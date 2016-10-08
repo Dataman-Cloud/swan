@@ -1,0 +1,18 @@
+{
+    "image": "nginx:latest",
+    "cpus": "0.05",
+    "mem": "16",
+    "disk": "0",
+    "network": "BRIDGE", 
+    "port_mappings": [
+       { "port": 80, "protocol": "tcp" },
+       { "port": 443, "protocol": "tcp" },
+    ],
+    "health_check": {
+	    "protocol": "http",
+	    "port": 80,
+	    "interval": 2,
+	    "timeout": 2,
+	    "failures": 3
+    }
+}
