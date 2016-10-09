@@ -20,15 +20,15 @@ func (r *Router) tasksAdd(w http.ResponseWriter, req *http.Request) error {
 	}
 
 	resources := r.sched.BuildResources(task.Cpus, task.Mem, task.Disk)
-	offers, err := r.sched.RequestOffers(resources)
+	offer, err := r.sched.RequestOffer(resources)
 	if err != nil {
 		logrus.Errorf("Request offers failed: %s", err.Error())
 		return err
 	}
-	if len(offers) > 0 {
+	if offer != nil {
 		task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 		task.Name = "testapp"
-		resp, err := r.sched.LaunchTask(offers[0], resources, &task)
+		resp, err := r.sched.LaunchTask(offer, resources, &task)
 		if err != nil {
 			return err
 		}

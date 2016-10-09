@@ -12,7 +12,6 @@ import (
 )
 
 func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, task *types.Task) (*http.Response, error) {
-	var tasks []*mesos.TaskInfo
 	taskInfo := mesos.TaskInfo{
 		Name: proto.String(task.Name),
 		TaskId: &mesos.TaskID{
@@ -27,9 +26,63 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 		Container: &mesos.ContainerInfo{
 			Type: mesos.ContainerInfo_DOCKER.Enum(),
 			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image: proto.String(task.Image),
+				Image: task.Image,
 			},
 		},
+	}
+
+	if task.Privileged != nil {
+		taskInfo.Container.Docker.Privileged = task.Privileged
+	}
+
+	if task.ForcePullImage != nil {
+		taskInfo.Container.Docker.ForcePullImage = task.ForcePullImage
+	}
+
+	// for _, parameter := range task.Parameters {
+	// 	logrus.Info(parameter.Key, parameter.Value)
+	// 	taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
+	// 		Key:   proto.String(parameter.Key),
+	// 		Value: proto.String(parameter.Value),
+	// 	})
+	// }
+
+	for _, volume := range task.Volumes {
+		mode := mesos.Volume_RO
+		if volume.Mode == "RW" {
+			mode = mesos.Volume_RW
+		}
+		taskInfo.Container.Volumes = append(taskInfo.Container.Volumes, &mesos.Volume{
+			ContainerPath: proto.String(volume.ContainerPath),
+			HostPath:      proto.String(volume.HostPath),
+			Mode:          &mode,
+		})
+	}
+
+	vars := make([]*mesos.Environment_Variable, 0)
+	for k, v := range task.Env {
+		vars = append(vars, &mesos.Environment_Variable{
+			Name:  proto.String(k),
+			Value: proto.String(v),
+		})
+	}
+
+	taskInfo.Command.Environment = &mesos.Environment{
+		Variables: vars,
+	}
+
+	if task.Labels != nil {
+		labels := make([]*mesos.Label, 0)
+		for k, v := range *task.Labels {
+			labels = append(labels, &mesos.Label{
+				Key:   proto.String(k),
+				Value: proto.String(v),
+			})
+		}
+
+		taskInfo.Labels = &mesos.Labels{
+			Labels: labels,
+		}
 	}
 
 	switch task.Network {
@@ -67,6 +120,7 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	}
 
+	var tasks []*mesos.TaskInfo
 	tasks = append(tasks, &taskInfo)
 
 	task.AgentId = *offer.AgentId.Value

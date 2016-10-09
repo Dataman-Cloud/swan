@@ -62,17 +62,17 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		// }
 
 	case mesos.TaskState_TASK_FINISHED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Info("Task is finished.")
-		s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Info("Task is finished.")
+		//s.reScheduler(ID)
 	case mesos.TaskState_TASK_FAILED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Warn("Task has failed.")
-		s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task has failed.")
+		//s.reScheduler(ID)
 	case mesos.TaskState_TASK_KILLED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Warn("Task was killed.")
-		s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was killed.")
+		//s.reScheduler(ID)
 	case mesos.TaskState_TASK_LOST:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Warn("Task was lost.")
-		s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was lost.")
+		//s.reScheduler(ID)
 	}
 }
 
@@ -80,6 +80,6 @@ func (s *Scheduler) reScheduler(ID string) {
 	logrus.WithFields(logrus.Fields{"ID": ID}).Info("Try to re-scheduler")
 	task, _ := s.registry.Fetch(ID)
 	resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
-	offers, _ := s.RequestOffers(resources)
-	s.LaunchTask(offers[0], resources, task)
+	offer, _ := s.RequestOffer(resources)
+	s.LaunchTask(offer, resources, task)
 }

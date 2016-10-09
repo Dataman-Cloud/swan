@@ -21,5 +21,8 @@ func (r *Router) initRoutes() {
 	r.routes = []Route{
 		// task
 		NewRoute("POST", "/tasks", r.tasksAdd),
+
+		// app
+		NewRoute("POST", "/v1/apps", r.appCreate),
 	}
 }
