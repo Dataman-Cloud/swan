@@ -11,6 +11,7 @@ import (
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
+	consul "github.com/hashicorp/consul/api"
 )
 
 // Scheduler represents a Mesos scheduler
@@ -19,13 +20,14 @@ type Scheduler struct {
 	framework *mesos.FrameworkInfo
 	registry  Registry
 
-	client   *client.Client
-	doneChan chan struct{}
-	events   Events
+	client       *client.Client
+	doneChan     chan struct{}
+	events       Events
+	consulClient *consul.Client
 }
 
 // New returns a pointer to new Scheduler
-func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
+func New(master string, fw *mesos.FrameworkInfo, registry Registry, consul *consul.Client) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
@@ -35,6 +37,7 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
 		events: Events{
 			sched.Event_OFFERS: make(chan *sched.Event, 64),
 		},
+		consulClient: consul,
 	}
 }
 
@@ -77,6 +80,12 @@ func (s *Scheduler) subscribe() error {
 		},
 	}
 
+	if s.framework.Id != nil {
+		call.FrameworkId = &mesos.FrameworkID{
+			Value: proto.String(s.framework.Id.GetValue()),
+		}
+	}
+
 	resp, err := s.send(call)
 	if err != nil {
 		return err
@@ -85,6 +94,7 @@ func (s *Scheduler) subscribe() error {
 		return fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
 	}
 
+	logrus.Info(s.client.StreamID)
 	go s.handleEvents(resp)
 
 	return nil
@@ -113,6 +123,12 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			sub := event.GetSubscribed()
 			s.framework.Id = sub.FrameworkId
 			logrus.WithFields(logrus.Fields{"FrameworkId": sub.FrameworkId.GetValue()}).Info("Subscription successful.")
+			if registered, _ := s.hasRegistered(sub.FrameworkId.GetValue()); !registered {
+				if err := s.storeFrameworkID(sub.FrameworkId.GetValue()); err != nil {
+					logrus.Errorf("Register framework id in consul failed: %s", err)
+					return
+				}
+			}
 		case sched.Event_OFFERS:
 			s.AddEvent(sched.Event_OFFERS, event)
 
@@ -150,4 +166,35 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		}
 
 	}
+}
+
+func (s *Scheduler) hasRegistered(frameworkId string) (bool, error) {
+	kv, _, err := s.consulClient.KV().Get("swan/frameworkid", nil)
+	if err != nil {
+		logrus.Errorf("Fetch framework id from consul failed: %s", err)
+		return false, err
+	}
+
+	if kv != nil {
+		return true, nil
+	}
+
+	return false, nil
+}
+
+func (s *Scheduler) storeFrameworkID(frameworkId string) error {
+	logrus.WithFields(logrus.Fields{"FrameworkID": frameworkId}).Info("Register frameworkId in consul")
+
+	kv := consul.KVPair{
+		Key:   "swan/frameworkid",
+		Value: []byte(frameworkId),
+	}
+
+	_, err := s.consulClient.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Error(err)
+		return err
+	}
+
+	return nil
 }

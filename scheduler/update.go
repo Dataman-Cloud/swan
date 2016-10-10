@@ -35,16 +35,16 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	ID := status.TaskId.GetValue()
 	state := status.GetState()
 
-	task, err := s.registry.Fetch(ID)
-	if err != nil {
-		logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Warn("Update received for unknown task.")
-		return
-	}
+	// task, err := s.registry.Fetch(ID)
+	// if err != nil {
+	// 	logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Warn("Update received for unknown task.")
+	// 	return
+	// }
 
-	task.State = &state
-	if err := s.registry.Update(ID, task); err != nil {
-		logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage(), "error": err}).Error("Update task state in registry")
-	}
+	// task.State = &state
+	// if err := s.registry.Update(ID, task); err != nil {
+	// 	logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage(), "error": err}).Error("Update task state in registry")
+	// }
 
 	switch state {
 	case mesos.TaskState_TASK_STAGING:

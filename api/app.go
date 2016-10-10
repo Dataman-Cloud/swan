@@ -10,8 +10,6 @@ import (
 )
 
 func (r *Router) appCreate(w http.ResponseWriter, req *http.Request) error {
-	defer req.Body.Close()
-
 	var application types.Application
 
 	decoder := json.NewDecoder(req.Body)
