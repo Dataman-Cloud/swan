@@ -1,0 +1,40 @@
+{
+  "id": "nginx",
+  "cmd": null,
+  "cpus": 0.01,
+  "mem": 32,
+  "disk": 0,
+  "instances": 4,
+  "container": {
+    "docker": {
+      "image": "nginx:1.10",
+      "network": "BRIDGE",
+      "forcePullImage": true,
+      "privileged": true,
+      "parameters": [
+        {
+          "key": "USER_ID",
+          "value": "1"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp",
+          "name": "web"
+        }
+      ]
+    },
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "hostPath": "/home",
+        "containerPath": "/data",
+        "mode": "RW"
+      }
+    ]
+  },
+  "env": {
+    "DB": "mysql"
+  }
+}
