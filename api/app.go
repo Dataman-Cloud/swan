@@ -29,7 +29,6 @@ func (r *Router) appCreate(w http.ResponseWriter, req *http.Request) error {
 		}
 
 		if offer != nil {
-
 			task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 
 			task.Name = application.ID
@@ -37,11 +36,13 @@ func (r *Router) appCreate(w http.ResponseWriter, req *http.Request) error {
 			task.Image = application.Container.Docker.Image
 			task.Network = application.Container.Docker.Network
 
-			for _, parameter := range *application.Container.Docker.Parameters {
-				task.Parameters = append(task.Parameters, &types.Parameter{
-					Key:   parameter.Key,
-					Value: parameter.Value,
-				})
+			if application.Container.Docker.Parameters != nil {
+				for _, parameter := range *application.Container.Docker.Parameters {
+					task.Parameters = append(task.Parameters, &types.Parameter{
+						Key:   parameter.Key,
+						Value: parameter.Value,
+					})
+				}
 			}
 
 			if application.Container.Docker.PortMappings != nil {

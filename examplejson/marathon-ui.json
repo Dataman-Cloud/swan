@@ -13,8 +13,8 @@
       "privileged": true,
       "parameters": [
         {
-          "key": "USER_ID",
-          "value": "1"
+            "key": "label",
+	    "value": "APP_ID=nginx"
         }
       ],
       "portMappings": [
@@ -36,5 +36,8 @@
   },
   "env": {
     "DB": "mysql"
+  },
+  "label": {
+    "USER_ID": "1"
   }
 }

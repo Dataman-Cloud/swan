@@ -39,13 +39,12 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 		taskInfo.Container.Docker.ForcePullImage = task.ForcePullImage
 	}
 
-	// for _, parameter := range task.Parameters {
-	// 	logrus.Info(parameter.Key, parameter.Value)
-	// 	taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
-	// 		Key:   proto.String(parameter.Key),
-	// 		Value: proto.String(parameter.Value),
-	// 	})
-	// }
+	for _, parameter := range task.Parameters {
+		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
+			Key:   proto.String(parameter.Key),
+			Value: proto.String(parameter.Value),
+		})
+	}
 
 	for _, volume := range task.Volumes {
 		mode := mesos.Volume_RO
