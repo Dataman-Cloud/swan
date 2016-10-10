@@ -42,9 +42,10 @@ func main() {
 	}
 
 	fw := &mesos.FrameworkInfo{
-		User:     mesosUser,
-		Name:     proto.String("swan"),
-		Hostname: proto.String(hostname),
+		User:            mesosUser,
+		Name:            proto.String("swan"),
+		Hostname:        proto.String(hostname),
+		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
 	sched := scheduler.New(*master, fw, inmemory.New())
