@@ -24,9 +24,10 @@ type Task struct {
 	Labels         *map[string]string `json:"labels"`
 	HealthCheck    *HealthCheck       `json:"health_check"`
 
-	AgentId       string           `json:"agent_id,string"`
-	AgentHostname string           `json:"agent_hostname"`
+	AgentId       *string          `json:"agent_id,string"`
+	AgentHostname *string          `json:"agent_hostname"`
 	State         *mesos.TaskState `json:"state"`
+	AppId         string           `json:"app_id"`
 }
 
 type PortMappings struct {

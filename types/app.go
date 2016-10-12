@@ -11,8 +11,10 @@ type Application struct {
 	Labels       *map[string]string `json:"labels"`
 	HealthChecks []*HealthCheck     `json:"healthChecks"`
 	Env          map[string]string  `json:"env"`
-	UserID       string             `json:"user_id"`
-	ClusterID    string             `json:"cluster_id"`
+
+	AutoIncrement int    `json:"-"`
+	UserID        string `json:"user_id"`
+	ClusterID     string `json:"cluster_id"`
 }
 
 // Container is the definition for a container type in marathon

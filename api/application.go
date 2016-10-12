@@ -37,9 +37,9 @@ func (r *Router) applicationList(w http.ResponseWriter, req *http.Request) error
 func (r *Router) applicationFetch(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	app, err := r.sched.FetchApplication(vars["id"])
+	app, err := r.sched.FetchApplication(vars["appId"])
 	if err != nil {
-		logrus.Errorf("Fetch application %s failed: %s", vars["id"], err.Error())
+		logrus.Errorf("Fetch application %s failed: %s", vars["appId"], err.Error())
 	}
 
 	return json.NewEncoder(w).Encode(app)
@@ -48,7 +48,38 @@ func (r *Router) applicationFetch(w http.ResponseWriter, req *http.Request) erro
 func (r *Router) applicationDelete(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	if err := r.sched.DeleteApplication(vars["id"]); err != nil {
+	if err := r.sched.DeleteApplication(vars["appId"]); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Router) ListApplicationTasks(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	tasks, err := r.sched.ListApplicationTasks(vars["appId"])
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(tasks)
+}
+
+func (r *Router) DeleteApplicationTasks(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	if err := r.sched.DeleteApplicationTasks(vars["appId"]); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (r *Router) DeleteApplicationTask(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	if err := r.sched.DeleteApplicationTask(vars["appId"], vars["taskId"]); err != nil {
 		return err
 	}
 

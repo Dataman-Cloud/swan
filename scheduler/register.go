@@ -33,8 +33,23 @@ type Registry interface {
 	ListApplications() ([]*types.Application, error)
 
 	// FetchApplication is used to fetch application from consul by application id.
-	FetchApplication(id string) (*types.Application, error)
+	FetchApplication(string) (*types.Application, error)
 
 	// DeleteApplication is used to delete application from consul by application id.
-	DeleteApplication(id string) error
+	DeleteApplication(string) error
+
+	// RegisterTask is used to register task in consul under task.AppId namespace.
+	RegisterTask(*types.Task) error
+
+	// ListApplicationTasks is used to get all tasks belong to a application from consul.
+	ListApplicationTasks(string) ([]*types.Task, error)
+
+	// DeleteApplicationTasks is used to delete all tasks belong to a application from consul.
+	DeleteApplicationTasks(string) error
+
+	// FetchApplicationTask is used to fetch a task belong to a application from consul.
+	FetchApplicationTask(string, string) (*types.Task, error)
+
+	// DeleteApplicationTask is used to delete specified task belong to a application from consul.
+	DeleteApplicationTask(string, string) error
 }
