@@ -23,6 +23,6 @@ func (r *Router) initRoutes() {
 		NewRoute("POST", "/tasks", r.tasksAdd),
 
 		// app
-		NewRoute("POST", "/v1/apps", r.appCreate),
+		NewRoute("POST", "/v1/apps", r.applicationCreate),
 	}
 }
