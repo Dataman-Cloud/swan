@@ -67,6 +67,24 @@
 			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
 			"branch": "master",
 			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/mgo.v2/bson",
+			"repository": "https://gopkg.in/mgo.v2",
+			"vcs": "git",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"branch": "v2",
+			"path": "/bson",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/mgo.v2/internal/json",
+			"repository": "https://gopkg.in/mgo.v2",
+			"vcs": "git",
+			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
+			"branch": "v2",
+			"path": "internal/json",
+			"notests": true
 		}
 	]
 }

@@ -76,10 +76,10 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	}
 }
 
-func (s *Scheduler) reScheduler(ID string) {
-	logrus.WithFields(logrus.Fields{"ID": ID}).Info("Try to re-scheduler")
-	task, _ := s.registry.Fetch(ID)
-	resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
-	offer, _ := s.RequestOffer(resources)
-	s.LaunchTask(offer, resources, task)
-}
+// func (s *Scheduler) reScheduler(ID string) {
+// 	logrus.WithFields(logrus.Fields{"ID": ID}).Info("Try to re-scheduler")
+// 	// task, _ := s.registry.Fetch(ID)
+// 	resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
+// 	offer, _ := s.RequestOffer(resources)
+// 	s.LaunchTask(offer, resources, task)
+// }

@@ -1,15 +1,12 @@
 package scheduler
 
 import (
-	"fmt"
 	"net/http"
-	"time"
 
 	mesos "github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/types"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -127,9 +124,9 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 	task.AgentId = *offer.AgentId.Value
 	task.AgentHostname = *offer.Hostname
 
-	if err := s.registry.Register(task.ID, task); err != nil {
-		logrus.Errorf("Register task in memory Failed. ID=%s", task.ID)
-	}
+	// if err := s.registry.Register(task.ID, task); err != nil {
+	// 	logrus.Errorf("Register task in memory Failed. ID=%s", task.ID)
+	// }
 
 	call := &sched.Call{
 		FrameworkId: s.framework.GetId(),
@@ -153,86 +150,92 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 	return s.send(call)
 }
 
-func (s *Scheduler) KillTask(ID string) (*http.Response, error) {
-	logrus.Infof("Kill task %s", ID)
-	task, _ := s.registry.Fetch(ID)
-	call := &sched.Call{
-		FrameworkId: s.framework.GetId(),
-		Type:        sched.Call_KILL.Enum(),
-		Kill: &sched.Call_Kill{
-			TaskId: &mesos.TaskID{
-				Value: proto.String(ID),
-			},
-			AgentId: &mesos.AgentID{
-				Value: proto.String(task.AgentId),
-			},
-		},
-	}
+// func (s *Scheduler) KillTask(ID string) (*http.Response, error) {
+// 	logrus.Infof("Kill task %s", ID)
+// 	//task, _ := s.registry.Fetch(ID)
+// 	call := &sched.Call{
+// 		FrameworkId: s.framework.GetId(),
+// 		Type:        sched.Call_KILL.Enum(),
+// 		Kill: &sched.Call_Kill{
+// 			TaskId: &mesos.TaskID{
+// 				Value: proto.String(ID),
+// 			},
+// 			AgentId: &mesos.AgentID{
+// 				Value: proto.String(task.AgentId),
+// 			},
+// 		},
+// 	}
+//
+// 	return s.send(call)
+// }
 
-	return s.send(call)
-}
-
-func (s *Scheduler) LaunchApplication(application *types.Application) error {
-	for i := 0; i < application.Instances; i++ {
-		var task types.Task
-		resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
-		offer, err := s.RequestOffer(resources)
-		if err != nil {
-			logrus.Errorf("Request offers failed: %s", err.Error())
-			return err
-		}
-
-		if offer != nil {
-			task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
-
-			task.Name = application.ID
-
-			task.Image = application.Container.Docker.Image
-			task.Network = application.Container.Docker.Network
-
-			if application.Container.Docker.Parameters != nil {
-				for _, parameter := range *application.Container.Docker.Parameters {
-					task.Parameters = append(task.Parameters, &types.Parameter{
-						Key:   parameter.Key,
-						Value: parameter.Value,
-					})
-				}
-			}
-
-			if application.Container.Docker.PortMappings != nil {
-				for _, portMapping := range *application.Container.Docker.PortMappings {
-					task.PortMappings = append(task.PortMappings, &types.PortMappings{
-						Port:     uint32(portMapping.ContainerPort),
-						Protocol: portMapping.Protocol,
-					})
-				}
-			}
-
-			if application.Container.Docker.Privileged != nil {
-				task.Privileged = application.Container.Docker.Privileged
-			}
-
-			if application.Container.Docker.ForcePullImage != nil {
-				task.ForcePullImage = application.Container.Docker.ForcePullImage
-			}
-
-			task.Env = application.Env
-
-			task.Volumes = application.Container.Volumes
-
-			if application.Labels != nil {
-				task.Labels = application.Labels
-			}
-
-			resp, err := s.LaunchTask(offer, resources, &task)
-			if err != nil {
-				return err
-			}
-
-			if resp != nil && resp.StatusCode != http.StatusAccepted {
-				return fmt.Errorf("status code %d received", resp.StatusCode)
-			}
-		}
-	}
-	return nil
-}
+// func (s *Scheduler) LaunchApplication(application *types.Application) error {
+// 	application.ClusterID = "cluster_id"
+// 	application.UserID = "user_id"
+// 	if err := s.registry.RegisterApplication(application); err != nil {
+// 		logrus.Errorf("Register application %s in consul failed: %s", application.ID, err.Error())
+// 	}
+//
+// 	for i := 0; i < application.Instances; i++ {
+// 		var task types.Task
+// 		resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
+// 		offer, err := s.RequestOffer(resources)
+// 		if err != nil {
+// 			logrus.Errorf("Request offers failed: %s", err.Error())
+// 			return err
+// 		}
+//
+// 		if offer != nil {
+// 			task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+//
+// 			task.Name = application.ID
+//
+// 			task.Image = application.Container.Docker.Image
+// 			task.Network = application.Container.Docker.Network
+//
+// 			if application.Container.Docker.Parameters != nil {
+// 				for _, parameter := range *application.Container.Docker.Parameters {
+// 					task.Parameters = append(task.Parameters, &types.Parameter{
+// 						Key:   parameter.Key,
+// 						Value: parameter.Value,
+// 					})
+// 				}
+// 			}
+//
+// 			if application.Container.Docker.PortMappings != nil {
+// 				for _, portMapping := range *application.Container.Docker.PortMappings {
+// 					task.PortMappings = append(task.PortMappings, &types.PortMappings{
+// 						Port:     uint32(portMapping.ContainerPort),
+// 						Protocol: portMapping.Protocol,
+// 					})
+// 				}
+// 			}
+//
+// 			if application.Container.Docker.Privileged != nil {
+// 				task.Privileged = application.Container.Docker.Privileged
+// 			}
+//
+// 			if application.Container.Docker.ForcePullImage != nil {
+// 				task.ForcePullImage = application.Container.Docker.ForcePullImage
+// 			}
+//
+// 			task.Env = application.Env
+//
+// 			task.Volumes = application.Container.Volumes
+//
+// 			if application.Labels != nil {
+// 				task.Labels = application.Labels
+// 			}
+//
+// 			resp, err := s.LaunchTask(offer, resources, &task)
+// 			if err != nil {
+// 				return err
+// 			}
+//
+// 			if resp != nil && resp.StatusCode != http.StatusAccepted {
+// 				return fmt.Errorf("status code %d received", resp.StatusCode)
+// 			}
+// 		}
+// 	}
+// 	return nil
+// }
