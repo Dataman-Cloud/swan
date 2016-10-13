@@ -9,7 +9,8 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (r *Router) applicationCreate(w http.ResponseWriter, req *http.Request) error {
+// BuildApplication is used to build a new application.
+func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) error {
 	var application types.Application
 
 	decoder := json.NewDecoder(req.Body)
@@ -25,7 +26,8 @@ func (r *Router) applicationCreate(w http.ResponseWriter, req *http.Request) err
 	return nil
 }
 
-func (r *Router) applicationList(w http.ResponseWriter, req *http.Request) error {
+// ListApplication is used to list all applications.
+func (r *Router) ListApplication(w http.ResponseWriter, req *http.Request) error {
 	apps, err := r.sched.ListApplications()
 	if err != nil {
 		logrus.Info(err)
@@ -34,7 +36,8 @@ func (r *Router) applicationList(w http.ResponseWriter, req *http.Request) error
 	return json.NewEncoder(w).Encode(apps)
 }
 
-func (r *Router) applicationFetch(w http.ResponseWriter, req *http.Request) error {
+// FetchApplication is used to fetch a application via applicaiton id.
+func (r *Router) FetchApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
 	app, err := r.sched.FetchApplication(vars["appId"])
@@ -45,7 +48,8 @@ func (r *Router) applicationFetch(w http.ResponseWriter, req *http.Request) erro
 	return json.NewEncoder(w).Encode(app)
 }
 
-func (r *Router) applicationDelete(w http.ResponseWriter, req *http.Request) error {
+// DeleteApplication is used to delete a application from mesos and consul via application id.
+func (r *Router) DeleteApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
 	if err := r.sched.DeleteApplication(vars["appId"]); err != nil {
@@ -55,6 +59,7 @@ func (r *Router) applicationDelete(w http.ResponseWriter, req *http.Request) err
 	return nil
 }
 
+// ListApplications is used to list all tasks belong to application via application id.
 func (r *Router) ListApplicationTasks(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
@@ -66,6 +71,7 @@ func (r *Router) ListApplicationTasks(w http.ResponseWriter, req *http.Request) 
 	return json.NewEncoder(w).Encode(tasks)
 }
 
+// DeleteApplicationTasks is used to delete all tasks belong to application via applicaiton id.
 func (r *Router) DeleteApplicationTasks(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
@@ -76,6 +82,7 @@ func (r *Router) DeleteApplicationTasks(w http.ResponseWriter, req *http.Request
 	return nil
 }
 
+// DeleteApplicationTask is used to delete specified task belong to application via application id and task id.
 func (r *Router) DeleteApplicationTask(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 

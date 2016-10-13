@@ -23,10 +23,10 @@ func (r *Router) initRoutes() {
 		NewRoute("POST", "/tasks", r.tasksAdd),
 
 		// app
-		NewRoute("POST", "/v1/apps", r.applicationCreate),
-		NewRoute("GET", "/v1/apps", r.applicationList),
-		NewRoute("GET", "/v1/apps/{appId}", r.applicationFetch),
-		NewRoute("DELETE", "/v1/apps/{appId}", r.applicationDelete),
+		NewRoute("POST", "/v1/apps", r.BuildApplication),
+		NewRoute("GET", "/v1/apps", r.ListApplication),
+		NewRoute("GET", "/v1/apps/{appId}", r.FetchApplication),
+		NewRoute("DELETE", "/v1/apps/{appId}", r.DeleteApplication),
 		NewRoute("GET", "/v1/apps/{appId}/tasks", r.ListApplicationTasks),
 		NewRoute("DELETE", "/v1/apps/{appId}/tasks", r.DeleteApplicationTasks),
 		NewRoute("DELETE", "/v1/apps/{appId}/tasks/{taskId}", r.DeleteApplicationTask),
