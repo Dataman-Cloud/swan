@@ -127,7 +127,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		switch event.GetType() {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
-			//s.framework.Id = sub.FrameworkId
 			logrus.WithFields(logrus.Fields{"FrameworkId": sub.FrameworkId.GetValue()}).Info("Subscription successful.")
 			if registered, _ := s.registry.FrameworkIDHasRegistered(sub.FrameworkId.GetValue()); !registered {
 				if err := s.registry.RegisterFrameworkID(sub.FrameworkId.GetValue()); err != nil {
@@ -137,6 +136,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			}
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 		case sched.Event_OFFERS:
+			logrus.Info("get offers")
 			s.AddEvent(sched.Event_OFFERS, event)
 
 		case sched.Event_RESCIND:
