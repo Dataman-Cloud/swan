@@ -88,71 +88,72 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 		logrus.Errorf("Register application %s in consul failed: %s", application.ID, err.Error())
 	}
 
-	for i := 0; i < application.Instances; i++ {
-		var task types.Task
-		resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
-		offer, err := s.RequestOffer(resources)
-		if err != nil {
-			logrus.Errorf("Request offers failed: %s", err.Error())
-			return err
-		}
-
-		if offer != nil {
-			task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
-
-			task.Name = fmt.Sprintf("%d.%s", application.AutoIncrement, application.ID)
-			application.AutoIncrement++
-			task.AppId = application.ID
-
-			task.Image = application.Container.Docker.Image
-			task.Network = application.Container.Docker.Network
-
-			if application.Container.Docker.Parameters != nil {
-				for _, parameter := range *application.Container.Docker.Parameters {
-					task.Parameters = append(task.Parameters, &types.Parameter{
-						Key:   parameter.Key,
-						Value: parameter.Value,
-					})
-				}
-			}
-
-			if application.Container.Docker.PortMappings != nil {
-				for _, portMapping := range *application.Container.Docker.PortMappings {
-					task.PortMappings = append(task.PortMappings, &types.PortMappings{
-						Port:     uint32(portMapping.ContainerPort),
-						Protocol: portMapping.Protocol,
-					})
-				}
-			}
-
-			if application.Container.Docker.Privileged != nil {
-				task.Privileged = application.Container.Docker.Privileged
-			}
-
-			if application.Container.Docker.ForcePullImage != nil {
-				task.ForcePullImage = application.Container.Docker.ForcePullImage
-			}
-
-			task.Env = application.Env
-
-			task.Volumes = application.Container.Volumes
-
-			if application.Labels != nil {
-				task.Labels = application.Labels
-			}
-
-			task.AgentId = offer.AgentId.Value
-			task.AgentHostname = offer.Hostname
-
-			resp, err := s.LaunchTask(offer, resources, &task)
+	go func() {
+		for i := 0; i < application.Instances; i++ {
+			var task types.Task
+			resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
+			offer, err := s.RequestOffer(resources)
 			if err != nil {
-				return err
+				logrus.Errorf("Request offers failed: %s", err.Error())
 			}
 
-			if resp != nil && resp.StatusCode != http.StatusAccepted {
-				return fmt.Errorf("status code %d received", resp.StatusCode)
+			if offer != nil {
+				task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+
+				task.Name = fmt.Sprintf("%d.%s", application.AutoIncrement, application.ID)
+				application.AutoIncrement++
+				task.AppId = application.ID
+
+				task.Image = application.Container.Docker.Image
+				task.Network = application.Container.Docker.Network
+
+				if application.Container.Docker.Parameters != nil {
+					for _, parameter := range *application.Container.Docker.Parameters {
+						task.Parameters = append(task.Parameters, &types.Parameter{
+							Key:   parameter.Key,
+							Value: parameter.Value,
+						})
+					}
+				}
+
+				if application.Container.Docker.PortMappings != nil {
+					for _, portMapping := range *application.Container.Docker.PortMappings {
+						task.PortMappings = append(task.PortMappings, &types.PortMappings{
+							Port:     uint32(portMapping.ContainerPort),
+							Protocol: portMapping.Protocol,
+						})
+					}
+				}
+
+				if application.Container.Docker.Privileged != nil {
+					task.Privileged = application.Container.Docker.Privileged
+				}
+
+				if application.Container.Docker.ForcePullImage != nil {
+					task.ForcePullImage = application.Container.Docker.ForcePullImage
+				}
+
+				task.Env = application.Env
+
+				task.Volumes = application.Container.Volumes
+
+				if application.Labels != nil {
+					task.Labels = application.Labels
+				}
+
+				task.AgentId = offer.AgentId.Value
+				task.AgentHostname = offer.Hostname
+
+				resp, err := s.LaunchTask(offer, resources, &task)
+				if err != nil {
+					logrus.Errorf("Launch task %s failed: %s", task.Name, err.Error())
+				}
+
+				if resp != nil && resp.StatusCode != http.StatusAccepted {
+					logrus.Errorf("status code %d received", resp.StatusCode)
+				}
 			}
 		}
-	}
+	}()
 	return nil
 }
