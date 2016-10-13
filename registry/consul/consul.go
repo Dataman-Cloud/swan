@@ -200,7 +200,10 @@ func (c *Consul) ListApplicationTasks(applicationId string) ([]*types.Task, erro
 			logrus.Errorf("Unmarshal application failed: %s", err.Error())
 			return nil, err
 		}
-		tasksList = append(tasksList, &t)
+		// Filter application
+		if t.ID != applicationId {
+			tasksList = append(tasksList, &t)
+		}
 	}
 
 	return tasksList, nil
@@ -219,7 +222,7 @@ func (c *Consul) DeleteApplicationTasks(applicationId string) error {
 
 // DeleteApplicationTask is used to delete specified task belong to a application from consul.
 func (c *Consul) DeleteApplicationTask(applicationId, taskId string) error {
-	_, err := c.client.KV().Delete(fmt.Sprintf("applications/%s/tasks/%s", applicationId, taskId), nil)
+	_, err := c.client.KV().Delete(fmt.Sprintf("applications/%s/%s", applicationId, taskId), nil)
 	if err != nil {
 		logrus.Errorf("Delete task %s failed: %s", taskId, err.Error())
 		return err

@@ -17,6 +17,7 @@ func (s *Scheduler) FetchApplication(id string) (*types.Application, error) {
 	return s.registry.FetchApplication(id)
 }
 
+// DeleteApplication will delete all data associated with application.
 func (s *Scheduler) DeleteApplication(id string) error {
 	tasks, err := s.registry.ListApplicationTasks(id)
 	if err != nil {
@@ -24,8 +25,14 @@ func (s *Scheduler) DeleteApplication(id string) error {
 	}
 
 	for _, task := range tasks {
+		// Kill task via mesos
 		if _, err := s.KillTask(*task.AgentId, task.ID); err != nil {
 			logrus.Errorf("Kill task failed: %s", err.Error())
+		}
+
+		// Delete task from consul
+		if err := s.registry.DeleteApplicationTask(id, task.ID); err != nil {
+			logrus.Errorf("Delete task %s from consul failed: %s", task.ID, err.Error())
 		}
 	}
 
@@ -36,8 +43,26 @@ func (s *Scheduler) ListApplicationTasks(id string) ([]*types.Task, error) {
 	return s.registry.ListApplicationTasks(id)
 }
 
+// DeleteApplicationTasks delete all tasks belong to appcaiton but keep that application exists.
 func (s *Scheduler) DeleteApplicationTasks(id string) error {
-	return s.registry.DeleteApplicationTasks(id)
+	tasks, err := s.registry.ListApplicationTasks(id)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range tasks {
+		// Kill task via mesos
+		if _, err := s.KillTask(*task.AgentId, task.ID); err != nil {
+			logrus.Errorf("Kill task failed: %s", err.Error())
+		}
+
+		// Delete task from consul
+		if err := s.registry.DeleteApplicationTask(id, task.ID); err != nil {
+			logrus.Errorf("Delete task %s from consul failed: %s", task.ID, err.Error())
+		}
+	}
+
+	return nil
 }
 
 func (s *Scheduler) DeleteApplicationTask(applicationId, taskId string) error {
