@@ -26,8 +26,14 @@ func (s *Scheduler) DeleteApplication(id string) error {
 
 	for _, task := range tasks {
 		// Kill task via mesos
-		if _, err := s.KillTask(*task.AgentId, task.ID); err != nil {
+		resp, err := s.KillTask(*task.AgentId, task.ID)
+		if err != nil {
 			logrus.Errorf("Kill task failed: %s", err.Error())
+		}
+
+		// Decline offer
+		if resp.StatusCode == http.StatusAccepted {
+			s.DeclineResource(task.OfferId)
 		}
 
 		// Delete task from consul
@@ -141,6 +147,7 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 					task.Labels = application.Labels
 				}
 
+				task.OfferId = offer.GetId().Value
 				task.AgentId = offer.AgentId.Value
 				task.AgentHostname = offer.Hostname
 

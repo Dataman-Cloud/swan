@@ -136,7 +136,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			}
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 		case sched.Event_OFFERS:
-			logrus.Info("get offers")
 			s.AddEvent(sched.Event_OFFERS, event)
 
 		case sched.Event_RESCIND:

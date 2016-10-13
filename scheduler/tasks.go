@@ -140,10 +140,11 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 					},
 				},
 			},
+			Filters: &mesos.Filters{RefuseSeconds: proto.Float64(1)},
 		},
-		//Filters: &mesos.Filters{RefuseSeconds: proto.Float64(1)},
 	}
 
+	logrus.WithFields(logrus.Fields{"ID": task.ID, "host": *task.AgentHostname}).Info("Launch task")
 	return s.send(call)
 }
 
