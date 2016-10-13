@@ -35,7 +35,14 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
 		registry:  registry,
 		doneChan:  make(chan struct{}),
 		events: Events{
-			sched.Event_OFFERS: make(chan *sched.Event, 64),
+			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
+			sched.Event_OFFERS:     make(chan *sched.Event, 64),
+			sched.Event_RESCIND:    make(chan *sched.Event, 64),
+			sched.Event_UPDATE:     make(chan *sched.Event, 64),
+			sched.Event_MESSAGE:    make(chan *sched.Event, 64),
+			sched.Event_FAILURE:    make(chan *sched.Event, 64),
+			sched.Event_ERROR:      make(chan *sched.Event, 64),
+			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
 	}
 }
@@ -128,18 +135,24 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 					return
 				}
 			}
+			s.AddEvent(sched.Event_SUBSCRIBED, event)
 		case sched.Event_OFFERS:
 			s.AddEvent(sched.Event_OFFERS, event)
 
 		case sched.Event_RESCIND:
 			logrus.Info("Received rescind offers")
+			s.AddEvent(sched.Event_RESCIND, event)
 
 		case sched.Event_UPDATE:
 			status := event.GetUpdate().GetStatus()
-			go s.status(status)
+			go func() {
+				s.status(status)
+			}()
 
+			s.AddEvent(sched.Event_UPDATE, event)
 		case sched.Event_MESSAGE:
 			logrus.Info("Received message event")
+			s.AddEvent(sched.Event_MESSAGE, event)
 
 		case sched.Event_FAILURE:
 			logrus.Error("Received failure event")
@@ -156,12 +169,14 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				}
 			}
 
+			s.AddEvent(sched.Event_FAILURE, event)
 		case sched.Event_ERROR:
 			err := event.GetError().GetMessage()
 			logrus.Error(err)
+			s.AddEvent(sched.Event_ERROR, event)
 
 		case sched.Event_HEARTBEAT:
-
+			s.AddEvent(sched.Event_HEARTBEAT, event)
 		}
 
 	}

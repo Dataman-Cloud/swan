@@ -30,5 +30,8 @@ func (r *Router) initRoutes() {
 		NewRoute("GET", "/v1/apps/{appId}/tasks", r.ListApplicationTasks),
 		NewRoute("DELETE", "/v1/apps/{appId}/tasks", r.DeleteApplicationTasks),
 		NewRoute("DELETE", "/v1/apps/{appId}/tasks/{taskId}", r.DeleteApplicationTask),
+
+		// events
+		NewRoute("GET", "/v1/events", r.EventStream),
 	}
 }
