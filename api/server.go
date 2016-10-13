@@ -43,6 +43,7 @@ func (s *Server) makeHTTPHandler(handler APIFunc) http.HandlerFunc {
 		logrus.WithFields(logrus.Fields{"from": r.RemoteAddr}).Infof("[%s] %s", r.Method, r.URL.Path)
 		if err := handler(w, r); err != nil {
 			logrus.Errorf("Handler for %s %s returned error: %v", r.Method, r.URL.Path, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 	}
 }

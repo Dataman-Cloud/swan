@@ -11,6 +11,10 @@ import (
 
 // BuildApplication is used to build a new application.
 func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) error {
+	if err := CheckForJSON(req); err != nil {
+		return err
+	}
+
 	var application types.Application
 
 	decoder := json.NewDecoder(req.Body)
