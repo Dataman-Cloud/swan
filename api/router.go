@@ -20,7 +20,7 @@ func NewRouter(sched *scheduler.Scheduler) *Router {
 func (r *Router) initRoutes() {
 	r.routes = []Route{
 		// task
-		NewRoute("POST", "/tasks", r.tasksAdd),
+		//NewRoute("POST", "/tasks", r.tasksAdd),
 
 		// app
 		NewRoute("POST", "/v1/apps", r.BuildApplication),

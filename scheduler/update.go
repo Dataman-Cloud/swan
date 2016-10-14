@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
-	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/mesosproto/sched"
 )
 
 func (s *Scheduler) status(status *mesos.TaskStatus) {

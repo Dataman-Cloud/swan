@@ -3,19 +3,16 @@ package scheduler
 import (
 	"net/http"
 
-	mesos "github.com/Dataman-Cloud/swan/mesosproto/mesos"
-	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/types"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 )
 
-func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, task *types.Task) (*http.Response, error) {
-	if err := s.registry.RegisterTask(task); err != nil {
-		logrus.Warnf("Register task %s in consul failed: %s", task.ID, err.Error())
-	}
-
+func (s *Scheduler) BuildTask(offer *mesos.Offer, resources []*mesos.Resource, task *types.Task) *mesos.TaskInfo {
+	logrus.Infof("Prepared task for launch with offer %s", *offer.GetId().Value)
 	taskInfo := mesos.TaskInfo{
 		Name: proto.String(task.Name),
 		TaskId: &mesos.TaskID{
@@ -96,8 +93,8 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 	case "BRIDGE":
 		ports := s.GetPorts(offer)
 		for _, m := range task.PortMappings {
-			hostPort := ports[0]
-			ports = ports[1:]
+			hostPort := ports[s.taskLaunched]
+			//ports = ports[1:]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
 				&mesos.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(hostPort)),
@@ -123,6 +120,12 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	}
 
+	return &taskInfo
+}
+
+// LaunchTasks lauch multiple tasks with specified offer.
+func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*http.Response, error) {
+	logrus.Infof("Launch %d tasks with offer %s", len(tasks), *offer.GetId().Value)
 	call := &sched.Call{
 		FrameworkId: s.framework.GetId(),
 		Type:        sched.Call_ACCEPT.Enum(),
@@ -134,9 +137,7 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 				&mesos.Offer_Operation{
 					Type: mesos.Offer_Operation_LAUNCH.Enum(),
 					Launch: &mesos.Offer_Operation_Launch{
-						TaskInfos: []*mesos.TaskInfo{
-							&taskInfo,
-						},
+						TaskInfos: tasks,
 					},
 				},
 			},
@@ -144,7 +145,6 @@ func (s *Scheduler) LaunchTask(offer *mesos.Offer, resources []*mesos.Resource, 
 		},
 	}
 
-	logrus.WithFields(logrus.Fields{"ID": task.ID, "host": *task.AgentHostname}).Info("Launch task")
 	return s.send(call)
 }
 

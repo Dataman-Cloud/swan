@@ -23,6 +23,8 @@ type Scheduler struct {
 	client   *client.Client
 	doneChan chan struct{}
 	events   Events
+
+	taskLaunched int
 }
 
 // New returns a pointer to new Scheduler
@@ -137,7 +139,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 		case sched.Event_OFFERS:
 			s.AddEvent(sched.Event_OFFERS, event)
-
 		case sched.Event_RESCIND:
 			logrus.Info("Received rescind offers")
 			s.AddEvent(sched.Event_RESCIND, event)

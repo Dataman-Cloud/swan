@@ -2,14 +2,14 @@
   "id": "nginx",
   "cmd": null,
   "cpus": 0.01,
-  "mem": 32,
+  "mem": 6,
   "disk": 0,
-  "instances": 1,
+  "instances": 5,
   "container": {
     "docker": {
       "image": "nginx:1.10",
       "network": "BRIDGE",
-      "forcePullImage": true,
+      "forcePullImage": false,
       "privileged": true,
       "parameters": [
         {

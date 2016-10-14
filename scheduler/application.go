@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 )
@@ -94,18 +95,25 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 		logrus.Errorf("Register application %s in consul failed: %s", application.ID, err.Error())
 	}
 
+	s.taskLaunched = 0
+
 	go func() {
-		for i := 0; i < application.Instances; i++ {
-			var task types.Task
-			resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
-			offer, err := s.RequestOffer(resources)
-			if err != nil {
-				logrus.Errorf("Request offers failed: %s", err.Error())
-			}
+		resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
+		offers, err := s.RequestOffers(resources)
+		if err != nil {
+			logrus.Errorf("Request offers failed: %s", err.Error())
+		}
 
-			if offer != nil {
+		for _, offer := range offers {
+			cpus, mem, disk := s.OfferedResources(offer)
+			var tasks []*mesos.TaskInfo
+			for s.taskLaunched < application.Instances &&
+				cpus >= application.Cpus &&
+				mem >= application.Mem &&
+				disk >= application.Disk {
+				var task types.Task
+
 				task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
-
 				task.Name = fmt.Sprintf("%d.%s", application.AutoIncrement, application.ID)
 				application.AutoIncrement++
 				task.AppId = application.ID
@@ -151,16 +159,24 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 				task.AgentId = offer.AgentId.Value
 				task.AgentHostname = offer.Hostname
 
-				resp, err := s.LaunchTask(offer, resources, &task)
-				if err != nil {
-					logrus.Errorf("Launch task %s failed: %s", task.Name, err.Error())
-				}
+				taskInfo := s.BuildTask(offer, resources, &task)
+				tasks = append(tasks, taskInfo)
+				s.taskLaunched++
+				cpus -= application.Cpus
+				mem -= application.Mem
+				disk -= application.Disk
+			}
 
-				if resp != nil && resp.StatusCode != http.StatusAccepted {
-					logrus.Errorf("status code %d received", resp.StatusCode)
-				}
+			resp, err := s.LaunchTasks(offer, tasks)
+			if err != nil {
+				logrus.Errorf("Launchs task failed: %s", err.Error())
+			}
+
+			if resp != nil && resp.StatusCode != http.StatusAccepted {
+				logrus.Errorf("status code %d received", resp.StatusCode)
 			}
 		}
 	}()
+
 	return nil
 }
