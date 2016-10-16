@@ -25,6 +25,9 @@ type Scheduler struct {
 	events   Events
 
 	taskLaunched int
+
+	// Status indicated scheduler's state is idle or busy.
+	Status string
 }
 
 // New returns a pointer to new Scheduler
@@ -46,6 +49,7 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
 			sched.Event_ERROR:      make(chan *sched.Event, 64),
 			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
+		Status: "idle",
 	}
 }
 
@@ -138,7 +142,15 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			}
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 		case sched.Event_OFFERS:
-			s.AddEvent(sched.Event_OFFERS, event)
+			if s.Status == "idle" {
+				// Refused all offers when scheduler is idle.
+				for _, offer := range event.Offers.Offers {
+					s.DeclineResource(offer.GetId().Value)
+				}
+			} else {
+				// Accept all offers when scheduler is busy.
+				s.AddEvent(sched.Event_OFFERS, event)
+			}
 		case sched.Event_RESCIND:
 			logrus.Info("Received rescind offers")
 			s.AddEvent(sched.Event_RESCIND, event)

@@ -97,6 +97,9 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 
 	s.taskLaunched = 0
 
+	// Set scheduler's status to busy for accepting resource.
+	s.Status = "busy"
+
 	go func() {
 		resources := s.BuildResources(application.Cpus, application.Mem, application.Disk)
 		offers, err := s.RequestOffers(resources)
@@ -176,6 +179,9 @@ func (s *Scheduler) LaunchApplication(application *types.Application) error {
 				logrus.Errorf("status code %d received", resp.StatusCode)
 			}
 		}
+
+		// Set scheduler's status back to idle after launch applicaiton.
+		s.Status = "idle"
 	}()
 
 	return nil
