@@ -1,6 +1,6 @@
 package types
 
-type Application struct {
+type ApplicationVersion struct {
 	ID           string             `json:"id"`
 	Command      *string            `json:"cmd"`
 	Cpus         float64            `json:"cpus"`
@@ -11,10 +11,6 @@ type Application struct {
 	Labels       *map[string]string `json:"labels"`
 	HealthChecks []*HealthCheck     `json:"healthChecks"`
 	Env          map[string]string  `json:"env"`
-
-	AutoIncrement int    `json:"-"`
-	UserID        string `json:"user_id"`
-	ClusterID     string `json:"cluster_id"`
 }
 
 // Container is the definition for a container type in marathon

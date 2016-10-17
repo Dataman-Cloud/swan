@@ -2,7 +2,10 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strconv"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
@@ -15,15 +18,43 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	var application types.Application
-
-	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&application); err != nil {
+	if err := req.ParseForm(); err != nil {
 		return err
 	}
 
-	if err := r.sched.LaunchApplication(&application); err != nil {
-		logrus.Infof("Launch application %s failed with error: %s", application.ID, err.Error())
+	var applicationVersion types.ApplicationVersion
+
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&applicationVersion); err != nil {
+		return err
+	}
+
+	user := req.Form.Get("user")
+	if user == "" {
+		user = "default"
+	}
+
+	application := types.Application{
+		ID:        applicationVersion.ID,
+		Name:      applicationVersion.ID,
+		Instances: 0,
+		UserId:    user,
+		ClusterId: r.sched.ClusterId,
+		Status:    "STAGING",
+		Created:   time.Now().Unix(),
+		Updated:   time.Now().Unix(),
+	}
+
+	if err := r.sched.RegisterApplication(&application); err != nil {
+		return err
+	}
+
+	if err := r.sched.RegisterApplicationVersion(&applicationVersion); err != nil {
+		return err
+	}
+
+	if err := r.sched.LaunchApplication(&applicationVersion); err != nil {
+		logrus.Infof("Launch application %s failed with error: %s", applicationVersion.ID, err.Error())
 		return err
 	}
 
@@ -91,6 +122,59 @@ func (r *Router) DeleteApplicationTask(w http.ResponseWriter, req *http.Request)
 	vars := mux.Vars(req)
 
 	if err := r.sched.DeleteApplicationTask(vars["appId"], vars["taskId"]); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListApplicationVersions is used to list all versions for a application specified by applicationId.
+func (r *Router) ListApplicationVersions(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	appVersions, err := r.sched.ListApplicationVersions(vars["appId"])
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(appVersions)
+}
+
+// FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
+func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	version, err := r.sched.FetchApplicationVersion(vars["appId"], vars["versionId"])
+	if err != nil {
+		return err
+	}
+
+	return json.NewEncoder(w).Encode(version)
+}
+
+// UpdateApplication is used to update application version.
+func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) error {
+	return nil
+}
+
+// ScaleApplication is used to scale application instances.
+func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) error {
+	if err := req.ParseForm(); err != nil {
+		return err
+	}
+
+	instances := req.Form.Get("instances")
+	// if instances == "" {
+	// 	return errors.New("instances must be specified in url")
+	// }
+	inst, err := strconv.Atoi(instances)
+	if err != nil {
+		return errors.New("instances must be specified in url and can't be null")
+	}
+
+	vars := mux.Vars(req)
+
+	if err := r.sched.ScaleApplication(vars["appId"], inst); err != nil {
 		return err
 	}
 

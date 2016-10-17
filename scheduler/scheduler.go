@@ -28,6 +28,8 @@ type Scheduler struct {
 
 	// Status indicated scheduler's state is idle or busy.
 	Status string
+
+	ClusterId string
 }
 
 // New returns a pointer to new Scheduler
