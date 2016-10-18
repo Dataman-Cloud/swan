@@ -210,3 +210,14 @@ func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) erro
 
 	return nil
 }
+
+// RollbackApplication rollback application to previous version.
+func (r *Router) RollbackApplication(w http.ResponseWriter, req *http.Request) error {
+	vars := mux.Vars(req)
+
+	if err := r.sched.RollbackApplication(vars["appId"]); err != nil {
+		return err
+	}
+
+	return nil
+}

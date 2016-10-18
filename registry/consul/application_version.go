@@ -68,7 +68,6 @@ func (c *Consul) FetchApplicationVersion(applicationId, versionId string) (*type
 	}
 
 	var version types.ApplicationVersion
-	logrus.Info("=====", string(ver.Value))
 	if err := json.Unmarshal(ver.Value, &version); err != nil {
 		logrus.Errorf("Unmarshal application version failed: %s", err.Error())
 		return nil, err

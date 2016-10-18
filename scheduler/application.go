@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -351,6 +352,99 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 	}
 
 	// Update application status to RUNNING
+	app.Status = "RUNNING"
+	if err := s.registry.UpdateApplication(app); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// RollbackApplication rollback application to previous version.
+func (s *Scheduler) RollbackApplication(applicationId string) error {
+	// Update application status to UPDATING
+	app, err := s.registry.FetchApplication(applicationId)
+	if err != nil {
+		return err
+	}
+
+	if app == nil {
+		logrus.Errorf("Application %s not found for rollback", applicationId)
+		return errors.New("Application not found")
+	}
+
+	app.Status = "ROLLINGBACK"
+	if err := s.registry.UpdateApplication(app); err != nil {
+		return err
+	}
+
+	versions, err := s.registry.ListApplicationVersions(applicationId)
+	if err != nil {
+		return err
+	}
+
+	sort.Strings(versions)
+
+	rollbackVer := versions[len(versions)-2]
+	version, err := s.registry.FetchApplicationVersion(applicationId, rollbackVer)
+	if err != nil {
+		return err
+	}
+
+	tasks, err := s.registry.ListApplicationTasks(applicationId)
+	if err != nil {
+		return err
+	}
+
+	for _, task := range tasks {
+		if _, err := s.KillTask(*task.AgentId, task.ID); err == nil {
+			s.registry.DeleteApplicationTask(app.ID, task.ID)
+		}
+
+		s.Status = "busy"
+
+		resources := s.BuildResources(version.Cpus, version.Mem, version.Disk)
+		offers, err := s.RequestOffers(resources)
+		if err != nil {
+			logrus.Errorf("Request offers failed: %s", err.Error())
+		}
+
+		var choosedOffer *mesos.Offer
+		for _, offer := range offers {
+			cpus, mem, disk := s.OfferedResources(offer)
+			if cpus >= version.Cpus && mem >= version.Mem && disk >= version.Disk {
+				choosedOffer = offer
+				break
+			}
+		}
+
+		task, err := s.BuildTask(choosedOffer, version, task.Name)
+		if err != nil {
+			logrus.Errorf("Build task failed: %s", err.Error())
+			return err
+		}
+
+		if err := s.registry.RegisterTask(task); err != nil {
+			return err
+		}
+
+		var taskInfos []*mesos.TaskInfo
+		taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
+		taskInfos = append(taskInfos, taskInfo)
+
+		resp, err := s.LaunchTasks(choosedOffer, taskInfos)
+		if err != nil {
+			logrus.Errorf("Launchs task failed: %s", err.Error())
+			return err
+		}
+
+		if resp != nil && resp.StatusCode != http.StatusAccepted {
+			return fmt.Errorf("status code %d received", resp.StatusCode)
+		}
+
+		s.Status = "idle"
+	}
+	// Update application status to UPDATING
 	app.Status = "RUNNING"
 	if err := s.registry.UpdateApplication(app); err != nil {
 		return err
