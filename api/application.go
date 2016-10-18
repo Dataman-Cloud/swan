@@ -35,14 +35,15 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	application := types.Application{
-		ID:        applicationVersion.ID,
-		Name:      applicationVersion.ID,
-		Instances: 0,
-		UserId:    user,
-		ClusterId: r.sched.ClusterId,
-		Status:    "STAGING",
-		Created:   time.Now().Unix(),
-		Updated:   time.Now().Unix(),
+		ID:              applicationVersion.ID,
+		Name:            applicationVersion.ID,
+		Instances:       0,
+		InstanceUpdated: 0,
+		UserId:          user,
+		ClusterId:       r.sched.ClusterId,
+		Status:          "STAGING",
+		Created:         time.Now().Unix(),
+		Updated:         time.Now().Unix(),
 	}
 
 	if err := r.sched.RegisterApplication(&application); err != nil {
@@ -154,6 +155,35 @@ func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Reques
 
 // UpdateApplication is used to update application version.
 func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) error {
+	if err := CheckForJSON(req); err != nil {
+		return err
+	}
+
+	if err := req.ParseForm(); err != nil {
+		return err
+	}
+	inst, err := strconv.Atoi(req.Form.Get("instances"))
+	if err != nil {
+		return errors.New("instances must be specified in url and can't be null")
+	}
+
+	var applicationVersion types.ApplicationVersion
+
+	decoder := json.NewDecoder(req.Body)
+	if err := decoder.Decode(&applicationVersion); err != nil {
+		return err
+	}
+
+	if err := r.sched.RegisterApplicationVersion(&applicationVersion); err != nil {
+		return err
+	}
+
+	vars := mux.Vars(req)
+
+	if err := r.sched.UpdateApplication(vars["appId"], inst, &applicationVersion); err != nil {
+		return err
+	}
+
 	return nil
 }
 

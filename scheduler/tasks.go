@@ -1,7 +1,9 @@
 package scheduler
 
 import (
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
@@ -11,7 +13,75 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func (s *Scheduler) BuildTask(offer *mesos.Offer, resources []*mesos.Resource, task *types.Task) *mesos.TaskInfo {
+func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVersion, name string) (*types.Task, error) {
+	var task types.Task
+
+	task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+	task.Name = name
+	if task.Name == "" {
+		app, err := s.registry.FetchApplication(version.ID)
+		if err != nil {
+			return nil, err
+		}
+
+		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
+		app.Instances = app.Instances + 1
+		if err := s.registry.UpdateApplication(app); err != nil {
+			return nil, err
+		}
+	}
+
+	task.AppId = version.ID
+
+	task.Image = version.Container.Docker.Image
+	task.Network = version.Container.Docker.Network
+
+	if version.Container.Docker.Parameters != nil {
+		for _, parameter := range *version.Container.Docker.Parameters {
+			task.Parameters = append(task.Parameters, &types.Parameter{
+				Key:   parameter.Key,
+				Value: parameter.Value,
+			})
+		}
+	}
+
+	if version.Container.Docker.PortMappings != nil {
+		for _, portMapping := range *version.Container.Docker.PortMappings {
+			task.PortMappings = append(task.PortMappings, &types.PortMappings{
+				Port:     uint32(portMapping.ContainerPort),
+				Protocol: portMapping.Protocol,
+			})
+		}
+	}
+
+	if version.Container.Docker.Privileged != nil {
+		task.Privileged = version.Container.Docker.Privileged
+	}
+
+	if version.Container.Docker.ForcePullImage != nil {
+		task.ForcePullImage = version.Container.Docker.ForcePullImage
+	}
+
+	task.Env = version.Env
+
+	task.Volumes = version.Container.Volumes
+
+	if version.Labels != nil {
+		task.Labels = version.Labels
+	}
+
+	task.Cpus = version.Cpus
+	task.Mem = version.Mem
+	task.Disk = version.Disk
+
+	task.OfferId = offer.GetId().Value
+	task.AgentId = offer.AgentId.Value
+	task.AgentHostname = offer.Hostname
+
+	return &task, nil
+}
+
+func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resource, task *types.Task) *mesos.TaskInfo {
 	logrus.Infof("Prepared task for launch with offer %s", *offer.GetId().Value)
 	taskInfo := mesos.TaskInfo{
 		Name: proto.String(task.Name),
