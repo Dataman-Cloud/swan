@@ -1,5 +1,5 @@
 {
-  "id": "nginx",
+  "id": "nginx003",
   "cmd": null,
   "cpus": 0.01,
   "mem": 6,
@@ -39,5 +39,8 @@
   },
   "label": {
     "USER_ID": "1"
+  },
+  "killPolicy": {
+    "duration": 5
   }
 }
