@@ -34,7 +34,7 @@ type Scheduler struct {
 
 // New returns a pointer to new Scheduler
 //func New(master string, fw *mesos.FrameworkInfo, registry Registry, consul *consul.Client) *Scheduler {
-func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
+func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
@@ -51,7 +51,8 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry) *Scheduler {
 			sched.Event_ERROR:      make(chan *sched.Event, 64),
 			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
-		Status: "idle",
+		Status:    "idle",
+		ClusterId: clusterId,
 	}
 }
 

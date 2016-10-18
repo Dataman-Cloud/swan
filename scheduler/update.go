@@ -35,7 +35,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	ID := status.TaskId.GetValue()
 	state := status.GetState()
 
-	// task, err := s.registry.Fetch(ID)
+	// task, err := s.registry.(ID)
 	// if err != nil {
 	// 	logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Warn("Update received for unknown task.")
 	// 	return
@@ -59,6 +59,20 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		// 	).Info("Task is RUNNING, but service seems Failed")
 		// } else {
 		// 	logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Info("Task is RUNNING")
+		// }
+		// Update application status to RUNNING
+		// app, err := s.registry.FetchApplication(version.ID)
+		// if err != nil {
+		// 	return err
+		// }
+		// app.RunningInstances += 1
+
+		// if app.RunningInstances == app.Instances {
+		// 	app.Status = "RUNNING"
+		// }
+
+		// if err := s.registry.UpdateApplication(app); err != nil {
+		// 	logrus.Errorf("Updating application got error: %s", err.Error())
 		// }
 
 	case mesos.TaskState_TASK_FINISHED:

@@ -18,6 +18,7 @@ var (
 	master     = flag.String("master", "127.0.0.1:5050", "Master address <ip:port>")
 	mesosUser  = flag.String("user", "", "Framework user")
 	consulAddr = flag.String("consul", "127.0.0.1:8500", "Consul address <ip:port>")
+	clusterId  = flag.String("cluster_id", "00001", "mesos cluster id")
 )
 
 func init() {
@@ -67,7 +68,7 @@ func main() {
 		}
 	}
 
-	sched := scheduler.New(*master, fw, consulClient)
+	sched := scheduler.New(*master, fw, consulClient, *clusterId)
 
 	srv := api.NewServer(sched)
 	go func() {
