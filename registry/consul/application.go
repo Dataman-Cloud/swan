@@ -83,7 +83,7 @@ func (c *Consul) ListApplications() ([]*types.Application, error) {
 
 // DeleteApplication is used to delete application from consul by application id.
 func (c *Consul) DeleteApplication(id string) error {
-	_, err := c.client.KV().Delete(fmt.Sprintf("applications/%s", id), nil)
+	_, err := c.client.KV().DeleteTree(fmt.Sprintf("applications/%s", id), nil)
 	if err != nil {
 		logrus.Errorf("Delete application %s failed: %s", id, err.Error())
 		return err
