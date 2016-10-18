@@ -29,6 +29,8 @@ type Task struct {
 	AgentHostname *string          `json:"agent_hostname"`
 	State         *mesos.TaskState `json:"state"`
 	AppId         string           `json:"app_id"`
+
+	KillPolicy *KillPolicy `json:"kill_policy"`
 }
 
 type PortMappings struct {

@@ -11,6 +11,7 @@ type ApplicationVersion struct {
 	Labels       *map[string]string `json:"labels"`
 	HealthChecks []*HealthCheck     `json:"healthChecks"`
 	Env          map[string]string  `json:"env"`
+	KillPolicy   *KillPolicy        `json:"killPolicy"`
 }
 
 // Container is the definition for a container type in marathon
@@ -45,4 +46,8 @@ type Volume struct {
 	ContainerPath string `json:"containerPath,omitempty"`
 	HostPath      string `json:"hostPath,omitempty"`
 	Mode          string `json:"mode,omitempty"`
+}
+
+type KillPolicy struct {
+	Duration int64 `json:"duration"`
 }

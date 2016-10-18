@@ -30,7 +30,7 @@ func (s *Scheduler) DeleteApplication(id string) error {
 
 	for _, task := range tasks {
 		// Kill task via mesos
-		resp, err := s.KillTask(*task.AgentId, task.ID)
+		resp, err := s.KillTask(task)
 		if err != nil {
 			logrus.Errorf("Kill task failed: %s", err.Error())
 		}
@@ -62,7 +62,7 @@ func (s *Scheduler) DeleteApplicationTasks(id string) error {
 
 	for _, task := range tasks {
 		// Kill task via mesos
-		if _, err := s.KillTask(*task.AgentId, task.ID); err != nil {
+		if _, err := s.KillTask(task); err != nil {
 			logrus.Errorf("Kill task failed: %s", err.Error())
 		}
 
@@ -85,7 +85,7 @@ func (s *Scheduler) DeleteApplicationTask(applicationId, taskId string) error {
 		return err
 	}
 
-	if _, err := s.KillTask(*task.AgentId, taskId); err != nil {
+	if _, err := s.KillTask(task); err != nil {
 		logrus.Errorf("Kill task failed: %s", err.Error())
 		return err
 	}
@@ -211,7 +211,7 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 			}
 
 			if taskId+1 > instances {
-				if _, err := s.KillTask(*task.AgentId, task.ID); err == nil {
+				if _, err := s.KillTask(task); err == nil {
 					s.registry.DeleteApplicationTask(app.ID, task.ID)
 				}
 
@@ -273,7 +273,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 			}
 
 			if taskId == i {
-				if _, err := s.KillTask(*task.AgentId, task.ID); err == nil {
+				if _, err := s.KillTask(task); err == nil {
 					s.registry.DeleteApplicationTask(app.ID, task.ID)
 				}
 
@@ -397,7 +397,7 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 	}
 
 	for _, task := range tasks {
-		if _, err := s.KillTask(*task.AgentId, task.ID); err == nil {
+		if _, err := s.KillTask(task); err == nil {
 			s.registry.DeleteApplicationTask(app.ID, task.ID)
 		}
 

@@ -78,6 +78,10 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVers
 	task.AgentId = offer.AgentId.Value
 	task.AgentHostname = offer.Hostname
 
+	if version.KillPolicy != nil {
+		task.KillPolicy = version.KillPolicy
+	}
+
 	return &task, nil
 }
 
@@ -218,19 +222,29 @@ func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*h
 	return s.send(call)
 }
 
-func (s *Scheduler) KillTask(agentId, taskId string) (*http.Response, error) {
-	logrus.WithFields(logrus.Fields{"ID": taskId, "AgentId": agentId}).Warn("Kill Task")
+func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
+	logrus.WithFields(logrus.Fields{"ID": task.ID, "AgentId": *task.AgentId}).Warn("Kill Task")
 	call := &sched.Call{
 		FrameworkId: s.framework.GetId(),
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
-				Value: proto.String(taskId),
+				Value: proto.String(task.ID),
 			},
 			AgentId: &mesos.AgentID{
-				Value: proto.String(agentId),
+				Value: task.AgentId,
 			},
 		},
+	}
+
+	if task.KillPolicy != nil {
+		if task.KillPolicy.Duration != 0 {
+			call.Kill.KillPolicy = &mesos.KillPolicy{
+				GracePeriod: &mesos.DurationInfo{
+					Nanoseconds: proto.Int64(task.KillPolicy.Duration * 1000 * 1000),
+				},
+			}
+		}
 	}
 
 	return s.send(call)
