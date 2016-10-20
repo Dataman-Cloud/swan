@@ -82,6 +82,10 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVers
 		task.KillPolicy = version.KillPolicy
 	}
 
+	if version.HealthChecks != nil {
+		task.HealthChecks = version.HealthChecks
+	}
+
 	return &task, nil
 }
 
@@ -248,4 +252,58 @@ func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
 	}
 
 	return s.send(call)
+}
+
+// ReschedulerTask process task re-scheduler if needed.
+func (s *Scheduler) ReschedulerTask() {
+	for {
+		select {
+		case msg := <-s.ReschedQueue:
+			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
+			if err != nil {
+				logrus.Errorf("Rescheduler task failed: %s", err.Error())
+				return
+			}
+
+			s.Status = "busy"
+
+			resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
+			offers, err := s.RequestOffers(resources)
+			if err != nil {
+				logrus.Errorf("Request offers failed: %s", err.Error())
+				msg.Err <- err
+			}
+
+			var choosedOffer *mesos.Offer
+			for _, offer := range offers {
+				cpus, mem, disk := s.OfferedResources(offer)
+				if cpus >= task.Cpus && mem >= task.Mem && disk >= task.Disk {
+					choosedOffer = offer
+					break
+				}
+			}
+
+			var taskInfos []*mesos.TaskInfo
+			taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
+			taskInfos = append(taskInfos, taskInfo)
+
+			resp, err := s.LaunchTasks(choosedOffer, taskInfos)
+			if err != nil {
+				logrus.Errorf("Launchs task failed: %s", err.Error())
+				msg.Err <- err
+			}
+
+			if resp != nil && resp.StatusCode != http.StatusAccepted {
+				logrus.Errorf("Launchs task failed: status code %d", resp.StatusCode)
+				msg.Err <- err
+			}
+
+			msg.Err <- nil
+
+			s.Status = "idle"
+
+		case <-s.DoneChan:
+			return
+		}
+	}
 }

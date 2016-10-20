@@ -7,11 +7,12 @@ import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/client"
+	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
-	//consul "github.com/hashicorp/consul/api"
 )
 
 // Scheduler represents a Mesos scheduler
@@ -20,9 +21,10 @@ type Scheduler struct {
 	framework *mesos.FrameworkInfo
 	registry  Registry
 
-	client   *client.Client
-	doneChan chan struct{}
-	events   Events
+	client       *client.Client
+	DoneChan     chan struct{}
+	ReschedQueue chan types.ReschedulerMsg
+	events       Events
 
 	taskLaunched int
 
@@ -30,17 +32,19 @@ type Scheduler struct {
 	Status string
 
 	ClusterId string
+
+	healthChecker *health.HealthChecker
 }
 
 // New returns a pointer to new Scheduler
 //func New(master string, fw *mesos.FrameworkInfo, registry Registry, consul *consul.Client) *Scheduler {
-func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string) *Scheduler {
+func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string, healthChecker *health.HealthChecker, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
 		registry:  registry,
-		doneChan:  make(chan struct{}),
+		DoneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
 			sched.Event_OFFERS:     make(chan *sched.Event, 64),
@@ -51,8 +55,11 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId st
 			sched.Event_ERROR:      make(chan *sched.Event, 64),
 			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
-		Status:    "idle",
-		ClusterId: clusterId,
+		Status:        "idle",
+		ClusterId:     clusterId,
+		healthChecker: healthChecker,
+
+		ReschedQueue: queue,
 	}
 }
 
@@ -62,7 +69,7 @@ func (s *Scheduler) Start() <-chan struct{} {
 	if err := s.subscribe(); err != nil {
 		logrus.Fatal(err)
 	}
-	return s.doneChan
+	return s.DoneChan
 }
 
 func (s *Scheduler) stop() {
@@ -118,7 +125,7 @@ func (s *Scheduler) subscribe() error {
 func (s *Scheduler) handleEvents(resp *http.Response) {
 	defer func() {
 		resp.Body.Close()
-		close(s.doneChan)
+		close(s.DoneChan)
 		for _, event := range s.events {
 			close(event)
 		}
@@ -144,6 +151,14 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				}
 			}
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
+
+			go func() {
+				s.healthChecker.Start()
+			}()
+
+			go func() {
+				s.ReschedulerTask()
+			}()
 		case sched.Event_OFFERS:
 			if s.Status == "idle" {
 				// Refused all offers when scheduler is idle.

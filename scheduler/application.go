@@ -135,6 +135,14 @@ func (s *Scheduler) LaunchApplication(version *types.ApplicationVersion) error {
 
 				taskInfo := s.BuildTaskInfo(offer, resources, task)
 				tasks = append(tasks, taskInfo)
+
+				if len(task.HealthChecks) != 0 {
+					if err := s.registry.RegisterCheck(task,
+						*taskInfo.Container.Docker.PortMappings[0].HostPort,
+						version.ID); err != nil {
+					}
+				}
+
 				s.taskLaunched++
 				cpus -= version.Cpus
 				mem -= version.Mem

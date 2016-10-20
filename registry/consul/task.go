@@ -19,7 +19,7 @@ func (c *Consul) RegisterTask(task *types.Task) error {
 	}
 
 	t := consul.KVPair{
-		Key:   fmt.Sprintf("applications/%s/tasks/%s", task.AppId, task.ID),
+		Key:   fmt.Sprintf("applications/%s/tasks/%s", task.AppId, task.Name),
 		Value: data,
 	}
 
@@ -81,7 +81,7 @@ func (c *Consul) DeleteApplicationTask(applicationId, taskId string) error {
 
 // FetchApplicationTask is used to fetch a task belong to a application from consul.
 func (c *Consul) FetchApplicationTask(applicationId, taskId string) (*types.Task, error) {
-	t, _, err := c.client.KV().Get(fmt.Sprintf("applications/%s/%s", applicationId, taskId), nil)
+	t, _, err := c.client.KV().Get(fmt.Sprintf("applications/%s/tasks/%s", applicationId, taskId), nil)
 	if err != nil {
 		logrus.Errorf("Fetch appliction failed: %s", err.Error())
 		return nil, err

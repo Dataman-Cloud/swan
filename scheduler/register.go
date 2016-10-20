@@ -47,4 +47,7 @@ type Registry interface {
 
 	// UpdateApplication is used to update application info.
 	UpdateApplication(*types.Application) error
+
+	// RegisterCheck register check in consul.
+	RegisterCheck(*types.Task, uint32, string) error
 }

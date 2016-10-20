@@ -1,8 +1,8 @@
 {
-  "id": "nginx003",
+  "id": "nginx008",
   "cmd": null,
   "cpus": 0.01,
-  "mem": 6,
+  "mem": 5,
   "disk": 0,
   "instances": 5,
   "container": {
@@ -42,5 +42,16 @@
   },
   "killPolicy": {
     "duration": 5
-  }
+  },
+  "healthChecks": [
+    {
+      "protocol": "TCP",
+      "path": "/",
+      "portIndex": 0,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 3,
+      "timeoutSeconds": 3,
+      "maxConsecutiveFailures": 3
+    }
+ ]
 }

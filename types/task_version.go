@@ -22,7 +22,7 @@ type Task struct {
 	Volumes        []*Volume          `json:"volumes"`
 	Env            map[string]string  `json:"env"`
 	Labels         *map[string]string `json:"labels"`
-	HealthCheck    *HealthCheck       `json:"health_check"`
+	HealthChecks   []*HealthCheck     `json:"health_checks"`
 
 	OfferId       *string          `json:"offer_id"`
 	AgentId       *string          `json:"agent_id,string"`
@@ -36,9 +36,4 @@ type Task struct {
 type PortMappings struct {
 	Port     uint32 `json:"port"`
 	Protocol string `json:"protocol"`
-}
-
-type HealthCheck struct {
-	Protocol string `json:"protocol"`
-	Port     uint32 `json:"port"`
 }

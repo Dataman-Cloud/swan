@@ -6,9 +6,11 @@ import (
 	"os/user"
 
 	"github.com/Dataman-Cloud/swan/api"
+	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/registry/consul"
 	"github.com/Dataman-Cloud/swan/scheduler"
+	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 )
@@ -68,7 +70,12 @@ func main() {
 		}
 	}
 
-	sched := scheduler.New(*master, fw, consulClient, *clusterId)
+	reschedQueue := make(chan types.ReschedulerMsg, 1000)
+
+	healthChecker := health.NewHealthChecker(consulClient, reschedQueue)
+	healthChecker.Init()
+
+	sched := scheduler.New(*master, fw, consulClient, *clusterId, healthChecker, reschedQueue)
 
 	srv := api.NewServer(sched)
 	go func() {
