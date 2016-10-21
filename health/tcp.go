@@ -1,7 +1,6 @@
 package health
 
 import (
-	"fmt"
 	"net"
 	"time"
 
@@ -9,65 +8,82 @@ import (
 )
 
 type TCPChecker struct {
+	ID          string
 	Addr        string
-	Port        int
 	Interval    int
 	Timeout     int
 	MaxFailures int
 
-	FailedHandler func() error
+	FailedHandler HandlerFunc
+
+	AppID  string
+	TaskID string
+
+	quit chan struct{}
 }
 
-func NewTcpChecker(addr string, port int, interval, timeout, failures int) *TCPChecker {
+func NewTCPChecker(id, addr string, port int, interval, timeout, failures int, handler HandlerFunc, appId, taskId string) *TCPChecker {
 	return &TCPChecker{
-		Addr:        addr,
-		Port:        port,
-		Interval:    interval,
-		Timeout:     timeout,
-		MaxFailures: failures,
+		ID:            id,
+		Addr:          addr,
+		Interval:      interval,
+		Timeout:       timeout,
+		MaxFailures:   failures,
+		FailedHandler: handler,
+		AppID:         appId,
+		TaskID:        taskId,
+		quit:          make(chan struct{}),
 	}
 }
 
 func (c *TCPChecker) Start() {
-	go func() {
-		ticker := time.NewTicker(time.Duration(c.Interval) * time.Second)
-		maxFailures := 0
-		for {
+	ticker := time.NewTicker(time.Duration(c.Interval) * time.Second)
+	maxFailures := 0
+	for {
 
-			if maxFailures >= c.MaxFailures {
-				c.FailedHandler()
+		if maxFailures >= c.MaxFailures {
+			c.FailedHandler(c.AppID, c.TaskID)
+			return
+		}
+
+		select {
+		case <-ticker.C:
+			_, err := net.ResolveTCPAddr("tcp", c.Addr)
+			if err != nil {
+				logrus.Errorf("Resolve tcp addr failed: %s", err.Error())
 				return
 			}
 
-			select {
-			case <-ticker.C:
-				if conn, err := net.DialTimeout("tcp",
-					fmt.Sprintf("%s:%d", c.Addr, c.Port),
-					time.Duration(c.Timeout)*time.Second); err != nil {
-					logrus.WithFields(logrus.Fields{"protocol": "tcp",
-						"address":  c.Addr,
-						"port":     c.Port,
-						"interval": c.Interval,
-						"timeout":  c.Timeout},
-					).Error("[FAILED] check service")
-
-					if conn != nil {
-						conn.Close()
-					}
-
-					maxFailures += 1
-					break
-				}
-
+			if conn, err := net.DialTimeout("tcp",
+				c.Addr,
+				time.Duration(c.Timeout)*time.Second); err != nil {
 				logrus.WithFields(logrus.Fields{"protocol": "tcp",
 					"address":  c.Addr,
-					"port":     c.Port,
 					"interval": c.Interval,
 					"timeout":  c.Timeout},
-				).Info("[OK] check service")
+				).Error("[FAILED] check service")
 
+				if conn != nil {
+					conn.Close()
+				}
+
+				maxFailures += 1
+				break
 			}
-		}
 
-	}()
+			logrus.WithFields(logrus.Fields{"protocol": "tcp",
+				"address":  c.Addr,
+				"interval": c.Interval,
+				"timeout":  c.Timeout},
+			).Info("[OK] check service")
+
+		case <-c.quit:
+			return
+		}
+	}
+
+}
+
+func (c *TCPChecker) Stop() {
+	close(c.quit)
 }

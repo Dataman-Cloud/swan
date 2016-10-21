@@ -9,75 +9,90 @@ import (
 )
 
 type HTTPChecker struct {
+	ID          string
 	Url         string
 	Interval    int
 	Timeout     int
 	MaxFailures int
 
-	FailedHandler func() error
+	FailedHandler HandlerFunc
+
+	AppID  string
+	TaskID string
+
+	quit chan struct{}
 }
 
-func NewHttpChecker(url string, interval, timeout int) *HTTPChecker {
+func NewHTTPChecker(id, url string, interval, timeout, failures int, handler HandlerFunc, appId, taskId string) *HTTPChecker {
 	return &HTTPChecker{
-		Url:      url,
-		Interval: interval,
-		Timeout:  timeout,
+		ID:            id,
+		Url:           url,
+		Interval:      interval,
+		Timeout:       timeout,
+		MaxFailures:   failures,
+		FailedHandler: handler,
+		AppID:         appId,
+		TaskID:        taskId,
+		quit:          make(chan struct{}),
 	}
 }
 
 func (c *HTTPChecker) Start() {
-	go func() {
-		ticker := time.NewTicker(time.Duration(c.Interval) * time.Second)
+	ticker := time.NewTicker(time.Duration(c.Interval) * time.Second)
 
-		maxFailures := 0
+	maxFailures := 0
 
-		for {
+	for {
 
-			if maxFailures >= c.MaxFailures {
-				c.FailedHandler()
-				return
+		if maxFailures >= c.MaxFailures {
+			c.FailedHandler(c.AppID, c.TaskID)
+			return
+		}
+
+		select {
+		case <-ticker.C:
+			transport := http.Transport{
+				Dial: func(network, addr string) (net.Conn, error) {
+					return net.DialTimeout(network, addr, time.Duration(c.Timeout)*time.Second)
+				},
 			}
 
-			select {
-			case <-ticker.C:
-				transport := http.Transport{
-					Dial: func(network, addr string) (net.Conn, error) {
-						return net.DialTimeout(network, addr, time.Duration(c.Timeout)*time.Second)
-					},
-				}
+			client := http.Client{
+				Transport: &transport,
+			}
 
-				client := http.Client{
-					Transport: &transport,
-				}
-
-				resp, err := client.Head(c.Url)
-				if err != nil {
-					logrus.WithFields(logrus.Fields{"protocol": "http",
-						"url":      c.Url,
-						"interval": c.Interval,
-						"timeout":  c.Timeout},
-					).Error("[FAILED] check service")
-					maxFailures += 1
-					break
-				}
-
-				if resp.StatusCode != 200 {
-					logrus.WithFields(logrus.Fields{"protocol": "http",
-						"url":      c.Url,
-						"interval": c.Interval,
-						"timeout":  c.Timeout},
-					).Error("[FAILED] check service")
-					maxFailures += 1
-					break
-				}
+			resp, err := client.Head(c.Url)
+			if err != nil {
 				logrus.WithFields(logrus.Fields{"protocol": "http",
 					"url":      c.Url,
 					"interval": c.Interval,
 					"timeout":  c.Timeout},
-				).Info("[OK] check service")
-
+				).Error("[FAILED] check service")
+				maxFailures += 1
+				break
 			}
-		}
 
-	}()
+			if resp.StatusCode != 200 {
+				logrus.WithFields(logrus.Fields{"protocol": "http",
+					"url":      c.Url,
+					"interval": c.Interval,
+					"timeout":  c.Timeout},
+				).Error("[FAILED] check service")
+				maxFailures += 1
+				break
+			}
+			logrus.WithFields(logrus.Fields{"protocol": "http",
+				"url":      c.Url,
+				"interval": c.Interval,
+				"timeout":  c.Timeout},
+			).Info("[OK] check service")
+		case <-c.quit:
+			return
+		}
+	}
+
+}
+
+func (c *HTTPChecker) Stop() {
+	close(c.quit)
 }

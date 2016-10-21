@@ -33,7 +33,7 @@ type Scheduler struct {
 
 	ClusterId string
 
-	healthChecker *health.HealthChecker
+	HealthCheckManager *health.HealthChecker
 }
 
 // New returns a pointer to new Scheduler
@@ -55,9 +55,9 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId st
 			sched.Event_ERROR:      make(chan *sched.Event, 64),
 			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
-		Status:        "idle",
-		ClusterId:     clusterId,
-		healthChecker: healthChecker,
+		Status:             "idle",
+		ClusterId:          clusterId,
+		HealthCheckManager: healthChecker,
 
 		ReschedQueue: queue,
 	}
@@ -153,7 +153,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 
 			go func() {
-				s.healthChecker.Start()
+				s.HealthCheckManager.Start()
 			}()
 
 			go func() {

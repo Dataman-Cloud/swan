@@ -44,6 +44,15 @@ func (s *Scheduler) DeleteApplication(id string) error {
 		if err := s.registry.DeleteApplicationTask(id, task.ID); err != nil {
 			logrus.Errorf("Delete task %s from consul failed: %s", task.ID, err.Error())
 		}
+
+		// Delete task health check
+		if err := s.registry.DeleteCheck(task.Name); err != nil {
+			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+		}
+
+		// Stop task health check
+		s.HealthCheckManager.StopCheck(task.Name)
+
 	}
 
 	return s.registry.DeleteApplication(id)
@@ -140,6 +149,31 @@ func (s *Scheduler) LaunchApplication(version *types.ApplicationVersion) error {
 					if err := s.registry.RegisterCheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
 						version.ID); err != nil {
+					}
+					for _, healthCheck := range task.HealthChecks {
+						check := types.Check{
+							ID:       task.Name,
+							Address:  *task.AgentHostname,
+							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+							TaskID:   task.Name,
+							AppID:    version.ID,
+							Protocol: healthCheck.Protocol,
+							Interval: int(healthCheck.IntervalSeconds),
+							Timeout:  int(healthCheck.TimeoutSeconds),
+						}
+						if healthCheck.Command != nil {
+							check.Command = healthCheck.Command
+						}
+
+						if healthCheck.Path != nil {
+							check.Path = *healthCheck.Path
+						}
+
+						if healthCheck.MaxConsecutiveFailures != nil {
+							check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+						}
+
+						s.HealthCheckManager.Add(&check)
 					}
 				}
 

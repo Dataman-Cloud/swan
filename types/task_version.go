@@ -24,11 +24,11 @@ type Task struct {
 	Labels         *map[string]string `json:"labels"`
 	HealthChecks   []*HealthCheck     `json:"health_checks"`
 
-	OfferId       *string          `json:"offer_id"`
-	AgentId       *string          `json:"agent_id,string"`
-	AgentHostname *string          `json:"agent_hostname"`
-	State         *mesos.TaskState `json:"state"`
-	AppId         string           `json:"app_id"`
+	OfferId       *string `json:"offer_id"`
+	AgentId       *string `json:"agent_id,string"`
+	AgentHostname *string `json:"agent_hostname"`
+	Status        string  `json:"status"`
+	AppId         string  `json:"app_id"`
 
 	KillPolicy *KillPolicy `json:"kill_policy"`
 }

@@ -50,4 +50,7 @@ type Registry interface {
 
 	// RegisterCheck register check in consul.
 	RegisterCheck(*types.Task, uint32, string) error
+
+	// DeleteCheck delete task health check from consul.
+	DeleteCheck(string) error
 }

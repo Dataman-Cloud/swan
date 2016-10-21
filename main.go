@@ -70,12 +70,12 @@ func main() {
 		}
 	}
 
-	reschedQueue := make(chan types.ReschedulerMsg, 1000)
+	msgQueue := make(chan types.ReschedulerMsg, 1)
 
-	healthChecker := health.NewHealthChecker(consulClient, reschedQueue)
+	healthChecker := health.NewHealthChecker(consulClient, msgQueue)
 	healthChecker.Init()
 
-	sched := scheduler.New(*master, fw, consulClient, *clusterId, healthChecker, reschedQueue)
+	sched := scheduler.New(*master, fw, consulClient, *clusterId, healthChecker, msgQueue)
 
 	srv := api.NewServer(sched)
 	go func() {

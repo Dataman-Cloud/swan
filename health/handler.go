@@ -4,15 +4,17 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 )
 
-func (hc *HealthChecker) HealthCheckFailedHandler(check *types.Check, queue chan types.ReschedulerMsg) error {
+type HandlerFunc func(string, string) error
+
+func (hc *HealthChecker) HealthCheckFailedHandler(appId, taskId string) error {
 	errC := make(chan error)
 	msg := types.ReschedulerMsg{
-		AppID:  check.AppID,
-		TaskID: check.TaskID,
+		AppID:  appId,
+		TaskID: taskId,
 		Err:    errC,
 	}
 
-	queue <- msg
+	hc.msgQueue <- msg
 
 	return <-msg.Err
 }
