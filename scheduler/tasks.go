@@ -16,7 +16,6 @@ import (
 func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVersion, name string) (*types.Task, error) {
 	var task types.Task
 
-	task.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	task.Name = name
 	if task.Name == "" {
 		app, err := s.registry.FetchApplication(version.ID)
@@ -32,6 +31,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVers
 	}
 
 	task.AppId = version.ID
+	task.ID = fmt.Sprintf("%d-%s", time.Now().UnixNano(), task.Name)
 
 	task.Image = version.Container.Docker.Image
 	task.Network = version.Container.Docker.Network

@@ -1,11 +1,12 @@
 package scheduler
 
 import (
-	"github.com/Sirupsen/logrus"
 	"net/http"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Sirupsen/logrus"
 )
 
 func (s *Scheduler) status(status *mesos.TaskStatus) {
@@ -35,65 +36,70 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	ID := status.TaskId.GetValue()
 	state := status.GetState()
 
-	// task, err := s.registry.(ID)
-	// if err != nil {
-	// 	logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Warn("Update received for unknown task.")
-	// 	return
-	// }
+	taskId := strings.Split(ID, "-")[1]
+	appId := strings.Split(taskId, ".")[1]
 
-	// task.State = &state
-	// if err := s.registry.Update(ID, task); err != nil {
-	// 	logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage(), "error": err}).Error("Update task state in registry")
-	// }
+	var STATUS string
 
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
-		logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Info("Task was registered.")
+		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task was registered.")
+		STATUS = "STAGING"
 	case mesos.TaskState_TASK_STARTING:
-		logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Info("Task is starting.")
+		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task is starting.")
+		STATUS = "STARTING"
 	case mesos.TaskState_TASK_RUNNING:
-		logrus.WithFields(logrus.Fields{"ID": ID, "message": status.GetMessage()}).Info("Task is running.")
-		// if !status.GetHealthy() {
-		// 	logrus.WithFields(
-		// 		logrus.Fields{"ID": ID, "message": status.GetMessage()},
-		// 	).Info("Task is RUNNING, but service seems Failed")
-		// } else {
-		// 	logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState()}).Info("Task is RUNNING")
-		// }
-		// Update application status to RUNNING
-		// app, err := s.registry.FetchApplication(version.ID)
-		// if err != nil {
-		// 	return err
-		// }
-		// app.RunningInstances += 1
+		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task is running.")
 
-		// if app.RunningInstances == app.Instances {
-		// 	app.Status = "RUNNING"
-		// }
+		STATUS = "RUNNING"
 
-		// if err := s.registry.UpdateApplication(app); err != nil {
-		// 	logrus.Errorf("Updating application got error: %s", err.Error())
-		// }
+		//Update application status to RUNNING
+		app, err := s.registry.FetchApplication(appId)
+		if err != nil {
+			break
+		}
+
+		app.RunningInstances += 1
+		if err := s.registry.UpdateApplication(app); err != nil {
+			logrus.Errorf("Updating application got error: %s", err.Error())
+		}
+
+		app, err = s.registry.FetchApplication(appId)
+		if err != nil {
+			break
+		}
+
+		if app.RunningInstances == app.Instances {
+			app.Status = "RUNNING"
+		}
+
+		if err := s.registry.UpdateApplication(app); err != nil {
+			logrus.Errorf("Updating application got error: %s", err.Error())
+		}
 
 	case mesos.TaskState_TASK_FINISHED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Info("Task is finished.")
-		//s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Info("Task is finished.")
+		STATUS = "FINISHED"
 	case mesos.TaskState_TASK_FAILED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task has failed.")
-		//s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task has failed.")
+		STATUS = "FAILED"
 	case mesos.TaskState_TASK_KILLED:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was killed.")
-		//s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was killed.")
+		STATUS = "KILLED"
 	case mesos.TaskState_TASK_LOST:
-		logrus.WithFields(logrus.Fields{"ID": ID, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was lost.")
-		//s.reScheduler(ID)
+		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was lost.")
+		STATUS = "LOST"
 	}
-}
 
-// func (s *Scheduler) reScheduler(ID string) {
-// 	logrus.WithFields(logrus.Fields{"ID": ID}).Info("Try to re-scheduler")
-// 	// task, _ := s.registry.Fetch(ID)
-// 	resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
-// 	offer, _ := s.RequestOffer(resources)
-// 	s.LaunchTask(offer, resources, task)
-// }
+	task, err := s.registry.FetchApplicationTask(appId, taskId)
+	if err != nil {
+		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Warn("Update received for unknown task.")
+		return
+	}
+
+	task.Status = STATUS
+	if err := s.registry.RegisterTask(task); err != nil {
+		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage(), "error": err}).Error("Update task state in registry")
+	}
+
+}
