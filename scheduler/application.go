@@ -302,7 +302,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 	tasks, err := s.registry.ListApplicationTasks(app.ID)
 
-	begin, end := app.InstanceUpdated, app.InstanceUpdated+instances
+	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
 	if instances == -1 {
 		begin, end = 0, len(tasks)+1
 	}
@@ -367,7 +367,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				}
 
 				// increase application updated instance count.
-				app.InstanceUpdated += 1
+				app.UpdatedInstances += 1
 				if err := s.registry.UpdateApplication(app); err != nil {
 					return err
 				}
@@ -386,8 +386,8 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 	}
 
 	// Rest application updated instance count to zero.
-	if app.InstanceUpdated == app.Instances {
-		app.InstanceUpdated = 0
+	if app.UpdatedInstances == app.Instances {
+		app.UpdatedInstances = 0
 		if err := s.registry.UpdateApplication(app); err != nil {
 			return err
 		}

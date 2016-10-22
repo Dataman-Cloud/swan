@@ -35,15 +35,17 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	application := types.Application{
-		ID:              applicationVersion.ID,
-		Name:            applicationVersion.ID,
-		Instances:       0,
-		InstanceUpdated: 0,
-		UserId:          user,
-		ClusterId:       r.sched.ClusterId,
-		Status:          "STAGING",
-		Created:         time.Now().Unix(),
-		Updated:         time.Now().Unix(),
+		ID:                applicationVersion.ID,
+		Name:              applicationVersion.ID,
+		Instances:         0,
+		UpdatedInstances:  0,
+		RunningInstances:  0,
+		RollbackInstances: 0,
+		UserId:            user,
+		ClusterId:         r.sched.ClusterId,
+		Status:            "STAGING",
+		Created:           time.Now().Unix(),
+		Updated:           time.Now().Unix(),
 	}
 
 	if err := r.sched.RegisterApplication(&application); err != nil {

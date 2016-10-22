@@ -4,9 +4,9 @@ type Application struct {
 	ID                string `json:"id"`
 	Name              string `json:"name"`
 	Instances         int    `json:"instances"`
-	InstanceUpdated   int    `json:"instance_updated"`
+	UpdatedInstances  int    `json:"instance_updated"`
 	RunningInstances  int    `json:"running_instances"`
-	RollBackInstances int    `json:"rollback_instances"`
+	RollbackInstances int    `json:"rollback_instances"`
 	UserId            string `json:"user_id"`
 	ClusterId         string `json:"cluster_id"`
 	Status            string `json:"status"`
