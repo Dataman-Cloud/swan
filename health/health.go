@@ -9,25 +9,25 @@ import (
 	fifo "github.com/foize/go.fifo"
 )
 
-type HealthChecker struct {
-	consul    *consul.Consul
+type HealthCheckManager struct {
+	store     *consul.Consul
 	checkers  map[string]Checker
 	msgQueue  chan types.ReschedulerMsg
 	taskQueue *fifo.Queue
 }
 
-func NewHealthChecker(consul *consul.Consul, queue chan types.ReschedulerMsg) *HealthChecker {
-	return &HealthChecker{
-		consul:    consul,
+func NewHealthCheckManager(store *consul.Consul, queue chan types.ReschedulerMsg) *HealthCheckManager {
+	return &HealthCheckManager{
+		store:     store,
 		msgQueue:  queue,
 		taskQueue: fifo.NewQueue(),
 		checkers:  make(map[string]Checker),
 	}
 }
 
-func (m *HealthChecker) Init() {
+func (m *HealthCheckManager) Init() {
 	logrus.Info("Initial health checkers...")
-	checks, err := m.consul.ListChecks()
+	checks, err := m.store.ListChecks()
 	if err != nil {
 		logrus.Errorf("Initial health checker failed: %s", err)
 		return
@@ -43,25 +43,24 @@ func (m *HealthChecker) Init() {
 	}
 }
 
-func (m *HealthChecker) Start() {
-	go func() {
-		for {
-			if checker := m.Next(); checker != nil {
+func (m *HealthCheckManager) Start() {
+	for {
+		if checker := m.Next(); checker != nil {
+			go func() {
 				checker.(Checker).Start()
-			}
+			}()
 		}
-	}()
+	}
 }
 
-func (m *HealthChecker) Add(check *types.Check) {
+func (m *HealthCheckManager) Add(check *types.Check) {
 	switch check.Protocol {
 	case "http", "HTTP":
-		logrus.WithFields(logrus.Fields{"protocol": "http",
-			"url":         fmt.Sprintf("http://%s:%d", check.Address, check.Port),
-			"interval":    check.Interval,
-			"timeout":     check.Timeout,
-			"maxFailures": check.MaxFailures,
-		}).Info("Register health checker")
+		logrus.Infof("Register health check for task %s protocol %s url %s",
+			check.TaskID,
+			"http",
+			fmt.Sprintf("http://%s:%d", check.Address, check.Port),
+		)
 		checker := &HTTPChecker{
 			ID:          check.TaskID,
 			Url:         fmt.Sprintf("http://%s:%d", check.Address, check.Port),
@@ -78,13 +77,12 @@ func (m *HealthChecker) Add(check *types.Check) {
 		m.taskQueue.Add(checker)
 		m.checkers[check.TaskID] = checker
 	case "tcp", "TCP":
-		logrus.WithFields(logrus.Fields{"protocol": "tcp",
-			"address":     check.Address,
-			"port":        check.Port,
-			"interval":    check.Interval,
-			"timeout":     check.Timeout,
-			"maxFailures": check.MaxFailures,
-		}).Info("Register health checker")
+		logrus.Infof("Add health check for task %s protocol %s address %s port %d",
+			check.TaskID,
+			"tcp",
+			check.Address,
+			check.Port,
+		)
 		checker := &TCPChecker{
 			ID:          check.TaskID,
 			Addr:        fmt.Sprintf("%s:%d", check.Address, check.Port),
@@ -104,11 +102,11 @@ func (m *HealthChecker) Add(check *types.Check) {
 
 }
 
-func (m *HealthChecker) Next() (item interface{}) {
+func (m *HealthCheckManager) Next() (item interface{}) {
 	return m.taskQueue.Next()
 }
 
-func (m *HealthChecker) StopCheck(id string) {
+func (m *HealthCheckManager) StopCheck(id string) {
 	if checker, exist := m.checkers[id]; exist {
 		logrus.Infof("Remove health check for task %s", id)
 		checker.Stop()

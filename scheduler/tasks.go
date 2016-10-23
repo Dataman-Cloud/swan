@@ -227,7 +227,7 @@ func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*h
 }
 
 func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
-	logrus.WithFields(logrus.Fields{"ID": task.ID, "AgentId": *task.AgentId}).Warn("Kill Task")
+	logrus.Infof("Kill task %s", task.Name)
 	call := &sched.Call{
 		FrameworkId: s.framework.GetId(),
 		Type:        sched.Call_KILL.Enum(),
@@ -259,9 +259,15 @@ func (s *Scheduler) ReschedulerTask() {
 	for {
 		select {
 		case msg := <-s.ReschedQueue:
+			logrus.Infof("Rescheduling task %s for health check failed", msg.TaskID)
 			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
 			if err != nil {
-				logrus.Errorf("Rescheduler task failed: %s", err.Error())
+				logrus.Errorf("Rescheduling task failed: %s", err.Error())
+				return
+			}
+
+			if _, err := s.KillTask(task); err != nil {
+				logrus.Errorf("Kill task failed: %s for rescheduling", err.Error())
 				return
 			}
 
@@ -270,7 +276,7 @@ func (s *Scheduler) ReschedulerTask() {
 			resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
 			offers, err := s.RequestOffers(resources)
 			if err != nil {
-				logrus.Errorf("Request offers failed: %s", err.Error())
+				logrus.Errorf("Request offers failed: %s for rescheduling", err.Error())
 				msg.Err <- err
 			}
 
@@ -289,13 +295,51 @@ func (s *Scheduler) ReschedulerTask() {
 
 			resp, err := s.LaunchTasks(choosedOffer, taskInfos)
 			if err != nil {
-				logrus.Errorf("Launchs task failed: %s", err.Error())
+				logrus.Errorf("Launchs task failed: %s for rescheduling", err.Error())
 				msg.Err <- err
 			}
 
 			if resp != nil && resp.StatusCode != http.StatusAccepted {
-				logrus.Errorf("Launchs task failed: status code %d", resp.StatusCode)
+				logrus.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
 				msg.Err <- err
+			}
+
+			logrus.Infof("Remove health check for task %s", msg.TaskID)
+			if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
+				logrus.Errorf("Remove health check for %s failed: %s", msg.TaskID, err.Error())
+				return
+			}
+
+			if len(task.HealthChecks) != 0 {
+				if err := s.registry.RegisterCheck(task,
+					*taskInfo.Container.Docker.PortMappings[0].HostPort,
+					msg.AppID); err != nil {
+				}
+				for _, healthCheck := range task.HealthChecks {
+					check := types.Check{
+						ID:       task.Name,
+						Address:  *task.AgentHostname,
+						Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+						TaskID:   task.Name,
+						AppID:    msg.AppID,
+						Protocol: healthCheck.Protocol,
+						Interval: int(healthCheck.IntervalSeconds),
+						Timeout:  int(healthCheck.TimeoutSeconds),
+					}
+					if healthCheck.Command != nil {
+						check.Command = healthCheck.Command
+					}
+
+					if healthCheck.Path != nil {
+						check.Path = *healthCheck.Path
+					}
+
+					if healthCheck.MaxConsecutiveFailures != nil {
+						check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+					}
+
+					s.HealthCheckManager.Add(&check)
+				}
 			}
 
 			msg.Err <- nil

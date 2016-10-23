@@ -54,28 +54,19 @@ func (c *TCPChecker) Start() {
 				return
 			}
 
-			if conn, err := net.DialTimeout("tcp",
+			conn, err := net.DialTimeout("tcp",
 				c.Addr,
-				time.Duration(c.Timeout)*time.Second); err != nil {
-				logrus.WithFields(logrus.Fields{"protocol": "tcp",
-					"address":  c.Addr,
-					"interval": c.Interval,
-					"timeout":  c.Timeout},
-				).Error("[FAILED] check service")
-
-				if conn != nil {
-					conn.Close()
-				}
+				time.Duration(c.Timeout)*time.Second)
+			if err != nil {
+				logrus.Errorf("check task %s failed protocol %s address %s", c.TaskID, "tcp", c.Addr)
 
 				maxFailures += 1
 				break
 			}
 
-			logrus.WithFields(logrus.Fields{"protocol": "tcp",
-				"address":  c.Addr,
-				"interval": c.Interval,
-				"timeout":  c.Timeout},
-			).Info("[OK] check service")
+			conn.Close()
+
+			logrus.Infof("check task %s ok protocol %s address %s", c.TaskID, "tcp", c.Addr)
 
 		case <-c.quit:
 			return

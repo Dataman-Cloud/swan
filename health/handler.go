@@ -6,15 +6,14 @@ import (
 
 type HandlerFunc func(string, string) error
 
-func (hc *HealthChecker) HealthCheckFailedHandler(appId, taskId string) error {
-	errC := make(chan error)
+func (m *HealthCheckManager) HealthCheckFailedHandler(appId, taskId string) error {
 	msg := types.ReschedulerMsg{
 		AppID:  appId,
 		TaskID: taskId,
-		Err:    errC,
+		Err:    make(chan error),
 	}
 
-	hc.msgQueue <- msg
+	m.msgQueue <- msg
 
 	return <-msg.Err
 }

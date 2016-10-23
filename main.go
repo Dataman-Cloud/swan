@@ -52,15 +52,15 @@ func main() {
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
-	consulClient, err := consul.NewConsul(*consulAddr)
+	store, err := consul.NewConsul(*consulAddr)
 	if err != nil {
-		logrus.Errorf("Init consul client failed:%s", err)
+		logrus.Errorf("Init store engine failed:%s", err)
 		return
 	}
 
-	frameworkId, err := consulClient.FetchFrameworkID("swan/frameworkid")
+	frameworkId, err := store.FetchFrameworkID("swan/frameworkid")
 	if err != nil {
-		logrus.Errorf("Fetch framework id from consul failed: %s", err)
+		logrus.Errorf("Fetch framework id failed: %s", err)
 		return
 	}
 
@@ -72,10 +72,13 @@ func main() {
 
 	msgQueue := make(chan types.ReschedulerMsg, 1)
 
-	healthChecker := health.NewHealthChecker(consulClient, msgQueue)
-	healthChecker.Init()
-
-	sched := scheduler.New(*master, fw, consulClient, *clusterId, healthChecker, msgQueue)
+	sched := scheduler.New(*master,
+		fw,
+		store,
+		*clusterId,
+		health.NewHealthCheckManager(store, msgQueue),
+		msgQueue,
+	)
 
 	srv := api.NewServer(sched)
 	go func() {

@@ -53,7 +53,7 @@ func (s *Server) ListenAndServe(addr string) error {
 		Addr:    addr,
 		Handler: s.createMux(),
 	}
-	logrus.WithFields(logrus.Fields{"addr": addr}).Info("API Server listen on")
+	logrus.Infof("API Server listen on %s", addr)
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
 		logrus.Errorf("Listen on %s error: %s", addr, err)
