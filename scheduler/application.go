@@ -266,6 +266,12 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 					return err
 				}
 
+				logrus.Infof("Remove health check for task %s", task.Name)
+				if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
+					logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
+					return err
+				}
+
 			}
 		}
 	}
@@ -364,6 +370,38 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 				if resp != nil && resp.StatusCode != http.StatusAccepted {
 					return fmt.Errorf("status code %d received", resp.StatusCode)
+				}
+
+				if len(task.HealthChecks) != 0 {
+					if err := s.registry.RegisterCheck(task,
+						*taskInfo.Container.Docker.PortMappings[0].HostPort,
+						msg.AppID); err != nil {
+					}
+					for _, healthCheck := range task.HealthChecks {
+						check := types.Check{
+							ID:       task.Name,
+							Address:  *task.AgentHostname,
+							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+							TaskID:   task.Name,
+							AppID:    msg.AppID,
+							Protocol: healthCheck.Protocol,
+							Interval: int(healthCheck.IntervalSeconds),
+							Timeout:  int(healthCheck.TimeoutSeconds),
+						}
+						if healthCheck.Command != nil {
+							check.Command = healthCheck.Command
+						}
+
+						if healthCheck.Path != nil {
+							check.Path = *healthCheck.Path
+						}
+
+						if healthCheck.MaxConsecutiveFailures != nil {
+							check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+						}
+
+						s.HealthCheckManager.Add(&check)
+					}
 				}
 
 				// increase application updated instance count.
@@ -466,10 +504,6 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 			return err
 		}
 
-		if err := s.registry.RegisterTask(task); err != nil {
-			return err
-		}
-
 		var taskInfos []*mesos.TaskInfo
 		taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
 		taskInfos = append(taskInfos, taskInfo)
@@ -482,6 +516,42 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 
 		if resp != nil && resp.StatusCode != http.StatusAccepted {
 			return fmt.Errorf("status code %d received", resp.StatusCode)
+		}
+
+		if err := s.registry.RegisterTask(task); err != nil {
+			return err
+		}
+
+		if len(task.HealthChecks) != 0 {
+			if err := s.registry.RegisterCheck(task,
+				*taskInfo.Container.Docker.PortMappings[0].HostPort,
+				msg.AppID); err != nil {
+			}
+			for _, healthCheck := range task.HealthChecks {
+				check := types.Check{
+					ID:       task.Name,
+					Address:  *task.AgentHostname,
+					Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+					TaskID:   task.Name,
+					AppID:    msg.AppID,
+					Protocol: healthCheck.Protocol,
+					Interval: int(healthCheck.IntervalSeconds),
+					Timeout:  int(healthCheck.TimeoutSeconds),
+				}
+				if healthCheck.Command != nil {
+					check.Command = healthCheck.Command
+				}
+
+				if healthCheck.Path != nil {
+					check.Path = *healthCheck.Path
+				}
+
+				if healthCheck.MaxConsecutiveFailures != nil {
+					check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+				}
+
+				s.HealthCheckManager.Add(&check)
+			}
 		}
 
 		s.Status = "idle"

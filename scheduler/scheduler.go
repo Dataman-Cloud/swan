@@ -33,12 +33,12 @@ type Scheduler struct {
 
 	ClusterId string
 
-	HealthCheckManager *health.HealthChecker
+	HealthCheckManager *health.HealthCheckManager
 }
 
 // New returns a pointer to new Scheduler
-//func New(master string, fw *mesos.FrameworkInfo, registry Registry, consul *consul.Client) *Scheduler {
-func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string, healthChecker *health.HealthChecker, queue chan types.ReschedulerMsg) *Scheduler {
+func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
+	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
@@ -57,9 +57,8 @@ func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId st
 		},
 		Status:             "idle",
 		ClusterId:          clusterId,
-		HealthCheckManager: healthChecker,
-
-		ReschedQueue: queue,
+		HealthCheckManager: health,
+		ReschedQueue:       queue,
 	}
 }
 
@@ -94,7 +93,7 @@ func (s *Scheduler) Registry() Registry {
 // It keeps the http connection opens with the Master to stream
 // subsequent events.
 func (s *Scheduler) subscribe() error {
-	logrus.WithFields(logrus.Fields{"master": s.master}).Info("Subscribe with mesos")
+	logrus.Infof("Subscribe with mesos master %s", s.master)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
@@ -143,7 +142,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		switch event.GetType() {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
-			logrus.WithFields(logrus.Fields{"FrameworkId": sub.FrameworkId.GetValue()}).Info("Subscription successful.")
+			logrus.Infof("Subscription successful with frameworkId %s", sub.FrameworkId.GetValue())
 			if registered, _ := s.registry.FrameworkIDHasRegistered(sub.FrameworkId.GetValue()); !registered {
 				if err := s.registry.RegisterFrameworkID(sub.FrameworkId.GetValue()); err != nil {
 					logrus.Errorf("Register framework id in consul failed: %s", err)
@@ -153,6 +152,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 
 			go func() {
+				s.HealthCheckManager.Init()
 				s.HealthCheckManager.Start()
 			}()
 
