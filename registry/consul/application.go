@@ -2,6 +2,7 @@ package consul
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -93,6 +94,244 @@ func (c *Consul) DeleteApplication(id string) error {
 }
 
 // UpdateApplication is used to update application's instance count.
-func (c *Consul) UpdateApplication(application *types.Application) error {
-	return c.RegisterApplication(application)
+func (c *Consul) UpdateApplication(appId, key string, value string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	switch key {
+	case "status":
+		app.Status = value
+	case "instance":
+		if value == "+1" {
+			app.Instances += 1
+		} else {
+			app.Instances -= 1
+		}
+	}
+
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// IncreaseApplicationUpdatedInstances increase updated instances count.
+func (c *Consul) IncreaseApplicationUpdatedInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.UpdatedInstances += 1
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+
+}
+
+// IncreaseApplicationInstances reduce instances count for application.
+func (c *Consul) IncreaseApplicationInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.Instances += 1
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// ResetApplicationUpdatedInstances reset updated instances count to zero for application.
+func (c *Consul) ResetApplicationUpdatedInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.UpdatedInstances = 0
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// UpdateApplicationStatus updated application status.
+func (c *Consul) UpdateApplicationStatus(appId, status string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.Status = status
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+
+}
+
+// IncreaseApplicationRunningInstances reduce instances count for application.
+func (c *Consul) IncreaseApplicationRunningInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.RunningInstances += 1
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+}
+
+// ReduceApplicationInstances reduce instances count for application.
+func (c *Consul) ReduceApplicationInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.Instances -= 1
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
 }

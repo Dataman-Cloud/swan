@@ -46,11 +46,28 @@ type Registry interface {
 	FetchApplicationVersion(string, string) (*types.ApplicationVersion, error)
 
 	// UpdateApplication is used to update application info.
-	UpdateApplication(*types.Application) error
+	UpdateApplication(string, string, string) error
 
 	// RegisterCheck register check in consul.
 	RegisterCheck(*types.Task, uint32, string) error
 
 	// DeleteCheck delete task health check from consul.
 	DeleteCheck(string) error
+
+	// UpdateTask updated task status by task id.
+	UpdateTask(string, string, string) error
+
+	// IncreaseApplicationInstances reduce instances count for application.
+	IncreaseApplicationInstances(string) error
+
+	// IncreaseApplicationUpdatedInstances increase updated instances count.
+	IncreaseApplicationUpdatedInstances(string) error
+
+	ResetApplicationUpdatedInstances(string) error
+
+	UpdateApplicationStatus(string, string) error
+
+	IncreaseApplicationRunningInstances(string) error
+
+	ReduceApplicationInstances(string) error
 }

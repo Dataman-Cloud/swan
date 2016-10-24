@@ -213,12 +213,8 @@ func (s *Scheduler) FetchApplicationVersion(applicationId, versionId string) (*t
 // ScaleApplication is used to scale application instances.
 func (s *Scheduler) ScaleApplication(applicationId string, instances int) error {
 	// Update application status to SCALING
-	app, err := s.registry.FetchApplication(applicationId)
-	if err != nil {
-		return err
-	}
-	app.Status = "SCALING"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	if err := s.registry.UpdateApplication(applicationId, "status", "SCALING"); err != nil {
+		logrus.Errorf("Updating application status to SCALING failed: %s", err.Error())
 		return err
 	}
 
@@ -235,7 +231,7 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 		return err
 	}
 
-	app, err = s.registry.FetchApplication(version.ID)
+	app, err := s.registry.FetchApplication(version.ID)
 	if err != nil {
 		return err
 	}
@@ -247,29 +243,33 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 		}
 
 		for _, task := range tasks {
-			taskId, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
+			taskIndex, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
 			if err != nil {
 				return err
 			}
 
-			if taskId+1 > instances {
+			if taskIndex+1 > instances {
 				if _, err := s.KillTask(task); err == nil {
 					s.registry.DeleteApplicationTask(app.ID, task.ID)
 				}
 
-				app, err := s.registry.FetchApplication(version.ID)
-				if err != nil {
-					return err
-				}
-				app.Instances = app.Instances - 1
-				if err := s.registry.UpdateApplication(app); err != nil {
+				// reduce application tasks count
+				if err := s.registry.ReduceApplicationInstances(app.ID); err != nil {
+					logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
 					return err
 				}
 
 				logrus.Infof("Remove health check for task %s", task.Name)
+
+				s.HealthCheckManager.StopCheck(task.Name)
+
 				if err := s.registry.DeleteCheck(task.Name); err != nil {
 					logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
 					return err
+				}
+
+				if err := s.registry.DeleteApplicationTask(app.ID, task.Name); err != nil {
+					logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
 				}
 
 			}
@@ -277,17 +277,103 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 	}
 
 	if app.Instances < instances {
-		version.Instances = instances - app.Instances
-		s.LaunchApplication(version)
+		for i := 0; i < instances-app.Instances; i++ {
+			s.Status = "busy"
+
+			resources := s.BuildResources(version.Cpus, version.Mem, version.Disk)
+			offers, err := s.RequestOffers(resources)
+			if err != nil {
+				logrus.Errorf("Request offers failed: %s for rescheduling", err.Error())
+			}
+
+			var choosedOffer *mesos.Offer
+			for _, offer := range offers {
+				cpus, mem, disk := s.OfferedResources(offer)
+				if cpus >= version.Cpus && mem >= version.Mem && disk >= version.Disk {
+					choosedOffer = offer
+					break
+				}
+			}
+
+			name := fmt.Sprintf("%d.%s.%s.%s", app.Instances+i, app.ID, app.UserId, app.ClusterId)
+
+			task, err := s.BuildTask(choosedOffer, version, name)
+			if err != nil {
+				logrus.Errorf("Build task failed: %s", err.Error())
+				return err
+			}
+
+			var taskInfos []*mesos.TaskInfo
+			taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
+			taskInfos = append(taskInfos, taskInfo)
+
+			resp, err := s.LaunchTasks(choosedOffer, taskInfos)
+			if err != nil {
+				logrus.Errorf("Launchs task failed: %s", err.Error())
+				return err
+			}
+
+			if resp != nil && resp.StatusCode != http.StatusAccepted {
+				return fmt.Errorf("status code %d received", resp.StatusCode)
+			}
+
+			if err := s.registry.RegisterTask(task); err != nil {
+				return err
+			}
+
+			if len(version.HealthChecks) != 0 {
+				if err := s.registry.RegisterCheck(task,
+					*taskInfo.Container.Docker.PortMappings[0].HostPort,
+					app.ID); err != nil {
+				}
+				for _, healthCheck := range task.HealthChecks {
+					check := types.Check{
+						ID:       task.Name,
+						Address:  *task.AgentHostname,
+						Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+						TaskID:   task.Name,
+						AppID:    app.ID,
+						Protocol: healthCheck.Protocol,
+						Interval: int(healthCheck.IntervalSeconds),
+						Timeout:  int(healthCheck.TimeoutSeconds),
+					}
+					if healthCheck.Command != nil {
+						check.Command = healthCheck.Command
+					}
+
+					if healthCheck.Path != nil {
+						check.Path = *healthCheck.Path
+					}
+
+					if healthCheck.MaxConsecutiveFailures != nil {
+						check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+					}
+
+					s.HealthCheckManager.Add(&check)
+				}
+			}
+
+			// Increase application task count
+			if err := s.registry.IncreaseApplicationInstances(version.ID); err != nil {
+				logrus.Errorf("Updating application %s instance count failed: %s", version.ID, err.Error())
+				return err
+			}
+
+			s.Status = "idle"
+		}
 	}
 
 	// Update application status to RUNNING
-	app, err = s.registry.FetchApplication(version.ID)
-	if err != nil {
-		return err
-	}
-	app.Status = "RUNNING"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	// app, err = s.registry.FetchApplication(version.ID)
+	// if err != nil {
+	// 	return err
+	// }
+	// app.Status = "RUNNING"
+	// if err := s.registry.UpdateApplication(app); err != nil {
+	// 	return err
+	// }
+	if err := s.registry.UpdateApplication(version.ID, "status", "RUNNING"); err != nil {
+		logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.ID, err.Error())
 		return err
 	}
 
@@ -297,16 +383,21 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 // UpdateApplication is used for application rolling-update.
 func (s *Scheduler) UpdateApplication(applicationId string, instances int, version *types.ApplicationVersion) error {
 	// Update application status to UPDATING
-	app, err := s.registry.FetchApplication(version.ID)
-	if err != nil {
-		return err
-	}
-	app.Status = "UPDATING"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	// app.Status = "UPDATING"
+	// if err := s.registry.UpdateApplication(app); err != nil {
+	// 	return err
+	// }
+	if err := s.registry.UpdateApplication(applicationId, "status", "UPDATING"); err != nil {
+		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
 		return err
 	}
 
-	tasks, err := s.registry.ListApplicationTasks(app.ID)
+	app, err := s.registry.FetchApplication(applicationId)
+	if err != nil {
+		return err
+	}
+
+	tasks, err := s.registry.ListApplicationTasks(applicationId)
 
 	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
 	if instances == -1 {
@@ -326,8 +417,11 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				}
 
 				// reduce application instance count.
-				app.Instances = app.Instances - 1
-				if err := s.registry.UpdateApplication(app); err != nil {
+				// app.Instances = app.Instances - 1
+				// if err := s.registry.UpdateApplication(app); err != nil {
+				// 	return err
+				// }
+				if err := s.registry.UpdateApplication(applicationId, "instance", "-1"); err != nil {
 					return err
 				}
 
@@ -405,16 +499,23 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				}
 
 				// increase application updated instance count.
-				app.UpdatedInstances += 1
-				if err := s.registry.UpdateApplication(app); err != nil {
+				//app.UpdatedInstances += 1
+				//if err := s.registry.UpdateApplication(app); err != nil {
+				//	return err
+				//}
+				if err := s.registry.IncreaseApplicationUpdatedInstances(app.ID); err != nil {
 					return err
 				}
 
 				// increase application instance count.
-				app.Instances += 1
-				if err := s.registry.UpdateApplication(app); err != nil {
+				// app.Instances += 1
+				// if err := s.registry.UpdateApplication(app); err != nil {
+				// 	return err
+				// }
+				if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
 					return err
 				}
+
 				s.Status = "idle"
 
 			}
@@ -425,15 +526,21 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 	// Rest application updated instance count to zero.
 	if app.UpdatedInstances == app.Instances {
-		app.UpdatedInstances = 0
-		if err := s.registry.UpdateApplication(app); err != nil {
+		if err := s.registry.ResetApplicationUpdatedInstances(app.ID); err != nil {
 			return err
 		}
+		// app.UpdatedInstances = 0
+		// if err := s.registry.UpdateApplication(app); err != nil {
+		// 	return err
+		// }
 	}
 
 	// Update application status to RUNNING
-	app.Status = "RUNNING"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	// app.Status = "RUNNING"
+	// if err := s.registry.UpdateApplication(app); err != nil {
+	// 	return err
+	// }
+	if err := s.registry.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
 		return err
 	}
 
@@ -453,8 +560,11 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 		return errors.New("Application not found")
 	}
 
-	app.Status = "ROLLINGBACK"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	// app.Status = "ROLLINGBACK"
+	// if err := s.registry.UpdateApplication(app); err != nil {
+	// 	return err
+	// }
+	if err := s.registry.UpdateApplicationStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
 
@@ -557,8 +667,11 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 		s.Status = "idle"
 	}
 	// Update application status to UPDATING
-	app.Status = "RUNNING"
-	if err := s.registry.UpdateApplication(app); err != nil {
+	//app.Status = "RUNNING"
+	//if err := s.registry.UpdateApplication(app); err != nil {
+	//	return err
+	//}
+	if err := s.registry.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
 		return err
 	}
 

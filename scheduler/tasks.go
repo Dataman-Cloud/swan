@@ -24,8 +24,11 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVers
 		}
 
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
-		app.Instances = app.Instances + 1
-		if err := s.registry.UpdateApplication(app); err != nil {
+		//app.Instances = app.Instances + 1
+		//if err := s.registry.UpdateApplication(app); err != nil {
+		//	return nil, err
+		//}
+		if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
 			return nil, err
 		}
 	}
