@@ -267,7 +267,7 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 				}
 
 				logrus.Infof("Remove health check for task %s", task.Name)
-				if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
+				if err := s.registry.DeleteCheck(task.Name); err != nil {
 					logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
 					return err
 				}
@@ -375,7 +375,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				if len(task.HealthChecks) != 0 {
 					if err := s.registry.RegisterCheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
-						msg.AppID); err != nil {
+						version.ID); err != nil {
 					}
 					for _, healthCheck := range task.HealthChecks {
 						check := types.Check{
@@ -383,7 +383,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 							Address:  *task.AgentHostname,
 							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 							TaskID:   task.Name,
-							AppID:    msg.AppID,
+							AppID:    version.ID,
 							Protocol: healthCheck.Protocol,
 							Interval: int(healthCheck.IntervalSeconds),
 							Timeout:  int(healthCheck.TimeoutSeconds),
@@ -525,7 +525,7 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 		if len(task.HealthChecks) != 0 {
 			if err := s.registry.RegisterCheck(task,
 				*taskInfo.Container.Docker.PortMappings[0].HostPort,
-				msg.AppID); err != nil {
+				app.ID); err != nil {
 			}
 			for _, healthCheck := range task.HealthChecks {
 				check := types.Check{
@@ -533,7 +533,7 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 					Address:  *task.AgentHostname,
 					Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 					TaskID:   task.Name,
-					AppID:    msg.AppID,
+					AppID:    app.ID,
 					Protocol: healthCheck.Protocol,
 					Interval: int(healthCheck.IntervalSeconds),
 					Timeout:  int(healthCheck.TimeoutSeconds),

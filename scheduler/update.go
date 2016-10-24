@@ -6,6 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 )
 
@@ -43,20 +44,20 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task was registered.")
 		STATUS = "STAGING"
 	case mesos.TaskState_TASK_STARTING:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task is starting.")
 		STATUS = "STARTING"
 	case mesos.TaskState_TASK_RUNNING:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Info("Task is running.")
-
+		logrus.Infof("Task %s RUNNING", taskId)
 		STATUS = "RUNNING"
-
 		//Update application status to RUNNING
 		app, err := s.registry.FetchApplication(appId)
 		if err != nil {
 			break
+		}
+
+		if app == nil {
+			return
 		}
 
 		app.RunningInstances += 1
@@ -78,17 +79,12 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		}
 
 	case mesos.TaskState_TASK_FINISHED:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Info("Task is finished.")
-		STATUS = "FINISHED"
+		STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_FAILED:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task has failed.")
-		STATUS = "FAILED"
+		STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_KILLED:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was killed.")
 		STATUS = "KILLED"
 	case mesos.TaskState_TASK_LOST:
-		logrus.WithFields(logrus.Fields{"Name": taskId, "status": status.GetState(), "message": status.GetMessage()}).Warn("Task was lost.")
-		STATUS = "LOST"
 	}
 
 	task, err := s.registry.FetchApplicationTask(appId, taskId)
@@ -97,9 +93,24 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	task.Status = STATUS
-	if err := s.registry.RegisterTask(task); err != nil {
-		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage(), "error": err}).Error("Update task state in registry")
-	}
+	if STATUS == "RESCHEDULING" && task.Status != "RESCHEDULING" {
+		task.Status = STATUS
+		if err := s.registry.RegisterTask(task); err != nil {
+			logrus.Errorf("Register task failed: %s", err.Error())
+		}
 
+		s.HealthCheckManager.StopCheck(taskId)
+		// Delete task health check
+		if err := s.registry.DeleteCheck(taskId); err != nil {
+			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+		}
+
+		msg := types.ReschedulerMsg{
+			AppID:  appId,
+			TaskID: taskId,
+			Err:    make(chan error),
+		}
+
+		s.ReschedQueue <- msg
+	}
 }
