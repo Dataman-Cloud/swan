@@ -14,23 +14,22 @@ import (
 
 // RegisterApplicationVersion is used to register a application version in consul. Use applicationId as
 // key, and application version information as value.
-func (c *Consul) RegisterApplicationVersion(applicationVersion *types.ApplicationVersion) error {
-	versionId := time.Now().UnixNano()
-	data, err := json.Marshal(applicationVersion)
+func (c *Consul) RegisterApplicationVersion(appId string, version *types.ApplicationVersion) error {
+	data, err := json.Marshal(version)
 	if err != nil {
-		logrus.Infof("Marshal application failed: %s", err.Error())
+		logrus.Errorf("Marshal application failed: %s", err.Error())
 		return err
 	}
 
 	// application version key is as format: applications/applicaitonId/versions/versionId
 	appVer := consul.KVPair{
-		Key:   fmt.Sprintf("applications/%s/versions/%d", applicationVersion.ID, versionId),
+		Key:   fmt.Sprintf("applications/%s/versions/%d", appId, time.Now().UnixNano()),
 		Value: data,
 	}
 
 	_, err = c.client.KV().Put(&appVer, nil)
 	if err != nil {
-		logrus.Info("Register application %s in consul failed: %s", applicationVersion.ID, err.Error())
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
 		return err
 	}
 

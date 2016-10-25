@@ -14,7 +14,7 @@ import (
 func (c *Consul) RegisterTask(task *types.Task) error {
 	data, err := json.Marshal(task)
 	if err != nil {
-		logrus.Infof("Marshal task failed: %s", err.Error())
+		logrus.Errorf("Marshal task failed: %s", err.Error())
 		return err
 	}
 
@@ -23,9 +23,9 @@ func (c *Consul) RegisterTask(task *types.Task) error {
 		Value: data,
 	}
 
-	_, _, err = c.client.KV().CAS(&t, nil)
+	_, err = c.client.KV().Put(&t, nil)
 	if err != nil {
-		logrus.Info("Register task %s in consul failed: %s", task.ID, err.Error())
+		logrus.Errorf("Register task %s in consul failed: %s", task.Name, err.Error())
 		return err
 	}
 
@@ -34,7 +34,7 @@ func (c *Consul) RegisterTask(task *types.Task) error {
 
 // ListApplicationTasks is used to get all tasks belong to a application from consul.
 func (c *Consul) ListApplicationTasks(applicationId string) ([]*types.Task, error) {
-	tasks, _, err := c.client.KV().List(fmt.Sprintf("applications/%s", applicationId), nil)
+	tasks, _, err := c.client.KV().List(fmt.Sprintf("applications/%s/tasks", applicationId), nil)
 	if err != nil {
 		logrus.Errorf("Fetch appliction tasks failed: %s", err.Error())
 		return nil, err
@@ -99,4 +99,32 @@ func (c *Consul) FetchApplicationTask(applicationId, taskId string) (*types.Task
 	}
 
 	return &task, nil
+}
+
+// UpdateTask is used to update task information.
+func (c *Consul) UpdateTask(applicationId, taskId string, status string) error {
+	task, err := c.FetchApplicationTask(applicationId, taskId)
+	if err != nil {
+		logrus.Errorf("Retrieve task %s faild for updating task status", taskId)
+		return err
+	}
+
+	task.Status = status
+	data, err := json.Marshal(task)
+	if err != nil {
+		logrus.Infof("Marshal task failed: %s", err.Error())
+		return err
+	}
+	t := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/tasks/%s", task.AppId, task.Name),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&t, nil)
+	if err != nil {
+		logrus.Info("Register task %s in consul failed: %s", task.ID, err.Error())
+		return err
+	}
+
+	return nil
 }

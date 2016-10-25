@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/types"
@@ -108,8 +109,8 @@ func (s *Scheduler) RegisterApplication(application *types.Application) error {
 }
 
 // RegisterApplicationVersion register application version in consul.
-func (s *Scheduler) RegisterApplicationVersion(version *types.ApplicationVersion) error {
-	return s.registry.RegisterApplicationVersion(version)
+func (s *Scheduler) RegisterApplicationVersion(appId string, version *types.ApplicationVersion) error {
+	return s.registry.RegisterApplicationVersion(appId, version)
 }
 
 func (s *Scheduler) LaunchApplication(version *types.ApplicationVersion) error {
@@ -382,12 +383,9 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 
 // UpdateApplication is used for application rolling-update.
 func (s *Scheduler) UpdateApplication(applicationId string, instances int, version *types.ApplicationVersion) error {
+	logrus.Infof("Updating application %s", applicationId)
 	// Update application status to UPDATING
-	// app.Status = "UPDATING"
-	// if err := s.registry.UpdateApplication(app); err != nil {
-	// 	return err
-	// }
-	if err := s.registry.UpdateApplication(applicationId, "status", "UPDATING"); err != nil {
+	if err := s.registry.UpdateApplicationStatus(applicationId, "UPDATING"); err != nil {
 		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
 		return err
 	}
@@ -398,11 +396,17 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 	}
 
 	tasks, err := s.registry.ListApplicationTasks(applicationId)
+	if err != nil {
+		logrus.Errorf("List application %s tasks failed: %s", applicationId, err.Error())
+		return err
+	}
 
 	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
 	if instances == -1 {
 		begin, end = 0, len(tasks)+1
 	}
+
+	ticker := time.NewTicker(time.Duration(30 * time.Second))
 
 	for i := begin; i < end; i++ {
 		for _, task := range tasks {
@@ -416,11 +420,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 					s.registry.DeleteApplicationTask(app.ID, task.ID)
 				}
 
-				// reduce application instance count.
-				// app.Instances = app.Instances - 1
-				// if err := s.registry.UpdateApplication(app); err != nil {
-				// 	return err
-				// }
+				// Reduce application instance count.
 				if err := s.registry.UpdateApplication(applicationId, "instance", "-1"); err != nil {
 					return err
 				}
@@ -448,10 +448,6 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 					return err
 				}
 
-				if err := s.registry.RegisterTask(task); err != nil {
-					return err
-				}
-
 				var taskInfos []*mesos.TaskInfo
 				taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
 				taskInfos = append(taskInfos, taskInfo)
@@ -464,6 +460,10 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 				if resp != nil && resp.StatusCode != http.StatusAccepted {
 					return fmt.Errorf("status code %d received", resp.StatusCode)
+				}
+
+				if err := s.registry.RegisterTask(task); err != nil {
+					return err
 				}
 
 				if len(task.HealthChecks) != 0 {
@@ -495,53 +495,46 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 						}
 
 						s.HealthCheckManager.Add(&check)
+
 					}
 				}
 
-				// increase application updated instance count.
-				//app.UpdatedInstances += 1
-				//if err := s.registry.UpdateApplication(app); err != nil {
-				//	return err
-				//}
+				ticker := time.Ticker(time.Minute)
+
 				if err := s.registry.IncreaseApplicationUpdatedInstances(app.ID); err != nil {
 					return err
 				}
 
-				// increase application instance count.
-				// app.Instances += 1
-				// if err := s.registry.UpdateApplication(app); err != nil {
-				// 	return err
-				// }
 				if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
 					return err
 				}
 
+				app, err := s.registry.FetchApplication(applicationId)
+				if err != nil {
+					return err
+				}
+
+				// Rest application updated instance count to zero.
+				if app.UpdatedInstances == app.Instances {
+					if err := s.registry.ResetApplicationUpdatedInstances(app.ID); err != nil {
+						return err
+					}
+					// Update application status to RUNNING
+					if err := s.registry.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
+						return err
+					}
+
+					logrus.Infof("Updating application %s finished", app.ID)
+				}
+
 				s.Status = "idle"
+
+				<-ticker.C
 
 			}
 
 		}
 
-	}
-
-	// Rest application updated instance count to zero.
-	if app.UpdatedInstances == app.Instances {
-		if err := s.registry.ResetApplicationUpdatedInstances(app.ID); err != nil {
-			return err
-		}
-		// app.UpdatedInstances = 0
-		// if err := s.registry.UpdateApplication(app); err != nil {
-		// 	return err
-		// }
-	}
-
-	// Update application status to RUNNING
-	// app.Status = "RUNNING"
-	// if err := s.registry.UpdateApplication(app); err != nil {
-	// 	return err
-	// }
-	if err := s.registry.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
-		return err
 	}
 
 	return nil

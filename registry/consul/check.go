@@ -11,8 +11,6 @@ import (
 
 // RegisterCheck register a check in consul for health check.
 func (c *Consul) RegisterCheck(task *types.Task, port uint32, appId string) error {
-	logrus.Info("Register check in consul")
-
 	for _, healthCheck := range task.HealthChecks {
 
 		check := types.Check{

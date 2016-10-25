@@ -13,11 +13,9 @@ import (
 // RegisterApplication is used to register a application in consul. Use cluster_id/user_id
 // as key, and application information as value.
 func (c *Consul) RegisterApplication(application *types.Application) error {
-	logrus.Infof("Register application %s in consul", application.ID)
-
 	data, err := json.Marshal(application)
 	if err != nil {
-		logrus.Infof("Marshal application failed: %s", err.Error())
+		logrus.Errorf("Marshal application failed: %s", err.Error())
 		return err
 	}
 
@@ -28,7 +26,7 @@ func (c *Consul) RegisterApplication(application *types.Application) error {
 
 	_, err = c.client.KV().Put(&app, nil)
 	if err != nil {
-		logrus.Info("Register application %s in consul failed: %s", application.ID, err.Error())
+		logrus.Errorf("Register application %s in consul failed: %s", application.ID, err.Error())
 		return err
 	}
 
@@ -38,8 +36,6 @@ func (c *Consul) RegisterApplication(application *types.Application) error {
 // FetchApplication is used to fetch application from consul by application id. If no application
 // found, nil will returned.
 func (c *Consul) FetchApplication(id string) (*types.Application, error) {
-	logrus.Infof("Fetch applicaiton %s from consul", id)
-
 	app, _, err := c.client.KV().Get(fmt.Sprintf("applications/%s/info", id), nil)
 	if err != nil {
 		logrus.Errorf("Fetch appliction failed: %s", err.Error())

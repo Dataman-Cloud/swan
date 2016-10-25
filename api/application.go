@@ -22,10 +22,10 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	var applicationVersion types.ApplicationVersion
+	var version types.ApplicationVersion
 
 	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&applicationVersion); err != nil {
+	if err := decoder.Decode(&version); err != nil {
 		return err
 	}
 
@@ -35,8 +35,8 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	application := types.Application{
-		ID:                applicationVersion.ID,
-		Name:              applicationVersion.ID,
+		ID:                version.ID,
+		Name:              version.ID,
 		Instances:         0,
 		UpdatedInstances:  0,
 		RunningInstances:  0,
@@ -52,12 +52,12 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	if err := r.sched.RegisterApplicationVersion(&applicationVersion); err != nil {
+	if err := r.sched.RegisterApplicationVersion(version.ID, &version); err != nil {
 		return err
 	}
 
-	if err := r.sched.LaunchApplication(&applicationVersion); err != nil {
-		logrus.Infof("Launch application %s failed with error: %s", applicationVersion.ID, err.Error())
+	if err := r.sched.LaunchApplication(&version); err != nil {
+		logrus.Infof("Launch application %s failed with error: %s", version.ID, err.Error())
 		return err
 	}
 
@@ -169,20 +169,20 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 		return errors.New("instances must be specified in url and can't be null")
 	}
 
-	var applicationVersion types.ApplicationVersion
+	var version types.ApplicationVersion
 
 	decoder := json.NewDecoder(req.Body)
-	if err := decoder.Decode(&applicationVersion); err != nil {
-		return err
-	}
-
-	if err := r.sched.RegisterApplicationVersion(&applicationVersion); err != nil {
+	if err := decoder.Decode(&version); err != nil {
 		return err
 	}
 
 	vars := mux.Vars(req)
 
-	if err := r.sched.UpdateApplication(vars["appId"], inst, &applicationVersion); err != nil {
+	if err := r.sched.RegisterApplicationVersion(vars["appId"], &version); err != nil {
+		return err
+	}
+
+	if err := r.sched.UpdateApplication(vars["appId"], inst, &version); err != nil {
 		return err
 	}
 
