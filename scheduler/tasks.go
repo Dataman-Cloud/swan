@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -175,7 +176,6 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 		ports := s.GetPorts(offer)
 		for _, m := range task.PortMappings {
 			hostPort := ports[s.taskLaunched]
-			//ports = ports[1:]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
 				&mesos.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(hostPort)),
@@ -227,6 +227,56 @@ func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*h
 	}
 
 	return s.send(call)
+}
+
+// SyncLaunchTasks launch task synchronization.
+func (s *Scheduler) SyncLaunchTask(offer *mesos.Offer, tasks []*mesos.TaskInfo) error {
+	logrus.Infof("Launch %d tasks with offer %s", len(tasks), *offer.GetId().Value)
+	call := &sched.Call{
+		FrameworkId: s.framework.GetId(),
+		Type:        sched.Call_ACCEPT.Enum(),
+		Accept: &sched.Call_Accept{
+			OfferIds: []*mesos.OfferID{
+				offer.GetId(),
+			},
+			Operations: []*mesos.Offer_Operation{
+				&mesos.Offer_Operation{
+					Type: mesos.Offer_Operation_LAUNCH.Enum(),
+					Launch: &mesos.Offer_Operation_Launch{
+						TaskInfos: tasks,
+					},
+				},
+			},
+			Filters: &mesos.Filters{RefuseSeconds: proto.Float64(1)},
+		},
+	}
+
+	resp, err := s.send(call)
+	if err != nil {
+		logrus.Errorf("Launchs task failed: %s", err.Error())
+		return err
+	}
+
+	if resp != nil && resp.StatusCode != http.StatusAccepted {
+		return fmt.Errorf("status code %d received", resp.StatusCode)
+	}
+
+	for {
+		select {
+		case event := <-s.GetEvent(sched.Event_UPDATE):
+			status := event.GetUpdate().GetStatus()
+			if status.TaskId.GetValue() == *tasks[0].TaskId.Value {
+				switch status.GetState() {
+				case mesos.TaskState_TASK_RUNNING:
+					return nil
+				case mesos.TaskState_TASK_FINISHED:
+					return errors.New("Launch Task Failed")
+				case mesos.TaskState_TASK_FAILED:
+					return errors.New("Launch Task Failed")
+				}
+			}
+		}
+	}
 }
 
 func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {

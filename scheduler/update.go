@@ -48,55 +48,44 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	case mesos.TaskState_TASK_STARTING:
 		STATUS = "STARTING"
 	case mesos.TaskState_TASK_RUNNING:
-		logrus.Infof("Task %s RUNNING", taskId)
-		STATUS = "RUNNING"
-		//Update application status to RUNNING
+		logrus.Infof("Task %s is RUNNING", taskId)
+		if err := s.registry.IncreaseApplicationRunningInstances(appId); err != nil {
+			logrus.Errorf("Updating application got error: %s", err.Error())
+		}
+
 		app, err := s.registry.FetchApplication(appId)
 		if err != nil {
 			break
 		}
 
-		if app == nil {
-			return
-		}
-
-		app.RunningInstances += 1
-		if err := s.registry.UpdateApplication(app); err != nil {
-			logrus.Errorf("Updating application got error: %s", err.Error())
-		}
-
-		app, err = s.registry.FetchApplication(appId)
-		if err != nil {
-			break
-		}
-
 		if app.RunningInstances == app.Instances {
-			app.Status = "RUNNING"
-		}
-
-		if err := s.registry.UpdateApplication(app); err != nil {
-			logrus.Errorf("Updating application got error: %s", err.Error())
+			if err := s.registry.UpdateApplicationStatus(appId, "RUNNING"); err != nil {
+				logrus.Errorf("Updating application got error: %s", err.Error())
+			}
 		}
 
 	case mesos.TaskState_TASK_FINISHED:
 		STATUS = "RESCHEDULING"
+		//logrus.Infof("Task %s is FINISHED", taskId)
 	case mesos.TaskState_TASK_FAILED:
 		STATUS = "RESCHEDULING"
+		//logrus.Infof("Task %s is FAILED", taskId)
 	case mesos.TaskState_TASK_KILLED:
-		STATUS = "KILLED"
+		//logrus.Infof("Task %s is KILLED", taskId)
 	case mesos.TaskState_TASK_LOST:
+		STATUS = "RESCHEDULING"
+		//logrus.Infof("Task %s is LOST", taskId)
 	}
 
 	task, err := s.registry.FetchApplicationTask(appId, taskId)
 	if err != nil {
-		logrus.WithFields(logrus.Fields{"Name": taskId, "message": status.GetMessage()}).Warn("Update received for unknown task.")
+		logrus.Errorf("Fetch task %s failed: %s", taskId, err.Error())
 		return
 	}
 
-	if STATUS == "RESCHEDULING" && task.Status != "RESCHEDULING" {
-		task.Status = STATUS
-		if err := s.registry.RegisterTask(task); err != nil {
-			logrus.Errorf("Register task failed: %s", err.Error())
+	if STATUS == "RESCHEDULING" && task.Status != "RESCHEDULING" && task.Status != "UPDATING" {
+		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
+			logrus.Errorf("Updating task status failed: %s", err.Error())
 		}
 
 		s.HealthCheckManager.StopCheck(taskId)

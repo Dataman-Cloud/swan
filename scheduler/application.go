@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 )
@@ -98,6 +99,14 @@ func (s *Scheduler) DeleteApplicationTask(applicationId, taskId string) error {
 	if _, err := s.KillTask(task); err != nil {
 		logrus.Errorf("Kill task failed: %s", err.Error())
 		return err
+	}
+
+	logrus.Infof("Stop health check for task %s", task.Name)
+	s.HealthCheckManager.StopCheck(task.Name)
+
+	// Delete task health check
+	if err := s.registry.DeleteCheck(task.Name); err != nil {
+		logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
 	}
 
 	return nil
@@ -365,14 +374,6 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 	}
 
 	// Update application status to RUNNING
-	// app, err = s.registry.FetchApplication(version.ID)
-	// if err != nil {
-	// 	return err
-	// }
-	// app.Status = "RUNNING"
-	// if err := s.registry.UpdateApplication(app); err != nil {
-	// 	return err
-	// }
 	if err := s.registry.UpdateApplication(version.ID, "status", "RUNNING"); err != nil {
 		logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.ID, err.Error())
 		return err
@@ -406,8 +407,6 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 		begin, end = 0, len(tasks)+1
 	}
 
-	ticker := time.NewTicker(time.Duration(30 * time.Second))
-
 	for i := begin; i < end; i++ {
 		for _, task := range tasks {
 			taskId, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
@@ -416,16 +415,17 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 			}
 
 			if taskId == i {
-				if _, err := s.KillTask(task); err == nil {
-					s.registry.DeleteApplicationTask(app.ID, task.ID)
+				if err := s.DeleteApplicationTask(applicationId, task.Name); err != nil {
+					logrus.Errorf("Delete application task %s failed: %s", task.Name, err.Error())
 				}
-
 				// Reduce application instance count.
 				if err := s.registry.UpdateApplication(applicationId, "instance", "-1"); err != nil {
 					return err
 				}
 
 				s.Status = "busy"
+
+				logrus.Infof("Launch task %s with new version", task.Name)
 
 				resources := s.BuildResources(version.Cpus, version.Mem, version.Disk)
 				offers, err := s.RequestOffers(resources)
@@ -452,18 +452,62 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
 				taskInfos = append(taskInfos, taskInfo)
 
-				resp, err := s.LaunchTasks(choosedOffer, taskInfos)
-				if err != nil {
-					logrus.Errorf("Launchs task failed: %s", err.Error())
-					return err
-				}
+				if err := s.SyncLaunchTask(choosedOffer, taskInfos); err != nil {
+					for i := 0; i < version.UpdatePolicy.MaxRetries; i++ {
+						logrus.Infof("Launch task %s failed, retry.", task.Name)
+						resources := s.BuildResources(version.Cpus, version.Mem, version.Disk)
+						offers, err := s.RequestOffers(resources)
+						if err != nil {
+							logrus.Errorf("Request offers failed: %s", err.Error())
+						}
 
-				if resp != nil && resp.StatusCode != http.StatusAccepted {
-					return fmt.Errorf("status code %d received", resp.StatusCode)
+						var choosedOffer *mesos.Offer
+						for _, offer := range offers {
+							cpus, mem, disk := s.OfferedResources(offer)
+							if cpus >= version.Cpus && mem >= version.Mem && disk >= version.Disk {
+								choosedOffer = offer
+								break
+							}
+						}
+
+						task, err := s.BuildTask(choosedOffer, version, task.Name)
+						if err != nil {
+							logrus.Errorf("Build task failed: %s", err.Error())
+							return err
+						}
+
+						var taskInfos []*mesos.TaskInfo
+						taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
+						taskInfos = append(taskInfos, taskInfo)
+
+						if err := s.SyncLaunchTask(choosedOffer, taskInfos); err == nil {
+							break
+						}
+
+						if i == version.UpdatePolicy.MaxRetries-1 {
+							logrus.Errorf("Launch task %s failed after retry 3 times, finished updating and rollback to previous version.", task.Name)
+							return s.RollbackApplication(version.ID)
+						}
+					}
 				}
 
 				if err := s.registry.RegisterTask(task); err != nil {
 					return err
+				}
+
+				select {
+				case <-time.After(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second):
+					break
+				case event := <-s.GetEvent(sched.Event_UPDATE):
+					status := event.GetUpdate().GetStatus()
+					ID := status.TaskId.GetValue()
+					taskName := strings.Split(ID, "-")[1]
+					if taskName == task.Name {
+						switch status.GetState() {
+						case mesos.TaskState_TASK_FAILED, mesos.TaskState_TASK_FINISHED, mesos.TaskState_TASK_LOST:
+							logrus.Errorf("Updating task %s failed, rollback!", task.Name)
+						}
+					}
 				}
 
 				if len(task.HealthChecks) != 0 {
@@ -499,7 +543,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 					}
 				}
 
-				ticker := time.Ticker(time.Minute)
+				//ticker := time.Ticker(time.Minute)
 
 				if err := s.registry.IncreaseApplicationUpdatedInstances(app.ID); err != nil {
 					return err
@@ -529,7 +573,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 				s.Status = "idle"
 
-				<-ticker.C
+				//<-ticker.C
 
 			}
 
@@ -542,6 +586,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 
 // RollbackApplication rollback application to previous version.
 func (s *Scheduler) RollbackApplication(applicationId string) error {
+	logrus.Infof("Rollback application %s", applicationId)
 	// Update application status to UPDATING
 	app, err := s.registry.FetchApplication(applicationId)
 	if err != nil {
@@ -553,10 +598,6 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 		return errors.New("Application not found")
 	}
 
-	// app.Status = "ROLLINGBACK"
-	// if err := s.registry.UpdateApplication(app); err != nil {
-	// 	return err
-	// }
 	if err := s.registry.UpdateApplicationStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
@@ -659,11 +700,7 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 
 		s.Status = "idle"
 	}
-	// Update application status to UPDATING
-	//app.Status = "RUNNING"
-	//if err := s.registry.UpdateApplication(app); err != nil {
-	//	return err
-	//}
+
 	if err := s.registry.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
 		return err
 	}

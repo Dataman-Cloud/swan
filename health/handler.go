@@ -13,12 +13,16 @@ func (m *HealthCheckManager) HealthCheckFailedHandler(appId, taskId string) erro
 		return err
 	}
 
-	if task.Status == "RESCHEDULING" {
+	app, err := m.store.FetchApplication(appId)
+	if err != nil {
+		return err
+	}
+
+	if task.Status == "RESCHEDULING" || app.Status == "UPDATING" {
 		return nil
 	} else {
-		task.Status = "RESCHEDULING"
-		if err := m.store.RegisterTask(task); err != nil {
-			logrus.Errorf("Register task failed: %s", err.Error())
+		if err := m.store.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
+			logrus.Errorf("Updating task status failed for health check failover: %s", err.Error())
 		}
 	}
 

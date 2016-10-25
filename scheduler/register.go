@@ -37,7 +37,7 @@ type Registry interface {
 	DeleteApplicationTask(string, string) error
 
 	// RegisterApplicationVersion is used to register a application version in consul.
-	RegisterApplicationVersion(*types.ApplicationVersion) error
+	RegisterApplicationVersion(string, *types.ApplicationVersion) error
 
 	// ListApplicationVersions is used to list all version ids for application.
 	ListApplicationVersions(string) ([]string, error)

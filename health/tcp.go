@@ -66,7 +66,7 @@ func (c *TCPChecker) Start() {
 
 			conn.Close()
 
-			logrus.Infof("check task %s ok protocol %s address %s", c.TaskID, "tcp", c.Addr)
+			//logrus.Infof("check task %s ok protocol %s address %s", c.TaskID, "tcp", c.Addr)
 
 		case <-c.quit:
 			return

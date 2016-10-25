@@ -1,8 +1,8 @@
 {
-  "id": "nginx008",
+  "id": "nginx0003",
   "cmd": null,
-  "cpus": 0.01,
-  "mem": 5,
+  "cpus": 0.02,
+  "mem": 10,
   "disk": 0,
   "instances": 5,
   "container": {
@@ -53,5 +53,9 @@
       "timeoutSeconds": 3,
       "maxConsecutiveFailures": 3
     }
- ]
+ ],
+  "updatePolicy": {
+	  "updateDelay": 10,
+	  "maxRetries": 3
+  }
 }

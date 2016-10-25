@@ -12,6 +12,7 @@ type ApplicationVersion struct {
 	HealthChecks []*HealthCheck     `json:"healthChecks"`
 	Env          map[string]string  `json:"env"`
 	KillPolicy   *KillPolicy        `json:"killPolicy"`
+	UpdatePolicy *UpdatePolicy      `json:"updatePolicy"`
 }
 
 // Container is the definition for a container type in marathon
