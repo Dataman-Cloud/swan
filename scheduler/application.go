@@ -222,6 +222,15 @@ func (s *Scheduler) FetchApplicationVersion(applicationId, versionId string) (*t
 
 // ScaleApplication is used to scale application instances.
 func (s *Scheduler) ScaleApplication(applicationId string, instances int) error {
+	app, err := s.registry.FetchApplication(applicationId)
+	if err != nil {
+		return err
+	}
+
+	if app.Status != "RUNNING" {
+		return errors.New("Operation Not Allowed")
+	}
+
 	// Update application status to SCALING
 	if err := s.registry.UpdateApplication(applicationId, "status", "SCALING"); err != nil {
 		logrus.Errorf("Updating application status to SCALING failed: %s", err.Error())
@@ -237,11 +246,6 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 
 	newestVersion := versions[len(versions)-1]
 	version, err := s.registry.FetchApplicationVersion(applicationId, newestVersion)
-	if err != nil {
-		return err
-	}
-
-	app, err := s.registry.FetchApplication(version.ID)
 	if err != nil {
 		return err
 	}
@@ -385,14 +389,18 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 // UpdateApplication is used for application rolling-update.
 func (s *Scheduler) UpdateApplication(applicationId string, instances int, version *types.ApplicationVersion) error {
 	logrus.Infof("Updating application %s", applicationId)
-	// Update application status to UPDATING
-	if err := s.registry.UpdateApplicationStatus(applicationId, "UPDATING"); err != nil {
-		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
+	app, err := s.registry.FetchApplication(applicationId)
+	if err != nil {
 		return err
 	}
 
-	app, err := s.registry.FetchApplication(applicationId)
-	if err != nil {
+	if app.Status != "RUNNING" {
+		return errors.New("Operation Not Allowed")
+	}
+
+	// Update application status to UPDATING
+	if err := s.registry.UpdateApplicationStatus(applicationId, "UPDATING"); err != nil {
+		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
 		return err
 	}
 
@@ -506,6 +514,7 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 						switch status.GetState() {
 						case mesos.TaskState_TASK_FAILED, mesos.TaskState_TASK_FINISHED, mesos.TaskState_TASK_LOST:
 							logrus.Errorf("Updating task %s failed, rollback!", task.Name)
+							return s.RollbackApplication(version.ID)
 						}
 					}
 				}
@@ -543,8 +552,6 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 					}
 				}
 
-				//ticker := time.Ticker(time.Minute)
-
 				if err := s.registry.IncreaseApplicationUpdatedInstances(app.ID); err != nil {
 					return err
 				}
@@ -572,13 +579,8 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 				}
 
 				s.Status = "idle"
-
-				//<-ticker.C
-
 			}
-
 		}
-
 	}
 
 	return nil
@@ -587,7 +589,6 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 // RollbackApplication rollback application to previous version.
 func (s *Scheduler) RollbackApplication(applicationId string) error {
 	logrus.Infof("Rollback application %s", applicationId)
-	// Update application status to UPDATING
 	app, err := s.registry.FetchApplication(applicationId)
 	if err != nil {
 		return err
@@ -598,6 +599,7 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 		return errors.New("Application not found")
 	}
 
+	// Update application status to ROLLINGBACK
 	if err := s.registry.UpdateApplicationStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
