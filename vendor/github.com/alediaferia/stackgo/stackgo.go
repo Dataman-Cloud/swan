@@ -4,12 +4,12 @@
 package stackgo
 
 type Stack struct {
-	size int
-	currentPage []interface{}
-	pages [][]interface{}
-	offset int
-	capacity int
-	pageSize int
+	size             int
+	currentPage      []interface{}
+	pages            [][]interface{}
+	offset           int
+	capacity         int
+	pageSize         int
 	currentPageIndex int
 }
 
@@ -33,7 +33,6 @@ func NewStack() *Stack {
 	return stack
 }
 
-
 // NewStackWithCapacity makes it easy to specify
 // a custom block size for inner slice backing the
 // stack
@@ -50,16 +49,15 @@ func NewStackWithCapacity(cap int) *Stack {
 	return stack
 }
 
-
 // Push pushes a new element to the stack
-func (s *Stack) Push(elem... interface{}) {
+func (s *Stack) Push(elem ...interface{}) {
 	if elem == nil || len(elem) == 0 {
 		return
 	}
 
-    if s.size == s.capacity {
+	if s.size == s.capacity {
 		pages_count := len(elem) / s.pageSize
-		if len(elem) % s.pageSize != 0 {
+		if len(elem)%s.pageSize != 0 {
 			pages_count++
 		}
 		s.capacity += s.pageSize
@@ -80,7 +78,7 @@ func (s *Stack) Push(elem... interface{}) {
 	available := len(s.currentPage) - s.offset
 	for len(elem) > available {
 		copy(s.currentPage[s.offset:], elem[:available])
-		s.currentPage = s.pages[s.currentPageIndex + 1]
+		s.currentPage = s.pages[s.currentPageIndex+1]
 		s.currentPageIndex++
 		elem = elem[available:]
 		s.offset = 0
@@ -104,7 +102,7 @@ func (s *Stack) Pop() (elem interface{}) {
 	if s.offset < 0 {
 		s.offset = s.pageSize - 1
 
-		s.currentPage, s.pages = s.pages[len(s.pages) - 2], s.pages[:len(s.pages) - 1]
+		s.currentPage, s.pages = s.pages[len(s.pages)-2], s.pages[:len(s.pages)-1]
 		s.capacity -= s.pageSize
 		s.currentPageIndex--
 	}

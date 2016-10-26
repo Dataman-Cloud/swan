@@ -1,9 +1,12 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"fmt"
 	"os"
 	"os/user"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/health"
@@ -13,11 +16,12 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 var (
 	addr       = flag.String("addr", "127.0.0.1:9999", "API Server address <ip:port>")
-	master     = flag.String("master", "127.0.0.1:5050", "Master address <ip:port>")
+	zks        = flag.String("zks", "127.0.0.1:2181", "Zookeeper address <ip:port>")
 	mesosUser  = flag.String("user", "", "Framework user")
 	consulAddr = flag.String("consul", "127.0.0.1:8500", "Consul address <ip:port>")
 	clusterId  = flag.String("cluster_id", "00001", "mesos cluster id")
@@ -40,6 +44,7 @@ func main() {
 		}
 		*mesosUser = u.Username
 	}
+
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "UNKNOWN"
@@ -72,7 +77,25 @@ func main() {
 
 	msgQueue := make(chan types.ReschedulerMsg, 1)
 
-	sched := scheduler.New(*master,
+	zks := []string{*zks}
+	conn, _, err := zk.Connect(zks, 5*time.Second)
+	defer conn.Close()
+	if err != nil {
+		logrus.Error("Couldn't connect to zookeeper")
+	}
+
+	children, _, _ := conn.Children("/mesos")
+	masterInfo := new(mesos.MasterInfo)
+	for _, name := range children {
+		data, _, _ := conn.Get("/mesos" + "/" + name)
+		err := json.Unmarshal(data, masterInfo)
+		if err == nil {
+			break
+		}
+	}
+
+	sched := scheduler.New(
+		fmt.Sprintf("%s:%d", masterInfo.GetHostname(), masterInfo.GetPort()),
 		fw,
 		store,
 		*clusterId,

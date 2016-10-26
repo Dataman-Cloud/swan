@@ -1,17 +1,17 @@
 ## Swan
 
-### swan is a mesos scheduling framework written in golang based on mesos new HTTP API.
+#### swan is a mesos scheduling framework written in golang based on mesos new HTTP API.
 
-### you can use swan to deployment application on mesos cluster, and manage the entire lifecycle of the application. you can do rolling-update with new version, you can scale application, and you can do health check for your applications and auto failover when applications or services are not available.
+#### you can use swan to deployment application on mesos cluster, and manage the entire lifecycle of the application. you can do rolling-update with new version, you can scale application, and you can do health check for your applications and auto failover when applications or services are not available.
 
-### swan is maintained by [dataman-cloud](https://github.com/Dataman-Cloud), and  licensed under the Apache License, Version 2.0. 
+#### swan is maintained by [dataman-cloud](https://github.com/Dataman-Cloud), and  licensed under the Apache License, Version 2.0. 
 
 ## Features
 + Application deployment
 + Application scaling
 + Rolling update
 + Version rollback
-+ Healtch check
++ Health check
 + Auto failover
 
 ## Special features
@@ -63,3 +63,11 @@
   `
   curl http://localhost:9999/v1/apps/nginx0003/versions
   `
+## How To Run 
+  ``` 
+  git clone https://github.com/Dataman-Cloud/swan.git
+  cd swan
+  make
+  ./swan --zks=192.168.1.50:2181 --user=root --consul=192.168.1.50:8500 --cluster_id="0001"
+  ``` 
+
