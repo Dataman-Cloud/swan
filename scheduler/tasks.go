@@ -312,7 +312,6 @@ func (s *Scheduler) ReschedulerTask() {
 	for {
 		select {
 		case msg := <-s.ReschedQueue:
-			logrus.Infof("Rescheduling task %s for health check failed", msg.TaskID)
 			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
 			if err != nil {
 				logrus.Errorf("Rescheduling task failed: %s", err.Error())

@@ -6,7 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/types"
+	//"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 )
 
@@ -45,12 +45,23 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
 		STATUS = "STAGING"
+		if err := s.registry.UpdateTask(appId, taskId, "STAGING"); err != nil {
+			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		}
 	case mesos.TaskState_TASK_STARTING:
 		STATUS = "STARTING"
+		if err := s.registry.UpdateTask(appId, taskId, "STARTING"); err != nil {
+			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		}
 	case mesos.TaskState_TASK_RUNNING:
-		logrus.Infof("Task %s is RUNNING", taskId)
+		STATUS = "RUNNING"
 		if err := s.registry.IncreaseApplicationRunningInstances(appId); err != nil {
 			logrus.Errorf("Updating application got error: %s", err.Error())
+		}
+
+		if err := s.registry.UpdateTask(appId, taskId, "RUNNING"); err != nil {
+			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+			return
 		}
 
 		app, err := s.registry.FetchApplication(appId)
@@ -66,12 +77,24 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	case mesos.TaskState_TASK_FINISHED:
 		STATUS = "RESCHEDULING"
+		//if err := s.registry.UpdateTask(appId, taskId, "FINISHED"); err != nil {
+		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		//}
 	case mesos.TaskState_TASK_FAILED:
 		STATUS = "RESCHEDULING"
+		//if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
+		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		//}
 	case mesos.TaskState_TASK_KILLED:
 		STATUS = "KILLED"
+		//if err := s.registry.UpdateTask(appId, taskId, "KILLED"); err != nil {
+		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		//}
 	case mesos.TaskState_TASK_LOST:
 		STATUS = "RESCHEDULING"
+		//if err := s.registry.UpdateTask(appId, taskId, "LOST"); err != nil {
+		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+		//}
 	}
 
 	task, err := s.registry.FetchApplicationTask(appId, taskId)
@@ -80,13 +103,39 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 {
-		msg := types.ReschedulerMsg{
-			AppID:  appId,
-			TaskID: taskId,
-			Err:    make(chan error),
+	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 && task.Status != "RESCHEDULING" {
+		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
+			logrus.Errorf("updating task status to RESCHEDULING failed: %s", taskId)
 		}
 
-		s.ReschedQueue <- msg
+		s.Status = "busy"
+
+		resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
+		offers, err := s.RequestOffers(resources)
+		if err != nil {
+			logrus.Errorf("Request offers failed: %s for rescheduling", err.Error())
+		}
+
+		var choosedOffer *mesos.Offer
+		for _, offer := range offers {
+			cpus, mem, disk := s.OfferedResources(offer)
+			if cpus >= task.Cpus && mem >= task.Mem && disk >= task.Disk {
+				choosedOffer = offer
+				break
+			}
+		}
+
+		var taskInfos []*mesos.TaskInfo
+		taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
+		taskInfos = append(taskInfos, taskInfo)
+
+		resp, err := s.LaunchTasks(choosedOffer, taskInfos)
+		if err != nil {
+			logrus.Errorf("Launchs task failed: %s for rescheduling", err.Error())
+		}
+
+		if resp != nil && resp.StatusCode != http.StatusAccepted {
+			logrus.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
+		}
 	}
 }
