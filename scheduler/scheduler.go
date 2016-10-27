@@ -6,10 +6,10 @@ import (
 	"io"
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan/client"
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/scheduler/client"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"

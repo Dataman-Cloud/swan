@@ -263,6 +263,13 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 			}
 
 			if taskIndex+1 > instances {
+				s.HealthCheckManager.StopCheck(task.Name)
+
+				if err := s.registry.DeleteCheck(task.Name); err != nil {
+					logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
+					return err
+				}
+
 				if _, err := s.KillTask(task); err == nil {
 					s.registry.DeleteApplicationTask(app.ID, task.ID)
 				}
@@ -274,13 +281,6 @@ func (s *Scheduler) ScaleApplication(applicationId string, instances int) error 
 				}
 
 				logrus.Infof("Remove health check for task %s", task.Name)
-
-				s.HealthCheckManager.StopCheck(task.Name)
-
-				if err := s.registry.DeleteCheck(task.Name); err != nil {
-					logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
-					return err
-				}
 
 				if err := s.registry.DeleteApplicationTask(app.ID, task.Name); err != nil {
 					logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())

@@ -66,15 +66,12 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	case mesos.TaskState_TASK_FINISHED:
 		STATUS = "RESCHEDULING"
-		//logrus.Infof("Task %s is FINISHED", taskId)
 	case mesos.TaskState_TASK_FAILED:
 		STATUS = "RESCHEDULING"
-		//logrus.Infof("Task %s is FAILED", taskId)
 	case mesos.TaskState_TASK_KILLED:
-		//logrus.Infof("Task %s is KILLED", taskId)
+		STATUS = "KILLED"
 	case mesos.TaskState_TASK_LOST:
 		STATUS = "RESCHEDULING"
-		//logrus.Infof("Task %s is LOST", taskId)
 	}
 
 	task, err := s.registry.FetchApplicationTask(appId, taskId)
@@ -83,17 +80,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	if STATUS == "RESCHEDULING" && task.Status != "RESCHEDULING" && task.Status != "UPDATING" {
-		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
-			logrus.Errorf("Updating task status failed: %s", err.Error())
-		}
-
-		s.HealthCheckManager.StopCheck(taskId)
-		// Delete task health check
-		if err := s.registry.DeleteCheck(taskId); err != nil {
-			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
-		}
-
+	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 {
 		msg := types.ReschedulerMsg{
 			AppID:  appId,
 			TaskID: taskId,
