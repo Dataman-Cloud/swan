@@ -110,5 +110,12 @@ func (m *HealthCheckManager) StopCheck(id string) {
 	if checker, exist := m.checkers[id]; exist {
 		logrus.Infof("Remove health check for task %s", id)
 		checker.Stop()
+		delete(m.checkers, id)
 	}
+}
+
+func (m *HealthCheckManager) HasCheck(id string) bool {
+	_, exists := m.checkers[id]
+
+	return exists
 }

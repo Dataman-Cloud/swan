@@ -77,24 +77,12 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	case mesos.TaskState_TASK_FINISHED:
 		STATUS = "RESCHEDULING"
-		//if err := s.registry.UpdateTask(appId, taskId, "FINISHED"); err != nil {
-		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
-		//}
 	case mesos.TaskState_TASK_FAILED:
 		STATUS = "RESCHEDULING"
-		//if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
-		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
-		//}
 	case mesos.TaskState_TASK_KILLED:
 		STATUS = "KILLED"
-		//if err := s.registry.UpdateTask(appId, taskId, "KILLED"); err != nil {
-		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
-		//}
 	case mesos.TaskState_TASK_LOST:
 		STATUS = "RESCHEDULING"
-		//if err := s.registry.UpdateTask(appId, taskId, "LOST"); err != nil {
-		//	logrus.Errorf("updating task %s status to RUNNING failed", taskId)
-		//}
 	}
 
 	task, err := s.registry.FetchApplicationTask(appId, taskId)
@@ -103,7 +91,13 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 && task.Status != "RESCHEDULING" {
+	app, err := s.registry.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed: %s", appId, err.Error())
+		return
+	}
+
+	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 && task.Status != "RESCHEDULING" && app.Status != "UPDATING" && app.Status != "ROLLINGBACK" {
 		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
 			logrus.Errorf("updating task status to RESCHEDULING failed: %s", taskId)
 		}

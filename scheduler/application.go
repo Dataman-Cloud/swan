@@ -394,6 +394,10 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 		return err
 	}
 
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
 	if app.Status != "RUNNING" {
 		return errors.New("Operation Not Allowed")
 	}
@@ -423,9 +427,20 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 			}
 
 			if taskId == i {
-				if err := s.DeleteApplicationTask(applicationId, task.Name); err != nil {
-					logrus.Errorf("Delete application task %s failed: %s", task.Name, err.Error())
+				// Stop task health check
+				s.HealthCheckManager.StopCheck(task.Name)
+
+				// Delete task health check
+				if err := s.registry.DeleteCheck(task.Name); err != nil {
+					logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
 				}
+
+				if _, err := s.KillTask(task); err == nil {
+					s.registry.DeleteApplicationTask(app.ID, task.ID)
+				}
+				//if err := s.DeleteApplicationTask(applicationId, task.Name); err != nil {
+				//	logrus.Errorf("Delete application task %s failed: %s", task.Name, err.Error())
+				//}
 				// Reduce application instance count.
 				if err := s.registry.UpdateApplication(applicationId, "instance", "-1"); err != nil {
 					return err
@@ -503,22 +518,26 @@ func (s *Scheduler) UpdateApplication(applicationId string, instances int, versi
 					return err
 				}
 
-				select {
-				case <-time.After(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second):
-					break
-				case event := <-s.GetEvent(sched.Event_UPDATE):
-					status := event.GetUpdate().GetStatus()
-					ID := status.TaskId.GetValue()
-					taskName := strings.Split(ID, "-")[1]
-					if taskName == task.Name {
-						switch status.GetState() {
-						case mesos.TaskState_TASK_FAILED, mesos.TaskState_TASK_FINISHED, mesos.TaskState_TASK_LOST:
-							logrus.Errorf("Updating task %s failed, rollback!", task.Name)
-							return s.RollbackApplication(version.ID)
+				for {
+					select {
+					case <-time.After(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second):
+						goto CONTINUE
+					case event := <-s.GetEvent(sched.Event_UPDATE):
+						status := event.GetUpdate().GetStatus()
+						ID := status.TaskId.GetValue()
+						taskName := strings.Split(ID, "-")[1]
+						logrus.Info("=====", taskName)
+						if taskName == task.Name {
+							switch status.GetState() {
+							case mesos.TaskState_TASK_FAILED, mesos.TaskState_TASK_FINISHED, mesos.TaskState_TASK_LOST:
+								logrus.Errorf("Updating task %s failed, rollback!", task.Name)
+								return s.RollbackApplication(version.ID)
+							}
 						}
 					}
-				}
 
+				}
+			CONTINUE:
 				if len(task.HealthChecks) != 0 {
 					if err := s.registry.RegisterCheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
@@ -623,6 +642,16 @@ func (s *Scheduler) RollbackApplication(applicationId string) error {
 	}
 
 	for _, task := range tasks {
+		// Stop task health check
+		if s.HealthCheckManager.HasCheck(task.Name) {
+			s.HealthCheckManager.StopCheck(task.Name)
+		}
+
+		// Delete task health check
+		if err := s.registry.DeleteCheck(task.Name); err != nil {
+			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+		}
+
 		if _, err := s.KillTask(task); err == nil {
 			s.registry.DeleteApplicationTask(app.ID, task.ID)
 		}
