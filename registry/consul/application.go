@@ -64,7 +64,7 @@ func (c *Consul) ListApplications() ([]*types.Application, error) {
 		return nil, err
 	}
 
-	var applications []*types.Application
+	applications := make([]*types.Application, 0)
 	for _, app := range apps {
 		var application types.Application
 

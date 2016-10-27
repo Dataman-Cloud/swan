@@ -65,7 +65,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 }
 
 // ListApplication is used to list all applications.
-func (r *Router) ListApplication(w http.ResponseWriter, req *http.Request) error {
+func (r *Router) ListApplications(w http.ResponseWriter, req *http.Request) error {
 	apps, err := r.sched.ListApplications()
 	if err != nil {
 		logrus.Info(err)

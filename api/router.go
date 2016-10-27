@@ -24,7 +24,7 @@ func (r *Router) initRoutes() {
 
 		// app
 		NewRoute("POST", "/v1/apps", r.BuildApplication),
-		NewRoute("GET", "/v1/apps", r.ListApplication),
+		NewRoute("GET", "/v1/apps", r.ListApplications),
 		NewRoute("GET", "/v1/apps/{appId}", r.FetchApplication),
 		NewRoute("DELETE", "/v1/apps/{appId}", r.DeleteApplication),
 		NewRoute("POST", "/v1/apps/{appId}/update", r.UpdateApplication),
