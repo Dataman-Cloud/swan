@@ -42,21 +42,21 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		RunningInstances:  0,
 		RollbackInstances: 0,
 		UserId:            user,
-		ClusterId:         r.sched.ClusterId,
+		ClusterId:         r.backend.ClusterId(),
 		Status:            "STAGING",
 		Created:           time.Now().Unix(),
 		Updated:           time.Now().Unix(),
 	}
 
-	if err := r.sched.RegisterApplication(&application); err != nil {
+	if err := r.backend.RegisterApplication(&application); err != nil {
 		return err
 	}
 
-	if err := r.sched.RegisterApplicationVersion(version.ID, &version); err != nil {
+	if err := r.backend.RegisterApplicationVersion(version.ID, &version); err != nil {
 		return err
 	}
 
-	if err := r.sched.LaunchApplication(&version); err != nil {
+	if err := r.backend.LaunchApplication(&version); err != nil {
 		logrus.Infof("Launch application %s failed with error: %s", version.ID, err.Error())
 		return err
 	}
@@ -66,7 +66,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 
 // ListApplication is used to list all applications.
 func (r *Router) ListApplications(w http.ResponseWriter, req *http.Request) error {
-	apps, err := r.sched.ListApplications()
+	apps, err := r.backend.ListApplications()
 	if err != nil {
 		logrus.Info(err)
 	}
@@ -78,7 +78,7 @@ func (r *Router) ListApplications(w http.ResponseWriter, req *http.Request) erro
 func (r *Router) FetchApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	app, err := r.sched.FetchApplication(vars["appId"])
+	app, err := r.backend.FetchApplication(vars["appId"])
 	if err != nil {
 		logrus.Errorf("Fetch application %s failed: %s", vars["appId"], err.Error())
 	}
@@ -90,7 +90,7 @@ func (r *Router) FetchApplication(w http.ResponseWriter, req *http.Request) erro
 func (r *Router) DeleteApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	if err := r.sched.DeleteApplication(vars["appId"]); err != nil {
+	if err := r.backend.DeleteApplication(vars["appId"]); err != nil {
 		return err
 	}
 
@@ -101,7 +101,7 @@ func (r *Router) DeleteApplication(w http.ResponseWriter, req *http.Request) err
 func (r *Router) ListApplicationTasks(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	tasks, err := r.sched.ListApplicationTasks(vars["appId"])
+	tasks, err := r.backend.ListApplicationTasks(vars["appId"])
 	if err != nil {
 		return err
 	}
@@ -113,7 +113,7 @@ func (r *Router) ListApplicationTasks(w http.ResponseWriter, req *http.Request) 
 func (r *Router) DeleteApplicationTasks(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	if err := r.sched.DeleteApplicationTasks(vars["appId"]); err != nil {
+	if err := r.backend.DeleteApplicationTasks(vars["appId"]); err != nil {
 		return err
 	}
 
@@ -124,7 +124,7 @@ func (r *Router) DeleteApplicationTasks(w http.ResponseWriter, req *http.Request
 func (r *Router) DeleteApplicationTask(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	if err := r.sched.DeleteApplicationTask(vars["appId"], vars["taskId"]); err != nil {
+	if err := r.backend.DeleteApplicationTask(vars["appId"], vars["taskId"]); err != nil {
 		return err
 	}
 
@@ -135,7 +135,7 @@ func (r *Router) DeleteApplicationTask(w http.ResponseWriter, req *http.Request)
 func (r *Router) ListApplicationVersions(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	appVersions, err := r.sched.ListApplicationVersions(vars["appId"])
+	appVersions, err := r.backend.ListApplicationVersions(vars["appId"])
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func (r *Router) ListApplicationVersions(w http.ResponseWriter, req *http.Reques
 func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	version, err := r.sched.FetchApplicationVersion(vars["appId"], vars["versionId"])
+	version, err := r.backend.FetchApplicationVersion(vars["appId"], vars["versionId"])
 	if err != nil {
 		return err
 	}
@@ -178,11 +178,11 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 
 	vars := mux.Vars(req)
 
-	if err := r.sched.RegisterApplicationVersion(vars["appId"], &version); err != nil {
+	if err := r.backend.RegisterApplicationVersion(vars["appId"], &version); err != nil {
 		return err
 	}
 
-	if err := r.sched.UpdateApplication(vars["appId"], inst, &version); err != nil {
+	if err := r.backend.UpdateApplication(vars["appId"], inst, &version); err != nil {
 		return err
 	}
 
@@ -206,7 +206,7 @@ func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) erro
 
 	vars := mux.Vars(req)
 
-	if err := r.sched.ScaleApplication(vars["appId"], inst); err != nil {
+	if err := r.backend.ScaleApplication(vars["appId"], inst); err != nil {
 		return err
 	}
 
@@ -217,7 +217,7 @@ func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) erro
 func (r *Router) RollbackApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
-	if err := r.sched.RollbackApplication(vars["appId"]); err != nil {
+	if err := r.backend.RollbackApplication(vars["appId"]); err != nil {
 		return err
 	}
 

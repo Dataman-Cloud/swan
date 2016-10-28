@@ -4,7 +4,7 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan/scheduler"
+	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 )
@@ -13,9 +13,9 @@ type Server struct {
 	router *Router
 }
 
-func NewServer(sched *scheduler.Scheduler) *Server {
+func NewServer(backend *backend.Backend) *Server {
 	return &Server{
-		router: NewRouter(sched),
+		router: NewRouter(backend),
 	}
 }
 

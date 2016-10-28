@@ -6,7 +6,7 @@ import (
 
 // EventStream is used to retrieve scheduler events as SSE format.
 func (r *Router) EventStream(w http.ResponseWriter, req *http.Request) error {
-	if err := r.sched.EventStream(w); err != nil {
+	if err := r.backend.EventStream(w); err != nil {
 		return err
 	}
 

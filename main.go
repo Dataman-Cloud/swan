@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/api"
+	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/registry/consul"
@@ -103,7 +104,9 @@ func main() {
 		msgQueue,
 	)
 
-	srv := api.NewServer(sched)
+	backend := backend.NewBackend(sched, store)
+
+	srv := api.NewServer(backend)
 	go func() {
 		srv.ListenAndServe(*addr)
 	}()

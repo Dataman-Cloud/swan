@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	//"fmt"
 	"github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 

@@ -25,10 +25,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVers
 		}
 
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
-		//app.Instances = app.Instances + 1
-		//if err := s.registry.UpdateApplication(app); err != nil {
-		//	return nil, err
-		//}
+
 		if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
 			return nil, err
 		}
@@ -175,7 +172,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 	case "BRIDGE":
 		ports := s.GetPorts(offer)
 		for _, m := range task.PortMappings {
-			hostPort := ports[s.taskLaunched]
+			hostPort := ports[s.TaskLaunched]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
 				&mesos.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(hostPort)),

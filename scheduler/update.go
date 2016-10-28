@@ -6,7 +6,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	//"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 )
 
@@ -97,7 +96,11 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	if STATUS == "RESCHEDULING" && len(task.HealthChecks) == 0 && task.Status != "RESCHEDULING" && app.Status != "UPDATING" && app.Status != "ROLLINGBACK" {
+	if STATUS == "RESCHEDULING" &&
+		len(task.HealthChecks) == 0 &&
+		task.Status != "RESCHEDULING" &&
+		app.Status != "UPDATING" &&
+		app.Status != "ROLLINGBACK" {
 		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
 			logrus.Errorf("updating task status to RESCHEDULING failed: %s", taskId)
 		}
