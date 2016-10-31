@@ -95,7 +95,7 @@ func main() {
 		}
 	}
 
-	sched := scheduler.New(
+	sched := scheduler.NewScheduler(
 		fmt.Sprintf("%s:%d", masterInfo.GetHostname(), masterInfo.GetPort()),
 		fw,
 		store,

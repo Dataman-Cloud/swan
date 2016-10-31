@@ -36,8 +36,8 @@ type Scheduler struct {
 	HealthCheckManager *health.HealthCheckManager
 }
 
-// New returns a pointer to new Scheduler
-func New(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
+// NewScheduler returns a pointer to new Scheduler
+func NewScheduler(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
 	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,
