@@ -171,6 +171,10 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
 	case "BRIDGE":
 		ports := GetPorts(offer)
+		if len(ports) == 0 {
+			logrus.Errorf("No ports resource defined")
+			break
+		}
 		for _, m := range task.PortMappings {
 			hostPort := ports[s.TaskLaunched]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,

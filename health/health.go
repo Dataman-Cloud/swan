@@ -3,25 +3,26 @@ package health
 import (
 	"fmt"
 
-	"github.com/Dataman-Cloud/swan/store/consul"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	fifo "github.com/foize/go.fifo"
 )
 
 type HealthCheckManager struct {
-	store     *consul.Consul
+	store     Store
 	checkers  map[string]Checker
 	msgQueue  chan types.ReschedulerMsg
 	taskQueue *fifo.Queue
+	quit      chan struct{}
 }
 
-func NewHealthCheckManager(store *consul.Consul, queue chan types.ReschedulerMsg) *HealthCheckManager {
+func NewHealthCheckManager(store Store, queue chan types.ReschedulerMsg) *HealthCheckManager {
 	return &HealthCheckManager{
 		store:     store,
 		msgQueue:  queue,
 		taskQueue: fifo.NewQueue(),
 		checkers:  make(map[string]Checker),
+		quit:      make(chan struct{}),
 	}
 }
 
@@ -45,11 +46,24 @@ func (m *HealthCheckManager) Init() {
 
 func (m *HealthCheckManager) Start() {
 	for {
-		if checker := m.Next(); checker != nil {
-			go func() {
-				checker.(Checker).Start()
-			}()
+		select {
+		case <-m.quit:
+			return
+		default:
+			if checker := m.Next(); checker != nil {
+				go func() {
+					checker.(Checker).Start()
+				}()
+			}
 		}
+	}
+}
+
+func (m *HealthCheckManager) Stop() {
+	close(m.quit)
+
+	for _, checker := range m.checkers {
+		checker.Stop()
 	}
 }
 

@@ -85,10 +85,6 @@ func (s *Scheduler) send(call *sched.Call) (*http.Response, error) {
 	return s.client.Send(payload)
 }
 
-func (s *Scheduler) Registry() Registry {
-	return s.registry
-}
-
 // Subscribe subscribes the scheduler to the Mesos cluster.
 // It keeps the http connection opens with the Master to stream
 // subsequent events.

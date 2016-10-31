@@ -17,9 +17,6 @@ func NewRouter(backend Backend) *Router {
 
 func (r *Router) initRoutes() {
 	r.routes = []Route{
-		// task
-		//NewRoute("POST", "/tasks", r.tasksAdd),
-
 		// app
 		NewRoute("POST", "/v1/apps", r.BuildApplication),
 		NewRoute("GET", "/v1/apps", r.ListApplications),
@@ -35,8 +32,5 @@ func (r *Router) initRoutes() {
 
 		NewRoute("GET", "/v1/apps/{appId}/versions", r.ListApplicationVersions),
 		NewRoute("GET", "/v1/apps/{appId}/versions/{versionId}", r.FetchApplicationVersion),
-
-		// events
-		NewRoute("GET", "/v1/events", r.EventStream),
 	}
 }

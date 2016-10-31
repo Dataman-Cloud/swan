@@ -4,7 +4,6 @@ import (
 	"net"
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 )
@@ -13,7 +12,7 @@ type Server struct {
 	router *Router
 }
 
-func NewServer(backend *backend.Backend) *Server {
+func NewServer(backend Backend) *Server {
 	return &Server{
 		router: NewRouter(backend),
 	}
