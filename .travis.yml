@@ -1,0 +1,18 @@
+sudo: required
+
+services:
+  - docker
+
+language: go
+
+go:
+  - 1.5.4
+
+script:
+  - docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan -v $(pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.5.4 make
+  - docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan -v $(pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.5.4 make collect-cover-data
+  - docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan -v $(pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.5.4 make test-cover-html
+  - docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan -v $(pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.5.4 make test-cover-func
+
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
