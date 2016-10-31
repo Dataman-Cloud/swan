@@ -2,7 +2,7 @@ package scheduler
 
 import "github.com/Dataman-Cloud/swan/mesosproto/mesos"
 
-func (s *Scheduler) GetPorts(offer *mesos.Offer) (ports []uint64) {
+func GetPorts(offer *mesos.Offer) (ports []uint64) {
 	for _, resource := range offer.Resources {
 		if resource.GetName() == "ports" {
 			for _, rang := range resource.GetRanges().GetRange() {

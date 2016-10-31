@@ -170,7 +170,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 	case "HOST":
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
 	case "BRIDGE":
-		ports := s.GetPorts(offer)
+		ports := GetPorts(offer)
 		for _, m := range task.PortMappings {
 			hostPort := ports[s.TaskLaunched]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
