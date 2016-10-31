@@ -3,7 +3,7 @@ package health
 import (
 	"fmt"
 
-	"github.com/Dataman-Cloud/swan/registry/consul"
+	"github.com/Dataman-Cloud/swan/store/consul"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	fifo "github.com/foize/go.fifo"
