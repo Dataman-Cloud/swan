@@ -12,7 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/scheduler/client"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 )
 
 // Scheduler represents a Mesos scheduler

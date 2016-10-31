@@ -2,7 +2,7 @@ package scheduler
 
 import (
 	"github.com/Sirupsen/logrus"
-	"github.com/gogo/protobuf/proto"
+	"github.com/golang/protobuf/proto"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"

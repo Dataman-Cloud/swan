@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	mesosjson "github.com/vladimirvivien/mesos-http/mesos/json"
+	mesosjson "github.com/Dataman-Cloud/swan/mesosproto/json"
 )
 
 type Client struct {
