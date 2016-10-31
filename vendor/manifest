@@ -155,6 +155,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/vladimirvivien/mesos-http/mesos/json",
+			"repository": "https://github.com/vladimirvivien/mesos-http",
+			"vcs": "git",
+			"revision": "5e20931482e8f5051ce555266fb4ed317f68cd94",
+			"branch": "master",
+			"path": "/mesos/json",
+			"notests": true
+		},
+		{
 			"importpath": "gopkg.in/mgo.v2/bson",
 			"repository": "https://gopkg.in/mgo.v2",
 			"vcs": "git",
