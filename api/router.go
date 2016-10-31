@@ -1,16 +1,13 @@
 package api
 
-import (
-	//"github.com/Dataman-Cloud/swan/scheduler"
-	"github.com/Dataman-Cloud/swan/backend"
-)
+import ()
 
 type Router struct {
 	routes  []Route
-	backend *backend.Backend
+	backend Backend
 }
 
-func NewRouter(backend *backend.Backend) *Router {
+func NewRouter(backend Backend) *Router {
 	r := &Router{
 		backend: backend,
 	}
