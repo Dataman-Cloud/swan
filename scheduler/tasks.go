@@ -265,12 +265,17 @@ func (s *Scheduler) ReschedulerTask() {
 		case msg := <-s.ReschedQueue:
 			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
 			if err != nil {
-				logrus.Errorf("Rescheduling task failed: %s", err.Error())
+				msg.Err <- fmt.Errorf("Rescheduling task failed: %s", err.Error())
+				return
+			}
+
+			if task == nil {
+				msg.Err <- fmt.Errorf("Task %s does not exists", msg.TaskID)
 				return
 			}
 
 			if _, err := s.KillTask(task); err != nil {
-				logrus.Errorf("Kill task failed: %s for rescheduling", err.Error())
+				msg.Err <- fmt.Errorf("Kill task failed: %s for rescheduling", err.Error())
 				return
 			}
 
@@ -279,8 +284,8 @@ func (s *Scheduler) ReschedulerTask() {
 			resources := s.BuildResources(task.Cpus, task.Mem, task.Disk)
 			offers, err := s.RequestOffers(resources)
 			if err != nil {
-				logrus.Errorf("Request offers failed: %s for rescheduling", err.Error())
-				msg.Err <- err
+				msg.Err <- fmt.Errorf("Request offers failed: %s for rescheduling", err.Error())
+				return
 			}
 
 			var choosedOffer *mesos.Offer
@@ -298,18 +303,18 @@ func (s *Scheduler) ReschedulerTask() {
 
 			resp, err := s.LaunchTasks(choosedOffer, taskInfos)
 			if err != nil {
-				logrus.Errorf("Launchs task failed: %s for rescheduling", err.Error())
-				msg.Err <- err
+				msg.Err <- fmt.Errorf("Launchs task failed: %s for rescheduling", err.Error())
+				return
 			}
 
 			if resp != nil && resp.StatusCode != http.StatusAccepted {
-				logrus.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
-				msg.Err <- err
+				msg.Err <- fmt.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
+				return
 			}
 
 			logrus.Infof("Remove health check for task %s", msg.TaskID)
 			if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
-				logrus.Errorf("Remove health check for %s failed: %s", msg.TaskID, err.Error())
+				msg.Err <- fmt.Errorf("Remove health check for %s failed: %s", msg.TaskID, err.Error())
 				return
 			}
 

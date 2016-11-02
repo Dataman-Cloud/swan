@@ -19,6 +19,8 @@ func TestCreateRangeResource(t *testing.T) {
 
 func TestBuildResource(t *testing.T) {
 	sched := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
-	resources := sched.BuildResources(0.1, 16, 0)
+	resources := sched.BuildResources(0.1, 16, 10)
 	assert.Equal(t, *resources[0].Name, "cpus")
+	assert.Equal(t, *resources[1].Name, "mem")
+	assert.Equal(t, *resources[2].Name, "disk")
 }

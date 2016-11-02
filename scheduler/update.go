@@ -30,6 +30,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		}
 		if resp.StatusCode != http.StatusAccepted {
 			logrus.Error("Acknowledge call returned unexpected status: %d", resp.StatusCode)
+			return
 		}
 	}
 

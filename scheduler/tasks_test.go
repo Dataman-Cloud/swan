@@ -49,7 +49,13 @@ func TestBuildTask(t *testing.T) {
 				},
 				Privileged: proto.Bool(true),
 			},
-			Volumes: nil,
+			Volumes: []*types.Volume{
+				{
+					ContainerPath: "/tmp/xxxx",
+					HostPath:      "/tmp/xxxx",
+					Mode:          "RW",
+				},
+			},
 		},
 		Labels: &map[string]string{
 			"USER_ID": "xxxxx"},
@@ -159,7 +165,7 @@ func TestBuildTaskInfo(t *testing.T) {
 			{
 				ContainerPath: "/tmp/xxxx",
 				HostPath:      "/tmp/xxxx",
-				Mode:          "rw",
+				Mode:          "RW",
 			},
 		},
 		Env:    map[string]string{"DB": "xxxxxxx"},
@@ -188,8 +194,15 @@ func TestBuildTaskInfo(t *testing.T) {
 
 	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
 	taskInfo := s.BuildTaskInfo(offer, resources, task)
-
 	assert.Equal(t, *taskInfo.Container.Docker.Image, "nginx:1.10")
+
+	task.Network = "NONE"
+	taskInfo = s.BuildTaskInfo(offer, resources, task)
+	assert.Equal(t, taskInfo.Container.Docker.Network, mesos.ContainerInfo_DockerInfo_NONE.Enum())
+
+	task.Network = "HOST"
+	taskInfo = s.BuildTaskInfo(offer, resources, task)
+	assert.Equal(t, taskInfo.Container.Docker.Network, mesos.ContainerInfo_DockerInfo_HOST.Enum())
 }
 
 func TestLaunchTasks(t *testing.T) {
@@ -367,4 +380,32 @@ func TestKillTask(t *testing.T) {
 
 	_, err := s.KillTask(task)
 	assert.NotNil(t, err)
+}
+
+func TestReschedulerTask(t *testing.T) {
+	msgQueue := make(chan types.ReschedulerMsg, 1)
+	fw := &mesos.FrameworkInfo{
+		User:            proto.String("testuser"),
+		Name:            proto.String("swan"),
+		Hostname:        proto.String("x.x.x.x"),
+		FailoverTimeout: proto.Float64(5),
+		Id: &mesos.FrameworkID{
+			Value: proto.String("xxxx-yyyy-zzzz"),
+		},
+	}
+
+	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxxx", nil, msgQueue)
+
+	go func() {
+		s.ReschedulerTask()
+	}()
+
+	msg := types.ReschedulerMsg{
+		AppID:  "xxxxx",
+		TaskID: "yyyyy",
+		Err:    make(chan error),
+	}
+
+	s.ReschedQueue <- msg
+	assert.NotNil(t, msg.Err)
 }

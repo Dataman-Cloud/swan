@@ -36,6 +36,10 @@ func TestRequestOffers(t *testing.T) {
 
 	offers, _ := s.RequestOffers(nil)
 	assert.Equal(t, *offers[0].Id.Value, "abcdefghigklmn")
+
+	s.AddEvent(eventType, nil)
+	offers, _ = s.RequestOffers(nil)
+	assert.Nil(t, offers)
 }
 
 func TestOfferedResources(t *testing.T) {
@@ -65,4 +69,10 @@ func TestOfferedResources(t *testing.T) {
 	assert.Equal(t, cpus, float64(0.1))
 	assert.Equal(t, mem, float64(16))
 	assert.Equal(t, disk, float64(10))
+}
+
+func TestDeclineResource(t *testing.T) {
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	_, err := s.DeclineResource(proto.String("xxxxx-yyyyy-zzzzz"))
+	assert.NotNil(t, err)
 }

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
+	"net/http"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
@@ -44,7 +45,7 @@ func (s *Scheduler) RequestOffers(resources []*mesos.Resource) ([]*mesos.Offer, 
 
 // DeclineResource is used to send DECLINE request to mesos to release offer. This
 // is very important, otherwise resource will be taked until framework exited.
-func (s *Scheduler) DeclineResource(offerId *string) {
+func (s *Scheduler) DeclineResource(offerId *string) (*http.Response, error) {
 	call := &sched.Call{
 		FrameworkId: s.framework.GetId(),
 		Type:        sched.Call_DECLINE.Enum(),
@@ -60,7 +61,7 @@ func (s *Scheduler) DeclineResource(offerId *string) {
 		},
 	}
 
-	s.send(call)
+	return s.send(call)
 }
 
 func (s *Scheduler) OfferedResources(offer *mesos.Offer) (cpus, mem, disk float64) {
