@@ -19,3 +19,8 @@ func TestSchedulerSend(t *testing.T) {
 	_, err := s.send(call)
 	assert.NotNil(t, err)
 }
+
+func TestSchedulerStop(t *testing.T) {
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s.stop()
+}

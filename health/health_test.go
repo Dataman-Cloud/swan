@@ -55,7 +55,19 @@ func TestHealthCheckNext(t *testing.T) {
 
 func TestHealthCheckStopCheck(t *testing.T) {
 	m := NewHealthCheckManager(&mock.Store{}, make(chan types.ReschedulerMsg))
-	m.StopCheck("xxxxxx")
+	check := types.Check{
+		ID:       "xxxxx",
+		Address:  "y.y.y.y",
+		Port:     8080,
+		TaskID:   "mmmm",
+		AppID:    "zzzzzz",
+		Protocol: "http",
+		Interval: 5,
+		Timeout:  5,
+	}
+
+	m.Add(&check)
+	m.StopCheck("mmmm")
 }
 
 func TestHasCheck(t *testing.T) {

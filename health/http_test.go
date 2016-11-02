@@ -6,7 +6,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
-	"time"
 )
 
 var (
@@ -36,10 +35,6 @@ func TestHTTPCheckerStart(t *testing.T) {
 		fmt.Println(appId, taskId)
 		return nil
 	}
-	checker := NewHTTPChecker("xxxxx", baseUrl, 3, 5, 5, handler, "xxx", "yyy")
-	go func() {
-		time.Sleep(2)
-		checker.Stop()
-	}()
+	checker := NewHTTPChecker("xxxxx", baseUrl, 1, 2, 2, handler, "xxx", "yyy")
 	checker.Start()
 }
