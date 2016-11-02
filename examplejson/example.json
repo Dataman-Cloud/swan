@@ -1,10 +1,10 @@
 {
-  "id": "nginx0002",
+  "id": "nginx0008",
   "cmd": null,
   "cpus": 0.01,
-  "mem": 6,
+  "mem": 5,
   "disk": 0,
-  "instances": 1,
+  "instances": 5,
   "container": {
     "docker": {
       "image": "nginx:1.10",
@@ -55,7 +55,7 @@
     }
  ],
   "updatePolicy": {
-	  "updateDelay": 30,
+	  "updateDelay": 5,
 	  "maxRetries": 3,
 	  "maxFailovers": 3,
 	  "action": "rollback"

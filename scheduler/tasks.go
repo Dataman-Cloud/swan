@@ -1,7 +1,7 @@
 package scheduler
 
 import (
-	"errors"
+	//"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -271,9 +271,9 @@ func (s *Scheduler) SyncLaunchTask(offer *mesos.Offer, tasks []*mesos.TaskInfo) 
 				case mesos.TaskState_TASK_RUNNING:
 					return nil
 				case mesos.TaskState_TASK_FINISHED:
-					return errors.New("Launch Task Failed")
+					return fmt.Errorf("Launch Task %s Finished", status.TaskId.GetValue())
 				case mesos.TaskState_TASK_FAILED:
-					return errors.New("Launch Task Failed")
+					return fmt.Errorf("Launch Task %s Failed", status.TaskId.GetValue())
 				}
 			}
 		}

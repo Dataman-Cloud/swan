@@ -299,6 +299,39 @@ func (c *Consul) IncreaseApplicationRunningInstances(appId string) error {
 	return nil
 }
 
+// ReduceApplicationRunningInstances reduce instances count for application.
+func (c *Consul) ReduceApplicationRunningInstances(appId string) error {
+	app, err := c.FetchApplication(appId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed for updating", appId)
+		return err
+	}
+
+	if app == nil {
+		return errors.New("Application not found")
+	}
+
+	app.RunningInstances -= 1
+	data, err := json.Marshal(app)
+	if err != nil {
+		logrus.Infof("Marshal application failed: %s", err.Error())
+		return err
+	}
+
+	kv := consul.KVPair{
+		Key:   fmt.Sprintf("applications/%s/info", appId),
+		Value: data,
+	}
+
+	_, err = c.client.KV().Put(&kv, nil)
+	if err != nil {
+		logrus.Errorf("Register application %s in consul failed: %s", appId, err.Error())
+		return err
+	}
+
+	return nil
+}
+
 // ReduceApplicationInstances reduce instances count for application.
 func (c *Consul) ReduceApplicationInstances(appId string) error {
 	app, err := c.FetchApplication(appId)

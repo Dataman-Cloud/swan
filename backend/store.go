@@ -69,5 +69,7 @@ type Store interface {
 
 	IncreaseApplicationRunningInstances(string) error
 
+	ReduceApplicationRunningInstances(string) error
+
 	ReduceApplicationInstances(string) error
 }
