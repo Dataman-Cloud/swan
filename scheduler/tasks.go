@@ -230,56 +230,6 @@ func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*h
 	return s.send(call)
 }
 
-// SyncLaunchTasks launch task synchronization.
-func (s *Scheduler) SyncLaunchTask(offer *mesos.Offer, tasks []*mesos.TaskInfo) error {
-	logrus.Infof("Launch %d tasks with offer %s", len(tasks), *offer.GetId().Value)
-	call := &sched.Call{
-		FrameworkId: s.framework.GetId(),
-		Type:        sched.Call_ACCEPT.Enum(),
-		Accept: &sched.Call_Accept{
-			OfferIds: []*mesos.OfferID{
-				offer.GetId(),
-			},
-			Operations: []*mesos.Offer_Operation{
-				&mesos.Offer_Operation{
-					Type: mesos.Offer_Operation_LAUNCH.Enum(),
-					Launch: &mesos.Offer_Operation_Launch{
-						TaskInfos: tasks,
-					},
-				},
-			},
-			Filters: &mesos.Filters{RefuseSeconds: proto.Float64(1)},
-		},
-	}
-
-	resp, err := s.send(call)
-	if err != nil {
-		logrus.Errorf("Launchs task failed: %s", err.Error())
-		return err
-	}
-
-	if resp != nil && resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("status code %d received", resp.StatusCode)
-	}
-
-	for {
-		select {
-		case event := <-s.GetEvent(sched.Event_UPDATE):
-			status := event.GetUpdate().GetStatus()
-			if status.TaskId.GetValue() == *tasks[0].TaskId.Value {
-				switch status.GetState() {
-				case mesos.TaskState_TASK_RUNNING:
-					return nil
-				case mesos.TaskState_TASK_FINISHED:
-					return fmt.Errorf("Launch Task %s Finished", status.TaskId.GetValue())
-				case mesos.TaskState_TASK_FAILED:
-					return fmt.Errorf("Launch Task %s Failed", status.TaskId.GetValue())
-				}
-			}
-		}
-	}
-}
-
 func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
 	logrus.Infof("Kill task %s", task.Name)
 	call := &sched.Call{
