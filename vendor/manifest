@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/andygrunwald/megos",
+			"repository": "https://github.com/andygrunwald/megos",
+			"vcs": "git",
+			"revision": "01814b52c25a0ea60ab4908f723cc9ee3bbfc495",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/foize/go.fifo",
 			"repository": "https://github.com/foize/go.fifo",
 			"vcs": "git",

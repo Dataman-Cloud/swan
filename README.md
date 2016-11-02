@@ -56,7 +56,7 @@
   curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v1/apps/nginx0003/update\?instances\=-1
   `
   
-  instances -1 means updating all instances. other value means updating the specified   instances at one time.
+  instances -1 means updating all instances. other value means updating the specified instances at one time.
   
 + application versions
   
@@ -68,6 +68,6 @@
   git clone https://github.com/Dataman-Cloud/swan.git
   cd swan
   make
-  ./swan --zks=192.168.1.50:2181 --user=root --consul=192.168.1.50:8500 --cluster_id="0001"
+  ./swan --masters=192.168.1.50:5050 --user=root --consul=192.168.1.50:8500
   ``` 
 
