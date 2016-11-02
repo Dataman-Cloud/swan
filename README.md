@@ -1,3 +1,5 @@
+[![codecov](https://codecov.io/gh/Dataman-Cloud/swan/branch/master/graph/badge.svg)](https://codecov.io/gh/Dataman-Cloud/swan)
+
 ## Swan
 
 #### swan is a mesos scheduling framework written in golang based on mesos new HTTP API.
