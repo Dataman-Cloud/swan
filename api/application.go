@@ -164,7 +164,8 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 	if err := req.ParseForm(); err != nil {
 		return err
 	}
-	inst, err := strconv.Atoi(req.Form.Get("instances"))
+
+	instances, err := strconv.Atoi(req.Form.Get("instances"))
 	if err != nil {
 		return errors.New("instances must be specified in url and can't be null")
 	}
@@ -182,7 +183,7 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	if err := r.backend.UpdateApplication(vars["appId"], inst, &version); err != nil {
+	if err := r.backend.UpdateApplication(vars["appId"], instances, &version); err != nil {
 		return err
 	}
 
@@ -195,18 +196,14 @@ func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	instances := req.Form.Get("instances")
-	// if instances == "" {
-	// 	return errors.New("instances must be specified in url")
-	// }
-	inst, err := strconv.Atoi(instances)
+	instances, err := strconv.Atoi(req.Form.Get("instances"))
 	if err != nil {
 		return errors.New("instances must be specified in url and can't be null")
 	}
 
 	vars := mux.Vars(req)
 
-	if err := r.backend.ScaleApplication(vars["appId"], inst); err != nil {
+	if err := r.backend.ScaleApplication(vars["appId"], instances); err != nil {
 		return err
 	}
 
