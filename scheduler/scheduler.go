@@ -22,7 +22,7 @@ type Scheduler struct {
 	registry  Registry
 
 	client       *client.Client
-	DoneChan     chan struct{}
+	doneChan     chan struct{}
 	ReschedQueue chan types.ReschedulerMsg
 	events       Events
 
@@ -44,7 +44,7 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, registry Registry, clu
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
 		registry:  registry,
-		DoneChan:  make(chan struct{}),
+		doneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
 			sched.Event_OFFERS:     make(chan *sched.Event, 64),
@@ -68,7 +68,7 @@ func (s *Scheduler) Start() <-chan struct{} {
 	if err := s.subscribe(); err != nil {
 		logrus.Fatal(err)
 	}
-	return s.DoneChan
+	return s.doneChan
 }
 
 func (s *Scheduler) stop() {
@@ -120,7 +120,7 @@ func (s *Scheduler) subscribe() error {
 func (s *Scheduler) handleEvents(resp *http.Response) {
 	defer func() {
 		resp.Body.Close()
-		close(s.DoneChan)
+		close(s.doneChan)
 		for _, event := range s.events {
 			close(event)
 		}

@@ -354,7 +354,7 @@ func (s *Scheduler) ReschedulerTask() {
 
 			s.Status = "idle"
 
-		case <-s.DoneChan:
+		case <-s.doneChan:
 			return
 		}
 	}
