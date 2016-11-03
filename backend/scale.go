@@ -16,7 +16,7 @@ import (
 
 // ScaleApplication is used to scale application instances.
 func (b *Backend) ScaleApplication(applicationId string, instances int) error {
-	app, err := b.store.FetchApplication(applicationId)
+	app, err := b.store.GetApp(applicationId)
 	if err != nil {
 		return err
 	}
@@ -45,7 +45,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 	}
 
 	go func() error {
-		if app.Instances > instances {
+		if int(app.Instances) > instances {
 			tasks, err := b.store.ListApplicationTasks(app.ID)
 			if err != nil {
 				return err
@@ -57,35 +57,42 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					return err
 				}
 
-				if taskIndex+1 > instances {
-					b.sched.HealthCheckManager.StopCheck(task.Name)
-
-					if err := b.store.DeleteCheck(task.Name); err != nil {
-						logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
+				for _, task := range tasks {
+					taskIndex, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
+					if err != nil {
 						return err
 					}
 
-					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteApplicationTask(app.ID, task.ID)
+					if taskIndex+1 > instances {
+						b.sched.HealthCheckManager.StopCheck(task.Name)
+
+						if err := b.store.DeleteCheck(task.Name); err != nil {
+							logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
+							return err
+						}
+
+						if _, err := b.sched.KillTask(task); err == nil {
+							b.store.DeleteApplicationTask(app.ID, task.ID)
+						}
+
+						// reduce application tasks count
+						if err := b.store.ReduceApplicationInstances(app.ID); err != nil {
+							logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
+							return err
+						}
+
+						logrus.Infof("Remove health check for task %s", task.Name)
+
+						if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
+							logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
+						}
+
 					}
-
-					// reduce application tasks count
-					if err := b.store.ReduceApplicationInstances(app.ID); err != nil {
-						logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
-						return err
-					}
-
-					logrus.Infof("Remove health check for task %s", task.Name)
-
-					if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
-						logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
-					}
-
 				}
 			}
 		}
 
-		if app.Instances < instances {
+		if int(app.Instances) < instances {
 			for i := 0; i < instances-app.Instances; i++ {
 				b.sched.Status = "busy"
 
@@ -103,8 +110,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 						break
 					}
 				}
-
-				name := fmt.Sprintf("%d.%s.%s.%s", app.Instances+i, app.ID, app.UserId, app.ClusterId)
+				name := fmt.Sprintf("%d.%s.%s.%s", int(app.Instances)+i, app.ID, app.UserId, app.ClusterId)
 
 				task, err := b.sched.BuildTask(choosedOffer, version, name)
 				if err != nil {

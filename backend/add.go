@@ -6,7 +6,7 @@ import (
 
 // RegisterApplication register application in consul.
 func (b *Backend) RegisterApplication(application *types.Application) error {
-	return b.store.RegisterApplication(application)
+	return b.store.PutApp(application)
 }
 
 // RegisterApplicationVersion register application version in consul.

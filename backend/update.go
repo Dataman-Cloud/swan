@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/types"
 
 	"github.com/Sirupsen/logrus"
@@ -16,7 +17,7 @@ import (
 // UpdateApplication is used for application rolling-update.
 func (b *Backend) UpdateApplication(applicationId string, instances int, version *types.Version) error {
 	logrus.Infof("Updating application %s", applicationId)
-	app, err := b.store.FetchApplication(applicationId)
+	app, err := b.FetchApplication(applicationId)
 	if err != nil {
 		return err
 	}
@@ -41,7 +42,51 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 		return err
 	}
 
-	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
+	begin, end := int(app.UpdatedInstances), int(app.UpdatedInstances)+instances
+	maxFailover := 0
+	quit := make(chan struct{})
+
+	taskNames := make([]string, 0)
+	for _, task := range tasks {
+		taskNames = append(taskNames, task.Name)
+	}
+
+	go func() {
+		for {
+			select {
+			case event := <-b.sched.GetEvent(sched.Event_UPDATE):
+				status := event.GetUpdate().GetStatus()
+				ID := status.TaskId.GetValue()
+				taskName := strings.Split(ID, "-")[1]
+				for _, name := range taskNames {
+					if name == taskName {
+						switch status.GetState() {
+						case mesos.TaskState_TASK_FAILED,
+							mesos.TaskState_TASK_FINISHED,
+							mesos.TaskState_TASK_LOST:
+							maxFailover++
+							if maxFailover >= version.UpdatePolicy.MaxFailovers {
+								switch version.UpdatePolicy.Action {
+								case "rollback", "ROLLBACK":
+									logrus.Errorf("MaxFailovers exceeded, Rollback")
+									go func() {
+										b.RollbackApplication(version.ID)
+									}()
+									close(quit)
+								case "stop", "STOP":
+									logrus.Errorf("MaxFailovers exceeded, Stop Updating")
+									close(quit)
+								}
+							}
+						}
+					}
+				}
+			case <-quit:
+				return
+			}
+		}
+	}()
+
 	if instances == -1 {
 		begin, end = 0, len(tasks)
 	}
@@ -148,7 +193,6 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 							}
 
 							b.sched.HealthCheckManager.Add(&check)
-
 						}
 					}
 

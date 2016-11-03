@@ -40,7 +40,7 @@ func (b *Backend) DeleteApplication(id string) error {
 
 	}
 
-	return b.store.DeleteApplication(id)
+	return b.store.DeleteApp(id)
 }
 
 // DeleteApplicationTasks delete all tasks belong to appcaiton but keep that application exists.

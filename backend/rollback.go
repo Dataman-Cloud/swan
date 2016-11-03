@@ -1,7 +1,6 @@
 package backend
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -14,14 +13,9 @@ import (
 // RollbackApplication rollback application to previous version.
 func (b *Backend) RollbackApplication(applicationId string) error {
 	logrus.Infof("Rollback application %s", applicationId)
-	app, err := b.store.FetchApplication(applicationId)
+	app, err := b.store.GetApp(applicationId)
 	if err != nil {
 		return err
-	}
-
-	if app == nil {
-		logrus.Errorf("Application %s not found for rollback", applicationId)
-		return errors.New("Application not found")
 	}
 
 	// Update application status to ROLLINGBACK

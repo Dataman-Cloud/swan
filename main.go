@@ -11,10 +11,12 @@ import (
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/scheduler"
-	"github.com/Dataman-Cloud/swan/store/consul"
+	"github.com/Dataman-Cloud/swan/store/boltdb"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
+	"github.com/boltdb/bolt"
+	"github.com/gogo/protobuf/proto"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -64,15 +66,17 @@ func main() {
 
 	setupLogger()
 
-	store, err := consul.NewConsul(consulAddr)
+	db, err := bolt.Open("./bin/bolt.db", 0644, nil)
 	if err != nil {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return
 	}
 
-	frameworkId, err := store.FetchFrameworkID("swan/frameworkid")
+	store := boltdb.NewBoltdbStore(db)
+
+	frameworkId, err := store.GetFrameworkID()
 	if err != nil {
-		logrus.Errorf("Fetch framework id failed: %s", err)
+		logrus.Errorf("get framework id failed: %s", err)
 		return
 	}
 

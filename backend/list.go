@@ -5,7 +5,7 @@ import (
 )
 
 func (b *Backend) ListApplications() ([]*types.Application, error) {
-	return b.store.ListApplications()
+	return b.store.GetApps()
 }
 
 func (b *Backend) ListApplicationTasks(id string) ([]*types.Task, error) {
