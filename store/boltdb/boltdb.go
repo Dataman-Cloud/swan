@@ -38,6 +38,15 @@ func withCreateAppBucketIfNotExists(tx *bolt.Tx, id string, fn func(bkt *bolt.Bu
 	return fn(bkt)
 }
 
+func withCreateAppTaskBucketIfNotExists(tx *bolt.Tx, appId, taskId string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), []byte(taskId))
+	if err != nil {
+		return err
+	}
+
+	return fn(bkt)
+}
+
 func createBucketIfNotExists(tx *bolt.Tx, keys ...[]byte) (*bolt.Bucket, error) {
 	bkt, err := tx.CreateBucketIfNotExists(keys[0])
 	if err != nil {

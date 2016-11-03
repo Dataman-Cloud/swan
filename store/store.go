@@ -19,6 +19,16 @@ type Store interface {
 
 	DeleteApps(...string) error
 
+	AddAppInstance(appId string, increment int) error
+
+	AddAppRunningInstance(appId string, increment int) error
+
+	PutAppStatus(appId string, status string) error
+
+	AddAppUpdatedInstance(appId string, increment int) error
+
+	SetAppUpdatedInstance(appId string, instances int) error
+
 	// RegisterTask is used to register task in consul under task.AppId namespace.
 	RegisterTask(*types.Task) error
 
@@ -54,18 +64,4 @@ type Store interface {
 
 	// UpdateTask updated task status by task id.
 	UpdateTask(string, string, string) error
-
-	// IncreaseApplicationInstances reduce instances count for application.
-	IncreaseApplicationInstances(string) error
-
-	// IncreaseApplicationUpdatedInstances increase updated instances count.
-	IncreaseApplicationUpdatedInstances(string) error
-
-	ResetApplicationUpdatedInstances(string) error
-
-	UpdateApplicationStatus(string, string) error
-
-	IncreaseApplicationRunningInstances(string) error
-
-	ReduceApplicationInstances(string) error
 }

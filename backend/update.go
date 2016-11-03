@@ -31,7 +31,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 	}
 
 	// Update application status to UPDATING
-	if err := b.store.UpdateApplicationStatus(applicationId, "UPDATING"); err != nil {
+	if err := b.store.PutAppStatus(applicationId, "UPDATING"); err != nil {
 		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
 		return err
 	}
@@ -65,7 +65,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 							mesos.TaskState_TASK_FINISHED,
 							mesos.TaskState_TASK_LOST:
 							maxFailover++
-							if maxFailover >= version.UpdatePolicy.MaxFailovers {
+							if maxFailover >= int(version.UpdatePolicy.MaxFailovers) {
 								switch version.UpdatePolicy.Action {
 								case "rollback", "ROLLBACK":
 									logrus.Errorf("MaxFailovers exceeded, Rollback")
@@ -113,7 +113,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 					}
 
 					//Reduce application running instance count.
-					if err := b.store.ReduceApplicationRunningInstances(applicationId); err != nil {
+					if err := b.store.AddAppRunningInstance(applicationId, -1); err != nil {
 						return err
 					}
 
@@ -172,46 +172,41 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 						for _, healthCheck := range task.HealthChecks {
 							check := types.Check{
 								ID:       task.Name,
-								Address:  *task.AgentHostname,
-								Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+								Address:  task.AgentHostname,
+								Port:     int64(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 								TaskID:   task.Name,
 								AppID:    version.ID,
 								Protocol: healthCheck.Protocol,
-								Interval: int(healthCheck.IntervalSeconds),
-								Timeout:  int(healthCheck.TimeoutSeconds),
+								Interval: int64(healthCheck.IntervalSeconds),
+								Timeout:  int64(healthCheck.TimeoutSeconds),
 							}
 							if healthCheck.Command != nil {
 								check.Command = healthCheck.Command
 							}
 
-							if healthCheck.Path != nil {
-								check.Path = *healthCheck.Path
-							}
-
-							if healthCheck.MaxConsecutiveFailures != nil {
-								check.MaxFailures = *healthCheck.MaxConsecutiveFailures
-							}
+							check.Path = healthCheck.Path
+							check.MaxFailures = healthCheck.MaxConsecutiveFailures
 
 							b.sched.HealthCheckManager.Add(&check)
 						}
 					}
 
-					if err := b.store.IncreaseApplicationUpdatedInstances(app.ID); err != nil {
+					if err := b.store.AddAppUpdatedInstance(app.ID, 1); err != nil {
 						return err
 					}
 
-					app, err := b.store.FetchApplication(applicationId)
+					app, err := b.store.GetApp(applicationId)
 					if err != nil {
 						return err
 					}
 
 					// Rest application updated instance count to zero.
 					if app.UpdatedInstances == app.Instances {
-						if err := b.store.ResetApplicationUpdatedInstances(app.ID); err != nil {
+						if err := b.store.SetAppUpdatedInstance(app.ID, 0); err != nil {
 							return err
 						}
 						// Update application status to RUNNING
-						if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
+						if err := b.store.PutAppStatus(app.ID, "RUNNING"); err != nil {
 							return err
 						}
 

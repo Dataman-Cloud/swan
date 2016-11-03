@@ -10,9 +10,9 @@ import (
 type TCPChecker struct {
 	ID          string
 	Addr        string
-	Interval    int
-	Timeout     int
-	MaxFailures int
+	Interval    int64
+	Timeout     int64
+	MaxFailures int64
 
 	FailedHandler HandlerFunc
 
@@ -22,7 +22,7 @@ type TCPChecker struct {
 	quit chan struct{}
 }
 
-func NewTCPChecker(id, addr string, port int, interval, timeout, failures int, handler HandlerFunc, appId, taskId string) *TCPChecker {
+func NewTCPChecker(id, addr string, port, interval, timeout, failures int64, handler HandlerFunc, appId, taskId string) *TCPChecker {
 	return &TCPChecker{
 		ID:            id,
 		Addr:          addr,
@@ -41,7 +41,7 @@ func (c *TCPChecker) Start() {
 	maxFailures := 0
 	for {
 
-		if maxFailures >= c.MaxFailures {
+		if maxFailures >= int(c.MaxFailures) {
 			c.FailedHandler(c.AppID, c.TaskID)
 			return
 		}

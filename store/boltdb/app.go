@@ -136,3 +136,85 @@ func (db *Boltdb) DeleteApps(appIds ...string) error {
 
 	return tx.Commit()
 }
+
+func (db *Boltdb) AddAppInstance(appId string, increment int) error {
+	app, err := db.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	app.Instances += int32(increment)
+
+	return db.PutApp(app)
+}
+
+func (db *Boltdb) AddAppRunningInstance(appId string, increment int) error {
+	app, err := db.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	app.RunningInstances += int32(increment)
+
+	return db.PutApp(app)
+}
+
+func (db *Boltdb) AddAppUpdatedInstance(appId string, increment int) error {
+	app, err := db.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	app.UpdatedInstances += int32(increment)
+
+	return db.PutApp(app)
+}
+
+func (db *Boltdb) PutAppStatus(appId, status string) error {
+	app, err := db.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	app.Status = status
+
+	return db.PutApp(app)
+}
+
+func (db *Boltdb) SetAppUpdatedInstance(appId string, instances int) error {
+	app, err := db.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	app.UpdatedInstances = int32(instances)
+
+	return db.PutApp(app)
+}
+
+func (db *Boltdb) PutTasks(tasks ...*types.Task) error {
+	tx, err := db.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, task := range tasks {
+		if err := withCreateAppTaskBucketIfNotExists(tx, task.AppId, task.ID, func(bkt *bolt.Bucket) error {
+			p, err := proto.Marshal(task)
+			if err != nil {
+				return err
+			}
+
+			return bkt.Put(bucketKeyData, p)
+		}); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (db *Boltdb) PutTask(task *types.Task) error {
+	return db.PutTasks(task)
+}

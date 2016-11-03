@@ -11,9 +11,9 @@ import (
 type HTTPChecker struct {
 	ID          string
 	Url         string
-	Interval    int
-	Timeout     int
-	MaxFailures int
+	Interval    int64
+	Timeout     int64
+	MaxFailures int64
 
 	FailedHandler HandlerFunc
 
@@ -23,7 +23,7 @@ type HTTPChecker struct {
 	quit chan struct{}
 }
 
-func NewHTTPChecker(id, url string, interval, timeout, failures int, handler HandlerFunc, appId, taskId string) *HTTPChecker {
+func NewHTTPChecker(id, url string, interval, timeout, failures int64, handler HandlerFunc, appId, taskId string) *HTTPChecker {
 	return &HTTPChecker{
 		ID:            id,
 		Url:           url,
@@ -44,7 +44,7 @@ func (c *HTTPChecker) Start() {
 
 	for {
 
-		if maxFailures >= c.MaxFailures {
+		if maxFailures >= int(c.MaxFailures) {
 			c.FailedHandler(c.AppID, c.TaskID)
 			return
 		}

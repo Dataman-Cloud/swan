@@ -19,7 +19,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 	}
 
 	// Update application status to ROLLINGBACK
-	if err := b.store.UpdateApplicationStatus(app.ID, "ROLLINGBACK"); err != nil {
+	if err := b.store.PutAppStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
 
@@ -105,25 +105,20 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 			for _, healthCheck := range task.HealthChecks {
 				check := types.Check{
 					ID:       task.Name,
-					Address:  *task.AgentHostname,
-					Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+					Address:  task.AgentHostname,
+					Port:     int64(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 					TaskID:   task.Name,
 					AppID:    app.ID,
 					Protocol: healthCheck.Protocol,
-					Interval: int(healthCheck.IntervalSeconds),
-					Timeout:  int(healthCheck.TimeoutSeconds),
+					Interval: int64(healthCheck.IntervalSeconds),
+					Timeout:  int64(healthCheck.TimeoutSeconds),
 				}
 				if healthCheck.Command != nil {
 					check.Command = healthCheck.Command
 				}
 
-				if healthCheck.Path != nil {
-					check.Path = *healthCheck.Path
-				}
-
-				if healthCheck.MaxConsecutiveFailures != nil {
-					check.MaxFailures = *healthCheck.MaxConsecutiveFailures
-				}
+				check.Path = healthCheck.Path
+				check.MaxFailures = healthCheck.MaxConsecutiveFailures
 
 				b.sched.HealthCheckManager.Add(&check)
 			}
@@ -132,7 +127,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		b.sched.Status = "idle"
 	}
 
-	if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
+	if err := b.store.PutAppStatus(app.ID, "RUNNING"); err != nil {
 		return err
 	}
 

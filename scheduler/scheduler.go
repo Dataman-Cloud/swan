@@ -26,7 +26,7 @@ type Scheduler struct {
 	ReschedQueue chan types.ReschedulerMsg
 	events       Events
 
-	TaskLaunched int
+	TaskLaunched int32
 
 	// Status indicated scheduler's state is idle or busy.
 	Status string

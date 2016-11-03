@@ -3,6 +3,7 @@ syntax = "proto3";
 package types;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "health.proto";
 
 option (gogoproto.populate_all) = true;
 option (gogoproto.testgen_all) = true;
@@ -26,4 +27,62 @@ message Application {
     string status = 9;
     int64 created = 10;
     int64 updated = 11;
+}
+
+message Container {
+    string type = 1;
+    Docker docker = 2;
+    repeated Volume volumes = 3;
+}
+
+message Docker {
+    bool forcePullImage = 1;
+    string image = 2;
+    string network = 3;
+    bool privileged = 4;
+    repeated Parameter parameters = 5;
+    repeated PortMapping portMappings = 6;
+}
+
+message Parameter {
+    string key = 1;
+    string value = 2;
+}
+
+message PortMapping {
+    int32 containerPort = 1;
+    string name = 2;
+    string protocol = 3;
+}
+
+message Volume {
+    string containerPath = 1;
+    string hostPath = 2;
+    string mode = 3;
+}
+
+message KillPolicy {
+    int64 duration = 1;
+}
+
+message UpdatePolicy {
+    int32 updateDelay = 1;
+    int32 maxRetries = 2;
+    int32 maxFailovers = 3;
+    string action = 4;
+}
+
+message ApplicationVersion {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string command = 2;
+    double cpus = 3;
+    double mem = 4;
+    double disk = 5;
+    int32 instances = 6;
+    Container container = 7;
+    map<string, string> labels = 8;
+    repeated HealthCheck healthChecks = 9;
+    map<string, string> env = 10;
+    KillPolicy killPolicy = 11;
+    UpdatePolicy updatePolicy = 12;
 }

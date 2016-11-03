@@ -13,11 +13,11 @@ import (
 	"github.com/Dataman-Cloud/swan/scheduler"
 	"github.com/Dataman-Cloud/swan/store/boltdb"
 	"github.com/Dataman-Cloud/swan/types"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
-	"github.com/golang/protobuf/proto"
 )
 
 var (

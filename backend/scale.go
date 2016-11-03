@@ -57,43 +57,36 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					return err
 				}
 
-				for _, task := range tasks {
-					taskIndex, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
-					if err != nil {
+				if taskIndex+1 > instances {
+					b.sched.HealthCheckManager.StopCheck(task.Name)
+
+					if err := b.store.DeleteCheck(task.Name); err != nil {
+						logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
 						return err
 					}
 
-					if taskIndex+1 > instances {
-						b.sched.HealthCheckManager.StopCheck(task.Name)
-
-						if err := b.store.DeleteCheck(task.Name); err != nil {
-							logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
-							return err
-						}
-
-						if _, err := b.sched.KillTask(task); err == nil {
-							b.store.DeleteApplicationTask(app.ID, task.ID)
-						}
-
-						// reduce application tasks count
-						if err := b.store.ReduceApplicationInstances(app.ID); err != nil {
-							logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
-							return err
-						}
-
-						logrus.Infof("Remove health check for task %s", task.Name)
-
-						if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
-							logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
-						}
-
+					if _, err := b.sched.KillTask(task); err == nil {
+						b.store.DeleteApplicationTask(app.ID, task.ID)
 					}
+
+					// reduce application tasks count
+					if err := b.store.AddAppInstance(app.ID, -1); err != nil {
+						logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
+						return err
+					}
+
+					logrus.Infof("Remove health check for task %s", task.Name)
+
+					if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
+						logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
+					}
+
 				}
 			}
 		}
 
 		if int(app.Instances) < instances {
-			for i := 0; i < instances-app.Instances; i++ {
+			for i := 0; i < instances-int(app.Instances); i++ {
 				b.sched.Status = "busy"
 
 				resources := b.sched.BuildResources(version.Cpus, version.Mem, version.Disk)
@@ -144,32 +137,27 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					for _, healthCheck := range task.HealthChecks {
 						check := types.Check{
 							ID:       task.Name,
-							Address:  *task.AgentHostname,
-							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+							Address:  task.AgentHostname,
+							Port:     int64(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 							TaskID:   task.Name,
 							AppID:    app.ID,
 							Protocol: healthCheck.Protocol,
-							Interval: int(healthCheck.IntervalSeconds),
-							Timeout:  int(healthCheck.TimeoutSeconds),
+							Interval: int64(healthCheck.IntervalSeconds),
+							Timeout:  int64(healthCheck.TimeoutSeconds),
 						}
 						if healthCheck.Command != nil {
 							check.Command = healthCheck.Command
 						}
 
-						if healthCheck.Path != nil {
-							check.Path = *healthCheck.Path
-						}
-
-						if healthCheck.MaxConsecutiveFailures != nil {
-							check.MaxFailures = *healthCheck.MaxConsecutiveFailures
-						}
+						check.Path = healthCheck.Path
+						check.MaxFailures = healthCheck.MaxConsecutiveFailures
 
 						b.sched.HealthCheckManager.Add(&check)
 					}
 				}
 
 				// Increase application task count
-				if err := b.store.IncreaseApplicationInstances(version.ID); err != nil {
+				if err := b.store.AddAppInstance(version.ID, 1); err != nil {
 					logrus.Errorf("Updating application %s instance count failed: %s", version.ID, err.Error())
 					return err
 				}
