@@ -10,6 +10,6 @@ func (b *Backend) RegisterApplication(application *types.Application) error {
 }
 
 // RegisterApplicationVersion register application version in consul.
-func (b *Backend) RegisterApplicationVersion(appId string, version *types.ApplicationVersion) error {
+func (b *Backend) RegisterApplicationVersion(appId string, version *types.Version) error {
 	return b.store.RegisterApplicationVersion(appId, version)
 }

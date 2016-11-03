@@ -21,7 +21,7 @@ func TestBuildTask(t *testing.T) {
 		Hostname: proto.String("x.x.x.x"),
 	}
 
-	version := &types.ApplicationVersion{
+	version := &types.Version{
 		ID:        "test",
 		Command:   nil,
 		Cpus:      0.1,

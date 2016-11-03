@@ -14,11 +14,11 @@ func (b *Backend) RegisterApplication(app *types.Application) error {
 	return nil
 }
 
-func (b *Backend) RegisterApplicationVersion(app string, version *types.ApplicationVersion) error {
+func (b *Backend) RegisterApplicationVersion(app string, version *types.Version) error {
 	return nil
 }
 
-func (b *Backend) LaunchApplication(version *types.ApplicationVersion) error {
+func (b *Backend) LaunchApplication(version *types.Version) error {
 	return nil
 }
 
@@ -50,11 +50,11 @@ func (b *Backend) ListApplicationVersions(appId string) ([]string, error) {
 	return nil, nil
 }
 
-func (b *Backend) FetchApplicationVersion(appId string, versionId string) (*types.ApplicationVersion, error) {
+func (b *Backend) FetchApplicationVersion(appId string, versionId string) (*types.Version, error) {
 	return nil, nil
 }
 
-func (b *Backend) UpdateApplication(string, int, *types.ApplicationVersion) error {
+func (b *Backend) UpdateApplication(string, int, *types.Version) error {
 	return nil
 }
 

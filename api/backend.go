@@ -10,10 +10,10 @@ type Backend interface {
 	RegisterApplication(*types.Application) error
 
 	// RegisterApplicationVersion register application version in consul.
-	RegisterApplicationVersion(string, *types.ApplicationVersion) error
+	RegisterApplicationVersion(string, *types.Version) error
 
 	// LaunchApplication launch applications
-	LaunchApplication(*types.ApplicationVersion) error
+	LaunchApplication(*types.Version) error
 
 	// DeleteApplication will delete all data associated with application.
 	DeleteApplication(string) error
@@ -31,9 +31,9 @@ type Backend interface {
 
 	ListApplicationVersions(string) ([]string, error)
 
-	FetchApplicationVersion(string, string) (*types.ApplicationVersion, error)
+	FetchApplicationVersion(string, string) (*types.Version, error)
 
-	UpdateApplication(string, int, *types.ApplicationVersion) error
+	UpdateApplication(string, int, *types.Version) error
 
 	ScaleApplication(string, int) error
 

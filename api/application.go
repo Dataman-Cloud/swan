@@ -22,7 +22,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	var version types.ApplicationVersion
+	var version types.Version
 
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&version); err != nil {
@@ -169,7 +169,7 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 		return errors.New("instances must be specified in url and can't be null")
 	}
 
-	var version types.ApplicationVersion
+	var version types.Version
 
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&version); err != nil {

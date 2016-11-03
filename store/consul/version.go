@@ -14,7 +14,7 @@ import (
 
 // RegisterApplicationVersion is used to register a application version in consul. Use applicationId as
 // key, and application version information as value.
-func (c *Consul) RegisterApplicationVersion(appId string, version *types.ApplicationVersion) error {
+func (c *Consul) RegisterApplicationVersion(appId string, version *types.Version) error {
 	data, err := json.Marshal(version)
 	if err != nil {
 		logrus.Errorf("Marshal application failed: %s", err.Error())
@@ -54,7 +54,7 @@ func (c *Consul) ListApplicationVersions(applicationId string) ([]string, error)
 }
 
 // FetchApplicationVersion is used to fetch specified version by version id from consul.
-func (c *Consul) FetchApplicationVersion(applicationId, versionId string) (*types.ApplicationVersion, error) {
+func (c *Consul) FetchApplicationVersion(applicationId, versionId string) (*types.Version, error) {
 	ver, _, err := c.client.KV().Get(fmt.Sprintf("applications/%s/versions/%s", applicationId, versionId), nil)
 	if err != nil {
 		logrus.Errorf("Fetch appliction version failed: %s", err.Error())
@@ -66,7 +66,7 @@ func (c *Consul) FetchApplicationVersion(applicationId, versionId string) (*type
 		return nil, err
 	}
 
-	var version types.ApplicationVersion
+	var version types.Version
 	if err := json.Unmarshal(ver.Value, &version); err != nil {
 		logrus.Errorf("Unmarshal application version failed: %s", err.Error())
 		return nil, err

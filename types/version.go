@@ -1,6 +1,6 @@
 package types
 
-type ApplicationVersion struct {
+type Version struct {
 	ID           string             `json:"id"`
 	Command      *string            `json:"cmd"`
 	Cpus         float64            `json:"cpus"`

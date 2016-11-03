@@ -8,7 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-func (b *Backend) LaunchApplication(version *types.ApplicationVersion) error {
+func (b *Backend) LaunchApplication(version *types.Version) error {
 	b.sched.TaskLaunched = 0
 
 	// Set scheduler's status to busy for accepting resource.

@@ -48,7 +48,7 @@ func (s *Store) DeleteApplicationTask(appId, taskId string) error {
 	return nil
 }
 
-func (s *Store) RegisterApplicationVersion(appId string, version *types.ApplicationVersion) error {
+func (s *Store) RegisterApplicationVersion(appId string, version *types.Version) error {
 	return nil
 }
 
@@ -56,7 +56,7 @@ func (s *Store) ListApplicationVersions(appId string) ([]string, error) {
 	return nil, nil
 }
 
-func (s *Store) FetchApplicationVersion(appId, verionId string) (*types.ApplicationVersion, error) {
+func (s *Store) FetchApplicationVersion(appId, verionId string) (*types.Version, error) {
 	return nil, nil
 }
 
