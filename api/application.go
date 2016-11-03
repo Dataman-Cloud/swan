@@ -29,6 +29,14 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
+	app, err := r.backend.FetchApplication(version.ID)
+	if err != nil {
+		return err
+	}
+	if app != nil {
+		return errors.New("Applicaiton Id Duplicated")
+	}
+
 	user := req.Form.Get("user")
 	if user == "" {
 		user = "default"
