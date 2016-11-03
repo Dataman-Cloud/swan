@@ -24,6 +24,10 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 			return nil, err
 		}
 
+		if app == nil {
+			return nil, fmt.Errorf("Application %s not found.", version.ID)
+		}
+
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
 
 		if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
