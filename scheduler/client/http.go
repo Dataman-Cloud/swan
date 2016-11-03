@@ -41,7 +41,7 @@ func (c *Client) Send(payload []byte) (*http.Response, error) {
 
 	httpReq.Header.Set("Content-Type", "application/x-protobuf")
 	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("User-Agent", "mesos-demo/0.1")
+	httpReq.Header.Set("User-Agent", "swan/0.1")
 	if c.StreamID != "" {
 		httpReq.Header.Set("Mesos-Stream-Id", c.StreamID)
 	}
@@ -70,7 +70,7 @@ func (c *Client) SendAsJson(call *mesosjson.Call) (*http.Response, error) {
 
 	httpReq.Header.Set("Content-Type", "application/json")
 	httpReq.Header.Set("Accept", "application/json")
-	httpReq.Header.Set("User-Agent", "mesos-demo/0.1")
+	httpReq.Header.Set("User-Agent", "swan/0.1")
 
 	httpResp, err := c.client.Do(httpReq)
 	if err != nil {
