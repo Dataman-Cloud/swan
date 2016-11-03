@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/user"
 
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/backend"
@@ -37,11 +36,7 @@ func init() {
 
 func main() {
 	if *mesosUser == "" {
-		u, err := user.Current()
-		if err != nil {
-			logrus.Fatal("Unable to determine user")
-		}
-		*mesosUser = u.Username
+		*mesosUser = "root"
 	}
 
 	hostname, err := os.Hostname()
