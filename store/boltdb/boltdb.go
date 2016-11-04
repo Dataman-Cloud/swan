@@ -28,10 +28,15 @@ var (
 	errFrameworkUnknown = errors.New("boltdb: framework unknown")
 )
 
-func NewBoltdbStore(db *bolt.DB) *Boltdb {
+func NewBoltdbStore(db *bolt.DB) (*Boltdb, error) {
+	if err := db.Update(func(tx *bolt.Tx) {
+		createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps)
+	}); err != nil {
+		return nil, err
+	}
 	return &Boltdb{
 		DB: db,
-	}
+	}, nil
 }
 
 func withCreateAppBucketIfNotExists(tx *bolt.Tx, id string, fn func(bkt *bolt.Bucket) error) error {

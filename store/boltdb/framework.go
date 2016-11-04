@@ -18,7 +18,7 @@ func (db *Boltdb) GetFrameworkID() (string, error) {
 	err := db.View(func(tx *bolt.Tx) error {
 		bkt := getBucket(tx, bucketKeyStorageVersion, bucketKeyFramework)
 		if bkt == nil {
-			return errFrameworkUnknown
+			return nil
 		}
 
 		val := bkt.Get(bucketKeyID)
