@@ -59,7 +59,7 @@ func main() {
 		return
 	}
 
-	frameworkId, err := store.FetchFrameworkID("swan/frameworkid")
+	frameworkId, err := store.FetchFrameworkID()
 	if err != nil {
 		logrus.Errorf("Fetch framework id failed: %s", err)
 		return

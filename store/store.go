@@ -12,7 +12,7 @@ type Store interface {
 	SaveFrameworkID(string) error
 
 	// fetch framework id from db
-	FetchFrameworkID(string) (string, error)
+	FetchFrameworkID() (string, error)
 
 	// check if framework id is in db or not
 	HasFrameworkID(string) (bool, error)

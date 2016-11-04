@@ -17,7 +17,7 @@ func (b *BoltStore) SaveFrameworkID(frameworkId string) error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) FetchFrameworkID(key string) (string, error) {
+func (b *BoltStore) FetchFrameworkID() (string, error) {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return "", err
