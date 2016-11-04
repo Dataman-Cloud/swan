@@ -29,7 +29,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		return err
 	}
 
-	versions, err := b.store.ListApplicationVersions(applicationId)
+	versions, err := b.store.ListVersions(applicationId)
 	if err != nil {
 		return err
 	}
@@ -37,12 +37,12 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 	sort.Strings(versions)
 
 	rollbackVer := versions[len(versions)-2]
-	version, err := b.store.FetchApplicationVersion(applicationId, rollbackVer)
+	version, err := b.store.FetchVersion(rollbackVer)
 	if err != nil {
 		return err
 	}
 
-	tasks, err := b.store.ListApplicationTasks(applicationId)
+	tasks, err := b.store.ListTasks(applicationId)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		}
 
 		if _, err := b.sched.KillTask(task); err == nil {
-			b.store.DeleteApplicationTask(app.ID, task.ID)
+			b.store.DeleteTask(task.ID)
 		}
 
 		b.sched.Status = "busy"
@@ -99,12 +99,12 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 			return fmt.Errorf("status code %d received", resp.StatusCode)
 		}
 
-		if err := b.store.RegisterTask(task); err != nil {
+		if err := b.store.SaveTask(task); err != nil {
 			return err
 		}
 
 		if len(task.HealthChecks) != 0 {
-			if err := b.store.RegisterCheck(task,
+			if err := b.store.SaveCheck(task,
 				*taskInfo.Container.Docker.PortMappings[0].HostPort,
 				app.ID); err != nil {
 			}

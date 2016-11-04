@@ -2,6 +2,7 @@ package backend
 
 import (
 	"github.com/Dataman-Cloud/swan/scheduler"
+	. "github.com/Dataman-Cloud/swan/store"
 )
 
 type Backend struct {

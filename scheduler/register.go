@@ -55,7 +55,7 @@ type Registry interface {
 	DeleteCheck(string) error
 
 	// UpdateTask updated task status by task id.
-	UpdateTask(string, string, string) error
+	UpdateTaskStatus(string, string, string) error
 
 	// IncreaseApplicationInstances reduce instances count for application.
 	IncreaseApplicationInstances(string) error

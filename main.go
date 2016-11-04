@@ -11,7 +11,8 @@ import (
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/scheduler"
-	"github.com/Dataman-Cloud/swan/store/consul"
+	//"github.com/Dataman-Cloud/swan/store/consul"
+	"github.com/Dataman-Cloud/swan/store/boltdb"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
@@ -51,7 +52,8 @@ func main() {
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
-	store, err := consul.NewConsul(*consulAddr)
+	//store, err := consul.NewConsul(*consulAddr)
+	store, err := boltdb.NewBoltStore("/tmp/bolt.db")
 	if err != nil {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return

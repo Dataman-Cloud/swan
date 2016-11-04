@@ -34,7 +34,7 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 					return
 				}
 
-				if err := b.store.RegisterTask(task); err != nil {
+				if err := b.store.SaveTask(task); err != nil {
 					return
 				}
 
@@ -42,7 +42,7 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 				tasks = append(tasks, taskInfo)
 
 				if len(task.HealthChecks) != 0 {
-					if err := b.store.RegisterCheck(task,
+					if err := b.store.SaveCheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
 						version.ID); err != nil {
 					}
