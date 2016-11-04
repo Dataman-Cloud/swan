@@ -49,15 +49,15 @@ type Store interface {
 
 	DeleteHealthCheck(appId, healthCheckId string) error
 
-	// RegisterApplicationVersion is used to register a application version in consul.
-	RegisterApplicationVersion(string, *types.ApplicationVersion) error
+	PutVersions(appId string, versions ...*types.ApplicationVersion) error
 
-	// ListApplicationVersions is used to list all version ids for application.
-	ListApplicationVersions(string) ([]string, error)
+	PutVersion(appId string, version types.ApplicationVersion) error
 
-	// FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
-	FetchApplicationVersion(string, string) (*types.ApplicationVersion, error)
+	GetVersions(appId string) ([]*types.ApplicationVersion, error)
 
-	// UpdateApplication is used to update application info.
-	UpdateApplication(string, string, string) error
+	GetVersion(appId, versionId string) (types.ApplicationVersion, error)
+
+	DeleteVersions(appId string, versionIds ...string) error
+
+	DeleteVersion(appId, versionId string) error
 }

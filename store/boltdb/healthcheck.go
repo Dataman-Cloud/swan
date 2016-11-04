@@ -6,7 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-func (db *Boltdb) PutHealthcheck(task *types.Task, port uint32, appId string) error {
+func (db *Boltdb) PutHealthcheck(task *types.Task, port int64, appId string) error {
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err
@@ -17,19 +17,19 @@ func (db *Boltdb) PutHealthcheck(task *types.Task, port uint32, appId string) er
 
 		check := types.Check{
 			ID:          task.Name,
-			Address:     *task.AgentHostname,
-			Port:        int(port),
+			Address:     task.AgentHostname,
+			Port:        port,
 			TaskID:      task.Name,
 			AppID:       appId,
 			Protocol:    healthCheck.Protocol,
-			Interval:    int(healthCheck.IntervalSeconds),
-			Timeout:     int(healthCheck.TimeoutSeconds),
+			Interval:    healthCheck.IntervalSeconds,
+			Timeout:     healthCheck.TimeoutSeconds,
 			Command:     healthCheck.Command,
 			Path:        healthCheck.Path,
 			MaxFailures: healthCheck.MaxConsecutiveFailures,
 		}
 
-		if err := withCreateHealthcheckBucketIfNotExists(tx, check.AppID, func(bkt *bolt.Bucket) error {
+		if err := withCreateHealthcheckBucketIfNotExists(tx, check.AppID, check.ID, func(bkt *bolt.Bucket) error {
 			p, err := proto.Marshal(&check)
 			if err != nil {
 				return err
@@ -44,11 +44,11 @@ func (db *Boltdb) PutHealthcheck(task *types.Task, port uint32, appId string) er
 	return tx.Commit()
 }
 
-func (db *boltdb) GetHealthChecks(appId string) ([]*types.Check, error) {
+func (db *Boltdb) GetHealthChecks(appId string) ([]*types.Check, error) {
 	var checks []*types.Check
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		bkt := getHealthchecksBucket(tx, appId)
+		bkt := getHealthChecksBucket(tx, appId)
 		if bkt == nil {
 			checks = []*types.Check{}
 			return nil
@@ -56,7 +56,7 @@ func (db *boltdb) GetHealthChecks(appId string) ([]*types.Check, error) {
 
 		if err := bkt.ForEach(func(k, v []byte) error {
 			healthCheckBkt := bkt.Bucket(k)
-			if healthcheckId == nil {
+			if healthCheckBkt == nil {
 				return nil
 			}
 
@@ -83,11 +83,11 @@ func (db *boltdb) GetHealthChecks(appId string) ([]*types.Check, error) {
 
 func (db *Boltdb) DeleteHealthCheck(appId, healthCheckId string) error {
 	return db.Update(func(tx *bolt.Tx) error {
-		bkt := getHealthchecksBucket(tx, appId)
+		bkt := getHealthChecksBucket(tx, appId)
 		if bkt == nil {
 			return nil
 		}
 
-		return bkt.DeleteBucket([]byte(healthcheckId))
+		return bkt.DeleteBucket([]byte(healthCheckId))
 	})
 }

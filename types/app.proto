@@ -85,4 +85,5 @@ message ApplicationVersion {
     map<string, string> env = 10;
     KillPolicy killPolicy = 11;
     UpdatePolicy updatePolicy = 12;
+    string appId = 13 [(gogoproto.customname) = "AppID"];
 }

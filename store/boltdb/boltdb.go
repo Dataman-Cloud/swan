@@ -16,6 +16,7 @@ var (
 	bucketKeyData           = []byte("data")
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyHealthchecks   = []byte("healthchecks")
+	bucketKeyVersions       = []byte("versions")
 	bucketKeyID             = []byte("ID")
 	bucketKeyFramework      = []byte("framework")
 )
@@ -23,6 +24,7 @@ var (
 var (
 	errAppUnknown       = errors.New("boltdb: app unknown")
 	errTaskUnknown      = errors.New("boltdb: task unknown")
+	errVersionUnknown   = errors.New("boltdb: version unknown")
 	errFrameworkUnknown = errors.New("boltdb: framework unknown")
 )
 
@@ -54,6 +56,16 @@ func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appId, taskId string, fn func(
 func withCreateHealthcheckBucketIfNotExists(tx *bolt.Tx, appId, healthcheckId string, fn func(bkt *bolt.Bucket) error) error {
 	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
 		bucketKeyHealthchecks, []byte(healthcheckId))
+	if err != nil {
+		return err
+	}
+
+	return fn(bkt)
+}
+
+func withCreateVersionBucketIfNotExists(tx *bolt.Tx, appId, versionId string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
+		bucketKeyVersions, []byte(versionId))
 	if err != nil {
 		return err
 	}
@@ -100,6 +112,18 @@ func getTasksBucket(tx *bolt.Tx, appId string) *bolt.Bucket {
 
 func getTaskBucket(tx *bolt.Tx, appId, taskId string) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyTasks, []byte(taskId))
+}
+
+func getHealthChecksBucket(tx *bolt.Tx, appId string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyHealthchecks)
+}
+
+func getVersionsBucket(tx *bolt.Tx, appId string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions)
+}
+
+func getVersionBucket(tx *bolt.Tx, appId, versionId string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions, []byte(versionId))
 }
 
 func getBucket(tx *bolt.Tx, keys ...[]byte) *bolt.Bucket {

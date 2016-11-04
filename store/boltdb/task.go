@@ -34,8 +34,8 @@ func (db *Boltdb) PutTask(task *types.Task) error {
 	return db.PutTasks(task)
 }
 
-func UpdateTaskStatus(appId, taskId, status string) error {
-	task, err := db.GetTask(appId, taskId, status)
+func (db *Boltdb) UpdateTaskStatus(appId, taskId, status string) error {
+	task, err := db.GetTask(appId, taskId)
 	if err != nil {
 		return err
 	}
