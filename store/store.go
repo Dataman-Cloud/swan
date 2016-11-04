@@ -23,26 +23,31 @@ type Store interface {
 
 	AddAppRunningInstance(appId string, increment int) error
 
-	PutAppStatus(appId string, status string) error
+	UpdateAppStatus(appId string, status string) error
 
 	AddAppUpdatedInstance(appId string, increment int) error
 
-	SetAppUpdatedInstance(appId string, instances int) error
+	updateAppUpdatedInstance(appId string, instances int) error
 
-	// RegisterTask is used to register task in consul under task.AppId namespace.
-	RegisterTask(*types.Task) error
+	PutTasks(tasks ...*types.Task) error
 
-	// ListApplicationTasks is used to get all tasks belong to a application from consul.
-	ListApplicationTasks(string) ([]*types.Task, error)
+	PutTask(task *types.Task) error
 
-	// DeleteApplicationTasks is used to delete all tasks belong to a application from consul.
-	DeleteApplicationTasks(string) error
+	UpdateTaskStatus(appId, taskId, status string) error
 
-	// FetchApplicationTask is used to fetch a task belong to a application from consul.
-	FetchApplicationTask(string, string) (*types.Task, error)
+	GetTask(appId, taskId string) (*types.Task, error)
 
-	// DeleteApplicationTask is used to delete specified task belong to a application from consul.
-	DeleteApplicationTask(string, string) error
+	GetTasks(appId string, taskIds ...string) ([]*types.Task, error)
+
+	DeleteTask(appId, taskId string) error
+
+	DeleteTasks(appId string, taskIds ...string) error
+
+	PutHealthcheck(task *types.Task, port uint32, appId string) error
+
+	GetHealthChecks(appId string) ([]*types.Check, error)
+
+	DeleteHealthCheck(appId, healthCheckId string) error
 
 	// RegisterApplicationVersion is used to register a application version in consul.
 	RegisterApplicationVersion(string, *types.ApplicationVersion) error
@@ -55,13 +60,4 @@ type Store interface {
 
 	// UpdateApplication is used to update application info.
 	UpdateApplication(string, string, string) error
-
-	// RegisterCheck register check in consul.
-	RegisterCheck(*types.Task, uint32, string) error
-
-	// DeleteCheck delete task health check from consul.
-	DeleteCheck(string) error
-
-	// UpdateTask updated task status by task id.
-	UpdateTask(string, string, string) error
 }

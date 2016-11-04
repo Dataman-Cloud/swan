@@ -2,6 +2,7 @@ package boltdb
 
 import (
 	"github.com/Dataman-Cloud/swan/types"
+
 	"github.com/boltdb/bolt"
 	"github.com/gogo/protobuf/proto"
 )
@@ -52,24 +53,25 @@ func (db *Boltdb) GetApps(appIds ...string) ([]*types.Application, error) {
 	}
 
 	var apps []*types.Application
-	tx, err := db.Begin(false)
-	if err != nil {
-		return nil, err
-	}
+	if err := db.View(func(tx *bolt.Tx) error {
+		for _, appId := range appIds {
+			if err := withAppBucket(tx, appId, func(bkt *bolt.Bucket) error {
+				var app types.Application
+				p := bkt.Get(bucketKeyData)
+				if err := proto.Unmarshal(p, &app); err != nil {
+					return err
+				}
 
-	for _, appId := range appIds {
-		if err := withAppBucket(tx, appId, func(bkt *bolt.Bucket) error {
-			var app types.Application
-			p := bkt.Get(bucketKeyData)
-			if err := proto.Unmarshal(p, &app); err != nil {
+				apps = append(apps, &app)
+				return nil
+			}); err != nil {
 				return err
 			}
-
-			apps = append(apps, &app)
-			return nil
-		}); err != nil {
-			return nil, err
 		}
+		return nil
+
+	}); err != nil {
+		return nil, err
 	}
 
 	return apps, nil
@@ -129,7 +131,7 @@ func (db *Boltdb) DeleteApps(appIds ...string) error {
 	}
 
 	for _, appId := range appIds {
-		if err := bkt.Delete([]byte(appId)); err != nil {
+		if err := bkt.DeleteBucket([]byte(appId)); err != nil {
 			return err
 		}
 	}
@@ -170,7 +172,7 @@ func (db *Boltdb) AddAppUpdatedInstance(appId string, increment int) error {
 	return db.PutApp(app)
 }
 
-func (db *Boltdb) PutAppStatus(appId, status string) error {
+func (db *Boltdb) UpdateAppStatus(appId, status string) error {
 	app, err := db.GetApp(appId)
 	if err != nil {
 		return err
@@ -181,7 +183,7 @@ func (db *Boltdb) PutAppStatus(appId, status string) error {
 	return db.PutApp(app)
 }
 
-func (db *Boltdb) SetAppUpdatedInstance(appId string, instances int) error {
+func (db *Boltdb) UpdateAppUpdatedInstance(appId string, instances int) error {
 	app, err := db.GetApp(appId)
 	if err != nil {
 		return err
@@ -190,31 +192,4 @@ func (db *Boltdb) SetAppUpdatedInstance(appId string, instances int) error {
 	app.UpdatedInstances = int32(instances)
 
 	return db.PutApp(app)
-}
-
-func (db *Boltdb) PutTasks(tasks ...*types.Task) error {
-	tx, err := db.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	for _, task := range tasks {
-		if err := withCreateAppTaskBucketIfNotExists(tx, task.AppId, task.ID, func(bkt *bolt.Bucket) error {
-			p, err := proto.Marshal(task)
-			if err != nil {
-				return err
-			}
-
-			return bkt.Put(bucketKeyData, p)
-		}); err != nil {
-			return err
-		}
-	}
-
-	return tx.Commit()
-}
-
-func (db *Boltdb) PutTask(task *types.Task) error {
-	return db.PutTasks(task)
 }

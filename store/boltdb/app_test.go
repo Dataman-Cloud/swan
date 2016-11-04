@@ -20,6 +20,7 @@ func TestAppCURD(t *testing.T) {
 
 	db, err := bolt.Open(tmpFile.Name(), 0644, nil)
 	assert.Nil(t, err)
+	defer db.Close()
 
 	boltdb := NewBoltdbStore(db)
 	assert.Nil(t, err)
@@ -35,26 +36,6 @@ func TestAppCURD(t *testing.T) {
 	}
 
 	err = boltdb.PutApps([]*types.Application{app1, app2}...)
-	assert.Nil(t, err)
-
-	tx, err := boltdb.Begin(false)
-	assert.Nil(t, err)
-	assert.NotNil(t, tx)
-	bkt := getAppsBucket(tx)
-
-	err = bkt.ForEach(func(k, v []byte) error {
-		fmt.Println(string(k))
-		var app types.Application
-		if err := proto.Unmarshal(v, &app); err != nil {
-			return err
-		}
-
-		fmt.Println(app.ID)
-		fmt.Printf("app %+v \n", app)
-
-		return nil
-	})
-
 	assert.Nil(t, err)
 
 	boltdb.View(func(tx *bolt.Tx) error {
@@ -82,4 +63,55 @@ func TestAppCURD(t *testing.T) {
 	allApps, err := boltdb.GetApps()
 	assert.Nil(t, err)
 	fmt.Printf("apps:  %#v", allApps)
+
+	err = boltdb.DeleteApp(app2.ID)
+	assert.Nil(t, err)
+
+	task1 := types.Task{
+		AppId: "111111",
+		ID:    "task1",
+		Name:  "test-task-1",
+	}
+
+	task2 := types.Task{
+		AppId: "111111",
+		ID:    "task2",
+		Name:  "test-task-2",
+	}
+
+	err = boltdb.PutTasks(&task1, &task2)
+	assert.Nil(t, nil)
+
+	boltdb.View(func(tx *bolt.Tx) error {
+		b := getAppBucket(tx, app1.ID)
+		b.ForEach(func(k, v []byte) error {
+			var app types.Application
+			if err := proto.Unmarshal(v, &app); err != nil {
+				return err
+			}
+
+			fmt.Println(string(v))
+			fmt.Printf("app %+v \n", app)
+
+			return nil
+		})
+		return nil
+	})
+
+	gotTasks, err := boltdb.GetTasks(app1.ID)
+	assert.Nil(t, err)
+	fmt.Printf("gotTasks %#v", gotTasks)
+	fmt.Println("got tasks num: ", len(gotTasks))
+
+	gotTask1, err := boltdb.GetTasks(app1.ID, task1.ID)
+	assert.Nil(t, nil)
+	fmt.Printf("gotTasks1 %#v", gotTask1)
+
+	err = boltdb.DeleteTasks(app1.ID)
+	assert.Nil(t, err)
+
+	gotTasks, err = boltdb.GetTasks(app1.ID)
+	assert.Nil(t, err)
+	fmt.Printf("gotTasks %#v", gotTasks)
+	fmt.Println("got tasks num: ", len(gotTasks))
 }

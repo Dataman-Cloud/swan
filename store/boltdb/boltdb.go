@@ -14,12 +14,15 @@ var (
 	bucketKeyStorageVersion = []byte("v1")
 	bucketKeyApps           = []byte("apps")
 	bucketKeyData           = []byte("data")
+	bucketKeyTasks          = []byte("tasks")
+	bucketKeyHealthchecks   = []byte("healthchecks")
 	bucketKeyID             = []byte("ID")
 	bucketKeyFramework      = []byte("framework")
 )
 
 var (
 	errAppUnknown       = errors.New("boltdb: app unknown")
+	errTaskUnknown      = errors.New("boltdb: task unknown")
 	errFrameworkUnknown = errors.New("boltdb: framework unknown")
 )
 
@@ -38,8 +41,19 @@ func withCreateAppBucketIfNotExists(tx *bolt.Tx, id string, fn func(bkt *bolt.Bu
 	return fn(bkt)
 }
 
-func withCreateAppTaskBucketIfNotExists(tx *bolt.Tx, appId, taskId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), []byte(taskId))
+func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appId, taskId string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
+		bucketKeyTasks, []byte(taskId))
+	if err != nil {
+		return err
+	}
+
+	return fn(bkt)
+}
+
+func withCreateHealthcheckBucketIfNotExists(tx *bolt.Tx, appId, healthcheckId string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
+		bucketKeyHealthchecks, []byte(healthcheckId))
 	if err != nil {
 		return err
 	}
@@ -78,6 +92,14 @@ func getAppBucket(tx *bolt.Tx, id string) *bolt.Bucket {
 
 func getAppsBucket(tx *bolt.Tx) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps)
+}
+
+func getTasksBucket(tx *bolt.Tx, appId string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyTasks)
+}
+
+func getTaskBucket(tx *bolt.Tx, appId, taskId string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyTasks, []byte(taskId))
 }
 
 func getBucket(tx *bolt.Tx, keys ...[]byte) *bolt.Bucket {
