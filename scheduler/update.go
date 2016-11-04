@@ -45,32 +45,32 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
 		STATUS = "STAGING"
-		if err := s.registry.UpdateTask(appId, taskId, "STAGING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "STAGING"); err != nil {
 			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
 		}
 	case mesos.TaskState_TASK_STARTING:
 		STATUS = "STARTING"
-		if err := s.registry.UpdateTask(appId, taskId, "STARTING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "STARTING"); err != nil {
 			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
 		}
 	case mesos.TaskState_TASK_RUNNING:
 		STATUS = "RUNNING"
-		if err := s.registry.IncreaseApplicationRunningInstances(appId); err != nil {
+		if err := s.store.AddAppRunningInstance(appId, 1); err != nil {
 			logrus.Errorf("Updating application got error: %s", err.Error())
 		}
 
-		if err := s.registry.UpdateTask(appId, taskId, "RUNNING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "RUNNING"); err != nil {
 			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
 			return
 		}
 
-		app, err := s.registry.FetchApplication(appId)
+		app, err := s.store.GetApp(appId)
 		if err != nil {
 			break
 		}
 
 		if app.RunningInstances == app.Instances {
-			if err := s.registry.UpdateApplicationStatus(appId, "RUNNING"); err != nil {
+			if err := s.store.UpdateAppStatus(appId, "RUNNING"); err != nil {
 				logrus.Errorf("Updating application got error: %s", err.Error())
 			}
 		}
@@ -89,13 +89,13 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		STATUS = "RESCHEDULING"
 	}
 
-	task, err := s.registry.FetchApplicationTask(appId, taskId)
+	task, err := s.store.GetTask(appId, taskId)
 	if err != nil {
 		logrus.Errorf("Fetch task %s failed: %s", taskId, err.Error())
 		return
 	}
 
-	app, err := s.registry.FetchApplication(appId)
+	app, err := s.store.GetApp(appId)
 	if err != nil {
 		logrus.Errorf("Fetch application %s failed: %s", appId, err.Error())
 		return
@@ -106,7 +106,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		task.Status != "RESCHEDULING" &&
 		app.Status != "UPDATING" &&
 		app.Status != "ROLLINGBACK" {
-		if err := s.registry.UpdateTask(appId, taskId, "RESCHEDULING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "RESCHEDULING"); err != nil {
 			logrus.Errorf("updating task status to RESCHEDULING failed: %s", taskId)
 		}
 

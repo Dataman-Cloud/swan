@@ -3,20 +3,22 @@ package health
 import (
 	"fmt"
 
+	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
+
 	"github.com/Sirupsen/logrus"
 	fifo "github.com/foize/go.fifo"
 )
 
 type HealthCheckManager struct {
-	store     Store
+	store     store.Store
 	checkers  map[string]Checker
 	msgQueue  chan types.ReschedulerMsg
 	taskQueue *fifo.Queue
 	quit      chan struct{}
 }
 
-func NewHealthCheckManager(store Store, queue chan types.ReschedulerMsg) *HealthCheckManager {
+func NewHealthCheckManager(store store.Store, queue chan types.ReschedulerMsg) *HealthCheckManager {
 	return &HealthCheckManager{
 		store:     store,
 		msgQueue:  queue,
@@ -28,18 +30,29 @@ func NewHealthCheckManager(store Store, queue chan types.ReschedulerMsg) *Health
 
 func (m *HealthCheckManager) Init() {
 	logrus.Info("Initial health checkers...")
-	checks, err := m.store.ListChecks()
+	var allHealthChecks []*types.Check
+	allApps, err := m.store.GetApps()
 	if err != nil {
 		logrus.Errorf("Initial health checker failed: %s", err)
 		return
 	}
 
-	if len(checks) == 0 {
+	for _, app := range allApps {
+		checks, err := m.store.GetHealthChecks(app.ID)
+		if err != nil {
+			logrus.Errorf("Initial health checker failed: %s", err)
+			return
+		}
+
+		allHealthChecks = append(allHealthChecks, checks...)
+	}
+
+	if len(allHealthChecks) == 0 {
 		logrus.Info("No checks defined.Skip")
 		return
 	}
 
-	for _, check := range checks {
+	for _, check := range allHealthChecks {
 		m.Add(check)
 	}
 }

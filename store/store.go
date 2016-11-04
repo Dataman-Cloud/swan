@@ -5,7 +5,7 @@ import "github.com/Dataman-Cloud/swan/types"
 type Store interface {
 	PutFrameworkID(string) error
 
-	GetFrameworkID(string) (string, error)
+	GetFrameworkID() (string, error)
 
 	PutApp(*types.Application) error
 
@@ -53,7 +53,7 @@ type Store interface {
 
 	PutVersion(appId string, version *types.ApplicationVersion) error
 
-	GetVersions(appId string) ([]*types.ApplicationVersion, error)
+	GetVersions(appId string, versionIds ...string) ([]*types.ApplicationVersion, error)
 
 	GetAndSortVersions(appId string, versionIds ...string) ([]*types.ApplicationVersion, error)
 

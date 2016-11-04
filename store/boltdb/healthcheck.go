@@ -6,7 +6,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-func (db *Boltdb) PutHealthcheck(task *types.Task, port int64, appId string) error {
+func (db *Boltdb) PutHealthcheck(task *types.Task, port uint32, appId string) error {
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err
@@ -18,7 +18,7 @@ func (db *Boltdb) PutHealthcheck(task *types.Task, port int64, appId string) err
 		check := types.Check{
 			ID:          task.Name,
 			Address:     task.AgentHostname,
-			Port:        port,
+			Port:        int64(port),
 			TaskID:      task.Name,
 			AppID:       appId,
 			Protocol:    healthCheck.Protocol,

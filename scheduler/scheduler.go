@@ -21,7 +21,7 @@ import (
 type Scheduler struct {
 	master    string
 	framework *mesos.FrameworkInfo
-	registry  store.Store
+	store     store.Store
 
 	client       *client.Client
 	doneChan     chan struct{}
@@ -45,8 +45,8 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clu
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
-		registry:  registry,
-		doneChan:  make(chan struct{}),
+		store:     store,
+		DoneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
 			sched.Event_OFFERS:     make(chan *sched.Event, 64),
@@ -141,8 +141,14 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
 			logrus.Infof("Subscription successful with frameworkId %s", sub.FrameworkId.GetValue())
-			if registered, _ := s.registry.FrameworkIDHasRegistered(sub.FrameworkId.GetValue()); !registered {
-				if err := s.registry.RegisterFrameworkID(sub.FrameworkId.GetValue()); err != nil {
+
+			oldFrameworkId, err := s.store.GetFrameworkID()
+			if err != nil {
+				logrus.Errorf("Register framework id in consul failed: %s", err)
+				return
+			}
+			if oldFrameworkId == "" {
+				if err := s.store.PutFrameworkID(sub.FrameworkId.GetValue()); err != nil {
 					logrus.Errorf("Register framework id in consul failed: %s", err)
 					return
 				}

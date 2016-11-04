@@ -29,7 +29,7 @@ type Backend interface {
 
 	DeleteApplicationTask(string, string) error
 
-	ListApplicationVersions(string) ([]string, error)
+	ListApplicationVersions(string) ([]*types.ApplicationVersion, error)
 
 	FetchApplicationVersion(string, string) (*types.Version, error)
 
