@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+package types;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+
+message Command {
+    string value = 1;
+}
+
+message Check {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string protocol = 2;
+    string address = 3;
+    int64 port = 4;
+    Command command  = 5;
+    string path = 6;
+    int64 maxFailures = 7;
+    int64 Interval = 8;
+    int64 Timeout = 9;
+    string taskId = 10 [(gogoproto.customname) = "TaskID"];
+    string appId = 11 [(gogoproto.customname) = "AppID"];
+}
+
+message HealthCheck {
+    string id = 1 [(gogoproto.customname) = "ID"]; 
+    string protocol = 2;
+    string address = 3;
+    int64 port = 5;
+    int64 portIndex = 6;
+    Command command  = 7;
+    string path = 8;
+    int64 maxConsecutiveFailures = 9;
+    int64 gracePeriodSeconds = 10;
+    int64 intervalSeconds = 11;
+    int64 timeoutSeconds = 12;
+    string taskId = 13 [(gogoproto.customname) = "TaskID"];
+    string appId = 14 [(gogoproto.customname) = "AppID"];
+}

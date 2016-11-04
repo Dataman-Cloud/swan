@@ -14,12 +14,12 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name string) (*types.Task, error) {
+func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVersion, name string) (*types.Task, error) {
 	var task types.Task
 
 	task.Name = name
 	if task.Name == "" {
-		app, err := s.registry.FetchApplication(version.ID)
+		app, err := s.store.GetApp(version.AppID)
 		if err != nil {
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
 
-		if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
+		if err := s.store.AddAppInstance(app.ID, 1); err != nil {
 			return nil, err
 		}
 	}
@@ -42,7 +42,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	task.Network = version.Container.Docker.Network
 
 	if version.Container.Docker.Parameters != nil {
-		for _, parameter := range *version.Container.Docker.Parameters {
+		for _, parameter := range version.Container.Docker.Parameters {
 			task.Parameters = append(task.Parameters, &types.Parameter{
 				Key:   parameter.Key,
 				Value: parameter.Value,
@@ -51,7 +51,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	}
 
 	if version.Container.Docker.PortMappings != nil {
-		for _, portMapping := range *version.Container.Docker.PortMappings {
+		for _, portMapping := range version.Container.Docker.PortMappings {
 			task.PortMappings = append(task.PortMappings, &types.PortMappings{
 				Port:     uint32(portMapping.ContainerPort),
 				Protocol: portMapping.Protocol,
@@ -59,16 +59,9 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 		}
 	}
 
-	if version.Container.Docker.Privileged != nil {
-		task.Privileged = version.Container.Docker.Privileged
-	}
-
-	if version.Container.Docker.ForcePullImage != nil {
-		task.ForcePullImage = version.Container.Docker.ForcePullImage
-	}
-
+	task.Privileged = version.Container.Docker.Privileged
+	task.ForcePullImage = version.Container.Docker.ForcePullImage
 	task.Env = version.Env
-
 	task.Volumes = version.Container.Volumes
 
 	if version.Labels != nil {
@@ -79,9 +72,9 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	task.Mem = version.Mem
 	task.Disk = version.Disk
 
-	task.OfferId = offer.GetId().Value
-	task.AgentId = offer.AgentId.Value
-	task.AgentHostname = offer.Hostname
+	task.OfferId = *offer.GetId().Value
+	task.AgentId = *offer.AgentId.Value
+	task.AgentHostname = *offer.Hostname
 
 	if version.KillPolicy != nil {
 		task.KillPolicy = version.KillPolicy
@@ -110,18 +103,13 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 		Container: &mesos.ContainerInfo{
 			Type: mesos.ContainerInfo_DOCKER.Enum(),
 			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image: task.Image,
+				Image: &(task.Image),
 			},
 		},
 	}
 
-	if task.Privileged != nil {
-		taskInfo.Container.Docker.Privileged = task.Privileged
-	}
-
-	if task.ForcePullImage != nil {
-		taskInfo.Container.Docker.ForcePullImage = task.ForcePullImage
-	}
+	taskInfo.Container.Docker.Privileged = &task.Privileged
+	taskInfo.Container.Docker.ForcePullImage = &task.ForcePullImage
 
 	for _, parameter := range task.Parameters {
 		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
@@ -156,7 +144,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 
 	if task.Labels != nil {
 		labels := make([]*mesos.Label, 0)
-		for k, v := range *task.Labels {
+		for k, v := range task.Labels {
 			labels = append(labels, &mesos.Label{
 				Key:   proto.String(k),
 				Value: proto.String(v),
@@ -244,7 +232,7 @@ func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
 				Value: proto.String(task.ID),
 			},
 			AgentId: &mesos.AgentID{
-				Value: task.AgentId,
+				Value: &task.AgentId,
 			},
 		},
 	}
@@ -267,7 +255,7 @@ func (s *Scheduler) ReschedulerTask() {
 	for {
 		select {
 		case msg := <-s.ReschedQueue:
-			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
+			task, err := s.store.GetTask(msg.AppID, msg.TaskID)
 			if err != nil {
 				msg.Err <- fmt.Errorf("Rescheduling task failed: %s", err.Error())
 				return
@@ -317,38 +305,31 @@ func (s *Scheduler) ReschedulerTask() {
 			}
 
 			logrus.Infof("Remove health check for task %s", msg.TaskID)
-			if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
+			if err := s.store.DeleteHealthCheck(msg.AppID, msg.TaskID); err != nil {
 				msg.Err <- fmt.Errorf("Remove health check for %s failed: %s", msg.TaskID, err.Error())
 				return
 			}
 
 			if len(task.HealthChecks) != 0 {
-				if err := s.registry.RegisterCheck(task,
+				if err := s.store.PutHealthcheck(task,
 					*taskInfo.Container.Docker.PortMappings[0].HostPort,
 					msg.AppID); err != nil {
 				}
 				for _, healthCheck := range task.HealthChecks {
 					check := types.Check{
 						ID:       task.Name,
-						Address:  *task.AgentHostname,
-						Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+						Address:  task.AgentHostname,
+						Port:     int64(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 						TaskID:   task.Name,
 						AppID:    msg.AppID,
 						Protocol: healthCheck.Protocol,
-						Interval: int(healthCheck.IntervalSeconds),
-						Timeout:  int(healthCheck.TimeoutSeconds),
-					}
-					if healthCheck.Command != nil {
-						check.Command = healthCheck.Command
+						Interval: int64(healthCheck.IntervalSeconds),
+						Timeout:  int64(healthCheck.TimeoutSeconds),
 					}
 
-					if healthCheck.Path != nil {
-						check.Path = *healthCheck.Path
-					}
-
-					if healthCheck.MaxConsecutiveFailures != nil {
-						check.MaxFailures = *healthCheck.MaxConsecutiveFailures
-					}
+					check.Command = healthCheck.Command
+					check.Path = healthCheck.Path
+					check.MaxFailures = healthCheck.MaxConsecutiveFailures
 
 					s.HealthCheckManager.Add(&check)
 				}

@@ -8,6 +8,8 @@ import (
 
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/store"
+
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/scheduler/client"
 	"github.com/Dataman-Cloud/swan/types"
@@ -19,14 +21,14 @@ import (
 type Scheduler struct {
 	master    string
 	framework *mesos.FrameworkInfo
-	registry  Registry
+	store     store.Store
 
 	client       *client.Client
 	doneChan     chan struct{}
 	ReschedQueue chan types.ReschedulerMsg
 	events       Events
 
-	TaskLaunched int
+	TaskLaunched int32
 
 	// Status indicated scheduler's state is idle or busy.
 	Status string
@@ -37,13 +39,13 @@ type Scheduler struct {
 }
 
 // NewScheduler returns a pointer to new Scheduler
-func NewScheduler(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
+func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clusterId string,
 	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
-		registry:  registry,
+		store:     store,
 		doneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
@@ -139,8 +141,14 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
 			logrus.Infof("Subscription successful with frameworkId %s", sub.FrameworkId.GetValue())
-			if registered, _ := s.registry.FrameworkIDHasRegistered(sub.FrameworkId.GetValue()); !registered {
-				if err := s.registry.RegisterFrameworkID(sub.FrameworkId.GetValue()); err != nil {
+
+			oldFrameworkId, err := s.store.GetFrameworkID()
+			if err != nil {
+				logrus.Errorf("Register framework id in consul failed: %s", err)
+				return
+			}
+			if oldFrameworkId == "" {
+				if err := s.store.PutFrameworkID(sub.FrameworkId.GetValue()); err != nil {
 					logrus.Errorf("Register framework id in consul failed: %s", err)
 					return
 				}

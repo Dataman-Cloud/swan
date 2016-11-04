@@ -27,23 +27,20 @@ type Store interface {
 	// ListApplicationTasks is used to get all tasks belong to a application from consul.
 	ListApplicationTasks(string) ([]*types.Task, error)
 
-	// DeleteApplicationTasks is used to delete all tasks belong to a application from consul.
-	DeleteApplicationTasks(string) error
-
 	// FetchApplicationTask is used to fetch a task belong to a application from consul.
 	FetchApplicationTask(string, string) (*types.Task, error)
 
 	// DeleteApplicationTask is used to delete specified task belong to a application from consul.
-	DeleteApplicationTask(string, string) error
+	DeleteApplicationTasks(string, ...string) error
 
 	// RegisterApplicationVersion is used to register a application version in consul.
-	RegisterApplicationVersion(string, *types.Version) error
+	RegisterApplicationVersion(string, *types.ApplicationVersion) error
 
 	// ListApplicationVersions is used to list all version ids for application.
 	ListApplicationVersions(string) ([]string, error)
 
 	// FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
-	FetchApplicationVersion(string, string) (*types.Version, error)
+	FetchApplicationVersion(string, string) (*types.ApplicationVersion, error)
 
 	// UpdateApplication is used to update application info.
 	UpdateApplication(string, string, string) error

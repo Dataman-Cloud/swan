@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -16,7 +15,7 @@ import (
 
 // ScaleApplication is used to scale application instances.
 func (b *Backend) ScaleApplication(applicationId string, instances int) error {
-	app, err := b.store.FetchApplication(applicationId)
+	app, err := b.store.GetApp(applicationId)
 	if err != nil {
 		return err
 	}
@@ -26,27 +25,25 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 	}
 
 	// Update application status to SCALING
-	if err := b.store.UpdateApplication(applicationId, "status", "SCALING"); err != nil {
+	if err := b.store.UpdateAppStatus(applicationId, "SCALING"); err != nil {
 		logrus.Errorf("Updating application status to SCALING failed: %s", err.Error())
 		return err
 	}
 
-	versions, err := b.store.ListApplicationVersions(applicationId)
+	versions, err := b.store.GetAndSortVersions(applicationId)
 	if err != nil {
 		return err
 	}
 
-	sort.Strings(versions)
-
-	newestVersion := versions[len(versions)-1]
-	version, err := b.store.FetchApplicationVersion(applicationId, newestVersion)
-	if err != nil {
-		return err
+	if len(versions) < 1 {
+		errors.New("app versions was empty")
 	}
+
+	version := versions[len(versions)-1]
 
 	go func() error {
-		if app.Instances > instances {
-			tasks, err := b.store.ListApplicationTasks(app.ID)
+		if int(app.Instances) > instances {
+			tasks, err := b.store.GetTasks(app.ID)
 			if err != nil {
 				return err
 			}
@@ -60,24 +57,24 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 				if taskIndex+1 > instances {
 					b.sched.HealthCheckManager.StopCheck(task.Name)
 
-					if err := b.store.DeleteCheck(task.Name); err != nil {
+					if err := b.store.DeleteHealthCheck(applicationId, task.Name); err != nil {
 						logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
 						return err
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteApplicationTask(app.ID, task.ID)
+						b.store.DeleteTask(app.ID, task.ID)
 					}
 
 					// reduce application tasks count
-					if err := b.store.ReduceApplicationInstances(app.ID); err != nil {
+					if err := b.store.AddAppInstance(app.ID, -1); err != nil {
 						logrus.Errorf("Updating application %s instances count failed: %s", app.ID, err.Error())
 						return err
 					}
 
 					logrus.Infof("Remove health check for task %s", task.Name)
 
-					if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
+					if err := b.store.DeleteTask(app.ID, task.Name); err != nil {
 						logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
 					}
 
@@ -85,8 +82,8 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 			}
 		}
 
-		if app.Instances < instances {
-			for i := 0; i < instances-app.Instances; i++ {
+		if int(app.Instances) < instances {
+			for i := 0; i < instances-int(app.Instances); i++ {
 				b.sched.Status = "busy"
 
 				resources := b.sched.BuildResources(version.Cpus, version.Mem, version.Disk)
@@ -103,8 +100,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 						break
 					}
 				}
-
-				name := fmt.Sprintf("%d.%s.%s.%s", app.Instances+i, app.ID, app.UserId, app.ClusterId)
+				name := fmt.Sprintf("%d.%s.%s.%s", int(app.Instances)+i, app.ID, app.UserId, app.ClusterId)
 
 				task, err := b.sched.BuildTask(choosedOffer, version, name)
 				if err != nil {
@@ -126,44 +122,39 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					return fmt.Errorf("status code %d received", resp.StatusCode)
 				}
 
-				if err := b.store.RegisterTask(task); err != nil {
+				if err := b.store.PutTask(applicationId, task); err != nil {
 					return err
 				}
 
 				if len(version.HealthChecks) != 0 {
-					if err := b.store.RegisterCheck(task,
+					if err := b.store.PutHealthcheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
 						app.ID); err != nil {
 					}
 					for _, healthCheck := range task.HealthChecks {
 						check := types.Check{
 							ID:       task.Name,
-							Address:  *task.AgentHostname,
-							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+							Address:  task.AgentHostname,
+							Port:     int64(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 							TaskID:   task.Name,
 							AppID:    app.ID,
 							Protocol: healthCheck.Protocol,
-							Interval: int(healthCheck.IntervalSeconds),
-							Timeout:  int(healthCheck.TimeoutSeconds),
+							Interval: int64(healthCheck.IntervalSeconds),
+							Timeout:  int64(healthCheck.TimeoutSeconds),
 						}
 						if healthCheck.Command != nil {
 							check.Command = healthCheck.Command
 						}
 
-						if healthCheck.Path != nil {
-							check.Path = *healthCheck.Path
-						}
-
-						if healthCheck.MaxConsecutiveFailures != nil {
-							check.MaxFailures = *healthCheck.MaxConsecutiveFailures
-						}
+						check.Path = healthCheck.Path
+						check.MaxFailures = healthCheck.MaxConsecutiveFailures
 
 						b.sched.HealthCheckManager.Add(&check)
 					}
 				}
 
 				// Increase application task count
-				if err := b.store.IncreaseApplicationInstances(version.ID); err != nil {
+				if err := b.store.AddAppInstance(version.ID, 1); err != nil {
 					logrus.Errorf("Updating application %s instance count failed: %s", version.ID, err.Error())
 					return err
 				}
@@ -173,7 +164,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 		}
 
 		// Update application status to RUNNING
-		if err := b.store.UpdateApplication(version.ID, "status", "RUNNING"); err != nil {
+		if err := b.store.UpdateAppStatus(version.ID, "RUNNING"); err != nil {
 			logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.ID, err.Error())
 			return err
 		}

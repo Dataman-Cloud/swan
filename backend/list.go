@@ -5,14 +5,14 @@ import (
 )
 
 func (b *Backend) ListApplications() ([]*types.Application, error) {
-	return b.store.ListApplications()
+	return b.store.GetApps()
 }
 
 func (b *Backend) ListApplicationTasks(id string) ([]*types.Task, error) {
-	return b.store.ListApplicationTasks(id)
+	return b.store.GetTasks(id)
 }
 
 // ListApplicationVersions is used to list all versions for application from consul specified by application id.
-func (b *Backend) ListApplicationVersions(applicationId string) ([]string, error) {
-	return b.store.ListApplicationVersions(applicationId)
+func (b *Backend) ListApplicationVersions(applicationId string) ([]*types.ApplicationVersion, error) {
+	return b.store.GetVersions(applicationId)
 }
