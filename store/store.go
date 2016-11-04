@@ -27,11 +27,11 @@ type Store interface {
 
 	AddAppUpdatedInstance(appId string, increment int) error
 
-	updateAppUpdatedInstance(appId string, instances int) error
+	UpdateAppUpdatedInstance(appId string, instances int) error
 
-	PutTasks(tasks ...*types.Task) error
+	PutTasks(appId string, tasks ...*types.Task) error
 
-	PutTask(task *types.Task) error
+	PutTask(appId string, task *types.Task) error
 
 	UpdateTaskStatus(appId, taskId, status string) error
 
@@ -51,11 +51,13 @@ type Store interface {
 
 	PutVersions(appId string, versions ...*types.ApplicationVersion) error
 
-	PutVersion(appId string, version types.ApplicationVersion) error
+	PutVersion(appId string, version *types.ApplicationVersion) error
 
 	GetVersions(appId string) ([]*types.ApplicationVersion, error)
 
-	GetVersion(appId, versionId string) (types.ApplicationVersion, error)
+	GetAndSortVersions(appId string, versionIds ...string) ([]*types.ApplicationVersion, error)
+
+	GetVersion(appId, versionId string) (*types.ApplicationVersion, error)
 
 	DeleteVersions(appId string, versionIds ...string) error
 

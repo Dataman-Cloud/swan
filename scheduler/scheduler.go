@@ -8,6 +8,8 @@ import (
 
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/store"
+
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/scheduler/client"
 	"github.com/Dataman-Cloud/swan/types"
@@ -19,7 +21,7 @@ import (
 type Scheduler struct {
 	master    string
 	framework *mesos.FrameworkInfo
-	registry  Registry
+	registry  store.Store
 
 	client       *client.Client
 	doneChan     chan struct{}
@@ -37,7 +39,7 @@ type Scheduler struct {
 }
 
 // NewScheduler returns a pointer to new Scheduler
-func NewScheduler(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
+func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clusterId string,
 	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,

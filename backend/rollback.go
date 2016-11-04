@@ -1,9 +1,9 @@
 package backend
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
-	"sort"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/types"
@@ -19,24 +19,21 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 	}
 
 	// Update application status to ROLLINGBACK
-	if err := b.store.PutAppStatus(app.ID, "ROLLINGBACK"); err != nil {
+	if err := b.store.UpdateAppStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
 
-	versions, err := b.store.ListApplicationVersions(applicationId)
+	versions, err := b.store.GetAndSortVersions(applicationId)
 	if err != nil {
 		return err
 	}
 
-	sort.Strings(versions)
-
-	rollbackVer := versions[len(versions)-2]
-	version, err := b.store.FetchApplicationVersion(applicationId, rollbackVer)
-	if err != nil {
-		return err
+	if len(versions) < 2 {
+		return errors.New("not have history version to rollback")
 	}
+	version := versions[len(versions)-2]
 
-	tasks, err := b.store.ListApplicationTasks(applicationId)
+	tasks, err := b.store.GetTasks(applicationId)
 	if err != nil {
 		return err
 	}
@@ -48,12 +45,12 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		}
 
 		// Delete task health check
-		if err := b.store.DeleteCheck(task.Name); err != nil {
+		if err := b.store.DeleteHealthCheck(applicationId, task.Name); err != nil {
 			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
 		}
 
 		if _, err := b.sched.KillTask(task); err == nil {
-			b.store.DeleteApplicationTask(app.ID, task.ID)
+			b.store.DeleteTask(app.ID, task.ID)
 		}
 
 		b.sched.Status = "busy"
@@ -93,12 +90,12 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 			return fmt.Errorf("status code %d received", resp.StatusCode)
 		}
 
-		if err := b.store.RegisterTask(task); err != nil {
+		if err := b.store.PutTask(applicationId, task); err != nil {
 			return err
 		}
 
 		if len(task.HealthChecks) != 0 {
-			if err := b.store.RegisterCheck(task,
+			if err := b.store.PutHealthcheck(task,
 				*taskInfo.Container.Docker.PortMappings[0].HostPort,
 				app.ID); err != nil {
 			}
@@ -127,7 +124,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		b.sched.Status = "idle"
 	}
 
-	if err := b.store.PutAppStatus(app.ID, "RUNNING"); err != nil {
+	if err := b.store.UpdateAppStatus(app.ID, "RUNNING"); err != nil {
 		return err
 	}
 

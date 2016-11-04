@@ -113,6 +113,95 @@ func (db *Boltdb) getAllVersions(appId string) ([]*types.ApplicationVersion, err
 	return versions, nil
 }
 
+func (db *Boltdb) GetAndSortVersions(appId string, versionIds ...string) ([]*types.ApplicationVersion, error) {
+	if versionIds == nil {
+		return db.getAllAndSortVersions(appId)
+	}
+
+	var versions []*types.ApplicationVersion
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		for _, versionId := range versionIds {
+			bkt := getVersionBucket(tx, appId, versionId)
+			if bkt == nil {
+				return nil
+			}
+
+			p := bkt.Get(bucketKeyData)
+
+			var version types.ApplicationVersion
+			if err := proto.Unmarshal(p, &version); err != nil {
+				return err
+			}
+
+			insertVersionById(versions, &version)
+		}
+
+		return nil
+
+	}); err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+}
+
+func (db *Boltdb) getAllAndSortVersions(appId string) ([]*types.ApplicationVersion, error) {
+	var versions []*types.ApplicationVersion
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		bkt := getVersionsBucket(tx, appId)
+		if bkt == nil {
+			versions = []*types.ApplicationVersion{}
+			return nil
+		}
+
+		if err := bkt.ForEach(func(k, v []byte) error {
+			versionBkt := bkt.Bucket(k)
+			if versionBkt == nil {
+				return nil
+			}
+
+			p := versionBkt.Get(bucketKeyData)
+
+			var version types.ApplicationVersion
+			if err := proto.Unmarshal(p, &version); err != nil {
+				return err
+			}
+
+			insertVersionById(versions, &version)
+			return nil
+		}); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	return versions, nil
+}
+
+func insertVersionById(versions []*types.ApplicationVersion, version *types.ApplicationVersion) []*types.ApplicationVersion {
+	var sortedVersions []*types.ApplicationVersion
+	if versions == nil || len(versions) == 0 {
+		sortedVersions = append(versions, version)
+		return sortedVersions
+	}
+
+	sortedVersions = append(versions, version)
+	for i := len(sortedVersions) - 1; i > 0; i-- {
+		if sortedVersions[i].ID > sortedVersions[i+1].ID {
+			sortedVersions[i], sortedVersions[i+1] = sortedVersions[i+1], sortedVersions[i]
+		} else {
+			break
+		}
+	}
+
+	return sortedVersions
+}
+
 func (db *Boltdb) DeleteVersion(appId, versionId string) error {
 	return db.DeleteVersions(appId, versionId)
 }

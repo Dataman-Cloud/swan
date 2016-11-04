@@ -7,7 +7,7 @@ import (
 	"github.com/gogo/protobuf/proto"
 )
 
-func (db *Boltdb) PutTasks(tasks ...*types.Task) error {
+func (db *Boltdb) PutTasks(appId string, tasks ...*types.Task) error {
 	tx, err := db.Begin(true)
 	if err != nil {
 		return err
@@ -15,7 +15,7 @@ func (db *Boltdb) PutTasks(tasks ...*types.Task) error {
 	defer tx.Rollback()
 
 	for _, task := range tasks {
-		if err := withCreateTaskBucketIfNotExists(tx, task.AppId, task.ID, func(bkt *bolt.Bucket) error {
+		if err := withCreateTaskBucketIfNotExists(tx, appId, task.ID, func(bkt *bolt.Bucket) error {
 			p, err := proto.Marshal(task)
 			if err != nil {
 				return err
@@ -30,8 +30,8 @@ func (db *Boltdb) PutTasks(tasks ...*types.Task) error {
 	return tx.Commit()
 }
 
-func (db *Boltdb) PutTask(task *types.Task) error {
-	return db.PutTasks(task)
+func (db *Boltdb) PutTask(appId string, task *types.Task) error {
+	return db.PutTasks(appId, task)
 }
 
 func (db *Boltdb) UpdateTaskStatus(appId, taskId, status string) error {
@@ -41,7 +41,7 @@ func (db *Boltdb) UpdateTaskStatus(appId, taskId, status string) error {
 	}
 
 	task.Status = status
-	return db.PutTask(task)
+	return db.PutTask(appId, task)
 }
 
 func (db *Boltdb) GetTask(appId, taskId string) (*types.Task, error) {

@@ -31,12 +31,12 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 	}
 
 	// Update application status to UPDATING
-	if err := b.store.PutAppStatus(applicationId, "UPDATING"); err != nil {
+	if err := b.store.UpdateAppStatus(applicationId, "UPDATING"); err != nil {
 		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
 		return err
 	}
 
-	tasks, err := b.store.ListApplicationTasks(applicationId)
+	tasks, err := b.store.GetTasks(applicationId)
 	if err != nil {
 		logrus.Errorf("List application %s tasks failed: %s", applicationId, err.Error())
 		return err
@@ -104,12 +104,12 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 					b.sched.HealthCheckManager.StopCheck(task.Name)
 
 					// Delete task health check
-					if err := b.store.DeleteCheck(task.Name); err != nil {
+					if err := b.store.DeleteHealthCheck(app.ID, task.Name); err != nil {
 						logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteApplicationTask(app.ID, task.ID)
+						b.store.DeleteTask(app.ID, task.ID)
 					}
 
 					//Reduce application running instance count.
@@ -157,7 +157,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 
 					b.sched.Status = "idle"
 
-					if err := b.store.RegisterTask(task); err != nil {
+					if err := b.store.PutTask(applicationId, task); err != nil {
 						return err
 					}
 
@@ -165,7 +165,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 					time.Sleep(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second)
 
 					if len(task.HealthChecks) != 0 {
-						if err := b.store.RegisterCheck(task,
+						if err := b.store.PutHealthcheck(task,
 							*taskInfo.Container.Docker.PortMappings[0].HostPort,
 							version.ID); err != nil {
 						}
@@ -202,11 +202,11 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 
 					// Rest application updated instance count to zero.
 					if app.UpdatedInstances == app.Instances {
-						if err := b.store.SetAppUpdatedInstance(app.ID, 0); err != nil {
+						if err := b.store.UpdateAppUpdatedInstance(app.ID, 0); err != nil {
 							return err
 						}
 						// Update application status to RUNNING
-						if err := b.store.PutAppStatus(app.ID, "RUNNING"); err != nil {
+						if err := b.store.UpdateAppStatus(app.ID, "RUNNING"); err != nil {
 							return err
 						}
 
