@@ -66,7 +66,7 @@ func main() {
 
 	setupLogger()
 
-	db, err := bolt.Open("./bin/bolt.db", 0644, nil)
+	db, err := bolt.Open("bolt.db", 0644, nil)
 	if err != nil {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return
@@ -78,7 +78,6 @@ func main() {
 	frameworkId, err := store.GetFrameworkID()
 	if err != nil {
 		logrus.Errorf("get framework id failed: %s", err)
-		return
 	}
 
 	if frameworkId != "" {
