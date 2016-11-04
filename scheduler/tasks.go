@@ -14,7 +14,7 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name string) (*types.Task, error) {
+func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.ApplicationVersion, name string) (*types.Task, error) {
 	var task types.Task
 
 	task.Name = name

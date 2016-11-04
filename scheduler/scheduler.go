@@ -46,7 +46,7 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clu
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
 		store:     store,
-		DoneChan:  make(chan struct{}),
+		doneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
 			sched.Event_OFFERS:     make(chan *sched.Event, 64),

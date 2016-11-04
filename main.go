@@ -71,6 +71,7 @@ func main() {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return
 	}
+	defer db.Close()
 
 	store := boltdb.NewBoltdbStore(db)
 
