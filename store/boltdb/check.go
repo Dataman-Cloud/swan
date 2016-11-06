@@ -2,8 +2,8 @@ package boltdb
 
 import (
 	"encoding/json"
-	"fmt"
 
+	"fmt"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -67,6 +67,7 @@ func (b *BoltStore) ListChecks() ([]*types.Check, error) {
 	if err := bucket.ForEach(func(k, v []byte) error {
 		var check types.Check
 		if err := json.Unmarshal(v, &check); err != nil {
+			fmt.Println("====", err)
 			return err
 		}
 		checks = append(checks, &check)
@@ -88,7 +89,6 @@ func (b *BoltStore) DeleteCheck(checkId string) error {
 
 	bucket := tx.Bucket([]byte("checks"))
 
-	fmt.Sprintf("=======", checkId)
 	if err := bucket.Delete([]byte(checkId)); err != nil {
 		return err
 	}

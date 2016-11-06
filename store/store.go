@@ -15,7 +15,7 @@ type Store interface {
 	FetchFrameworkID() (string, error)
 
 	// check if framework id is in db or not
-	HasFrameworkID(string) (bool, error)
+	HasFrameworkID() (bool, error)
 
 	// application
 

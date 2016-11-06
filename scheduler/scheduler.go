@@ -140,7 +140,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
 			logrus.Infof("Subscription successful with frameworkId %s", sub.FrameworkId.GetValue())
-			if registered, _ := s.store.HasFrameworkID(sub.FrameworkId.GetValue()); !registered {
+			if registered, _ := s.store.HasFrameworkID(); !registered {
 				if err := s.store.SaveFrameworkID(sub.FrameworkId.GetValue()); err != nil {
 					logrus.Errorf("Register framework id in consul failed: %s", err)
 					return

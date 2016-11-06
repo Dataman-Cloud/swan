@@ -33,7 +33,7 @@ func (b *BoltStore) FetchFrameworkID() (string, error) {
 	return string(val[:]), nil
 }
 
-func (b *BoltStore) HasFrameworkID(key string) (bool, error) {
+func (b *BoltStore) HasFrameworkID() (bool, error) {
 	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return false, err

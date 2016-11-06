@@ -8,11 +8,11 @@ func (s *Store) SaveFrameworkID(id string) error {
 	return nil
 }
 
-func (s *Store) HasFrameworkID(id string) (bool, error) {
+func (s *Store) HasFrameworkID() (bool, error) {
 	return true, nil
 }
 
-func (s *Store) FetchFrameworkID(key string) (string, error) {
+func (s *Store) FetchFrameworkID() (string, error) {
 	return "xxxxx", nil
 }
 

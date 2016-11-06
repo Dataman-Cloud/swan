@@ -57,8 +57,30 @@ func (b *BoltStore) ListTasks(applicationId string) ([]*types.Task, error) {
 	return tasksList, nil
 }
 
-func (b *BoltStore) DeleteApplicationTasks(applicationId string) error {
-	return nil
+func (b *BoltStore) DeleteApplicationTasks(appId string) error {
+	tx, err := b.conn.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	bucket := tx.Bucket([]byte("tasks"))
+
+	bucket.ForEach(func(k, v []byte) error {
+		var task types.Task
+		if err := json.Unmarshal(v, &task); err != nil {
+			return err
+		}
+		if task.AppId == appId {
+			if err := bucket.Delete([]byte(task.Name)); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	return tx.Commit()
 }
 
 func (b *BoltStore) DeleteTask(taskId string) error {
