@@ -127,6 +127,10 @@ func (b *BoltStore) UpdateTaskStatus(taskId string, status string) error {
 		return err
 	}
 
+	if task == nil {
+		return errors.New("task not found")
+	}
+
 	task.Status = status
 
 	if err := b.SaveTask(task); err != nil {

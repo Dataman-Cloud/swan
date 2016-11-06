@@ -395,7 +395,6 @@ func TestReschedulerTask(t *testing.T) {
 	}
 
 	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxxx", nil, msgQueue)
-
 	go func() {
 		s.ReschedulerTask()
 	}()
@@ -407,5 +406,6 @@ func TestReschedulerTask(t *testing.T) {
 	}
 
 	s.ReschedQueue <- msg
-	assert.NotNil(t, msg.Err)
+	err := <-msg.Err
+	assert.NotNil(t, err)
 }

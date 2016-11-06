@@ -67,7 +67,8 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clu
 // returns a channel to wait for completion.
 func (s *Scheduler) Start() <-chan struct{} {
 	if err := s.subscribe(); err != nil {
-		logrus.Fatal(err)
+		logrus.Error(err)
+		close(s.doneChan)
 	}
 	return s.doneChan
 }

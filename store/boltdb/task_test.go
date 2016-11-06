@@ -105,6 +105,9 @@ func TestUpdateTaskStatus(t *testing.T) {
 
 	task, _ := bolt.FetchTask("x.y.z")
 	assert.Equal(t, task.Status, "FAILED")
+
+	err := bolt.UpdateTaskStatus("x.y.z.m.n", "RUNNING")
+	assert.NotNil(t, err)
 }
 
 func TestDeleteApplicationTasks(t *testing.T) {
