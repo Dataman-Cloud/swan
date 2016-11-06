@@ -1,10 +1,10 @@
 {
-  "id": "nginx0011",
+  "id": "nginx0050",
   "cmd": null,
   "cpus": 0.01,
   "mem": 5,
   "disk": 0,
-  "instances": 5,
+  "instances": 1,
   "container": {
     "docker": {
       "image": "nginx:1.10",

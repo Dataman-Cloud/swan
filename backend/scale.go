@@ -15,8 +15,8 @@ import (
 )
 
 // ScaleApplication is used to scale application instances.
-func (b *Backend) ScaleApplication(applicationId string, instances int) error {
-	app, err := b.store.FetchApplication(applicationId)
+func (b *Backend) ScaleApplication(appId string, instances int) error {
+	app, err := b.store.FetchApplication(appId)
 	if err != nil {
 		return err
 	}
@@ -26,12 +26,12 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 	}
 
 	// Update application status to SCALING
-	if err := b.store.UpdateApplication(applicationId, "status", "SCALING"); err != nil {
+	if err := b.store.UpdateApplicationStatus(appId, "SCALING"); err != nil {
 		logrus.Errorf("Updating application status to SCALING failed: %s", err.Error())
 		return err
 	}
 
-	versions, err := b.store.ListApplicationVersions(applicationId)
+	versions, err := b.store.ListVersions(appId)
 	if err != nil {
 		return err
 	}
@@ -39,14 +39,14 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 	sort.Strings(versions)
 
 	newestVersion := versions[len(versions)-1]
-	version, err := b.store.FetchApplicationVersion(applicationId, newestVersion)
+	version, err := b.store.FetchVersion(newestVersion)
 	if err != nil {
 		return err
 	}
 
 	go func() error {
 		if app.Instances > instances {
-			tasks, err := b.store.ListApplicationTasks(app.ID)
+			tasks, err := b.store.ListTasks(app.ID)
 			if err != nil {
 				return err
 			}
@@ -66,7 +66,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteApplicationTask(app.ID, task.ID)
+						b.store.DeleteTask(task.ID)
 					}
 
 					// reduce application tasks count
@@ -77,7 +77,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 
 					logrus.Infof("Remove health check for task %s", task.Name)
 
-					if err := b.store.DeleteApplicationTask(app.ID, task.Name); err != nil {
+					if err := b.store.DeleteTask(task.Name); err != nil {
 						logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
 					}
 
@@ -126,12 +126,12 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 					return fmt.Errorf("status code %d received", resp.StatusCode)
 				}
 
-				if err := b.store.RegisterTask(task); err != nil {
+				if err := b.store.SaveTask(task); err != nil {
 					return err
 				}
 
 				if len(version.HealthChecks) != 0 {
-					if err := b.store.RegisterCheck(task,
+					if err := b.store.SaveCheck(task,
 						*taskInfo.Container.Docker.PortMappings[0].HostPort,
 						app.ID); err != nil {
 					}
@@ -173,7 +173,7 @@ func (b *Backend) ScaleApplication(applicationId string, instances int) error {
 		}
 
 		// Update application status to RUNNING
-		if err := b.store.UpdateApplication(version.ID, "status", "RUNNING"); err != nil {
+		if err := b.store.UpdateApplicationStatus(version.ID, "RUNNING"); err != nil {
 			logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.ID, err.Error())
 			return err
 		}

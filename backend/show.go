@@ -10,5 +10,5 @@ func (b *Backend) FetchApplication(id string) (*types.Application, error) {
 
 // FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
 func (b *Backend) FetchApplicationVersion(applicationId, versionId string) (*types.Version, error) {
-	return b.store.FetchApplicationVersion(applicationId, versionId)
+	return b.store.FetchVersion(versionId)
 }

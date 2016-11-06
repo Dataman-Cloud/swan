@@ -10,6 +10,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/scheduler/client"
+	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
@@ -19,7 +20,7 @@ import (
 type Scheduler struct {
 	master    string
 	framework *mesos.FrameworkInfo
-	registry  Registry
+	store     store.Store
 
 	client       *client.Client
 	doneChan     chan struct{}
@@ -37,13 +38,13 @@ type Scheduler struct {
 }
 
 // NewScheduler returns a pointer to new Scheduler
-func NewScheduler(master string, fw *mesos.FrameworkInfo, registry Registry, clusterId string,
+func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clusterId string,
 	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
 		framework: fw,
-		registry:  registry,
+		store:     store,
 		doneChan:  make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
@@ -139,8 +140,8 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 		case sched.Event_SUBSCRIBED:
 			sub := event.GetSubscribed()
 			logrus.Infof("Subscription successful with frameworkId %s", sub.FrameworkId.GetValue())
-			if registered, _ := s.registry.FrameworkIDHasRegistered(sub.FrameworkId.GetValue()); !registered {
-				if err := s.registry.RegisterFrameworkID(sub.FrameworkId.GetValue()); err != nil {
+			if registered, _ := s.store.HasFrameworkID(); !registered {
+				if err := s.store.SaveFrameworkID(sub.FrameworkId.GetValue()); err != nil {
 					logrus.Errorf("Register framework id in consul failed: %s", err)
 					return
 				}

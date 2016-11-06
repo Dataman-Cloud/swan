@@ -19,7 +19,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 
 	task.Name = name
 	if task.Name == "" {
-		app, err := s.registry.FetchApplication(version.ID)
+		app, err := s.store.FetchApplication(version.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -30,7 +30,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.UserId, app.ClusterId)
 
-		if err := s.registry.IncreaseApplicationInstances(app.ID); err != nil {
+		if err := s.store.IncreaseApplicationInstances(app.ID); err != nil {
 			return nil, err
 		}
 	}
@@ -267,7 +267,7 @@ func (s *Scheduler) ReschedulerTask() {
 	for {
 		select {
 		case msg := <-s.ReschedQueue:
-			task, err := s.registry.FetchApplicationTask(msg.AppID, msg.TaskID)
+			task, err := s.store.FetchTask(msg.TaskID)
 			if err != nil {
 				msg.Err <- fmt.Errorf("Rescheduling task failed: %s", err.Error())
 				return
@@ -317,13 +317,13 @@ func (s *Scheduler) ReschedulerTask() {
 			}
 
 			logrus.Infof("Remove health check for task %s", msg.TaskID)
-			if err := s.registry.DeleteCheck(msg.TaskID); err != nil {
+			if err := s.store.DeleteCheck(msg.TaskID); err != nil {
 				msg.Err <- fmt.Errorf("Remove health check for %s failed: %s", msg.TaskID, err.Error())
 				return
 			}
 
 			if len(task.HealthChecks) != 0 {
-				if err := s.registry.RegisterCheck(task,
+				if err := s.store.SaveCheck(task,
 					*taskInfo.Container.Docker.PortMappings[0].HostPort,
 					msg.AppID); err != nil {
 				}

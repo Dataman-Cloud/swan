@@ -14,9 +14,9 @@ import (
 )
 
 // UpdateApplication is used for application rolling-update.
-func (b *Backend) UpdateApplication(applicationId string, instances int, version *types.Version) error {
-	logrus.Infof("Updating application %s", applicationId)
-	app, err := b.store.FetchApplication(applicationId)
+func (b *Backend) UpdateApplication(appId string, instances int, version *types.Version) error {
+	logrus.Infof("Updating application %s", appId)
+	app, err := b.store.FetchApplication(appId)
 	if err != nil {
 		return err
 	}
@@ -30,14 +30,14 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 	}
 
 	// Update application status to UPDATING
-	if err := b.store.UpdateApplicationStatus(applicationId, "UPDATING"); err != nil {
-		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", applicationId, err.Error())
+	if err := b.store.UpdateApplicationStatus(appId, "UPDATING"); err != nil {
+		logrus.Errorf("Setting application %s status to UPDATING for rolling-update failed: %s", appId, err.Error())
 		return err
 	}
 
-	tasks, err := b.store.ListApplicationTasks(applicationId)
+	tasks, err := b.store.ListTasks(appId)
 	if err != nil {
-		logrus.Errorf("List application %s tasks failed: %s", applicationId, err.Error())
+		logrus.Errorf("List application %s tasks failed: %s", appId, err.Error())
 		return err
 	}
 
@@ -64,11 +64,11 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteApplicationTask(app.ID, task.ID)
+						b.store.DeleteTask(task.ID)
 					}
 
 					//Reduce application running instance count.
-					if err := b.store.ReduceApplicationRunningInstances(applicationId); err != nil {
+					if err := b.store.ReduceApplicationRunningInstances(appId); err != nil {
 						return err
 					}
 
@@ -112,7 +112,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 
 					b.sched.Status = "idle"
 
-					if err := b.store.RegisterTask(task); err != nil {
+					if err := b.store.SaveTask(task); err != nil {
 						return err
 					}
 
@@ -120,7 +120,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 					time.Sleep(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second)
 
 					if len(task.HealthChecks) != 0 {
-						if err := b.store.RegisterCheck(task,
+						if err := b.store.SaveCheck(task,
 							*taskInfo.Container.Docker.PortMappings[0].HostPort,
 							version.ID); err != nil {
 						}
@@ -156,7 +156,7 @@ func (b *Backend) UpdateApplication(applicationId string, instances int, version
 						return err
 					}
 
-					app, err := b.store.FetchApplication(applicationId)
+					app, err := b.store.FetchApplication(appId)
 					if err != nil {
 						return err
 					}
