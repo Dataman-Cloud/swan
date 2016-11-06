@@ -2,8 +2,6 @@ package boltdb
 
 import (
 	"encoding/json"
-
-	"fmt"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -67,7 +65,6 @@ func (b *BoltStore) ListChecks() ([]*types.Check, error) {
 	if err := bucket.ForEach(func(k, v []byte) error {
 		var check types.Check
 		if err := json.Unmarshal(v, &check); err != nil {
-			fmt.Println("====", err)
 			return err
 		}
 		checks = append(checks, &check)

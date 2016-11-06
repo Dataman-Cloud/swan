@@ -41,6 +41,9 @@ func TestFetchVersion(t *testing.T) {
 
 	version, _ = bolt.FetchVersion(versions[0])
 	assert.Equal(t, version.ID, "xxxxxx")
+
+	version, _ = bolt.FetchVersion("yyxxzz")
+	assert.Nil(t, version)
 }
 
 func TestDeleteVersion(t *testing.T) {
