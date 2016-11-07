@@ -10,11 +10,11 @@ func (b *Backend) ClusterId() string {
 	return "testId"
 }
 
-func (b *Backend) RegisterApplication(app *types.Application) error {
+func (b *Backend) SaveApplication(app *types.Application) error {
 	return nil
 }
 
-func (b *Backend) RegisterApplicationVersion(app string, version *types.Version) error {
+func (b *Backend) SaveVersion(app string, version *types.Version) error {
 	return nil
 }
 

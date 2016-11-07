@@ -1,11 +1,10 @@
 package boltdb
 
 import (
+	"github.com/Dataman-Cloud/swan/types"
 	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
-
-	"github.com/Dataman-Cloud/swan/types"
 )
 
 func TestSaveTask(t *testing.T) {

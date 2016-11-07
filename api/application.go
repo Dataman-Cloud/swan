@@ -56,11 +56,11 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		Updated:           time.Now().Unix(),
 	}
 
-	if err := r.backend.RegisterApplication(&application); err != nil {
+	if err := r.backend.SaveApplication(&application); err != nil {
 		return err
 	}
 
-	if err := r.backend.RegisterApplicationVersion(version.ID, &version); err != nil {
+	if err := r.backend.SaveVersion(version.ID, &version); err != nil {
 		return err
 	}
 
@@ -187,7 +187,7 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 
 	vars := mux.Vars(req)
 
-	if err := r.backend.RegisterApplicationVersion(vars["appId"], &version); err != nil {
+	if err := r.backend.SaveVersion(vars["appId"], &version); err != nil {
 		return err
 	}
 
