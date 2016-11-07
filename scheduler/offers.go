@@ -1,9 +1,11 @@
 package scheduler
 
 import (
+	"errors"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 	"net/http"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
@@ -16,6 +18,8 @@ func (s *Scheduler) RequestOffers(resources []*mesos.Resource) ([]*mesos.Offer, 
 
 	select {
 	case event = <-s.GetEvent(sched.Event_OFFERS):
+	case <-time.After(time.Second * time.Duration(5)):
+		return nil, errors.New("Offer timeout")
 	}
 
 	if event == nil {

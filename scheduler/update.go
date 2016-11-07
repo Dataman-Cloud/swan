@@ -29,7 +29,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 			return
 		}
 		if resp.StatusCode != http.StatusAccepted {
-			logrus.Error("Acknowledge call returned unexpected status: %d", resp.StatusCode)
+			logrus.Errorf("Acknowledge call returned unexpected status: %d", resp.StatusCode)
 			return
 		}
 	}
@@ -60,7 +60,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		}
 
 		if err := s.store.UpdateTaskStatus(taskId, "RUNNING"); err != nil {
-			logrus.Errorf("updating task %s status to RUNNING failed", taskId)
+			logrus.Errorf("updating task %s status to RUNNING failed: %s", taskId, err.Error())
 			return
 		}
 
@@ -116,6 +116,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		offers, err := s.RequestOffers(resources)
 		if err != nil {
 			logrus.Errorf("Request offers failed: %s for rescheduling", err.Error())
+			return
 		}
 
 		var choosedOffer *mesos.Offer

@@ -11,7 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/scheduler"
-	"github.com/Dataman-Cloud/swan/store/local"
+	. "github.com/Dataman-Cloud/swan/store/local"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
@@ -64,7 +64,7 @@ func main() {
 
 	setupLogger()
 
-	store, err := boltdb.NewBoltStore("/tmp/bolt.db")
+	store, err := NewBoltStore(".bolt.db")
 	if err != nil {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return

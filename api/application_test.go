@@ -257,6 +257,10 @@ func TestScaleApplication(t *testing.T) {
 
 	resp, _ := http.DefaultClient.Do(req)
 	assert.Equal(t, resp.StatusCode, 200)
+
+	req, _ = http.NewRequest("POST", baseUrl+"/v1/apps/1111/scale", nil)
+	resp, _ = http.DefaultClient.Do(req)
+	assert.Equal(t, resp.StatusCode, 500)
 }
 
 func TestRollbackApplication(t *testing.T) {
