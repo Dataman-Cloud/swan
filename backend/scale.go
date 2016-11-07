@@ -15,7 +15,7 @@ import (
 )
 
 // ScaleApplication is used to scale application instances.
-func (b *Backend) ScaleApplication(appId string, instances int) error {
+func (b *Backend) ScaleApplication(appId string, instances int64) error {
 	app, err := b.store.FetchApplication(appId)
 	if err != nil {
 		return err
@@ -52,7 +52,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 			}
 
 			for _, task := range tasks {
-				taskIndex, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
+				taskIndex, err := strconv.ParseInt(strings.Split(task.Name, ".")[0], 10, 64)
 				if err != nil {
 					return err
 				}
@@ -86,7 +86,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 		}
 
 		if app.Instances < instances {
-			for i := 0; i < instances-app.Instances; i++ {
+			for i := 0; i < int(instances-app.Instances); i++ {
 				b.sched.Status = "busy"
 
 				resources := b.sched.BuildResources(version.Cpus, version.Mem, version.Disk)
@@ -104,7 +104,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 					}
 				}
 
-				name := fmt.Sprintf("%d.%s.%s.%s", app.Instances+i, app.ID, app.UserId, app.ClusterId)
+				name := fmt.Sprintf("%d.%s.%s.%s", int(app.Instances)+i, app.ID, app.UserId, app.ClusterId)
 
 				task, err := b.sched.BuildTask(choosedOffer, version, name)
 				if err != nil {

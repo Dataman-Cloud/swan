@@ -173,7 +173,7 @@ func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) err
 		return err
 	}
 
-	instances, err := strconv.Atoi(req.Form.Get("instances"))
+	instances, err := strconv.ParseInt(req.Form.Get("instances"), 10, 64)
 	if err != nil {
 		return errors.New("instances must be specified in url and can't be null")
 	}
@@ -204,7 +204,7 @@ func (r *Router) ScaleApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	instances, err := strconv.Atoi(req.Form.Get("instances"))
+	instances, err := strconv.ParseInt(req.Form.Get("instances"), 10, 64)
 	if err != nil {
 		return errors.New("instances must be specified in url and can't be null")
 	}

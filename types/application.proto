@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package types;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+message Application {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string name = 2;
+    int64 instances = 3;
+    int64 updatedInstances = 4;
+    int64 runningInstances = 5;
+    int64 rollbackInstances = 6;
+    string userId = 7;
+    string clusterId = 8;
+    string status = 9;
+    int64 created = 10;
+    int64 updated = 11;
+}
