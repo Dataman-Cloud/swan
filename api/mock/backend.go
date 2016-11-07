@@ -54,11 +54,11 @@ func (b *Backend) FetchApplicationVersion(appId string, versionId string) (*type
 	return nil, nil
 }
 
-func (b *Backend) UpdateApplication(string, int64, *types.Version) error {
+func (b *Backend) UpdateApplication(string, int, *types.Version) error {
 	return nil
 }
 
-func (b *Backend) ScaleApplication(appId string, instances int64) error {
+func (b *Backend) ScaleApplication(appId string, instances int) error {
 	return nil
 }
 

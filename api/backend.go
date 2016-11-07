@@ -33,9 +33,9 @@ type Backend interface {
 
 	FetchApplicationVersion(string, string) (*types.Version, error)
 
-	UpdateApplication(string, int64, *types.Version) error
+	UpdateApplication(string, int, *types.Version) error
 
-	ScaleApplication(string, int64) error
+	ScaleApplication(string, int) error
 
 	RollbackApplication(string) error
 }

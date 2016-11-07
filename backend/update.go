@@ -14,7 +14,7 @@ import (
 )
 
 // UpdateApplication is used for application rolling-update.
-func (b *Backend) UpdateApplication(appId string, instances int64, version *types.Version) error {
+func (b *Backend) UpdateApplication(appId string, instances int, version *types.Version) error {
 	logrus.Infof("Updating application %s", appId)
 	app, err := b.store.FetchApplication(appId)
 	if err != nil {
@@ -43,13 +43,13 @@ func (b *Backend) UpdateApplication(appId string, instances int64, version *type
 
 	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
 	if instances == -1 {
-		begin, end = 0, int64(len(tasks))
+		begin, end = 0, len(tasks)
 	}
 
 	go func() error {
 		for i := begin; i < end; i++ {
 			for _, task := range tasks {
-				taskId, err := strconv.ParseInt(strings.Split(task.Name, ".")[0], 10, 64)
+				taskId, err := strconv.Atoi(strings.Split(task.Name, ".")[0])
 				if err != nil {
 					return err
 				}
