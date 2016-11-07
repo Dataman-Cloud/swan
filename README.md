@@ -71,6 +71,6 @@
   git clone https://github.com/Dataman-Cloud/swan.git
   cd swan
   make
-  ./swan --masters=192.168.1.50:5050 --user=root --consul=192.168.1.50:8500
+  ./swan --masters=192.168.1.50:5050 
   ``` 
 
