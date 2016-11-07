@@ -1,11 +1,10 @@
 package health
 
 import (
+	"github.com/Sirupsen/logrus"
 	"net"
 	"net/http"
 	"time"
-
-	"github.com/Sirupsen/logrus"
 )
 
 type HTTPChecker struct {
@@ -90,7 +89,6 @@ func (c *HTTPChecker) Start() {
 			return
 		}
 	}
-
 }
 
 func (c *HTTPChecker) Stop() {

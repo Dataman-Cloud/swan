@@ -1,10 +1,9 @@
 package health
 
 import (
+	"github.com/Sirupsen/logrus"
 	"net"
 	"time"
-
-	"github.com/Sirupsen/logrus"
 )
 
 type TCPChecker struct {
