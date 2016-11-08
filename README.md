@@ -1,8 +1,8 @@
-[![Build Status](https://travis-ci.org/Dataman-Cloud/swan.svg?branch=master)](https://travis-ci.org/Dataman-Cloud/swan)
-[![codecov](https://codecov.io/gh/Dataman-Cloud/swan/branch/master/graph/badge.svg)](https://codecov.io/gh/Dataman-Cloud/swan)
 
 ## Swan
 
+[![Build Status](https://travis-ci.org/Dataman-Cloud/swan.svg?branch=master)](https://travis-ci.org/Dataman-Cloud/swan)
+[![codecov](https://codecov.io/gh/Dataman-Cloud/swan/branch/master/graph/badge.svg)](https://codecov.io/gh/Dataman-Cloud/swan)
 [![Join the chat at https://gitter.im/Dataman-Cloud/swan](https://badges.gitter.im/Dataman-Cloud/swan.svg)](https://gitter.im/Dataman-Cloud/swan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 #### swan is a mesos scheduling framework written in golang based on mesos new HTTP API.
@@ -23,8 +23,17 @@
 + The instance name is fixed during the application lifecycle. 
 + The instance index is continuously incremented from zero.
 
-## Usage
+## Installation 
+  ```
+  git clone https://github.com/Dataman-Cloud/swan.git
 
+  cd swan
+
+  make
+
+  ./swan --masters=192.168.1.50:5050 
+  ```
+## Getting Started
 ### swan has no ui, no command-line client at this time. you can use it with `curl`.
 
 + applicaiton deloyment
@@ -68,11 +77,11 @@
   `
   curl http://localhost:9999/v1/apps/nginx0003/versions
   `
-## How To Run 
-  ``` 
-  git clone https://github.com/Dataman-Cloud/swan.git
-  cd swan
-  make
-  ./swan --masters=192.168.1.50:5050 
-  ``` 
 
+## Contributing
+If you want to contribute to swan, make a PR or report a issue.
+
+## Licensing
+Swan is licensed under the Apache License, Version 2.0. See 
+[LICENSE](https://github.com/Dataman-Cloud/swan/blob/master/LICENSE) for the full
+license text.
