@@ -3,6 +3,7 @@
 
 [![Build Status](https://travis-ci.org/Dataman-Cloud/swan.svg?branch=master)](https://travis-ci.org/Dataman-Cloud/swan)
 [![codecov](https://codecov.io/gh/Dataman-Cloud/swan/branch/master/graph/badge.svg)](https://codecov.io/gh/Dataman-Cloud/swan)
+[![Go Report Card](https://goreportcard.com/badge/github.com/Dataman-Cloud/swan)](https://goreportcard.com/report/github.com/Dataman-Cloud/swan)
 [![Join the chat at https://gitter.im/Dataman-Cloud/swan](https://badges.gitter.im/Dataman-Cloud/swan.svg)](https://gitter.im/Dataman-Cloud/swan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 ![Swan](img/swan.png)
@@ -26,15 +27,27 @@
 + The instance index is continuously incremented from zero.
 
 ## Installation 
-  ```
-  git clone https://github.com/Dataman-Cloud/swan.git
+### From Source
+First get the swan:
+```
+  go get github.com/Dataman-Cloud/swan
+```
+Then you can compile `swan` with:
+```
+  go install github.com/Dataman-Cloud/swan
+```
+`swan` will be installed at $GOPATH/bin/swan, If `$GOPATH/bin` is in your `PATH`, you can invoke `swan` from the CLI.
 
-  cd swan
-
-  make
-
-  ./swan --masters=192.168.1.50:5050 
-  ```
+### Latest Release
+To get started with the latest release, run the following commands:
+```
+  wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
+  chmod +x swan
+```
+### Run
+```
+  swan --masters=192.168.1.50:5050 
+```
 ## Getting Started
 ### swan has no ui, no command-line client at this time. you can use it with `curl`.
 
