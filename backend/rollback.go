@@ -25,6 +25,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 	}
 
 	// Update application status to ROLLINGBACK
+	// wtzhou: hardcode : ROLLINGBACK
 	if err := b.store.UpdateApplicationStatus(app.ID, "ROLLINGBACK"); err != nil {
 		return err
 	}
@@ -62,6 +63,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 			b.store.DeleteTask(task.ID)
 		}
 
+		// wtzhou: hardcode
 		b.sched.Status = "busy"
 
 		resources := b.sched.BuildResources(version.Cpus, version.Mem, version.Disk)

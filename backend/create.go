@@ -12,6 +12,10 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 	b.sched.TaskLaunched = 0
 
 	// Set scheduler's status to busy for accepting resource.
+	// wtzhou: hard code.
+	// const (
+	//  STATUS_BUSY := "busy"
+	//)
 	b.sched.Status = "busy"
 
 	go func() {
@@ -90,6 +94,10 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 		}
 
 		// Set scheduler's status back to idle after launch applicaiton.
+		// wtzhou: hardcode. here constant "idle" should be maintained at some file constant.go , and use it like this
+		// const (
+		//  IDLE := "idle"
+		//)
 		b.sched.Status = "idle"
 	}()
 
