@@ -1,4 +1,4 @@
-package api
+package application
 
 import (
 	"github.com/Dataman-Cloud/swan/types"
@@ -6,10 +6,10 @@ import (
 
 type Backend interface {
 	ClusterId() string
-	// RegisterApplication register application in db.
+	// RegisterApplication register application in consul.
 	SaveApplication(*types.Application) error
 
-	// RegisterApplicationVersion register application version in db.
+	// RegisterApplicationVersion register application version in consul.
 	SaveVersion(string, *types.Version) error
 
 	// LaunchApplication launch applications

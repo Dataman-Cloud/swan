@@ -1,4 +1,4 @@
-package api
+package router
 
 import (
 	"net/http"
@@ -12,20 +12,20 @@ type Route struct {
 	handler APIFunc
 }
 
-func (r Route) Method() string {
+func (r *Route) Method() string {
 	return r.method
 }
 
-func (r Route) Path() string {
+func (r *Route) Path() string {
 	return r.path
 }
 
-func (r Route) Handler() APIFunc {
+func (r *Route) Handler() APIFunc {
 	return r.handler
 }
 
-func NewRoute(method, path string, handler APIFunc) Route {
-	return Route{
+func NewRoute(method, path string, handler APIFunc) *Route {
+	return &Route{
 		method,
 		path,
 		handler,

@@ -7,6 +7,8 @@ import (
 	"os"
 
 	"github.com/Dataman-Cloud/swan/api"
+	"github.com/Dataman-Cloud/swan/api/router"
+	"github.com/Dataman-Cloud/swan/api/router/application"
 	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
@@ -111,9 +113,16 @@ func main() {
 
 	backend := backend.NewBackend(sched, store)
 
-	srv := api.NewServer(backend)
+	srv := api.NewServer(addr)
+
+	routers := []router.Router{
+		application.NewRouter(backend),
+	}
+
+	srv.InitRouter(routers...)
+
 	go func() {
-		srv.ListenAndServe(addr)
+		srv.ListenAndServe()
 	}()
 
 	<-sched.Start()

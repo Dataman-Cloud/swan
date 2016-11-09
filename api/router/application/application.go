@@ -1,20 +1,20 @@
-package api
+package application
 
 import (
 	"encoding/json"
 	"errors"
-	"net/http"
-	"strconv"
-	"time"
-
+	"github.com/Dataman-Cloud/swan/api/utils"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
+	"net/http"
+	"strconv"
+	"time"
 )
 
 // BuildApplication is used to build a new application.
 func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) error {
-	if err := CheckForJSON(req); err != nil {
+	if err := utils.CheckForJSON(req); err != nil {
 		return err
 	}
 
@@ -94,7 +94,7 @@ func (r *Router) FetchApplication(w http.ResponseWriter, req *http.Request) erro
 	return json.NewEncoder(w).Encode(app)
 }
 
-// DeleteApplication is used to delete a application from mesos and db via application id.
+// DeleteApplication is used to delete a application from mesos and consul via application id.
 func (r *Router) DeleteApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
@@ -151,7 +151,7 @@ func (r *Router) ListApplicationVersions(w http.ResponseWriter, req *http.Reques
 	return json.NewEncoder(w).Encode(appVersions)
 }
 
-// FetchApplicationVersion is used to fetch specified version from db by version id and application id.
+// FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
 func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
@@ -165,7 +165,7 @@ func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Reques
 
 // UpdateApplication is used to update application version.
 func (r *Router) UpdateApplication(w http.ResponseWriter, req *http.Request) error {
-	if err := CheckForJSON(req); err != nil {
+	if err := utils.CheckForJSON(req); err != nil {
 		return err
 	}
 
