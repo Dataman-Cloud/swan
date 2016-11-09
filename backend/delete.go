@@ -36,7 +36,7 @@ func (b *Backend) DeleteApplication(appId string) error {
 
 		// Delete task health check
 		if err := b.store.DeleteCheck(task.Name); err != nil {
-			logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+			logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
 		}
 
 	}
@@ -68,9 +68,9 @@ func (b *Backend) DeleteApplicationTasks(id string) error {
 			logrus.Errorf("Kill task failed: %s", err.Error())
 		}
 
-		// Delete task from consul
+		// Delete task from db
 		if err := b.store.DeleteTask(task.ID); err != nil {
-			logrus.Errorf("Delete task %s from consul failed: %s", task.ID, err.Error())
+			logrus.Errorf("Delete task %s from db failed: %s", task.ID, err.Error())
 		}
 	}
 
@@ -97,7 +97,7 @@ func (b *Backend) DeleteApplicationTask(applicationId, taskId string) error {
 
 	// Delete task health check
 	if err := b.store.DeleteCheck(task.Name); err != nil {
-		logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+		logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
 	}
 
 	return nil
