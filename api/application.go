@@ -94,7 +94,7 @@ func (r *Router) FetchApplication(w http.ResponseWriter, req *http.Request) erro
 	return json.NewEncoder(w).Encode(app)
 }
 
-// DeleteApplication is used to delete a application from mesos and consul via application id.
+// DeleteApplication is used to delete a application from mesos and db via application id.
 func (r *Router) DeleteApplication(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 
@@ -151,7 +151,7 @@ func (r *Router) ListApplicationVersions(w http.ResponseWriter, req *http.Reques
 	return json.NewEncoder(w).Encode(appVersions)
 }
 
-// FetchApplicationVersion is used to fetch specified version from consul by version id and application id.
+// FetchApplicationVersion is used to fetch specified version from db by version id and application id.
 func (r *Router) FetchApplicationVersion(w http.ResponseWriter, req *http.Request) error {
 	vars := mux.Vars(req)
 

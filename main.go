@@ -19,18 +19,16 @@ import (
 )
 
 var (
-	addr       string
-	masters    string
-	user       string
-	consulAddr string
-	debug      bool
+	addr    string
+	masters string
+	user    string
+	debug   bool
 )
 
 func init() {
 	flag.StringVar(&addr, "addr", "127.0.0.1:9999", "API Server address <ip:port>")
 	flag.StringVar(&masters, "masters", "127.0.0.1:5050", "masters address <ip:port>,<ip:port>...")
 	flag.StringVar(&user, "user", "root", "mesos user")
-	flag.StringVar(&consulAddr, "consul", "127.0.0.1:8500", "Consul address <ip:port>")
 	flag.BoolVar(&debug, "debug", false, "log level")
 
 	flag.Parse()

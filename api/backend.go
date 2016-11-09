@@ -6,10 +6,10 @@ import (
 
 type Backend interface {
 	ClusterId() string
-	// RegisterApplication register application in consul.
+	// RegisterApplication register application in db.
 	SaveApplication(*types.Application) error
 
-	// RegisterApplicationVersion register application version in consul.
+	// RegisterApplicationVersion register application version in db.
 	SaveVersion(string, *types.Version) error
 
 	// LaunchApplication launch applications

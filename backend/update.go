@@ -60,7 +60,7 @@ func (b *Backend) UpdateApplication(appId string, instances int, version *types.
 
 					// Delete task health check
 					if err := b.store.DeleteCheck(task.Name); err != nil {
-						logrus.Errorf("Delete task health check %s from consul failed: %s", task.ID, err.Error())
+						logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
