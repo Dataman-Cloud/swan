@@ -1,13 +1,15 @@
 package api
 
 import (
-	"github.com/Dataman-Cloud/swan/api/mock"
+	"net/http/httptest"
 	"testing"
 	"time"
 )
 
 func TestListenAndServe(t *testing.T) {
-	s := NewServer(&mock.Backend{})
+	srv := httptest.NewServer(nil)
+	srv.Close()
+	s := NewServer(srv.URL)
 	quit := make(chan struct{})
 	go func() {
 		for {
@@ -15,7 +17,7 @@ func TestListenAndServe(t *testing.T) {
 			case <-quit:
 				return
 			default:
-				s.ListenAndServe("localhost:35008")
+				s.ListenAndServe()
 			}
 		}
 	}()
