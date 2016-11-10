@@ -76,16 +76,16 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		}
 
 	case mesos.TaskState_TASK_FINISHED:
-		logrus.Info("Task Finished")
+		logrus.Infof("Task Finished, message: %s", status.GetMessage())
 		STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_FAILED:
-		logrus.Info("Task Failed")
+		logrus.Infof("Task Failed, message: %s", status.GetMessage())
 		STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_KILLED:
-		logrus.Info("Task Killed")
+		logrus.Infof("Task Killed, message: %s", status.GetMessage())
 		STATUS = "KILLED"
 	case mesos.TaskState_TASK_LOST:
-		logrus.Info("Task Lost")
+		logrus.Infof("Task Lost, message: %s", status.GetMessage())
 		STATUS = "RESCHEDULING"
 	}
 
