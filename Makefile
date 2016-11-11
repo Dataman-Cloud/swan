@@ -14,6 +14,9 @@ default: build
 build: fmt
 	go build -v -o swan .
 
+install:
+	install -v swan /usr/local/bin
+
 fmt:
 	go fmt ./...
 

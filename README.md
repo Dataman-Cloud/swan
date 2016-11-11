@@ -27,7 +27,11 @@
 + The instance index is continuously incremented from zero.
 
 ## Installation 
-### From Source
+### Use Docker Compose(all-in-one, include mesos)
+```
+  docker-compose up -d
+```
+### From Source(swan only)
 First get the swan:
 ```
   go get github.com/Dataman-Cloud/swan
@@ -38,7 +42,7 @@ Then you can compile `swan` with:
 ```
 `swan` will be installed at $GOPATH/bin/swan, If `$GOPATH/bin` is in your `PATH`, you can invoke `swan` from the CLI.
 
-### Latest Release
+### Latest Release(swan only)
 To get started with the latest release, run the following commands:
 ```
   wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
