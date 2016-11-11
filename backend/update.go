@@ -2,6 +2,8 @@ package backend
 
 import (
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"sort"
 	"time"
@@ -53,7 +55,8 @@ func (b *Backend) UpdateApplication(appId string, instances int, version *types.
 
 	go func() error {
 		if err := b.doUpdate(tasks[begin:end], version); err != nil {
-			return err
+			logrus.Errorf("Update application %s failed, rollback to previous version.", appId)
+			return b.RollbackApplication(appId)
 		}
 
 		app, err = b.store.FetchApplication(appId)
@@ -145,8 +148,13 @@ func (b *Backend) doUpdate(tasks []*types.Task, version *types.Version) error {
 			return err
 		}
 
-		// Pause updating
-		time.Sleep(time.Duration(version.UpdatePolicy.UpdateDelay) * time.Second)
+		if err := b.doCheck(
+			fmt.Sprintf("%s:%d",
+				*choosedOffer.Hostname,
+				int(*taskInfo.Container.Docker.PortMappings[0].HostPort)),
+			version.UpdatePolicy); err != nil {
+			return err
+		}
 
 		if len(task.HealthChecks) != 0 {
 			if err := b.store.SaveCheck(task,
@@ -191,4 +199,40 @@ func (b *Backend) doUpdate(tasks []*types.Task, version *types.Version) error {
 	}
 
 	return nil
+}
+
+func (b *Backend) doCheck(addr string, update *types.UpdatePolicy) error {
+	ticker := time.NewTicker(time.Duration(2) * time.Second)
+
+	quit := time.After(time.Duration(update.UpdateDelay) * time.Second)
+
+	failureTimes := 0
+
+	for {
+		if failureTimes >= update.MaxFailovers {
+			return fmt.Errorf("Service Update Failed")
+		}
+
+		select {
+		case <-ticker.C:
+			_, err := net.ResolveTCPAddr("tcp", addr)
+			if err != nil {
+				logrus.Errorf("Resolve tcp addr failed: %s", err.Error())
+				return err
+			}
+
+			conn, err := net.DialTimeout("tcp",
+				addr,
+				time.Duration(2*time.Second))
+			if err != nil {
+				failureTimes++
+			}
+			if conn != nil {
+				conn.Close()
+			}
+		case <-quit:
+			ticker.Stop()
+			return nil
+		}
+	}
 }
