@@ -69,7 +69,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 			break
 		}
 
-		if app.RunningInstances == app.Instances {
+		if app.RunningInstances == app.Instances && app.Status != "UPDATING" {
 			if err := s.store.UpdateApplicationStatus(appId, "RUNNING"); err != nil {
 				logrus.Errorf("Updating application got error: %s", err.Error())
 			}

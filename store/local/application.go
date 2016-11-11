@@ -152,7 +152,6 @@ func (b *BoltStore) UpdateApplicationStatus(appId, status string) error {
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 

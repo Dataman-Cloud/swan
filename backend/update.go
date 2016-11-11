@@ -156,27 +156,27 @@ func (b *Backend) UpdateApplication(appId string, instances int, version *types.
 						return err
 					}
 
-					app, err := b.store.FetchApplication(appId)
-					if err != nil {
-						return err
-					}
-
-					// Rest application updated instance count to zero.
-					if app.UpdatedInstances == app.Instances {
-						if err := b.store.ResetApplicationUpdatedInstances(app.ID); err != nil {
-							return err
-						}
-						// Update application status to RUNNING
-						if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
-							return err
-						}
-
-						logrus.Infof("Updating application %s finished", app.ID)
-					}
-
 				}
 			}
 		}
+
+		app, err := b.store.FetchApplication(appId)
+		if err != nil {
+			return err
+		}
+		// Rest application updated instance count to zero.
+		if app.UpdatedInstances == app.Instances {
+			if err := b.store.ResetApplicationUpdatedInstances(app.ID); err != nil {
+				return err
+			}
+
+		}
+		// Update application status to RUNNING
+		if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
+			return err
+		}
+		logrus.Infof("Updating application %s finished", app.ID)
+
 		return nil
 	}()
 
