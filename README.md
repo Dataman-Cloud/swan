@@ -29,73 +29,66 @@
 ## Installation 
 ### Use Docker Compose(all-in-one, include mesos)
 ```
-  docker-compose up -d
+docker-compose up -d
 ```
 ### From Source(swan only)
 First get the swan:
 ```
-  go get github.com/Dataman-Cloud/swan
+go get github.com/Dataman-Cloud/swan
 ```
 Then you can compile `swan` with:
 ```
-  go install github.com/Dataman-Cloud/swan
+go install github.com/Dataman-Cloud/swan
 ```
 `swan` will be installed at $GOPATH/bin/swan, If `$GOPATH/bin` is in your `PATH`, you can invoke `swan` from the CLI.
 
 ### Latest Release(swan only)
 To get started with the latest release, run the following commands:
 ```
-  wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
-  chmod +x swan
+wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
+chmod +x swan
 ```
 ### Run
 ```
-  swan --masters=192.168.1.50:5050 
+swan --masters=192.168.1.50:5050 
 ```
+Use `swan --help` to see usage.
+
 ## Getting Started
 ### swan has no ui, no command-line client at this time. you can use it with `curl`.
 
 + applicaiton deloyment
-
-  `
-  curl -X POST -H "Content-Type: application/json" -d@example.json http://localhost:9999/v1/apps
-  `
+```
+curl -X POST -H "Content-Type: application/json" -d@example.json http://localhost:9999/v1/apps
+```
 + application delete
-
-  `
-  curl -X DELETE http://localhost:9999/v1/apps/nginx0003
-  `
+```
+curl -X DELETE http://localhost:9999/v1/apps/nginx0003
+```
 + application show
-
-  `
-  curl http://localhost:9999/v1/apps/nginx0003
-  `
+```
+curl http://localhost:9999/v1/apps/nginx0003
+```
 + applications list
-
-  `
-  curl http://localhost:9999/v1/apps
-  `
+```
+curl http://localhost:9999/v1/apps
+```
 + application scaling
-
-  `
-  curl -X POST http://localhost:9999/v1/apps/nginx0003/scale?instances=10
-  `
-  
-  instances is used to specified the instances count you wanna scale to.
+```
+curl -X POST http://localhost:9999/v1/apps/nginx0003/scale?instances=10
+```
+`instances` is used to specified the instances count you wanna scale to.
   
 + application rolling update
-
-  `
-  curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v1/apps/nginx0003/update\?instances\=-1
-  `
-  
-  instances -1 means updating all instances. other value means updating the specified instances at one time.
+```
+curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v1/apps/nginx0003/update\?instances\=-1
+```  
+`instances` -1 means updating all instances. other value means updating the specified instances at one time.
   
 + application versions
-  
-  `
-  curl http://localhost:9999/v1/apps/nginx0003/versions
-  `
+```
+curl http://localhost:9999/v1/apps/nginx0003/versions
+```
 
 ## Roadmap
 See [ROADMAP](https://github.com/pwzgorilla/swan/blob/master/ROADMAP.md) for the full roadmap.
