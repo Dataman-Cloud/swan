@@ -12,15 +12,15 @@ import (
 )
 
 // RollbackApplication rollback application to previous version.
-func (b *Backend) RollbackApplication(applicationId string) error {
-	logrus.Infof("Rollback application %s", applicationId)
-	app, err := b.store.FetchApplication(applicationId)
+func (b *Backend) RollbackApplication(appId string) error {
+	logrus.Infof("Rollback application %s", appId)
+	app, err := b.store.FetchApplication(appId)
 	if err != nil {
 		return err
 	}
 
 	if app == nil {
-		logrus.Errorf("Application %s not found for rollback", applicationId)
+		logrus.Errorf("Application %s not found for rollback", appId)
 		return errors.New("Application not found")
 	}
 
@@ -29,7 +29,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		return err
 	}
 
-	versions, err := b.store.ListVersions(applicationId)
+	versions, err := b.store.ListVersions(appId)
 	if err != nil {
 		return err
 	}
@@ -42,11 +42,31 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		return err
 	}
 
-	tasks, err := b.store.ListTasks(applicationId)
+	tasks, err := b.store.ListTasks(appId)
 	if err != nil {
 		return err
 	}
 
+	go func() error {
+		if err := b.doRollback(tasks, version); err != nil {
+			logrus.Errorf("Rollback application failed: %s", appId)
+			if err := b.store.UpdateApplicationStatus(app.ID, "ROLLBACK-FAILED"); err != nil {
+				return err
+			}
+			return err
+		}
+
+		if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
+			return err
+		}
+
+		return nil
+	}()
+
+	return nil
+}
+
+func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error {
 	for _, task := range tasks {
 		// Stop task health check
 		if b.sched.HealthCheckManager.HasCheck(task.Name) {
@@ -106,7 +126,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		if len(task.HealthChecks) != 0 {
 			if err := b.store.SaveCheck(task,
 				*taskInfo.Container.Docker.PortMappings[0].HostPort,
-				app.ID); err != nil {
+				task.AppId); err != nil {
 			}
 			for _, healthCheck := range task.HealthChecks {
 				check := types.Check{
@@ -114,7 +134,7 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 					Address:  *task.AgentHostname,
 					Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
 					TaskID:   task.Name,
-					AppID:    app.ID,
+					AppID:    task.AppId,
 					Protocol: healthCheck.Protocol,
 					Interval: int(healthCheck.IntervalSeconds),
 					Timeout:  int(healthCheck.TimeoutSeconds),
@@ -136,10 +156,6 @@ func (b *Backend) RollbackApplication(applicationId string) error {
 		}
 
 		b.sched.Status = "idle"
-	}
-
-	if err := b.store.UpdateApplicationStatus(app.ID, "RUNNING"); err != nil {
-		return err
 	}
 
 	return nil
