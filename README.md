@@ -48,12 +48,12 @@ To get started with the latest release, run the following commands:
 wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
 chmod +x swan
 ```
-### Run with single node
+### Run as standalone mode
 ```
 swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111
 ```
 
-### Run with HA mode
+### Run as HA mode
 ```
 swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
 swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
@@ -62,7 +62,7 @@ swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=http:/
 Use `swan --help` to see usage.
 
 ## Getting Started
-### swan has no ui, no command-line client at this time. you can use it with `curl`.
+### Use `curl` 
 
 + applicaiton deloyment
 ```
@@ -96,6 +96,13 @@ curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://loca
 ```
 curl http://localhost:9999/v1/apps/nginx0003/versions
 ```
+
+### Use command line client `swancfg`
+```
+cd cli
+make && make install
+```
+`swancfg --help` for usage.
 
 ## Roadmap
 See [ROADMAP](https://github.com/Dataman-Cloud/swan/blob/master/ROADMAP.md) for the full roadmap.

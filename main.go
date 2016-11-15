@@ -54,6 +54,11 @@ func main() {
 			Usage: "API Server address <ip:port>",
 		},
 		cli.StringFlag{
+			Name:  "sock",
+			Value: "/var/run/swan.sock",
+			Usage: "Unix socket for listening",
+		},
+		cli.StringFlag{
 			Name:  "masters",
 			Value: "127.0.0.1:5050",
 			Usage: "masters address <ip:port>,<ip:port>...",
@@ -185,7 +190,7 @@ func Start(c *cli.Context) {
 
 	backend := backend.NewBackend(sched, store)
 
-	srv := api.NewServer(c.String("addr"))
+	srv := api.NewServer(c.String("addr"), c.String("sock"))
 
 	routers := []router.Router{
 		application.NewRouter(backend),

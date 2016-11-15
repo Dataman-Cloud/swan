@@ -1,0 +1,63 @@
+{
+  "id": "nginx",
+  "cmd": null,
+  "cpus": 0.01,
+  "mem": 5,
+  "disk": 0,
+  "instances": 1,
+  "container": {
+    "docker": {
+      "image": "nginx:1.10",
+      "network": "BRIDGE",
+      "forcePullImage": false,
+      "privileged": true,
+      "parameters": [
+        {
+            "key": "label",
+	    "value": "APP_ID=nginx"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp",
+          "name": "web"
+        }
+      ]
+    },
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "hostPath": "/home",
+        "containerPath": "/data",
+        "mode": "RW"
+      }
+    ]
+  },
+  "env": {
+    "DB": "mysql"
+  },
+  "label": {
+    "USER_ID": "1"
+  },
+  "killPolicy": {
+    "duration": 5
+  },
+  "healthChecks": [
+    {
+      "protocol": "TCP",
+      "path": "/",
+      "portIndex": 0,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 3,
+      "timeoutSeconds": 3,
+      "maxConsecutiveFailures": 3
+    }
+ ],
+  "updatePolicy": {
+	  "updateDelay": 5,
+	  "maxRetries": 3,
+	  "maxFailovers": 3,
+	  "action": "rollback"
+  }
+}

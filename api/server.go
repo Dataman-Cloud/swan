@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"github.com/Dataman-Cloud/swan/api/router"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
@@ -10,12 +11,14 @@ import (
 
 type Server struct {
 	addr    string
+	sock    string
 	routers []router.Router
 }
 
-func NewServer(addr string) *Server {
+func NewServer(addr, sock string) *Server {
 	return &Server{
 		addr: addr,
+		sock: sock,
 	}
 }
 
@@ -54,15 +57,36 @@ func (s *Server) InitRouter(routers ...router.Router) {
 }
 
 func (s *Server) ListenAndServe() error {
-	srv := &http.Server{
-		Addr:    s.addr,
-		Handler: s.createMux(),
-	}
-	logrus.Infof("API Server listen on %s", s.addr)
-	ln, err := net.Listen("tcp", s.addr)
-	if err != nil {
-		logrus.Errorf("Listen on %s error: %s", s.addr, err)
-		return err
-	}
-	return srv.Serve(ln)
+	var chError = make(chan error)
+	go func() {
+		srv := &http.Server{
+			Addr:    s.addr,
+			Handler: s.createMux(),
+		}
+		logrus.Infof("API Server listen on %s", s.addr)
+		ln, err := net.Listen("tcp", s.addr)
+		if err != nil {
+			logrus.Errorf("Listen on %s error: %s", s.addr, err)
+			chError <- err
+		}
+		chError <- srv.Serve(ln)
+	}()
+
+	go func() {
+		srv := &http.Server{
+			Addr:    s.sock,
+			Handler: s.createMux(),
+		}
+		ln, err := net.ListenUnix("unix", &net.UnixAddr{
+			Name: s.sock,
+			Net:  "unix",
+		})
+		if err != nil {
+			chError <- fmt.Errorf("can't create unix socket %s: %v", s.sock, err)
+		}
+
+		chError <- srv.Serve(ln)
+	}()
+
+	return <-chError
 }
