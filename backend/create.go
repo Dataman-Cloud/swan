@@ -13,11 +13,16 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 
 	// Set scheduler's status to busy for accepting resource.
 	b.sched.Status = "busy"
+	// Set scheduler's status back to idle after launch applicaiton.
+	defer func() {
+		b.sched.Status = "idle"
+	}()
 
 	resources := b.sched.BuildResources(version.Cpus, version.Mem, version.Disk)
 	offers, err := b.sched.RequestOffers(resources)
 	if err != nil {
 		logrus.Errorf("Request offers failed: %s", err.Error())
+		return err
 	}
 
 	for _, offer := range offers {
@@ -90,9 +95,6 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 			return fmt.Errorf("status code %d received", resp.StatusCode)
 		}
 	}
-
-	// Set scheduler's status back to idle after launch applicaiton.
-	b.sched.Status = "idle"
 
 	return nil
 }
