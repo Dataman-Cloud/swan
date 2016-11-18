@@ -3,3 +3,4 @@ coverage-all.out
 coverage.out
 coverage.html
 .bolt.db
+.bolt-foobar.db

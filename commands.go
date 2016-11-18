@@ -8,8 +8,10 @@ import (
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/api/router"
 	"github.com/Dataman-Cloud/swan/api/router/application"
+	ipamapi "github.com/Dataman-Cloud/swan/api/router/ipam"
 	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Dataman-Cloud/swan/health"
+	"github.com/Dataman-Cloud/swan/ipam"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/scheduler"
 	. "github.com/Dataman-Cloud/swan/store/local"
@@ -114,10 +116,18 @@ func ServerCommand(c *cli.Context) {
 
 	backend := backend.NewBackend(sched, store)
 
+	ipamStore, err := ipam.NewBoltStore(".bolt-foobar.db")
+	if err != nil {
+		logrus.Errorf("Init store engine failed:%s", err)
+		return
+	}
+	ipamager := ipam.NewIPAM(ipamStore)
+
 	srv := api.NewServer(c.String("addr"))
 
 	routers := []router.Router{
 		application.NewRouter(backend),
+		ipamapi.NewRouter(ipamager),
 	}
 
 	srv.InitRouter(routers...)
