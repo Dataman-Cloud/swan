@@ -147,6 +147,11 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 					return
 				}
 			}
+
+			if s.framework.Id == nil {
+				s.framework.Id = sub.FrameworkId
+			}
+
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 
 			go func() {
