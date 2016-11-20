@@ -12,7 +12,11 @@ export GO15VENDOREXPERIMENT=1
 default: build
 
 build: fmt
-	go build -v -o swan .
+	go build -v  -ldflags "-X github.com/Dataman-Cloud/swan/version.Version=0.0.1 -X github.com/Dataman-Cloud/swan/version.Commit=`git rev-parse --short HEAD`  -X github.com/Dataman-Cloud/swan/version.BuildTime=`date -u '+%Y-%m-%d_%I:%M:%S'` " -o swan .
+
+
+rel: fmt
+  GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -v -o ./rel/swan .
 
 install:
 	install -v swan /usr/local/bin
