@@ -3,7 +3,6 @@ package scheduler
 import (
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/health"
@@ -127,14 +126,15 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			close(event)
 		}
 	}()
-	dec := json.NewDecoder(resp.Body)
+
+	r := NewReader(resp.Body)
+	dec := json.NewDecoder(r)
+
 	for {
 		event := new(sched.Event)
 		if err := dec.Decode(event); err != nil {
-			if err == io.EOF {
-				return
-			}
-			continue
+			logrus.Errorf("Deocde event failed: %s", err)
+			return
 		}
 
 		switch event.GetType() {
