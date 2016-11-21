@@ -27,7 +27,7 @@ var (
 type IP struct {
 	Ip        string    `json:"Ip"`
 	State     string    `json:"State"`
-	ReleaseAt time.Time `json:"releaseAt"`
+	ReleaseAt time.Time `json:"ReleaseAt"`
 	TaskId    string    `json:"TaskId"`
 }
 

@@ -91,7 +91,7 @@ func (b *BoltStore) SaveIP(ip IP) error {
 }
 
 func (b *BoltStore) RetriveIP(key string) (IP, error) {
-	tx, err := b.conn.Begin(true)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return IP{}, err
 	}
@@ -113,7 +113,7 @@ func (b *BoltStore) RetriveIP(key string) (IP, error) {
 }
 
 func (b *BoltStore) ListAllIPs() (IPList, error) {
-	tx, err := b.conn.Begin(true)
+	tx, err := b.conn.Begin(false)
 	if err != nil {
 		return nil, err
 	}
