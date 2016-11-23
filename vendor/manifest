@@ -2,6 +2,14 @@
 	"version": 0,
 	"dependencies": [
 		{
+			"importpath": "code.cloudfoundry.org/clock",
+			"repository": "https://github.com/cloudfoundry/clock",
+			"vcs": "git",
+			"revision": "821b5b70523e39fd74d71510f04c9080797c6215",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/Sirupsen/logrus",
 			"repository": "https://github.com/Sirupsen/logrus",
 			"vcs": "git",
@@ -26,11 +34,217 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/beorn7/perks/quantile",
+			"repository": "https://github.com/beorn7/perks",
+			"vcs": "git",
+			"revision": "4c0e84591b9aa9e6dcfdf3e020114cd81f89d5f9",
+			"branch": "master",
+			"path": "/quantile",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/boltdb/bolt",
 			"repository": "https://github.com/boltdb/bolt",
 			"vcs": "git",
 			"revision": "4b1ebc1869ad66568b313d0dc410e2be72670dda",
 			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/etcdserver/stats",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "etcdserver/stats",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/crc",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/crc",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/fileutil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/fileutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/httputil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/httputil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/ioutil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/ioutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/logutil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/logutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/pbutil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/pbutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/tlsutil",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/tlsutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/transport",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/transport",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/pkg/types",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "pkg/types",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/raft",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "raft",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/snap",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "snap",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/version",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "version",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/etcd/wal",
+			"repository": "https://github.com/coreos/etcd",
+			"vcs": "git",
+			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
+			"branch": "master",
+			"path": "/wal",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/go-semver/semver",
+			"repository": "https://github.com/coreos/go-semver",
+			"vcs": "git",
+			"revision": "8ab6407b697782a06568d4b7f1db25550ec2e4c6",
+			"branch": "master",
+			"path": "/semver",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/go-systemd/journal",
+			"repository": "https://github.com/coreos/go-systemd",
+			"vcs": "git",
+			"revision": "48702e0da86bd25e76cfef347e2adeb434a0d0a6",
+			"branch": "master",
+			"path": "/journal",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/coreos/pkg/capnslog",
+			"repository": "https://github.com/coreos/pkg",
+			"vcs": "git",
+			"revision": "447b7ec906e523386d9c53be15b55a8ae86ea944",
+			"branch": "master",
+			"path": "/capnslog",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/go-events",
+			"repository": "https://github.com/docker/go-events",
+			"vcs": "git",
+			"revision": "aa2e3b613fbbfdddbe055a7b9e3ce271cfd83eca",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/swarmkit/vendor/github.com/Sirupsen/logrus",
+			"repository": "https://github.com/docker/swarmkit",
+			"vcs": "git",
+			"revision": "53fcdeba083627b1a2616612a103019b73c6d5ce",
+			"branch": "master",
+			"path": "vendor/github.com/Sirupsen/logrus",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/swarmkit/vendor/github.com/docker/go-events",
+			"repository": "https://github.com/docker/swarmkit",
+			"vcs": "git",
+			"revision": "53fcdeba083627b1a2616612a103019b73c6d5ce",
+			"branch": "master",
+			"path": "vendor/github.com/docker/go-events",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/swarmkit/vendor/golang.org/x/sys/unix",
+			"repository": "https://github.com/docker/swarmkit",
+			"vcs": "git",
+			"revision": "53fcdeba083627b1a2616612a103019b73c6d5ce",
+			"branch": "master",
+			"path": "vendor/golang.org/x/sys/unix",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/swarmkit/watch",
+			"repository": "https://github.com/docker/swarmkit",
+			"vcs": "git",
+			"revision": "53fcdeba083627b1a2616612a103019b73c6d5ce",
+			"branch": "master",
+			"path": "/watch",
 			"notests": true
 		},
 		{
@@ -81,6 +295,76 @@
 			"vcs": "git",
 			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
 			"branch": "master",
+			"notests": true            
+        },
+        {
+			"importpath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
+			"repository": "https://github.com/matttproud/golang_protobuf_extensions",
+			"vcs": "git",
+			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
+			"branch": "master",
+			"path": "/pbutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/pivotal-golang/clock",
+			"repository": "https://github.com/pivotal-golang/clock",
+			"vcs": "git",
+			"revision": "821b5b70523e39fd74d71510f04c9080797c6215",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/client_golang/prometheus",
+			"repository": "https://github.com/prometheus/client_golang",
+			"vcs": "git",
+			"revision": "7993aa4cbec0531b926db082b0d589ad2e4d5e33",
+			"branch": "master",
+			"path": "/prometheus",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/client_model/go",
+			"repository": "https://github.com/prometheus/client_model",
+			"vcs": "git",
+			"revision": "fa8ad6fec33561be4280a8f0514318c79d7f6cb6",
+			"branch": "master",
+			"path": "/go",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/common/expfmt",
+			"repository": "https://github.com/prometheus/common",
+			"vcs": "git",
+			"revision": "0d5de9d6d8629cb8bee6d4674da4127cd8b615a3",
+			"branch": "master",
+			"path": "expfmt",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/common/internal/bitbucket.org/ww/goautoneg",
+			"repository": "https://github.com/prometheus/common",
+			"vcs": "git",
+			"revision": "0d5de9d6d8629cb8bee6d4674da4127cd8b615a3",
+			"branch": "master",
+			"path": "internal/bitbucket.org/ww/goautoneg",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/common/model",
+			"repository": "https://github.com/prometheus/common",
+			"vcs": "git",
+			"revision": "0d5de9d6d8629cb8bee6d4674da4127cd8b615a3",
+			"branch": "master",
+			"path": "/model",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/prometheus/procfs",
+			"repository": "https://github.com/prometheus/procfs",
+			"vcs": "git",
+			"revision": "abf152e5f3e97f2fafac028d2cc06c1feb87ffa5",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -116,6 +400,14 @@
 			"revision": "976c720a22c8eb4eb6a0b4348ad85ad12491a506",
 			"branch": "master",
 			"path": "vendor/github.com/pmezard/go-difflib/difflib",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/xiang90/probing",
+			"repository": "https://github.com/xiang90/probing",
+			"vcs": "git",
+			"revision": "07dd2e8dfe18522e9c447ba95f2fe95262f63bb2",
+			"branch": "master",
 			"notests": true
 		},
 		{
