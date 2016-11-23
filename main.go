@@ -12,6 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/ns"
 	"github.com/Dataman-Cloud/swan/scheduler"
 	. "github.com/Dataman-Cloud/swan/store/local"
 	"github.com/Dataman-Cloud/swan/types"
@@ -120,6 +121,15 @@ func main() {
 	}
 
 	srv.InitRouter(routers...)
+
+	go func() {
+		for {
+			err := <-ns.StartAsDnsProxy()
+			if err != nil {
+				logrus.Errorf("start dns proxy got err %s", err)
+			}
+		}
+	}()
 
 	go func() {
 		srv.ListenAndServe()
