@@ -76,6 +76,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/miekg/dns",
+			"repository": "https://github.com/miekg/dns",
+			"vcs": "git",
+			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/satori/go.uuid",
 			"repository": "https://github.com/satori/go.uuid",
 			"vcs": "git",
