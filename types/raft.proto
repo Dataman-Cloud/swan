@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package types;
+
+import weak "gogoproto/gogo.proto";
+import "application.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+
+message InternalRaftMessage {
+    uint64 id = 1 [(gogoproto.customname) = "ID"];
+
+    repeated StoreAction action = 2;
+}
+
+enum StoreActionKind {
+    option (gogoproto.goproto_enum_prefix) = false;
+    option (gogoproto.enum_customname) = "StoreActionKind";
+    UNKNOWN = 0 [(gogoproto.enumvalue_customname) = "StoreActionKindUnkonwn"];
+    STORE_ACTION_CREATE = 1 [(gogoproto.enumvalue_customname) = "StoreActionKindCreate"];
+    STORE_ACTION_UPDATE = 2 [(gogoproto.enumvalue_customname) = "StoreActionKindUpdate"];
+    STORE_ACTION_REMOVE = 3 [(gogoproto.enumvalue_customname) = "StoreActionKindRemove"];
+}
+
+message StoreAction {
+    StoreActionKind action = 1;
+    oneof target {
+        Application application = 2;
+    }
+}
