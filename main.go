@@ -12,9 +12,9 @@ import (
 	"github.com/Dataman-Cloud/swan/api/router/application"
 	"github.com/Dataman-Cloud/swan/backend"
 	"github.com/Dataman-Cloud/swan/health"
+	"github.com/Dataman-Cloud/swan/manager/raft"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/ns"
-	"github.com/Dataman-Cloud/swan/raft"
 	"github.com/Dataman-Cloud/swan/scheduler"
 	. "github.com/Dataman-Cloud/swan/store/local"
 	"github.com/Dataman-Cloud/swan/types"
@@ -147,6 +147,10 @@ func Start(c *cli.Context) {
 			log.Fatal(err)
 		}
 	}()
+
+	if err := raftNode.WaitForLeader(ctx); err != nil {
+		panic(err)
+	}
 
 	frameworkId, err := store.FetchFrameworkID()
 	if err != nil {
