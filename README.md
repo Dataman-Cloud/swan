@@ -50,14 +50,14 @@ chmod +x swan
 ```
 ### Run with single node
 ```
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=127.0.0.1:2111
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111
 ```
 
-### Run with ha model
+### Run with HA mode
 ```
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
 ```
 Use `swan --help` to see usage.
 
