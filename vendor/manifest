@@ -87,15 +87,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/coreos/etcd/pkg/idutil",
-			"repository": "https://github.com/coreos/etcd",
-			"vcs": "git",
-			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
-			"branch": "master",
-			"path": "/pkg/idutil",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/coreos/etcd/pkg/ioutil",
 			"repository": "https://github.com/coreos/etcd",
 			"vcs": "git",
@@ -299,20 +290,20 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/miekg/dns",
+			"repository": "https://github.com/miekg/dns",
+			"vcs": "git",
+			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
+			"branch": "master",
+			"notests": true            
+        },
+        {
 			"importpath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
 			"repository": "https://github.com/matttproud/golang_protobuf_extensions",
 			"vcs": "git",
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
 			"branch": "master",
 			"path": "/pbutil",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/miekg/dns",
-			"repository": "https://github.com/miekg/dns",
-			"vcs": "git",
-			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
-			"branch": "master",
 			"notests": true
 		},
 		{

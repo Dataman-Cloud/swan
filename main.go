@@ -41,7 +41,7 @@ func init() {
 	flag.StringVar(&masters, "masters", "127.0.0.1:5050", "masters address <ip:port>,<ip:port>...")
 	flag.StringVar(&user, "user", "root", "mesos user")
 	flag.BoolVar(&debug, "debug", false, "log level")
-	flag.IntVar(&raftId, "raftId", 1, "raft node id")
+	flag.IntVar(&raftId, "raftid", 1, "raft node id")
 	flag.StringVar(&cluster, "cluster", "http://127.0.0.1:2221", "raft cluster peers addr")
 
 	flag.Parse()

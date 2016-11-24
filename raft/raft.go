@@ -47,7 +47,7 @@ const (
 )
 
 var (
-	// returns when an operation was submiited bu the node was stopped in the meantime
+	// returns when an operation was submitted but the node was stopped in the meantime
 	ErrStopped = errors.New("raft: failed to process the request: node is stopped")
 
 	// returns when an operation was submitted but the node lost leader status before it became committed
