@@ -46,6 +46,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
 	app.Usage = "A general purpose mesos framework"
+	app.Version = "0.1"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
