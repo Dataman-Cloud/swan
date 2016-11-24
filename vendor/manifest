@@ -10,6 +10,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/BurntSushi/toml",
+			"repository": "https://github.com/BurntSushi/toml",
+			"vcs": "git",
+			"revision": "99064174e013895bbd9b025c31100bd1d9b590ca",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/Sirupsen/logrus",
 			"repository": "https://github.com/Sirupsen/logrus",
 			"vcs": "git",
@@ -290,20 +298,20 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/miekg/dns",
-			"repository": "https://github.com/miekg/dns",
-			"vcs": "git",
-			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
-			"branch": "master",
-			"notests": true            
-        },
-        {
 			"importpath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
 			"repository": "https://github.com/matttproud/golang_protobuf_extensions",
 			"vcs": "git",
 			"revision": "c12348ce28de40eed0136aa2b644d0ee0650e56c",
 			"branch": "master",
 			"path": "/pbutil",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/miekg/dns",
+			"repository": "https://github.com/miekg/dns",
+			"vcs": "git",
+			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
+			"branch": "master",
 			"notests": true
 		},
 		{
@@ -403,6 +411,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/urfave/cli",
+			"repository": "https://github.com/urfave/cli",
+			"vcs": "git",
+			"revision": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/xiang90/probing",
 			"repository": "https://github.com/xiang90/probing",
 			"vcs": "git",
@@ -437,6 +453,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "gopkg.in/check.v1",
+			"repository": "https://gopkg.in/check.v1",
+			"vcs": "git",
+			"revision": "aa8c43564278bc4c58e8ca51bfc5f1c149925cf0",
+			"branch": "v1",
+			"notests": true
+		},
+		{
 			"importpath": "gopkg.in/gemnasium/logrus-airbrake-hook.v2",
 			"repository": "https://gopkg.in/gemnasium/logrus-airbrake-hook.v2",
 			"vcs": "git",
@@ -460,6 +484,22 @@
 			"revision": "3f83fa5005286a7fe593b055f0d7771a7dce4655",
 			"branch": "v2",
 			"path": "internal/json",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/urfave/cli.v1",
+			"repository": "https://gopkg.in/urfave/cli.v1",
+			"vcs": "git",
+			"revision": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/yaml.v2",
+			"repository": "https://gopkg.in/yaml.v2",
+			"vcs": "git",
+			"revision": "a5b47d31c556af34a302ce5d659e6fea44d90de0",
+			"branch": "v2",
 			"notests": true
 		}
 	]
