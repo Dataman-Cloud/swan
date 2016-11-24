@@ -23,10 +23,12 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
+// StoreActionKind defines the operation to take on the store for the target of
+// a storage action.
 type StoreActionKind int32
 
 const (
-	StoreActionKindUnkonwn StoreActionKind = 0
+	StoreActionKindUnknown StoreActionKind = 0
 	StoreActionKindCreate  StoreActionKind = 1
 	StoreActionKindUpdate  StoreActionKind = 2
 	StoreActionKindRemove  StoreActionKind = 3
@@ -50,16 +52,20 @@ func (x StoreActionKind) String() string {
 }
 func (StoreActionKind) EnumDescriptor() ([]byte, []int) { return fileDescriptorRaft, []int{0} }
 
-type InternalRaftMessage struct {
+// Contains one of many protobuf encoded objects to replicate
+// over the raft backend with a request ID to track when the
+// action is effectively applied
+type InternalRaftRequest struct {
 	ID     uint64         `protobuf:"varint,1,opt,name=id,proto3" json:"id,omitempty"`
 	Action []*StoreAction `protobuf:"bytes,2,rep,name=action" json:"action,omitempty"`
 }
 
-func (m *InternalRaftMessage) Reset()                    { *m = InternalRaftMessage{} }
-func (m *InternalRaftMessage) String() string            { return proto.CompactTextString(m) }
-func (*InternalRaftMessage) ProtoMessage()               {}
-func (*InternalRaftMessage) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{0} }
+func (m *InternalRaftRequest) Reset()                    { *m = InternalRaftRequest{} }
+func (m *InternalRaftRequest) String() string            { return proto.CompactTextString(m) }
+func (*InternalRaftRequest) ProtoMessage()               {}
+func (*InternalRaftRequest) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{0} }
 
+// StoreAction defines a target and operation to apply on the storage system.
 type StoreAction struct {
 	Action StoreActionKind `protobuf:"varint,1,opt,name=action,proto3,enum=types.StoreActionKind" json:"action,omitempty"`
 	// Types that are valid to be assigned to Target:
@@ -156,11 +162,11 @@ func _StoreAction_OneofSizer(msg proto.Message) (n int) {
 }
 
 func init() {
-	proto.RegisterType((*InternalRaftMessage)(nil), "types.InternalRaftMessage")
+	proto.RegisterType((*InternalRaftRequest)(nil), "types.InternalRaftRequest")
 	proto.RegisterType((*StoreAction)(nil), "types.StoreAction")
 	proto.RegisterEnum("types.StoreActionKind", StoreActionKind_name, StoreActionKind_value)
 }
-func (this *InternalRaftMessage) VerboseEqual(that interface{}) error {
+func (this *InternalRaftRequest) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -168,22 +174,22 @@ func (this *InternalRaftMessage) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*InternalRaftMessage)
+	that1, ok := that.(*InternalRaftRequest)
 	if !ok {
-		that2, ok := that.(InternalRaftMessage)
+		that2, ok := that.(InternalRaftRequest)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *InternalRaftMessage")
+			return fmt.Errorf("that is not of type *InternalRaftRequest")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *InternalRaftMessage but is nil && this != nil")
+		return fmt.Errorf("that is type *InternalRaftRequest but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *InternalRaftMessage but is not nil && this == nil")
+		return fmt.Errorf("that is type *InternalRaftRequest but is not nil && this == nil")
 	}
 	if this.ID != that1.ID {
 		return fmt.Errorf("ID this(%v) Not Equal that(%v)", this.ID, that1.ID)
@@ -198,7 +204,7 @@ func (this *InternalRaftMessage) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *InternalRaftMessage) Equal(that interface{}) bool {
+func (this *InternalRaftRequest) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
 			return true
@@ -206,9 +212,9 @@ func (this *InternalRaftMessage) Equal(that interface{}) bool {
 		return false
 	}
 
-	that1, ok := that.(*InternalRaftMessage)
+	that1, ok := that.(*InternalRaftRequest)
 	if !ok {
-		that2, ok := that.(InternalRaftMessage)
+		that2, ok := that.(InternalRaftRequest)
 		if ok {
 			that1 = &that2
 		} else {
@@ -374,12 +380,12 @@ func (this *StoreAction_Application) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *InternalRaftMessage) GoString() string {
+func (this *InternalRaftRequest) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&types.InternalRaftMessage{")
+	s = append(s, "&types.InternalRaftRequest{")
 	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
 	if this.Action != nil {
 		s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
@@ -434,7 +440,7 @@ func extensionToGoStringRaft(m github_com_gogo_protobuf_proto.Message) string {
 	s += strings.Join(ss, ",") + "})"
 	return s
 }
-func (m *InternalRaftMessage) Marshal() (dAtA []byte, err error) {
+func (m *InternalRaftRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -444,7 +450,7 @@ func (m *InternalRaftMessage) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *InternalRaftMessage) MarshalTo(dAtA []byte) (int, error) {
+func (m *InternalRaftRequest) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -540,8 +546,8 @@ func encodeVarintRaft(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func NewPopulatedInternalRaftMessage(r randyRaft, easy bool) *InternalRaftMessage {
-	this := &InternalRaftMessage{}
+func NewPopulatedInternalRaftRequest(r randyRaft, easy bool) *InternalRaftRequest {
+	this := &InternalRaftRequest{}
 	this.ID = uint64(uint64(r.Uint32()))
 	if r.Intn(10) != 0 {
 		v1 := r.Intn(5)
@@ -646,7 +652,7 @@ func encodeVarintPopulateRaft(dAtA []byte, v uint64) []byte {
 	dAtA = append(dAtA, uint8(v))
 	return dAtA
 }
-func (m *InternalRaftMessage) Size() (n int) {
+func (m *InternalRaftRequest) Size() (n int) {
 	var l int
 	_ = l
 	if m.ID != 0 {
@@ -696,7 +702,7 @@ func sovRaft(x uint64) (n int) {
 func sozRaft(x uint64) (n int) {
 	return sovRaft(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *InternalRaftMessage) Unmarshal(dAtA []byte) error {
+func (m *InternalRaftRequest) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -719,10 +725,10 @@ func (m *InternalRaftMessage) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: InternalRaftMessage: wiretype end group for non-group")
+			return fmt.Errorf("proto: InternalRaftRequest: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: InternalRaftMessage: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: InternalRaftRequest: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -1010,7 +1016,7 @@ var fileDescriptorRaft = []byte{
 	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d, 0x96, 0x12, 0x49,
 	0xcf, 0x4f, 0xcf, 0x07, 0x8b, 0xe8, 0x83, 0x58, 0x10, 0x49, 0x29, 0xc1, 0xc4, 0x82, 0x82, 0x9c,
 	0xcc, 0xe4, 0xc4, 0x92, 0xcc, 0xfc, 0x3c, 0x88, 0x90, 0x52, 0x24, 0x97, 0xb0, 0x67, 0x5e, 0x49,
-	0x6a, 0x51, 0x5e, 0x62, 0x4e, 0x10, 0xd0, 0x14, 0xdf, 0xd4, 0xe2, 0xe2, 0xc4, 0xf4, 0x54, 0x21,
+	0x6a, 0x51, 0x5e, 0x62, 0x4e, 0x10, 0xd0, 0x94, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21,
 	0x31, 0x2e, 0xa6, 0xcc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0x16, 0x27, 0xb6, 0x47, 0xf7, 0xe4,
 	0x99, 0x3c, 0x5d, 0x82, 0x80, 0x22, 0x42, 0x5a, 0x5c, 0x6c, 0x89, 0xc9, 0x20, 0xed, 0x12, 0x4c,
 	0x0a, 0xcc, 0x1a, 0xdc, 0x46, 0x42, 0x7a, 0x60, 0xfb, 0xf4, 0x82, 0x4b, 0xf2, 0x8b, 0x52, 0x1d,
@@ -1019,7 +1025,7 @@ var fileDescriptorRaft = []byte{
 	0x23, 0x39, 0x17, 0x68, 0x1f, 0x23, 0x92, 0x7d, 0x8e, 0x08, 0x19, 0x0f, 0x86, 0x20, 0x64, 0x85,
 	0x4e, 0x1c, 0x5c, 0x6c, 0x25, 0x89, 0x45, 0xe9, 0xa9, 0x25, 0x5a, 0xef, 0x19, 0xb9, 0xf8, 0xd1,
 	0x4c, 0x17, 0x52, 0xe7, 0x62, 0x0f, 0xf5, 0xf3, 0xf6, 0xf3, 0x0f, 0xf7, 0x13, 0x60, 0x90, 0x92,
-	0xea, 0x9a, 0xab, 0x20, 0x86, 0xa6, 0x22, 0x34, 0x2f, 0x3b, 0x3f, 0xaf, 0x3c, 0x4f, 0xc8, 0x88,
+	0xea, 0x9a, 0xab, 0x20, 0x86, 0xa6, 0x22, 0x34, 0x2f, 0x3b, 0x2f, 0xbf, 0x3c, 0x4f, 0xc8, 0x88,
 	0x4b, 0x38, 0x38, 0xc4, 0x3f, 0xc8, 0x35, 0xde, 0xd1, 0x39, 0xc4, 0xd3, 0xdf, 0x2f, 0xde, 0x39,
 	0xc8, 0xd5, 0x31, 0xc4, 0x55, 0x80, 0x51, 0x4a, 0x12, 0xa8, 0x49, 0x14, 0x4d, 0x93, 0x73, 0x51,
 	0x6a, 0x62, 0x49, 0x2a, 0x86, 0x9e, 0xd0, 0x00, 0x17, 0x90, 0x1e, 0x26, 0xac, 0x7a, 0x42, 0x0b,
@@ -1027,6 +1033,6 @@ var fileDescriptorRaft = []byte{
 	0x37, 0xbf, 0x2c, 0x55, 0x4a, 0xbc, 0x63, 0xb1, 0x1c, 0xc3, 0xae, 0x25, 0x72, 0xe8, 0xbe, 0x73,
 	0x52, 0x39, 0xf1, 0x50, 0x8e, 0xe1, 0xc1, 0x43, 0x39, 0xc6, 0x0f, 0x40, 0xfc, 0x03, 0x88, 0x57,
 	0x3c, 0x92, 0x63, 0xdc, 0x01, 0xc4, 0x27, 0x80, 0xf8, 0x02, 0x10, 0x3f, 0x00, 0xe2, 0x08, 0x86,
-	0x24, 0x36, 0x70, 0xe4, 0x1b, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0xcd, 0x3d, 0x9f, 0xb6, 0x3a,
+	0x24, 0x36, 0x70, 0xe4, 0x1b, 0x03, 0x02, 0x00, 0x00, 0xff, 0xff, 0x45, 0xa6, 0x11, 0xc9, 0x3a,
 	0x02, 0x00, 0x00,
 }

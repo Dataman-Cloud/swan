@@ -11,7 +11,7 @@ It is generated from these files:
 
 It has these top-level messages:
 	Application
-	InternalRaftMessage
+	InternalRaftRequest
 	StoreAction
 */
 package types
