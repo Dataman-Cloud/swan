@@ -45,7 +45,7 @@ func setupLogger(c *cli.Context) {
 func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
-	app.Usage = "general purpose mesos framework"
+	app.Usage = "A general purpose mesos framework"
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
@@ -61,12 +61,12 @@ func main() {
 		cli.StringFlag{
 			Name:  "user",
 			Value: "root",
-			Usage: "mesos user",
+			Usage: "mesos framework user",
 		},
 		cli.StringFlag{
 			Name:  "log-level",
 			Value: "debug",
-			Usage: "custom debug level [debug|info|error]",
+			Usage: "customize debug level [debug|info|error]",
 		},
 		cli.IntFlag{
 			Name:  "raftid",
@@ -80,7 +80,7 @@ func main() {
 		},
 		cli.BoolTFlag{
 			Name:  "enable-dns-proxy",
-			Usage: "weather enable dns proxy",
+			Usage: "enable dns proxy or not",
 		},
 	}
 
