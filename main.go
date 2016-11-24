@@ -3,8 +3,10 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/api/router"
@@ -13,12 +15,16 @@ import (
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/ns"
+	"github.com/Dataman-Cloud/swan/raft"
 	"github.com/Dataman-Cloud/swan/scheduler"
 	. "github.com/Dataman-Cloud/swan/store/local"
 	"github.com/Dataman-Cloud/swan/types"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
+	events "github.com/docker/go-events"
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -26,6 +32,8 @@ var (
 	masters string
 	user    string
 	debug   bool
+	raftId  int
+	cluster string
 )
 
 func init() {
@@ -33,6 +41,8 @@ func init() {
 	flag.StringVar(&masters, "masters", "127.0.0.1:5050", "masters address <ip:port>,<ip:port>...")
 	flag.StringVar(&user, "user", "root", "mesos user")
 	flag.BoolVar(&debug, "debug", false, "log level")
+	flag.IntVar(&raftId, "raftid", 1, "raft node id")
+	flag.StringVar(&cluster, "cluster", "http://127.0.0.1:2221", "raft cluster peers addr")
 
 	flag.Parse()
 }
@@ -70,6 +80,21 @@ func main() {
 		logrus.Errorf("Init store engine failed:%s", err)
 		return
 	}
+
+	raftNode := raft.NewNode(raftId, strings.Split(cluster, ","), store)
+
+	leadershipCh, cancel := raftNode.SubscribeLeadership()
+	defer cancel()
+
+	go handleLeadershipEvents(context.TODO(), leadershipCh)
+
+	ctx := context.Background()
+	go func() {
+		err := raftNode.StartRaft(ctx)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}()
 
 	frameworkId, err := store.FetchFrameworkID()
 	if err != nil {
@@ -136,4 +161,22 @@ func main() {
 	}()
 
 	<-sched.Start()
+}
+
+func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
+	for {
+		select {
+		case leadershipEvent := <-leadershipCh:
+			// TODO lock it and if manager stop return
+			newState := leadershipEvent.(raft.LeadershipState)
+
+			if newState == raft.IsLeader {
+				fmt.Println("Now i am a leader !!!!!")
+			} else if newState == raft.IsFollower {
+				fmt.Println("Now i am a follower !!!!!")
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
 }

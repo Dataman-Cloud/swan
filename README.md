@@ -48,9 +48,16 @@ To get started with the latest release, run the following commands:
 wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
 chmod +x swan
 ```
-### Run
+### Run with single node
 ```
-swan --masters=192.168.1.50:5050 
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=127.0.0.1:2111
+```
+
+### Run with ha model
+```
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=127.0.0.1:2111,127.0.0.1:2112,127.0.0.1:2113
 ```
 Use `swan --help` to see usage.
 
