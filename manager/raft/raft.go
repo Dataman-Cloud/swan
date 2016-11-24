@@ -643,6 +643,28 @@ func (n *Node) Leader() (uint64, error) {
 	return leader, nil
 }
 
+func (n *Node) WaitForLeader(ctx context.Context) error {
+	_, err := n.Leader()
+	if err == nil {
+		return nil
+	}
+
+	ticker := time.NewTicker(50 * time.Millisecond)
+	defer ticker.Stop()
+
+	for err != nil {
+		select {
+		case <-ticker.C:
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+
+		_, err = n.Leader()
+	}
+
+	return nil
+}
+
 // close http and close all channels and stop raft
 func (n *Node) stop(ctx context.Context) {
 	n.stopHTTP()
