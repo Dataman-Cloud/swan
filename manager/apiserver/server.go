@@ -1,29 +1,29 @@
-package api
+package apiserver
 
 import (
 	"fmt"
-	"github.com/Dataman-Cloud/swan/api/router"
+	"github.com/Dataman-Cloud/swan/manager/apiserver/router"
 	"github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 	"net"
 	"net/http"
 )
 
-type Server struct {
+type ApiServer struct {
 	addr    string
 	sock    string
 	routers []router.Router
 }
 
-func NewServer(addr, sock string) *Server {
-	return &Server{
+func NewApiServer(addr, sock string) *ApiServer {
+	return &ApiServer{
 		addr: addr,
 		sock: sock,
 	}
 }
 
 // createMux initializes the main router the server uses.
-func (s *Server) createMux() *mux.Router {
+func (s *ApiServer) createMux() *mux.Router {
 	m := mux.NewRouter()
 
 	logrus.Debug("Registering routers")
@@ -39,7 +39,7 @@ func (s *Server) createMux() *mux.Router {
 	return m
 }
 
-func (s *Server) makeHTTPHandler(handler router.APIFunc) http.HandlerFunc {
+func (s *ApiServer) makeHTTPHandler(handler router.APIFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		logrus.WithFields(logrus.Fields{"from": r.RemoteAddr}).Infof("[%s] %s", r.Method, r.URL.Path)
 		if err := handler(w, r); err != nil {
@@ -50,13 +50,13 @@ func (s *Server) makeHTTPHandler(handler router.APIFunc) http.HandlerFunc {
 }
 
 // InitRouter initializes the list of routers for the server.
-func (s *Server) InitRouter(routers ...router.Router) {
+func (s *ApiServer) AppendRouter(routers ...router.Router) {
 	for _, r := range routers {
 		s.routers = append(s.routers, r)
 	}
 }
 
-func (s *Server) ListenAndServe() error {
+func (s *ApiServer) ListenAndServe() error {
 	var chError = make(chan error)
 	go func() {
 		srv := &http.Server{

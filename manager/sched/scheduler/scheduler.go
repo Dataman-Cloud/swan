@@ -4,14 +4,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 
 	"github.com/Dataman-Cloud/swan/health"
+	"github.com/Dataman-Cloud/swan/manager/sched/client"
+	"github.com/Dataman-Cloud/swan/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/scheduler/client"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/util"
+
 	"github.com/Sirupsen/logrus"
+	"github.com/andygrunwald/megos"
 	"github.com/golang/protobuf/proto"
 	"github.com/urfave/cli"
 )
@@ -33,6 +38,8 @@ type Scheduler struct {
 	Status string
 
 	ClusterId string
+	config    util.Scheduler
+	scontext  *swancontext.SwanContext
 
 	HealthCheckManager *health.HealthCheckManager
 
@@ -40,14 +47,12 @@ type Scheduler struct {
 }
 
 // NewScheduler returns a pointer to new Scheduler
-func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clusterId string,
-	health *health.HealthCheckManager, queue chan types.ReschedulerMsg, c *cli.Context) *Scheduler {
-	return &Scheduler{
-		master:    master,
-		client:    client.New(master, "/api/v1/scheduler"),
-		framework: fw,
-		store:     store,
-		doneChan:  make(chan struct{}),
+func New(config util.Scheduler, scontext *swancontext.SwanContext) *Scheduler {
+	sched := &Scheduler{
+		config:   config,
+		scontext: scontext,
+		store:    scontext.Store,
+		doneChan: make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
 			sched.Event_OFFERS:     make(chan *sched.Event, 64),
@@ -58,22 +63,70 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clu
 			sched.Event_ERROR:      make(chan *sched.Event, 64),
 			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
 		},
-		Status:             "idle",
-		ClusterId:          clusterId,
-		HealthCheckManager: health,
-		ReschedQueue:       queue,
-		cliContext:         c,
+		Status: "idle",
 	}
+
+	return sched
+}
+
+func createOrLoadFrameworkInfo(config util.Scheduler, scontext *swancontext.SwanContext) (*mesos.FrameworkInfo, error) {
+	fw := &mesos.FrameworkInfo{
+		User:            proto.String(config.MesosFrameworkUser),
+		Name:            proto.String("swan"),
+		Hostname:        proto.String(config.Hostname),
+		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
+	}
+
+	frameworkId, err := scontext.Store.FetchFrameworkID()
+	if err != nil {
+		logrus.Errorf("Fetch framework id failed: %s", err)
+		return nil, err
+	}
+
+	if frameworkId != "" {
+		fw.Id = &mesos.FrameworkID{
+			Value: proto.String(frameworkId),
+		}
+	}
+
+	return fw, nil
+}
+
+func stateFromMasters(masters []string) (*megos.State, error) {
+	masterUrls := make([]*url.URL, 0)
+	for _, master := range masters {
+		masterUrl, _ := url.Parse(fmt.Sprintf("http://%s", master))
+		masterUrls = append(masterUrls, masterUrl)
+	}
+
+	mesos := megos.NewClient(masterUrls, nil)
+	return mesos.GetStateFromCluster()
 }
 
 // start starts the scheduler and subscribes to event stream
 // returns a channel to wait for completion.
-func (s *Scheduler) Start() <-chan struct{} {
+func (s *Scheduler) Run() error {
+	var err error
+	s.framework, err = createOrLoadFrameworkInfo(s.config, s.scontext)
+	state, err := stateFromMasters(s.config.MesosMasters)
+	if err != nil {
+		return err
+	}
+
+	s.master = state.Leader
+	cluster := state.Cluster
+	if cluster == "" {
+		cluster = "Unnamed"
+	}
+	s.ClusterId = cluster
+	s.client = client.New(state.Leader, "/api/v1/scheduler")
+
 	if err := s.subscribe(); err != nil {
 		logrus.Error(err)
-		close(s.doneChan)
+		return err
 	}
-	return s.doneChan
+
+	return nil
 }
 
 func (s *Scheduler) stop() {

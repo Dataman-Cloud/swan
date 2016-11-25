@@ -1,17 +1,16 @@
 package ipam
 
 import (
-	"github.com/Dataman-Cloud/swan/api/router"
-	manager "github.com/Dataman-Cloud/swan/ipam"
+	"github.com/Dataman-Cloud/swan/manager/apiserver/router"
 )
 
 type Router struct {
 	routes []*router.Route
-	ipam   *manager.IPAM
+	ipam   *IPAM
 }
 
 // NewRouter initializes a new ipam router.
-func NewRouter(manager *manager.IPAM) *Router {
+func NewRouter(manager *IPAM) *Router {
 	r := &Router{
 		ipam: manager,
 	}

@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"github.com/Dataman-Cloud/swan/scheduler"
+	"github.com/Dataman-Cloud/swan/manager/sched/scheduler"
 	. "github.com/Dataman-Cloud/swan/store"
 )
 

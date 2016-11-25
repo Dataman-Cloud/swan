@@ -1,15 +1,17 @@
-package application
+package api
 
 import (
 	"encoding/json"
 	"errors"
-	"github.com/Dataman-Cloud/swan/api/utils"
-	"github.com/Dataman-Cloud/swan/types"
-	"github.com/Sirupsen/logrus"
-	"github.com/gorilla/mux"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/Dataman-Cloud/swan/manager/apiserver/utils"
+	"github.com/Dataman-Cloud/swan/types"
+
+	"github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 )
 
 // BuildApplication is used to build a new application.

@@ -5,8 +5,7 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan/api/utils"
-	ipamanger "github.com/Dataman-Cloud/swan/ipam"
+	"github.com/Dataman-Cloud/swan/manager/apiserver/utils"
 )
 
 func (r *Router) AllocateIP(w http.ResponseWriter, req *http.Request) error {
@@ -23,7 +22,7 @@ func (r *Router) AllocateIP(w http.ResponseWriter, req *http.Request) error {
 		return errors.New("no ip specified")
 	}
 
-	ip, err := r.ipam.AllocateIp(ipamanger.IP{Ip: ipStr})
+	ip, err := r.ipam.AllocateIp(IP{Ip: ipStr})
 	if err != nil {
 		return err
 	}
@@ -88,7 +87,7 @@ func (r *Router) ReleaseIP(w http.ResponseWriter, req *http.Request) error {
 		return err
 	}
 
-	err := r.ipam.Release(ipamanger.IP{Ip: param.IP})
+	err := r.ipam.Release(IP{Ip: param.IP})
 	if err != nil {
 		return err
 	}
@@ -109,14 +108,14 @@ func (r *Router) RefillIPs(w http.ResponseWriter, req *http.Request) error {
 		IPs []string `json:"ips"`
 	}
 
-	var ips []ipamanger.IP
+	var ips []IP
 	decoder := json.NewDecoder(req.Body)
 	if err := decoder.Decode(&param); err != nil {
 		return err
 	}
 
 	for _, ipStr := range param.IPs {
-		ips = append(ips, ipamanger.IP{Ip: ipStr})
+		ips = append(ips, IP{Ip: ipStr})
 	}
 
 	err := r.ipam.Refill(ips)

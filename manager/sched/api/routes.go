@@ -1,7 +1,7 @@
-package application
+package api
 
 import (
-	"github.com/Dataman-Cloud/swan/api/router"
+	"github.com/Dataman-Cloud/swan/manager/apiserver/router"
 )
 
 type Router struct {

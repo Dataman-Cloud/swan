@@ -6,3 +6,4 @@ coverage.html
 .bolt-foobar.db
 node-1
 node-2
+tmp/

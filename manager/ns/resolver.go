@@ -9,65 +9,68 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/util"
+
 	log "github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 )
 
-const (
-	DOMAIN_SUFIX = "swan"
-	LISTEN_IP    = "0.0.0.0"
-	LISTEN_PORT  = 53
-)
+func New(config util.DNS) *Resolver {
+	res := &Resolver{
+		config: config,
+		stopC:  make(chan struct{}),
+	}
 
-type Config struct {
-	Domain    string
-	RecurseOn bool
-	Listener  string
-	Port      int
+	rr := RecordGenerator{}
+	rr.As = make(map[string]map[string]struct{})
+	rr.As.add("swan.", "192.168.1.1")
+	rr.As.add("dm.swan.", "192.168.1.3")
+	rr.As.add("borg.dm.swan.", "192.168.1.2")
+	rr.As.add("a.borg.dm.swan.", "192.168.1.4")
 
-	SOARname   string
-	SOAMname   string
-	SOASerial  uint32
-	SOARefresh uint32
-	SOARetry   uint32
-	SOAExpire  uint32
+	rr.SRVs = make(map[string]map[string]struct{})
+	res.rs = &rr
 
-	TTL int
+	res.defaultFwd = NewForwarder(
+		config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
 
-	Resolvers       []string
-	ExchangeTimeout time.Duration
+	return res
 }
 
-func StartAsDnsProxy() <-chan error {
-	var config Config
-
-	config.Domain = DOMAIN_SUFIX
-	config.RecurseOn = true
-	config.Listener = LISTEN_IP
-	config.Port = LISTEN_PORT
-	config.Resolvers = []string{"114.114.114.114"}
-
-	res := NewResolver(config)
-	return res.LaunchDNS()
+func (res *Resolver) Start() <-chan struct{} {
+	res.startedC <- struct{}{}
+	return res.startedC
 }
 
-type Resolver struct {
-	config     Config
-	rs         *RecordGenerator
-	defaultFwd Forwarder
+func (res *Resolver) Stop() {
 }
 
-func (res *Resolver) LaunchDNS() <-chan error {
+func (res *Resolver) Run() (stopc chan struct{}, errCh <-chan error) {
 	// Handers for Mesos requests
 	dns.HandleFunc(res.config.Domain+".", panicRecover(res.HandleMesos))
 	dns.HandleFunc(".", panicRecover(res.HandleNonMesos(res.defaultFwd)))
 
-	startCh, errCh := res.Serve()
 	go func() {
-		<-startCh
-		log.Infof("Dns Start Serve")
+		_, errCh = res.Serve()
+
+		for {
+			select {
+			case <-res.stopC:
+				res.Stop()
+			}
+		}
 	}()
-	return errCh
+
+	return res.stopC, errCh
+}
+
+type Resolver struct {
+	config util.DNS
+
+	rs         *RecordGenerator
+	defaultFwd Forwarder
+	stopC      chan struct{}
+	startedC   chan struct{}
 }
 
 func (res *Resolver) HandleMesos(w dns.ResponseWriter, r *dns.Msg) {
@@ -80,6 +83,7 @@ func (res *Resolver) HandleMesos(w dns.ResponseWriter, r *dns.Msg) {
 	var errs multiError
 	rs := res.records()
 	name := strings.ToLower(cleanWild(r.Question[0].Name))
+	log.Debugf("resolve dns hostname %s", name)
 	switch r.Question[0].Qtype {
 	case dns.TypeSRV:
 		errs.Add(res.handleSRV(rs, name, m, r))
@@ -242,24 +246,6 @@ func cleanWild(name string) string {
 		return strings.Replace(name, ".*", "", -1)
 	}
 	return name
-}
-
-func NewResolver(config Config) *Resolver {
-	res := &Resolver{config: config}
-
-	rr := RecordGenerator{}
-	rr.As = make(map[string]map[string]struct{})
-	rr.As.add("swan.", "192.168.1.1")
-	rr.As.add("dm.swan.", "192.168.1.3")
-	rr.As.add("borg.dm.swan.", "192.168.1.2")
-	rr.As.add("a.borg.dm.swan.", "192.168.1.4")
-
-	rr.SRVs = make(map[string]map[string]struct{})
-	res.rs = &rr
-
-	res.defaultFwd = NewForwarder(
-		config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
-	return res
 }
 
 func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {

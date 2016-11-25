@@ -1,4 +1,4 @@
-package application
+package api
 
 import (
 	"github.com/Dataman-Cloud/swan/types"
