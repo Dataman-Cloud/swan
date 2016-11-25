@@ -19,10 +19,6 @@ func NewListCommand() cli.Command {
 		Usage: "list all applications",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
-				Name:  "table",
-				Usage: "List apps with table format",
-			},
-			cli.BoolFlag{
 				Name:  "json",
 				Usage: "List apps with json format",
 			},
@@ -65,16 +61,10 @@ func listApplications(c *cli.Context) error {
 		listApps = apps
 	}
 
-	if c.IsSet("table") {
-		printTable(listApps)
-	}
-
 	if c.IsSet("json") {
 		printJson(listApps)
-	}
-
-	if !c.IsSet("table") && !c.IsSet("json") {
-		printJson(listApps)
+	} else {
+		printTable(listApps)
 	}
 
 	return nil
