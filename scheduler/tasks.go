@@ -1,9 +1,9 @@
 package scheduler
 
 import (
-	//"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
@@ -188,6 +188,37 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 					Protocol:      proto.String(m.Protocol),
 				},
 			)
+			if len(task.HealthChecks) > 0 {
+				for _, healthCheck := range task.HealthChecks {
+					protocol := strings.ToLower(healthCheck.Protocol)
+					if protocol == "http" {
+						taskInfo.HealthCheck = &mesos.HealthCheck{
+							Type: mesos.HealthCheck_HTTP.Enum(),
+							Http: &mesos.HealthCheck_HTTPCheckInfo{
+								Scheme:   proto.String("http"),
+								Port:     proto.Uint32(uint32(hostPort)),
+								Path:     healthCheck.Path,
+								Statuses: []uint32{uint32(200)},
+							},
+						}
+					}
+
+					if protocol == "tcp" {
+						taskInfo.HealthCheck = &mesos.HealthCheck{
+							Type: mesos.HealthCheck_TCP.Enum(),
+							Tcp: &mesos.HealthCheck_TCPCheckInfo{
+								Port: proto.Uint32(31000),
+							},
+						}
+					}
+
+					taskInfo.HealthCheck.DelaySeconds = proto.Float64(healthCheck.DelaySeconds)
+					taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
+					taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
+					taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
+					taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
+				}
+			}
 			taskInfo.Resources = append(taskInfo.Resources, &mesos.Resource{
 				Name: proto.String("ports"),
 				Type: mesos.Value_RANGES.Enum(),
@@ -346,8 +377,8 @@ func (s *Scheduler) ReschedulerTask() {
 						check.Path = *healthCheck.Path
 					}
 
-					if healthCheck.MaxConsecutiveFailures != nil {
-						check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+					if healthCheck.ConsecutiveFailures != 0 {
+						check.MaxFailures = int(healthCheck.ConsecutiveFailures)
 					}
 
 					s.HealthCheckManager.Add(&check)

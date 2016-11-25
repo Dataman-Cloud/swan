@@ -13,7 +13,7 @@ func TestAddEvent(t *testing.T) {
 		Type: sched.Event_SUBSCRIBED.Enum(),
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	s.AddEvent(eventType, event)
 
 	e := <-s.GetEvent(eventType)
@@ -29,7 +29,7 @@ func TestAddEvent(t *testing.T) {
 }
 
 func TestGetEvent(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	ev := s.GetEvent(sched.Event_UNKNOWN)
 	assert.Nil(t, ev)
 }

@@ -47,11 +47,11 @@
     {
       "protocol": "TCP",
       "path": "/",
-      "portIndex": 0,
+      "delaySeconds": 5,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 3,
       "timeoutSeconds": 3,
-      "maxConsecutiveFailures": 3
+      "consecutiveFailures": 3,
     }
  ],
   "updatePolicy": {

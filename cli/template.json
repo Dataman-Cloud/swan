@@ -1,5 +1,5 @@
 {
-  "id": "nginx",
+  "id": "nginx0051",
   "cmd": null,
   "cpus": 0.01,
   "mem": 5,
@@ -47,11 +47,11 @@
     {
       "protocol": "TCP",
       "path": "/",
-      "portIndex": 0,
+      "delaySeconds": 15,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 3,
       "timeoutSeconds": 3,
-      "maxConsecutiveFailures": 3
+      "consecutiveFailures": 5
     }
  ],
   "updatePolicy": {

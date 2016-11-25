@@ -13,6 +13,7 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
+	"github.com/urfave/cli"
 )
 
 // Scheduler represents a Mesos scheduler
@@ -34,11 +35,13 @@ type Scheduler struct {
 	ClusterId string
 
 	HealthCheckManager *health.HealthCheckManager
+
+	cliContext *cli.Context
 }
 
 // NewScheduler returns a pointer to new Scheduler
 func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clusterId string,
-	health *health.HealthCheckManager, queue chan types.ReschedulerMsg) *Scheduler {
+	health *health.HealthCheckManager, queue chan types.ReschedulerMsg, c *cli.Context) *Scheduler {
 	return &Scheduler{
 		master:    master,
 		client:    client.New(master, "/api/v1/scheduler"),
@@ -59,6 +62,7 @@ func NewScheduler(master string, fw *mesos.FrameworkInfo, store store.Store, clu
 		ClusterId:          clusterId,
 		HealthCheckManager: health,
 		ReschedQueue:       queue,
+		cliContext:         c,
 	}
 }
 
@@ -154,10 +158,12 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 
-			go func() {
-				s.HealthCheckManager.Init()
-				s.HealthCheckManager.Start()
-			}()
+			if s.cliContext.Bool("enable-local-healthcheck") {
+				go func() {
+					s.HealthCheckManager.Init()
+					s.HealthCheckManager.Start()
+				}()
+			}
 
 			go func() {
 				s.ReschedulerTask()

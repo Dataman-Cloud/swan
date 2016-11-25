@@ -35,8 +35,8 @@ func (b *BoltStore) SaveCheck(task *types.Task, port uint32, appId string) error
 			check.Path = *healthCheck.Path
 		}
 
-		if healthCheck.MaxConsecutiveFailures != nil {
-			check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+		if healthCheck.ConsecutiveFailures != 0 {
+			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
 		}
 
 		data, err := json.Marshal(&check)

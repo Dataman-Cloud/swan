@@ -10,7 +10,7 @@ import (
 )
 
 func TestSchedulerSend(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
@@ -23,7 +23,7 @@ func TestSchedulerSend(t *testing.T) {
 }
 
 func TestSchedulerStop(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	s.stop()
 }
 
@@ -38,6 +38,6 @@ func TestSchedulerStart(t *testing.T) {
 		},
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxx", nil, nil, nil)
 	s.Start()
 }

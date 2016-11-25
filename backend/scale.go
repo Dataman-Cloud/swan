@@ -154,8 +154,8 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 							check.Path = *healthCheck.Path
 						}
 
-						if healthCheck.MaxConsecutiveFailures != nil {
-							check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+						if healthCheck.ConsecutiveFailures != 0 {
+							check.MaxFailures = int(healthCheck.ConsecutiveFailures)
 						}
 
 						b.sched.HealthCheckManager.Add(&check)

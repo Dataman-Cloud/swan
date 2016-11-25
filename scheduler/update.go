@@ -36,11 +36,18 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	ID := status.TaskId.GetValue()
 	state := status.GetState()
+	healthy := status.GetHealthy()
 
 	taskId := strings.Split(ID, "-")[1]
 	appId := strings.Split(taskId, ".")[1]
 
 	var STATUS string
+
+	logrus.WithFields(logrus.Fields{
+		"ID":      ID,
+		"State":   state,
+		"Healthy": healthy,
+	}).Info("xxxxxxx")
 
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
@@ -80,7 +87,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_FAILED:
 		logrus.Infof("Task Failed, message: %s", status.GetMessage())
-		STATUS = "RESCHEDULING"
+		//STATUS = "RESCHEDULING"
 	case mesos.TaskState_TASK_KILLED:
 		logrus.Infof("Task Killed, message: %s", status.GetMessage())
 		STATUS = "KILLED"

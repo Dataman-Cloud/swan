@@ -47,7 +47,7 @@ func TestStatusRunning(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -101,7 +101,7 @@ func TestStatusSTAGING(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -155,7 +155,7 @@ func TestStatusSTARTING(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -209,7 +209,7 @@ func TestStatusFINISHED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -263,7 +263,7 @@ func TestStatusFAILED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -317,7 +317,7 @@ func TestStatusKILLED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -371,7 +371,7 @@ func TestStatusLOST(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil)
+	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
