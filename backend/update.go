@@ -44,13 +44,13 @@ func (b *Backend) UpdateApplication(appId string, instances int, version *types.
 
 	sort.Sort(TaskSorter(tasks))
 
-	begin, end := app.UpdatedInstances, app.UpdatedInstances+instances
+	begin, end := int(app.UpdatedInstances), int(app.UpdatedInstances)+instances
 	if instances == -1 {
 		begin, end = 0, len(tasks)
 	}
 
-	if end > app.Instances {
-		end = app.Instances
+	if end > int(app.Instances) {
+		end = int(app.Instances)
 	}
 
 	go func() error {

@@ -1,11 +1,12 @@
 package boltdb
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 
 	"github.com/Dataman-Cloud/swan/types"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveApplication(t *testing.T) {
@@ -98,7 +99,7 @@ func TestIncreaseApplicationUpdatedInstances(t *testing.T) {
 
 	app, _ = bolt.FetchApplication("test")
 
-	assert.Equal(t, app.UpdatedInstances, 1)
+	assert.Equal(t, int(app.UpdatedInstances), 1)
 }
 
 func TestIncreaseApplicationInstances(t *testing.T) {
@@ -116,7 +117,7 @@ func TestIncreaseApplicationInstances(t *testing.T) {
 	bolt.SaveApplication(app)
 	bolt.IncreaseApplicationInstances("test")
 	app, _ = bolt.FetchApplication("test")
-	assert.Equal(t, app.Instances, 1)
+	assert.Equal(t, int(app.Instances), 1)
 
 }
 
@@ -137,7 +138,7 @@ func TestResetApplicationUpdatedInstances(t *testing.T) {
 
 	app, _ = bolt.FetchApplication("test")
 
-	assert.Equal(t, app.UpdatedInstances, 0)
+	assert.Equal(t, int(app.UpdatedInstances), 0)
 }
 
 func TestUpdateApplicationStatus(t *testing.T) {
@@ -177,7 +178,7 @@ func TestIncreaseApplicationRunningInstances(t *testing.T) {
 
 	app, _ = bolt.FetchApplication("test")
 
-	assert.Equal(t, app.RunningInstances, 1)
+	assert.Equal(t, int(app.RunningInstances), 1)
 }
 
 func TestReduceApplicationRunningInstances(t *testing.T) {
@@ -197,7 +198,7 @@ func TestReduceApplicationRunningInstances(t *testing.T) {
 
 	app, _ = bolt.FetchApplication("test")
 
-	assert.Equal(t, app.RunningInstances, 0)
+	assert.Equal(t, int(app.RunningInstances), 0)
 }
 
 func TestReduceApplicationInstances(t *testing.T) {
@@ -215,5 +216,5 @@ func TestReduceApplicationInstances(t *testing.T) {
 	bolt.SaveApplication(app)
 	bolt.ReduceApplicationInstances("test")
 	app, _ = bolt.FetchApplication("test")
-	assert.Equal(t, app.Instances, 0)
+	assert.Equal(t, int(app.Instances), 0)
 }
