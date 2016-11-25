@@ -84,7 +84,7 @@ func main() {
 			Value: "http://127.0.0.1.2221",
 			Usage: "raft cluster peers addr",
 		},
-		cli.BoolTFlag{
+		cli.BoolFlag{
 			Name:  "enable-dns-proxy",
 			Usage: "enable dns proxy or not",
 		},
