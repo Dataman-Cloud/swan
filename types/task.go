@@ -22,7 +22,7 @@ type Task struct {
 	Volumes        []*Volume          `json:"volumes"`
 	Env            map[string]string  `json:"env"`
 	Labels         *map[string]string `json:"labels"`
-	HealthChecks   []*HealthCheck     `json:"health_checks"`
+	HealthChecks   []*HealthCheck     `json:"healthChecks"`
 
 	OfferId       *string `json:"offer_id"`
 	AgentId       *string `json:"agent_id,string"`

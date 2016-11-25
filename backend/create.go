@@ -68,8 +68,8 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 						check.Path = *healthCheck.Path
 					}
 
-					if healthCheck.MaxConsecutiveFailures != nil {
-						check.MaxFailures = *healthCheck.MaxConsecutiveFailures
+					if healthCheck.ConsecutiveFailures != 0 {
+						check.MaxFailures = int(healthCheck.ConsecutiveFailures)
 					}
 
 					b.sched.HealthCheckManager.Add(&check)

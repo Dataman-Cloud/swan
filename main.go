@@ -71,7 +71,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "log-level",
-			Value: "debug",
+			Value: "info",
 			Usage: "customize debug level [debug|info|error]",
 		},
 		cli.IntFlag{
@@ -87,6 +87,14 @@ func main() {
 		cli.BoolTFlag{
 			Name:  "enable-dns-proxy",
 			Usage: "enable dns proxy or not",
+		},
+		cli.BoolFlag{
+			Name:  "enable-local-healthcheck",
+			Usage: "Enable local healt check",
+		},
+		cli.BoolFlag{
+			Name:  "standalone",
+			Usage: "Run as standalone mode",
 		},
 	}
 
@@ -133,23 +141,25 @@ func Start(c *cli.Context) {
 		return
 	}
 
-	raftNode := raft.NewNode(c.Int("raftid"), strings.Split(c.String("cluster"), ","), store)
+	if !c.Bool("standalone") {
+		raftNode := raft.NewNode(c.Int("raftid"), strings.Split(c.String("cluster"), ","), store)
 
-	leadershipCh, cancel := raftNode.SubscribeLeadership()
-	defer cancel()
+		leadershipCh, cancel := raftNode.SubscribeLeadership()
+		defer cancel()
 
-	go handleLeadershipEvents(context.TODO(), leadershipCh)
+		go handleLeadershipEvents(context.TODO(), leadershipCh)
 
-	ctx := context.Background()
-	go func() {
-		err := raftNode.StartRaft(ctx)
-		if err != nil {
-			log.Fatal(err)
+		ctx := context.Background()
+		go func() {
+			err := raftNode.StartRaft(ctx)
+			if err != nil {
+				log.Fatal(err)
+			}
+		}()
+
+		if err := raftNode.WaitForLeader(ctx); err != nil {
+			panic(err)
 		}
-	}()
-
-	if err := raftNode.WaitForLeader(ctx); err != nil {
-		panic(err)
 	}
 
 	frameworkId, err := store.FetchFrameworkID()
@@ -191,6 +201,7 @@ func Start(c *cli.Context) {
 		cluster,
 		health.NewHealthCheckManager(store, msgQueue),
 		msgQueue,
+		c,
 	)
 
 	backend := backend.NewBackend(sched, store)

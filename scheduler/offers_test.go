@@ -10,7 +10,7 @@ import (
 )
 
 func TestRequestOffers(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 
 	eventType := sched.Event_OFFERS
 
@@ -63,7 +63,7 @@ func TestOfferedResources(t *testing.T) {
 		},
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	cpus, mem, disk := s.OfferedResources(&offer)
 
 	assert.Equal(t, cpus, float64(0.1))
@@ -72,7 +72,7 @@ func TestOfferedResources(t *testing.T) {
 }
 
 func TestDeclineResource(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	_, err := s.DeclineResource(proto.String("xxxxx-yyyyy-zzzzz"))
 	assert.NotNil(t, err)
 }

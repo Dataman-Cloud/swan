@@ -78,7 +78,7 @@ func TestBuildTask(t *testing.T) {
 		UpdatePolicy: nil,
 	}
 
-	sched := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	sched := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	task, _ := sched.BuildTask(offer, version, "a.b.c.d")
 	assert.Equal(t, task.Name, "a.b.c.d")
 }
@@ -172,14 +172,20 @@ func TestBuildTaskInfo(t *testing.T) {
 		Labels: &map[string]string{"USER": "yyyy"},
 		HealthChecks: []*types.HealthCheck{
 			{
-				ID:        "xxxxx",
-				Address:   "x.x.x.x",
-				TaskID:    "aaaa",
-				AppID:     "bbbb",
-				Port:      nil,
-				PortIndex: nil,
-				Command:   nil,
-				Path:      nil,
+				ID:                  "xxxxx",
+				Address:             "x.x.x.x",
+				TaskID:              "aaaa",
+				AppID:               "bbbb",
+				Port:                nil,
+				PortIndex:           nil,
+				Command:             nil,
+				Path:                nil,
+				Protocol:            "tcp",
+				DelaySeconds:        1,
+				ConsecutiveFailures: 1,
+				GracePeriodSeconds:  1,
+				IntervalSeconds:     1,
+				TimeoutSeconds:      1,
 			},
 		},
 		KillPolicy: &types.KillPolicy{
@@ -192,7 +198,7 @@ func TestBuildTaskInfo(t *testing.T) {
 		AppId:         "testapp",
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	taskInfo := s.BuildTaskInfo(offer, resources, task)
 	assert.Equal(t, *taskInfo.Container.Docker.Image, "nginx:1.10")
 
@@ -294,14 +300,20 @@ func TestLaunchTasks(t *testing.T) {
 		Labels: &map[string]string{"USER": "yyyy"},
 		HealthChecks: []*types.HealthCheck{
 			{
-				ID:        "xxxxx",
-				Address:   "x.x.x.x",
-				TaskID:    "aaaa",
-				AppID:     "bbbb",
-				Port:      nil,
-				PortIndex: nil,
-				Command:   nil,
-				Path:      nil,
+				ID:                  "xxxxx",
+				Address:             "x.x.x.x",
+				TaskID:              "aaaa",
+				AppID:               "bbbb",
+				Port:                nil,
+				PortIndex:           nil,
+				Command:             nil,
+				Path:                nil,
+				Protocol:            "tcp",
+				DelaySeconds:        1,
+				ConsecutiveFailures: 1,
+				GracePeriodSeconds:  1,
+				IntervalSeconds:     1,
+				TimeoutSeconds:      1,
 			},
 		},
 		KillPolicy: &types.KillPolicy{
@@ -314,7 +326,7 @@ func TestLaunchTasks(t *testing.T) {
 		AppId:         "testapp",
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 	taskInfo := s.BuildTaskInfo(offer, resources, task)
 
 	var tasks []*mesos.TaskInfo
@@ -376,7 +388,7 @@ func TestKillTask(t *testing.T) {
 		Status:        "RUNNING",
 		AppId:         "testapp",
 	}
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil)
+	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
 
 	_, err := s.KillTask(task)
 	assert.NotNil(t, err)
@@ -394,7 +406,7 @@ func TestReschedulerTask(t *testing.T) {
 		},
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxxx", nil, msgQueue)
+	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxxx", nil, msgQueue, nil)
 	go func() {
 		s.ReschedulerTask()
 	}()
