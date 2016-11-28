@@ -1,10 +1,12 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"testing"
+
+	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestGetPorts(t *testing.T) {

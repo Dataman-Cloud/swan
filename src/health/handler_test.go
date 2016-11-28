@@ -1,10 +1,12 @@
 package health
 
 import (
-	"github.com/Dataman-Cloud/swan/health/mock"
-	"github.com/Dataman-Cloud/swan/types"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/Dataman-Cloud/swan/src/health/mock"
+	"github.com/Dataman-Cloud/swan/src/types"
 )
 
 func TestHealthCheckFailedHandler(t *testing.T) {

@@ -1,12 +1,13 @@
 package boltdb
 
 import (
-	"github.com/golang/protobuf/proto"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
 
-	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/src/types"
+
+	"github.com/golang/protobuf/proto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveCheck(t *testing.T) {

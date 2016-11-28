@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/stretchr/testify/assert"
 )

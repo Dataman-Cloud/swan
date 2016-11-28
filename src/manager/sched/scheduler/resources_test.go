@@ -1,9 +1,11 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/manager/sched/mock"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/Dataman-Cloud/swan/src/manager/sched/mock"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestCreateScaleResource(t *testing.T) {

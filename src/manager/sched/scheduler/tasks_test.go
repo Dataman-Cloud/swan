@@ -1,12 +1,14 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/manager/sched/mock"
-	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/types"
+	"testing"
+
+	"github.com/Dataman-Cloud/swan/src/manager/sched/mock"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/src/types"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestBuildTask(t *testing.T) {

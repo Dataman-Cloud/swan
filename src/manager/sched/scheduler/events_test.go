@@ -1,10 +1,12 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/manager/sched/mock"
-	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/Dataman-Cloud/swan/src/manager/sched/mock"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestAddEvent(t *testing.T) {

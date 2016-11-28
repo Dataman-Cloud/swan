@@ -1,13 +1,15 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/manager/sched/mock"
-	"github.com/Dataman-Cloud/swan/manager/swancontext"
-	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/util"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/src/manager/sched/mock"
+	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/src/util"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func FakeConfig() util.Scheduler {
@@ -45,5 +47,5 @@ func TestSchedulerStop(t *testing.T) {
 
 func TestSchedulerStart(t *testing.T) {
 	s := NewScheduler(FakeConfig(), &mock.Store{})
-	s.Run()
+	s.Start()
 }

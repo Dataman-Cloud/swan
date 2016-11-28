@@ -1,6 +1,6 @@
 package mock
 
-import "github.com/Dataman-Cloud/swan/types"
+import "github.com/Dataman-Cloud/swan/src/types"
 
 type Store struct{}
 

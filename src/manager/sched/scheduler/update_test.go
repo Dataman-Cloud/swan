@@ -6,11 +6,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Dataman-Cloud/swan/manager/sched/mock"
-	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	. "github.com/Dataman-Cloud/swan/store/local"
-	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/src/manager/sched/mock"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+	. "github.com/Dataman-Cloud/swan/src/store/local"
+	"github.com/Dataman-Cloud/swan/src/types"
+
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
 )
