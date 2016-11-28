@@ -1,4 +1,4 @@
-package boltdb
+package store
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-func (b *BoltStore) SaveTask(task *types.Task) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) SaveTask(task *types.Task) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -32,8 +32,8 @@ func (b *BoltStore) SaveTask(task *types.Task) error {
 
 }
 
-func (b *BoltStore) ListTasks(applicationId string) ([]*types.Task, error) {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) ListTasks(applicationId string) ([]*types.Task, error) {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return nil, err
 	}
@@ -58,8 +58,8 @@ func (b *BoltStore) ListTasks(applicationId string) ([]*types.Task, error) {
 	return tasksList, nil
 }
 
-func (b *BoltStore) DeleteApplicationTasks(appId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) DeleteApplicationTasks(appId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -84,8 +84,8 @@ func (b *BoltStore) DeleteApplicationTasks(appId string) error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) DeleteTask(taskId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) DeleteTask(taskId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -100,8 +100,8 @@ func (b *BoltStore) DeleteTask(taskId string) error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) FetchTask(taskId string) (*types.Task, error) {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) FetchTask(taskId string) (*types.Task, error) {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return nil, err
 	}
@@ -122,8 +122,8 @@ func (b *BoltStore) FetchTask(taskId string) (*types.Task, error) {
 	return &task, nil
 }
 
-func (b *BoltStore) UpdateTaskStatus(taskId string, status string) error {
-	task, err := b.FetchTask(taskId)
+func (store *ManagerStore) UpdateTaskStatus(taskId string, status string) error {
+	task, err := store.FetchTask(taskId)
 	if err != nil {
 		return err
 	}
@@ -134,7 +134,7 @@ func (b *BoltStore) UpdateTaskStatus(taskId string, status string) error {
 
 	task.Status = status
 
-	if err := b.SaveTask(task); err != nil {
+	if err := store.SaveTask(task); err != nil {
 		return err
 	}
 

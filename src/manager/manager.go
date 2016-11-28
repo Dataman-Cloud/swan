@@ -10,8 +10,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/ns"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/sched"
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
-	. "github.com/Dataman-Cloud/swan/src/store/local"
 	"github.com/Dataman-Cloud/swan/src/util"
 	"github.com/boltdb/bolt"
 	events "github.com/docker/go-events"
@@ -21,7 +21,7 @@ import (
 )
 
 type Manager struct {
-	store     *BoltStore
+	store     *store.Store
 	apiserver *apiserver.ApiServer
 	//proxyserver
 
@@ -39,11 +39,14 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 		config: config,
 	}
 
-	store, err := NewBoltStore(db)
+	raftNode, err := raft.NewNode(config.Raft.RaftId, strings.Split(config.Raft.Cluster, ","), db)
 	if err != nil {
-		logrus.Errorf("Init store engine failed:%s", err)
+		logrus.Errorf("inti raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
+	manager.raftNode = raftNode
+
+	store := store.NewManagerStore(db, raftNode)
 
 	manager.swanContext = &swancontext.SwanContext{
 		Config: config,
@@ -60,13 +63,6 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 
 	manager.resolver = ns.New(manager.config.DNS)
 	manager.sched = sched.New(manager.config.Scheduler, manager.swanContext)
-
-	raftNode, err := raft.NewNode(config.Raft.RaftId, strings.Split(config.Raft.Cluster, ","), db)
-	if err != nil {
-		logrus.Errorf("inti raft node failed. Error: %s", err.Error())
-		return nil, err
-	}
-	manager.raftNode = raftNode
 
 	return manager, nil
 }

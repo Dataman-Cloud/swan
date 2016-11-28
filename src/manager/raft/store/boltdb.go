@@ -15,12 +15,12 @@ type BoltbDb struct {
 var (
 	bucketKeyStorageVersion = []byte("v1")
 	bucketKeyApps           = []byte("apps")
-	bucketKeyData           = []byte("data")
+
+	BucketKeyData = []byte("data")
 )
 
 var (
-	errAppUnknown = errors.New("boltdb: app unknow")
-
+	ErrAppUnknown             = errors.New("boltdb: app unknow")
 	ErrNilStoreAction         = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction    = errors.New("boltdb: undefine store action")
 	ErrUndefineAppStoreAction = errors.New("boltdb: undefine app store action")

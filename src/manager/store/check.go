@@ -1,4 +1,4 @@
-package boltdb
+package store
 
 import (
 	"encoding/json"
@@ -6,8 +6,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
-func (b *BoltStore) SaveCheck(task *types.Task, port uint32, appId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) SaveCheck(task *types.Task, port uint32, appId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -53,8 +53,8 @@ func (b *BoltStore) SaveCheck(task *types.Task, port uint32, appId string) error
 	return tx.Commit()
 }
 
-func (b *BoltStore) ListChecks() ([]*types.Check, error) {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) ListChecks() ([]*types.Check, error) {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +78,8 @@ func (b *BoltStore) ListChecks() ([]*types.Check, error) {
 	return checks, nil
 }
 
-func (b *BoltStore) DeleteCheck(checkId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) DeleteCheck(checkId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
