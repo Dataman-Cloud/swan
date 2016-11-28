@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/Dataman-Cloud/swan/manager/raft"
-	. "github.com/Dataman-Cloud/swan/store/local"
-	"github.com/Dataman-Cloud/swan/util"
+	"github.com/Dataman-Cloud/swan/src/manager/raft"
+	. "github.com/Dataman-Cloud/swan/src/store/local"
+	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
 	events "github.com/docker/go-events"

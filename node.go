@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/Dataman-Cloud/swan/agent"
-	"github.com/Dataman-Cloud/swan/manager"
-	"github.com/Dataman-Cloud/swan/util"
+	"github.com/Dataman-Cloud/swan/src/agent"
+	"github.com/Dataman-Cloud/swan/src/manager"
+	"github.com/Dataman-Cloud/swan/src/util"
 
 	"golang.org/x/net/context"
 )

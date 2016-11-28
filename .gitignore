@@ -7,3 +7,5 @@ coverage.html
 node-1
 node-2
 tmp/
+bin/*
+.ipam-store.db

@@ -11,11 +11,20 @@ export GO15VENDOREXPERIMENT=1
 
 default: build
 
-build: fmt
-	go build -v -o swan .
+build: fmt build-swancfg build-swan
+
+build-swan:
+	go build -v -o bin/swan main.go node.go
+
+build-swancfg:
+	go build -v -o bin/swancfg src/cli/cli.go
 
 install:
-	install -v swan /usr/local/bin
+	install -v bin/swan /usr/local/bin
+	install -v bin/swancfg /usr/local/bin
+
+clean:
+	rm -rf bin/*
 
 fmt:
 	go fmt ./...
