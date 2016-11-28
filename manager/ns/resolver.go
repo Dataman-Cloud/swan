@@ -37,12 +37,13 @@ func New(config util.DNS) *Resolver {
 	return res
 }
 
-func (res *Resolver) Start() <-chan struct{} {
-	res.startedC <- struct{}{}
-	return res.startedC
+func (res *Resolver) Stop() error {
+	return nil
 }
 
-func (res *Resolver) Stop() {
+func (res *Resolver) Start() error {
+	res.stopC, _ = res.Run()
+	return nil
 }
 
 func (res *Resolver) Run() (stopc chan struct{}, errCh <-chan error) {

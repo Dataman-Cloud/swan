@@ -103,7 +103,7 @@ func main() {
 		doneCh := make(chan bool)
 		node, _ := NewNode(config)
 		go func() {
-			node.Run(context.Background())
+			node.Start(context.Background())
 		}()
 
 		Start(config)

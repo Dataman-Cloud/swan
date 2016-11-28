@@ -25,8 +25,10 @@ func New(config util.Scheduler, scontext *swancontext.SwanContext) *Sched {
 	return s
 }
 
-func (s *Sched) Start() {
-}
-func (s *Sched) Run() error {
-	return s.scheduler.Run()
+func (s *Sched) Start() error {
+	if err := s.scheduler.Start(); err != nil {
+		return err
+	}
+
+	return nil
 }

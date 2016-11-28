@@ -41,10 +41,7 @@ func NewNode(config util.SwanConfig) (*Node, error) {
 	return node, nil
 }
 
-func (n *Node) Start() {
-}
-
-func (n *Node) Run(ctx context.Context) error {
+func (n *Node) Start(ctx context.Context) error {
 	if n.config.Mode == MODE_MANAGER || n.config.Mode == MODE_MIXED {
 		if err := n.runManager(ctx); err != nil {
 			return err
@@ -61,9 +58,9 @@ func (n *Node) Run(ctx context.Context) error {
 }
 
 func (n *Node) runAgent(ctx context.Context) error {
-	return n.agent.Run()
+	return n.agent.Start()
 }
 
 func (n *Node) runManager(ctx context.Context) error {
-	return n.manager.Run()
+	return n.manager.Start()
 }

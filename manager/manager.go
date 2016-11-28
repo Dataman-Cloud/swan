@@ -1,6 +1,8 @@
 package manager
 
 import (
+	"sync"
+
 	"github.com/Dataman-Cloud/swan/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/manager/ipam"
 	"github.com/Dataman-Cloud/swan/manager/ns"
@@ -53,24 +55,31 @@ func New(config util.SwanConfig) (*Manager, error) {
 	return manager, nil
 }
 
-func (manager *Manager) Start() error {
-	return nil
-}
-
 func (manager *Manager) Stop() error {
 	return nil
 }
 
-func (manager *Manager) Run() error {
-	dnsServer := ns.New(manager.config.DNS)
-	_, errCh := dnsServer.Run()
+func (manager *Manager) Start() error {
+	var wg sync.WaitGroup
+	var err error
+	wg.Add(3)
+
 	go func() {
-		err := <-errCh
-		logrus.Errorf("dns running go error %s", err)
+		err = manager.resolver.Start()
+		wg.Done()
 	}()
 
-	manager.swanContext.ApiServer.ListenAndServe()
-	err := manager.sched.Run()
+	go func() {
+		err = manager.sched.Start()
+		wg.Done()
+	}()
+
+	go func() {
+		err = manager.swanContext.ApiServer.ListenAndServe()
+		wg.Done()
+	}()
+	wg.Wait()
+
 	if err != nil {
 		return err
 	}

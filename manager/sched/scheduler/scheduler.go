@@ -66,6 +66,33 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 	return s
 }
 
+// start starts the scheduler and subscribes to event stream
+// returns a channel to wait for completion.
+func (s *Scheduler) Start() error {
+	var err error
+	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
+	state, err := stateFromMasters(s.config.MesosMasters)
+	if err != nil {
+		logrus.Errorf("%s, check your mesos mastger configuration", err)
+		return err
+	}
+
+	s.master = state.Leader
+	cluster := state.Cluster
+	if cluster == "" {
+		cluster = "Unnamed"
+	}
+	s.ClusterId = cluster
+	s.client = client.New(state.Leader, "/api/v1/scheduler")
+
+	if err := s.subscribe(); err != nil {
+		logrus.Error(err)
+		return err
+	}
+
+	return nil
+}
+
 func createOrLoadFrameworkInfo(config util.Scheduler, store store.Store) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
@@ -98,36 +125,6 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 
 	mesos := megos.NewClient(masterUrls, nil)
 	return mesos.GetStateFromCluster()
-}
-
-func (s *Scheduler) Start() error {
-	var err error
-	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
-	state, err := stateFromMasters(s.config.MesosMasters)
-	if err != nil {
-		return err
-	}
-
-	s.master = state.Leader
-	cluster := state.Cluster
-	if cluster == "" {
-		cluster = "Unnamed"
-	}
-	s.ClusterId = cluster
-	s.client = client.New(state.Leader, "/api/v1/scheduler")
-
-	return s.Run()
-}
-
-// start starts the scheduler and subscribes to event stream
-// returns a channel to wait for completion.
-func (s *Scheduler) Run() error {
-	if err := s.subscribe(); err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	return nil
 }
 
 func (s *Scheduler) stop() {

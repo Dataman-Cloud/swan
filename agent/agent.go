@@ -16,7 +16,6 @@ func New(config util.SwanConfig) (*Agent, error) {
 	return agent, nil
 }
 
-func (agent *Agent) Start() {}
-func (agent *Agent) Run() error {
+func (agent *Agent) Start() error {
 	return nil
 }
