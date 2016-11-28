@@ -1,4 +1,5 @@
 PACKAGES = $(shell go list ./...)
+TEST_PACKAGES = $(shell go list ./... | grep -v scheduler | grep -v vendor)
 
 .PHONY: build fmt test test-cover-html test-cover-func collect-cover-data
 
@@ -30,11 +31,11 @@ fmt:
 	go fmt ./src/...
 
 test:
-	go test -cover=true ./src/...
+	go test -cover=true ${TEST_PACKAGES}
 
 collect-cover-data:
 	@echo "mode: count" > coverage-all.out
-	$(foreach pkg,$(PACKAGES),\
+	$(foreach pkg,$(TEST_PACKAGES),\
 		go test -v -coverprofile=coverage.out -covermode=count $(pkg) || exit $$?;\
 		if [ -f coverage.out ]; then\
 			tail -n +2 coverage.out >> coverage-all.out;\
