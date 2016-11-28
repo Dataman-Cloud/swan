@@ -63,12 +63,13 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 		Status: "idle",
 	}
 
+	// TODO, the follow statements are only used for passing test,
+	// should resovled to make sure test pass
 	s.client = client.New("foobar", "make test pass")
 	return s
 }
 
 // start starts the scheduler and subscribes to event stream
-// returns a channel to wait for completion.
 func (s *Scheduler) Start() error {
 	var err error
 	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
@@ -94,6 +95,8 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
+// create frameworkInfo on initial start
+// OR load preexisting frameworkId make mesos believe it's a RESTART of framework
 func createOrLoadFrameworkInfo(config util.Scheduler, store store.Store) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
@@ -128,7 +131,7 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 	return mesos.GetStateFromCluster()
 }
 
-func (s *Scheduler) stop() {
+func (s *Scheduler) Stop() {
 	for _, event := range s.events {
 		close(event)
 	}
@@ -164,6 +167,8 @@ func (s *Scheduler) subscribe() error {
 	if err != nil {
 		return err
 	}
+
+	// http might now be the default transport in future release
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
 	}
@@ -174,6 +179,7 @@ func (s *Scheduler) subscribe() error {
 	return nil
 }
 
+// main loop of a scheduler module
 func (s *Scheduler) handleEvents(resp *http.Response) {
 	defer func() {
 		resp.Body.Close()
@@ -210,6 +216,8 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 
 			s.AddEvent(sched.Event_SUBSCRIBED, event)
 
+			// as a scheduler should not interact directly with the cli context,
+			// scheduler are way to deep and should not care about user action
 			if s.cliContext.Bool("enable-local-healthcheck") {
 				go func() {
 					s.HealthCheckManager.Init()
@@ -236,6 +244,8 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 
 		case sched.Event_UPDATE:
 			status := event.GetUpdate().GetStatus()
+			// why status & AddEvent together, as initial thought would be
+			// status should be notified on the other side of events
 			go func() {
 				s.status(status)
 			}()
