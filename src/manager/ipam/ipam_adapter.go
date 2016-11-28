@@ -16,7 +16,6 @@ func New(scontext *swancontext.SwanContext) (*IpamAdapter, error) {
 	}
 
 	m := NewIPAM(store)
-	scontext.ApiServer.AppendRouter(NewRouter(m))
 
 	adapter := &IpamAdapter{
 		scontext: scontext,
@@ -27,6 +26,7 @@ func New(scontext *swancontext.SwanContext) (*IpamAdapter, error) {
 }
 
 func (ipamAdapter *IpamAdapter) Start() error {
+	ipamAdapter.scontext.ApiServer.AppendRouter(NewRouter(ipamAdapter.IPAM))
 	return nil
 }
 func (ipamAdapter *IpamAdapter) Stop() error {

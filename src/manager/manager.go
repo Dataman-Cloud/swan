@@ -78,7 +78,7 @@ func (manager *Manager) Stop() error {
 func (manager *Manager) Start() error {
 	var wg sync.WaitGroup
 	var err error
-	wg.Add(3)
+	wg.Add(4)
 
 	go func() {
 		err = manager.resolver.Start()
@@ -92,6 +92,11 @@ func (manager *Manager) Start() error {
 
 	go func() {
 		err = manager.swanContext.ApiServer.ListenAndServe()
+		wg.Done()
+	}()
+
+	go func() {
+		err = manager.ipamAdapter.Start()
 		wg.Done()
 	}()
 
