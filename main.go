@@ -1,17 +1,12 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
-	"strings"
 
-	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	. "github.com/Dataman-Cloud/swan/src/store/local"
 	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
-	events "github.com/docker/go-events"
 	"github.com/urfave/cli"
 	"golang.org/x/net/context"
 )
@@ -100,65 +95,22 @@ func main() {
 
 		setupLogger(config.LogLevel)
 
+		db, err := bolt.Open(".bolt.db", 0600, nil)
+		if err != nil {
+			logrus.Errorf("Init store engine failed:%s", err)
+			return err
+		}
+
 		doneCh := make(chan bool)
-		node, _ := NewNode(config)
+		node, _ := NewNode(config, db)
 		go func() {
 			node.Start(context.Background())
 		}()
 
-		Start(config)
 		<-doneCh
 
 		return nil
 	}
 
 	app.Run(os.Args)
-}
-
-func Start(config util.SwanConfig) {
-	store, err := NewBoltStore(".bolt.db")
-	if err != nil {
-		logrus.Errorf("Init store engine failed:%s", err)
-		return
-	}
-
-	if config.Standalone {
-		raftNode := raft.NewNode(config.Raft.RaftId, strings.Split(config.Raft.Cluster, ","), store)
-
-		leadershipCh, cancel := raftNode.SubscribeLeadership()
-		defer cancel()
-
-		go handleLeadershipEvents(context.TODO(), leadershipCh)
-
-		ctx := context.Background()
-		go func() {
-			err := raftNode.StartRaft(ctx)
-			if err != nil {
-				log.Fatal(err)
-			}
-		}()
-
-		if err := raftNode.WaitForLeader(ctx); err != nil {
-			panic(err)
-		}
-	}
-
-}
-
-func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
-	for {
-		select {
-		case leadershipEvent := <-leadershipCh:
-			// TODO lock it and if manager stop return
-			newState := leadershipEvent.(raft.LeadershipState)
-
-			if newState == raft.IsLeader {
-				fmt.Println("Now i am a leader !!!!!")
-			} else if newState == raft.IsFollower {
-				fmt.Println("Now i am a follower !!!!!")
-			}
-		case <-ctx.Done():
-			return
-		}
-	}
 }

@@ -1,13 +1,14 @@
 package boltdb
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSaveFrameworkID(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -23,7 +24,7 @@ func TestSaveFrameworkID(t *testing.T) {
 }
 
 func TestFetchFrameworkID(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -34,7 +35,7 @@ func TestFetchFrameworkID(t *testing.T) {
 }
 
 func TestHasFrameworkID(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")

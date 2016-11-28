@@ -1,7 +1,6 @@
 package raft
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -13,9 +12,11 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/log"
-	"github.com/Dataman-Cloud/swan/src/store"
+	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
+	swan "github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
 	"github.com/coreos/etcd/etcdserver/stats"
 	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/coreos/etcd/pkg/idutil"
@@ -28,6 +29,7 @@ import (
 	"github.com/coreos/etcd/wal/walpb"
 	events "github.com/docker/go-events"
 	"github.com/docker/swarmkit/watch"
+	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/clock"
 	"golang.org/x/net/context"
 )
@@ -89,7 +91,7 @@ type Node struct {
 	isMember            uint32
 	ticker              clock.Ticker
 	leadershipBroadcast *watch.Queue
-	store               store.Store
+	store               *store.BoltbDb
 
 	stoppedC  chan struct{}
 	stopC     chan struct{}
@@ -109,23 +111,12 @@ var (
 	snapshotCatchUpEntrisN uint64 = 10000
 )
 
-// TODO (upccup) result should contain more info
-//type applyResult struct {
-//	resp proto.Message
-//	err  error
-//}
-
 type applyResult struct {
-	resp string
+	resp proto.Message
 	err  error
 }
 
-type InternalRaftRequest struct {
-	ID    uint64
-	Value string
-}
-
-func NewNode(id int, peers []string, store store.Store) *Node {
+func NewNode(id int, peers []string, db *bolt.DB) (*Node, error) {
 	n := Node{
 		id:          id,
 		peers:       peers,
@@ -137,7 +128,6 @@ func NewNode(id int, peers []string, store store.Store) *Node {
 		httpstopC:   make(chan struct{}),
 		httpdoneC:   make(chan struct{}),
 		stoppedC:    make(chan struct{}),
-		store:       store,
 	}
 
 	n.leadershipBroadcast = watch.NewQueue()
@@ -145,7 +135,15 @@ func NewNode(id int, peers []string, store store.Store) *Node {
 	n.reqIDGen = idutil.NewGenerator(uint16(n.id), time.Now())
 	n.wait = newWait()
 
-	return &n
+	boltDbStore, err := store.NewBoltbdStore(db)
+	if err != nil {
+		log.L.Errorf("raft: create raft store of boltdb failed. Error: %s", err.Error())
+		return nil, err
+	}
+
+	n.store = boltDbStore
+
+	return &n, nil
 }
 
 func (n *Node) StartRaft(ctx context.Context) error {
@@ -379,13 +377,11 @@ func (n *Node) canSubmitProposal() bool {
 	}
 }
 
-// TODO (upccup) raft message need common interface
-//func (n *Node) ProposeValue(ctx context.Context, storeAction []ztypes.StoreAction, cb func()) error {
-func (n *Node) ProposeValue(ctx context.Context, value string, cb func()) error {
+func (n *Node) ProposeValue(ctx context.Context, actions []*swan.StoreAction, cb func()) error {
 	ctx, cancel := n.WithContext(ctx)
 	defer cancel()
 
-	_, err := n.processInternalRaftRequest(ctx, InternalRaftRequest{Value: value}, cb)
+	_, err := n.processInternalRaftRequest(ctx, swan.InternalRaftRequest{Action: actions}, cb)
 	if err != nil {
 		return err
 	}
@@ -393,7 +389,7 @@ func (n *Node) ProposeValue(ctx context.Context, value string, cb func()) error 
 	return nil
 }
 
-func (n *Node) processInternalRaftRequest(ctx context.Context, r InternalRaftRequest, cb func()) (*string, error) {
+func (n *Node) processInternalRaftRequest(ctx context.Context, r swan.InternalRaftRequest, cb func()) (proto.Message, error) {
 	n.stopMu.RLock()
 	if !n.canSubmitProposal() {
 		n.stopMu.RUnlock()
@@ -418,7 +414,7 @@ func (n *Node) processInternalRaftRequest(ctx context.Context, r InternalRaftReq
 		return nil, ErrLostLeadership
 	}
 
-	data, err := json.Marshal(r)
+	data, err := r.Marshal()
 	if err != nil {
 		n.wait.cancel(r.ID)
 		return nil, err
@@ -438,7 +434,7 @@ func (n *Node) processInternalRaftRequest(ctx context.Context, r InternalRaftReq
 	select {
 	case x := <-ch:
 		res := x.(*applyResult)
-		return &res.resp, res.err
+		return res.resp, res.err
 	case <-waitCtx.Done():
 		return nil, ErrLostLeadership
 	case <-ctx.Done():
@@ -496,16 +492,18 @@ func (n *Node) publishEntries(ents []raftpb.Entry) bool {
 				break
 			}
 
-			var r InternalRaftRequest
-			if err := json.Unmarshal(ents[i].Data, &r); err != nil {
+			r := &swan.InternalRaftRequest{}
+			if err := r.Unmarshal(ents[i].Data); err != nil {
 				log.L.Errorf("store data got error", err.Error())
 				return false
 			}
 
-			//TODO (upccup) store data to database
-			//n.store.PutKeyValue(id, []byte(id))
+			if err := n.store.DoStoreActions(r.Action); err != nil {
+				log.L.Errorf("raft: store data failed. Error: %s", err.Error())
+				return false
+			}
 
-			if !n.wait.trigger(r.ID, &applyResult{resp: r.Value, err: nil}) {
+			if !n.wait.trigger(r.ID, &applyResult{resp: r, err: nil}) {
 				n.wait.cancelAll()
 			}
 

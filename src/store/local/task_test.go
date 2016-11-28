@@ -10,7 +10,7 @@ import (
 )
 
 func TestSaveTask(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -29,7 +29,7 @@ func TestSaveTask(t *testing.T) {
 }
 
 func TestFetchTask(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -40,7 +40,7 @@ func TestFetchTask(t *testing.T) {
 }
 
 func TestListTasks(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -67,7 +67,7 @@ func TestListTasks(t *testing.T) {
 }
 
 func TestDeleteTask(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -88,7 +88,7 @@ func TestDeleteTask(t *testing.T) {
 }
 
 func TestUpdateTaskStatus(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -112,7 +112,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 }
 
 func TestDeleteApplicationTasks(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
