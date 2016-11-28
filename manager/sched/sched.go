@@ -17,7 +17,7 @@ type Sched struct {
 func New(config util.Scheduler, scontext *swancontext.SwanContext) *Sched {
 	s := &Sched{config: config,
 		scontext:  scontext,
-		scheduler: scheduler.New(config, scontext),
+		scheduler: scheduler.NewScheduler(config, scontext.Store),
 	}
 
 	backend := backend.NewBackend(s.scheduler, s.scontext.Store)

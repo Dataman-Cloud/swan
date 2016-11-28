@@ -3,8 +3,6 @@ package ipam
 import (
 	"errors"
 	"sync"
-
-	"github.com/Dataman-Cloud/swan/manager/swancontext"
 )
 
 var (
@@ -21,12 +19,10 @@ type IPAM struct {
 
 // for time now, IPAM only acts as accessor of ips.
 // it should be a sigleton but not necessary for now.
-func New(scontext *swancontext.SwanContext) *IPAM {
+func NewIPAM(store IPAMStore) *IPAM {
 	m := &IPAM{
-		store: scontext.Store,
+		store: store,
 	}
-
-	scontext.ApiServer.AppendRouter(NewRouter(m))
 
 	return m
 }

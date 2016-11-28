@@ -8,12 +8,12 @@ type Agent struct {
 	Config util.SwanConfig
 }
 
-func New(config util.SwanConfig) *Agent {
+func New(config util.SwanConfig) (*Agent, error) {
 	agent := &Agent{
 		Config: config,
 	}
 
-	return agent
+	return agent, nil
 }
 
 func (agent *Agent) Start() {}

@@ -8,7 +8,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/health"
 	"github.com/Dataman-Cloud/swan/manager/sched/client"
-	"github.com/Dataman-Cloud/swan/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/store"
@@ -39,7 +38,6 @@ type Scheduler struct {
 
 	ClusterId string
 	config    util.Scheduler
-	scontext  *swancontext.SwanContext
 
 	HealthCheckManager *health.HealthCheckManager
 
@@ -47,11 +45,10 @@ type Scheduler struct {
 }
 
 // NewScheduler returns a pointer to new Scheduler
-func New(config util.Scheduler, scontext *swancontext.SwanContext) *Scheduler {
-	sched := &Scheduler{
+func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
+	s := &Scheduler{
 		config:   config,
-		scontext: scontext,
-		store:    scontext.Store,
+		store:    store,
 		doneChan: make(chan struct{}),
 		events: Events{
 			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
@@ -66,10 +63,10 @@ func New(config util.Scheduler, scontext *swancontext.SwanContext) *Scheduler {
 		Status: "idle",
 	}
 
-	return sched
+	return s
 }
 
-func createOrLoadFrameworkInfo(config util.Scheduler, scontext *swancontext.SwanContext) (*mesos.FrameworkInfo, error) {
+func createOrLoadFrameworkInfo(config util.Scheduler, store store.Store) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
 		Name:            proto.String("swan"),
@@ -77,7 +74,7 @@ func createOrLoadFrameworkInfo(config util.Scheduler, scontext *swancontext.Swan
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
-	frameworkId, err := scontext.Store.FetchFrameworkID()
+	frameworkId, err := store.FetchFrameworkID()
 	if err != nil {
 		logrus.Errorf("Fetch framework id failed: %s", err)
 		return nil, err
@@ -103,11 +100,9 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 	return mesos.GetStateFromCluster()
 }
 
-// start starts the scheduler and subscribes to event stream
-// returns a channel to wait for completion.
-func (s *Scheduler) Run() error {
+func (s *Scheduler) Start() error {
 	var err error
-	s.framework, err = createOrLoadFrameworkInfo(s.config, s.scontext)
+	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
 	state, err := stateFromMasters(s.config.MesosMasters)
 	if err != nil {
 		return err
@@ -121,6 +116,12 @@ func (s *Scheduler) Run() error {
 	s.ClusterId = cluster
 	s.client = client.New(state.Leader, "/api/v1/scheduler")
 
+	return s.Run()
+}
+
+// start starts the scheduler and subscribes to event stream
+// returns a channel to wait for completion.
+func (s *Scheduler) Run() error {
 	if err := s.subscribe(); err != nil {
 		logrus.Error(err)
 		return err

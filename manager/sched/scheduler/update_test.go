@@ -1,17 +1,18 @@
 package scheduler
 
 import (
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"testing"
+
+	"github.com/Dataman-Cloud/swan/manager/sched/mock"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
 	. "github.com/Dataman-Cloud/swan/store/local"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/gorilla/mux"
-	"net/http"
-	"net/http/httptest"
-	"os"
-	"strings"
-	"testing"
 )
 
 func TestStatusRunning(t *testing.T) {
@@ -47,7 +48,7 @@ func TestStatusRunning(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -101,7 +102,7 @@ func TestStatusSTAGING(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -155,7 +156,7 @@ func TestStatusSTARTING(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -209,7 +210,7 @@ func TestStatusFINISHED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -263,7 +264,7 @@ func TestStatusFAILED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -317,7 +318,7 @@ func TestStatusKILLED(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{
@@ -371,7 +372,7 @@ func TestStatusLOST(t *testing.T) {
 
 	bolt.SaveTask(task)
 
-	s := NewScheduler(strings.TrimPrefix(srv.URL, "http://"), nil, bolt, "xxxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := &sched.Event{
 		Type: sched.Event_UPDATE.Enum(),
 		Update: &sched.Event_Update{

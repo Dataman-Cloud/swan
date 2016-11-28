@@ -21,14 +21,24 @@ type Node struct {
 	ctx     context.Context
 }
 
-func NewNode(config util.SwanConfig) *Node {
-	node := &Node{
-		config:  config,
-		manager: manager.New(config),
-		agent:   agent.New(config),
+func NewNode(config util.SwanConfig) (*Node, error) {
+	m, err := manager.New(config)
+	if err != nil {
+		return nil, err
 	}
 
-	return node
+	a, err := agent.New(config)
+	if err != nil {
+		return nil, err
+	}
+
+	node := &Node{
+		config:  config,
+		manager: m,
+		agent:   a,
+	}
+
+	return node, nil
 }
 
 func (n *Node) Start() {

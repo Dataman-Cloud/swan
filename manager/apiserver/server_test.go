@@ -10,7 +10,7 @@ import (
 func TestListenAndServe(t *testing.T) {
 	srv := httptest.NewServer(nil)
 	srv.Close()
-	s := NewServer(srv.URL, "test.sock")
+	s := NewApiServer(srv.URL, "test.sock")
 	defer os.Remove("test.sock")
 	quit := make(chan struct{})
 	go func() {

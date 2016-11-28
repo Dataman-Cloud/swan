@@ -1,8 +1,8 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/manager/sched/mock"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/scheduler/mock"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
@@ -78,7 +78,7 @@ func TestBuildTask(t *testing.T) {
 		UpdatePolicy: nil,
 	}
 
-	sched := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	sched := NewScheduler(FakeConfig(), &mock.Store{})
 	task, _ := sched.BuildTask(offer, version, "a.b.c.d")
 	assert.Equal(t, task.Name, "a.b.c.d")
 }
@@ -198,7 +198,7 @@ func TestBuildTaskInfo(t *testing.T) {
 		AppId:         "testapp",
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	taskInfo := s.BuildTaskInfo(offer, resources, task)
 	assert.Equal(t, *taskInfo.Container.Docker.Image, "nginx:1.10")
 
@@ -326,7 +326,7 @@ func TestLaunchTasks(t *testing.T) {
 		AppId:         "testapp",
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	taskInfo := s.BuildTaskInfo(offer, resources, task)
 
 	var tasks []*mesos.TaskInfo
@@ -388,25 +388,14 @@ func TestKillTask(t *testing.T) {
 		Status:        "RUNNING",
 		AppId:         "testapp",
 	}
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 
 	_, err := s.KillTask(task)
 	assert.NotNil(t, err)
 }
 
 func TestReschedulerTask(t *testing.T) {
-	msgQueue := make(chan types.ReschedulerMsg, 1)
-	fw := &mesos.FrameworkInfo{
-		User:            proto.String("testuser"),
-		Name:            proto.String("swan"),
-		Hostname:        proto.String("x.x.x.x"),
-		FailoverTimeout: proto.Float64(5),
-		Id: &mesos.FrameworkID{
-			Value: proto.String("xxxx-yyyy-zzzz"),
-		},
-	}
-
-	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxxx", nil, msgQueue, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	go func() {
 		s.ReschedulerTask()
 	}()

@@ -53,7 +53,7 @@ type HttpListener struct {
 }
 
 type IPAM struct {
-	Foo string `json:"foo"`
+	StorePath string `json:"store_path"`
 }
 
 type Raft struct {
@@ -86,7 +86,9 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			Resolvers:      []string{"114.114.114.114"},
 		},
 
-		IPAM: IPAM{},
+		IPAM: IPAM{
+			StorePath: ".ipam-store.db",
+		},
 
 		Raft: Raft{
 			Cluster: c.String("cluster"),

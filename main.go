@@ -101,7 +101,7 @@ func main() {
 		setupLogger(config.LogLevel)
 
 		doneCh := make(chan bool)
-		node := NewNode(config)
+		node, _ := NewNode(config)
 		go func() {
 			node.Run(context.Background())
 		}()

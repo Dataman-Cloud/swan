@@ -1,16 +1,16 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/manager/sched/mock"
 	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/scheduler/mock"
 	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
 func TestRequestOffers(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 
 	eventType := sched.Event_OFFERS
 
@@ -63,7 +63,7 @@ func TestOfferedResources(t *testing.T) {
 		},
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	cpus, mem, disk := s.OfferedResources(&offer)
 
 	assert.Equal(t, cpus, float64(0.1))
@@ -72,7 +72,7 @@ func TestOfferedResources(t *testing.T) {
 }
 
 func TestDeclineResource(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	_, err := s.DeclineResource(proto.String("xxxxx-yyyyy-zzzzz"))
 	assert.NotNil(t, err)
 }

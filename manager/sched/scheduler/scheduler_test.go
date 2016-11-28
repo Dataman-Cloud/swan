@@ -1,16 +1,32 @@
 package scheduler
 
 import (
-	"github.com/Dataman-Cloud/swan/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/manager/sched/mock"
+	"github.com/Dataman-Cloud/swan/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/scheduler/mock"
-	"github.com/golang/protobuf/proto"
+	"github.com/Dataman-Cloud/swan/util"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
 
+func FakeConfig() util.Scheduler {
+	return util.Scheduler{
+		MesosMasters:       []string{"xx.x.x.x:yyyy"},
+		MesosFrameworkUser: "root",
+		Hostname:           "foobar",
+	}
+}
+
+func FakeSwanContext() *swancontext.SwanContext {
+	return &swancontext.SwanContext{
+		Store:     &mock.Store{},
+		ApiServer: apiserver.NewApiServer("x", "x"),
+	}
+}
+
 func TestSchedulerSend(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
@@ -23,21 +39,11 @@ func TestSchedulerSend(t *testing.T) {
 }
 
 func TestSchedulerStop(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	s.stop()
 }
 
 func TestSchedulerStart(t *testing.T) {
-	fw := &mesos.FrameworkInfo{
-		User:            proto.String("testuser"),
-		Name:            proto.String("swan"),
-		Hostname:        proto.String("x.x.x.x"),
-		FailoverTimeout: proto.Float64(5),
-		Id: &mesos.FrameworkID{
-			Value: proto.String("xxxx-yyyy-zzzz"),
-		},
-	}
-
-	s := NewScheduler("x.x.x.x:yyyy", fw, &mock.Store{}, "xxxx", nil, nil, nil)
-	s.Start()
+	s := NewScheduler(FakeConfig(), &mock.Store{})
+	s.Run()
 }

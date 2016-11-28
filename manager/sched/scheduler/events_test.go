@@ -1,8 +1,8 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/manager/sched/mock"
 	"github.com/Dataman-Cloud/swan/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/scheduler/mock"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )
@@ -13,7 +13,7 @@ func TestAddEvent(t *testing.T) {
 		Type: sched.Event_SUBSCRIBED.Enum(),
 	}
 
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	s.AddEvent(eventType, event)
 
 	e := <-s.GetEvent(eventType)
@@ -29,7 +29,7 @@ func TestAddEvent(t *testing.T) {
 }
 
 func TestGetEvent(t *testing.T) {
-	s := NewScheduler("x.x.x.x:yyyy", nil, &mock.Store{}, "xxxx", nil, nil, nil)
+	s := NewScheduler(FakeConfig(), &mock.Store{})
 	ev := s.GetEvent(sched.Event_UNKNOWN)
 	assert.Nil(t, ev)
 }
