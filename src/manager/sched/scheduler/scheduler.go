@@ -63,6 +63,7 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 		Status: "idle",
 	}
 
+	s.client = client.New("foobar", "make test pass")
 	return s
 }
 
