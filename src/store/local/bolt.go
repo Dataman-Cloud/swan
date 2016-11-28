@@ -6,18 +6,11 @@ import (
 
 type BoltStore struct {
 	conn *bolt.DB
-	path string
 }
 
-func NewBoltStore(path string) (*BoltStore, error) {
-	handle, err := bolt.Open(path, 0600, nil)
-	if err != nil {
-		return nil, err
-	}
-
+func NewBoltStore(db *bolt.DB) (*BoltStore, error) {
 	store := &BoltStore{
-		conn: handle,
-		path: path,
+		conn: db,
 	}
 
 	if err := store.initialize(); err != nil {

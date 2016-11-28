@@ -1,18 +1,22 @@
 package boltdb
 
 import (
-	"github.com/stretchr/testify/assert"
 	"os"
 	"testing"
+
+	"github.com/boltdb/bolt"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestNewBoltStore(t *testing.T) {
-	_, err := NewBoltStore("/xxxx/yyyy")
-	assert.NotNil(t, err)
+	db, err := bolt.Open("/tmp/xxxx", 0600, nil)
+	assert.Nil(t, err)
 
-	bolt, err := NewBoltStore("/tmp/xxxx")
+	_, err = NewBoltStore(db)
+	assert.Nil(t, err)
+
 	defer func() {
-		bolt.Close()
+		db.Close()
 		os.Remove("/tmp/xxxx")
 	}()
 }

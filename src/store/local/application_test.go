@@ -5,12 +5,22 @@ import (
 	"testing"
 
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/boltdb/bolt"
 
 	"github.com/stretchr/testify/assert"
 )
 
+func NewTestBoltStore(path string) (*BoltStore, error) {
+	db, err := bolt.Open(path, 0600, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewBoltStore(db)
+}
+
 func TestSaveApplication(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -29,7 +39,7 @@ func TestSaveApplication(t *testing.T) {
 }
 
 func TestListApplications(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -57,7 +67,7 @@ func TestListApplications(t *testing.T) {
 }
 
 func TestDeleteApplication(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -82,7 +92,7 @@ func TestDeleteApplication(t *testing.T) {
 }
 
 func TestIncreaseApplicationUpdatedInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -103,7 +113,7 @@ func TestIncreaseApplicationUpdatedInstances(t *testing.T) {
 }
 
 func TestIncreaseApplicationInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -122,7 +132,7 @@ func TestIncreaseApplicationInstances(t *testing.T) {
 }
 
 func TestResetApplicationUpdatedInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -142,7 +152,7 @@ func TestResetApplicationUpdatedInstances(t *testing.T) {
 }
 
 func TestUpdateApplicationStatus(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -162,7 +172,7 @@ func TestUpdateApplicationStatus(t *testing.T) {
 }
 
 func TestIncreaseApplicationRunningInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -182,7 +192,7 @@ func TestIncreaseApplicationRunningInstances(t *testing.T) {
 }
 
 func TestReduceApplicationRunningInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -202,7 +212,7 @@ func TestReduceApplicationRunningInstances(t *testing.T) {
 }
 
 func TestReduceApplicationInstances(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")

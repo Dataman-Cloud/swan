@@ -10,7 +10,7 @@ import (
 )
 
 func TestSaveVersion(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -27,7 +27,7 @@ func TestSaveVersion(t *testing.T) {
 }
 
 func TestFetchVersion(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")
@@ -49,7 +49,7 @@ func TestFetchVersion(t *testing.T) {
 }
 
 func TestDeleteVersion(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")

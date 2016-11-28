@@ -11,7 +11,7 @@ import (
 )
 
 func TestSaveCheck(t *testing.T) {
-	bolt, _ := NewBoltStore("/tmp/boltdbtest")
+	bolt, _ := NewTestBoltStore("/tmp/boltdbtest")
 	defer func() {
 		bolt.Close()
 		os.Remove("/tmp/boltdbtest")

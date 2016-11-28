@@ -5,6 +5,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager"
 	"github.com/Dataman-Cloud/swan/src/util"
 
+	"github.com/boltdb/bolt"
 	"golang.org/x/net/context"
 )
 
@@ -21,8 +22,8 @@ type Node struct {
 	ctx     context.Context
 }
 
-func NewNode(config util.SwanConfig) (*Node, error) {
-	m, err := manager.New(config)
+func NewNode(config util.SwanConfig, db *bolt.DB) (*Node, error) {
+	m, err := manager.New(config, db)
 	if err != nil {
 		return nil, err
 	}

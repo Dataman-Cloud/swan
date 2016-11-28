@@ -1,0 +1,113 @@
+package store
+
+import (
+	"errors"
+
+	"github.com/Dataman-Cloud/swan/src/types"
+
+	"github.com/boltdb/bolt"
+)
+
+type BoltbDb struct {
+	*bolt.DB
+}
+
+var (
+	bucketKeyStorageVersion = []byte("v1")
+	bucketKeyApps           = []byte("apps")
+	bucketKeyData           = []byte("data")
+)
+
+var (
+	errAppUnknown = errors.New("boltdb: app unknow")
+
+	ErrNilStoreAction         = errors.New("boltdb: nil store action")
+	ErrUndefineStoreAction    = errors.New("boltdb: undefine store action")
+	ErrUndefineAppStoreAction = errors.New("boltdb: undefine app store action")
+)
+
+func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
+	if err := db.Update(func(tx *bolt.Tx) error {
+		_, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps)
+		return err
+	}); err != nil {
+		return nil, err
+	}
+
+	return &BoltbDb{db}, nil
+}
+
+func createBucketIfNotExists(tx *bolt.Tx, keys ...[]byte) (*bolt.Bucket, error) {
+	bkt, err := tx.CreateBucketIfNotExists(keys[0])
+	if err != nil {
+		return nil, err
+	}
+
+	for _, key := range keys[1:] {
+		bkt, err = bkt.CreateBucketIfNotExists(key)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return bkt, nil
+}
+
+func getBucket(tx *bolt.Tx, keys ...[]byte) *bolt.Bucket {
+	bkt := tx.Bucket(keys[0])
+
+	for _, key := range keys[1:] {
+		if bkt == nil {
+			break
+		}
+
+		bkt = bkt.Bucket(key)
+	}
+
+	return bkt
+}
+
+func (db *BoltbDb) DoStoreActions(actions []*types.StoreAction) error {
+	tx, err := db.Begin(true)
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	for _, storeAction := range actions {
+		if err := db.doStoreAction(tx, storeAction); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
+}
+
+func (db *BoltbDb) doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
+	if action == nil {
+		return ErrNilStoreAction
+	}
+
+	actionTarget := action.GetTarget()
+	if actionTarget == nil {
+		return ErrUndefineStoreAction
+	}
+
+	switch actionTarget.(type) {
+	case *types.StoreAction_Application:
+		return db.doAppStoreAction(tx, action.Action, action.GetApplication())
+	default:
+		return ErrUndefineStoreAction
+	}
+}
+
+func (db *BoltbDb) doAppStoreAction(tx *bolt.Tx, action types.StoreActionKind, app *types.Application) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putApp(tx, app)
+	case types.StoreActionKindRemove:
+		return removeApp(tx, app.ID)
+	default:
+		return ErrUndefineAppStoreAction
+	}
+}
