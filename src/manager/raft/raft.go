@@ -11,9 +11,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/types"
-	log "github.com/Dataman-Cloud/swan/src/util/context_logger"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
