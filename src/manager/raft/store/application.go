@@ -16,7 +16,20 @@ func withCreateAppBucketIfNotExists(tx *bolt.Tx, id string, fn func(bkt *bolt.Bu
 	return fn(bkt)
 }
 
-func getAppsBucket(tx *bolt.Tx) *bolt.Bucket {
+func WithAppBucket(tx *bolt.Tx, id string, fn func(bkt *bolt.Bucket) error) error {
+	bkt := GetAppBucket(tx, id)
+	if bkt == nil {
+		return ErrAppUnknown
+	}
+
+	return fn(bkt)
+}
+
+func GetAppBucket(tx *bolt.Tx, id string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(id))
+}
+
+func GetAppsBucket(tx *bolt.Tx) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps)
 }
 
@@ -27,12 +40,12 @@ func putApp(tx *bolt.Tx, app *types.Application) error {
 			return nil
 		}
 
-		return bkt.Put(bucketKeyData, p)
+		return bkt.Put(BucketKeyData, p)
 	})
 }
 
 func removeApp(tx *bolt.Tx, appId string) error {
-	appsBkt := getAppsBucket(tx)
+	appsBkt := GetAppsBucket(tx)
 	if appsBkt == nil {
 		return nil
 	}

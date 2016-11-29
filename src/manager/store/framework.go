@@ -1,9 +1,7 @@
-package boltdb
+package store
 
-import ()
-
-func (b *BoltStore) SaveFrameworkID(frameworkId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) SaveFrameworkID(frameworkId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -17,8 +15,8 @@ func (b *BoltStore) SaveFrameworkID(frameworkId string) error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) FetchFrameworkID() (string, error) {
-	tx, err := b.conn.Begin(false)
+func (store *ManagerStore) FetchFrameworkID() (string, error) {
+	tx, err := store.BoltbDb.Begin(false)
 	if err != nil {
 		return "", err
 	}
@@ -33,8 +31,8 @@ func (b *BoltStore) FetchFrameworkID() (string, error) {
 	return string(val[:]), nil
 }
 
-func (b *BoltStore) HasFrameworkID() (bool, error) {
-	tx, err := b.conn.Begin(false)
+func (store *ManagerStore) HasFrameworkID() (bool, error) {
+	tx, err := store.BoltbDb.Begin(false)
 	if err != nil {
 		return false, err
 	}

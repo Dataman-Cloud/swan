@@ -8,9 +8,9 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/health"
 	"github.com/Dataman-Cloud/swan/src/manager/sched/client"
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/store"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/util"
 

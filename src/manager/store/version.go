@@ -1,4 +1,4 @@
-package boltdb
+package store
 
 import (
 	"encoding/json"
@@ -9,8 +9,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
-func (b *BoltStore) SaveVersion(version *types.Version) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) SaveVersion(version *types.Version) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
@@ -30,8 +30,8 @@ func (b *BoltStore) SaveVersion(version *types.Version) error {
 	return tx.Commit()
 }
 
-func (b *BoltStore) ListVersions(appId string) ([]string, error) {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) ListVersions(appId string) ([]string, error) {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return nil, err
 	}
@@ -56,8 +56,8 @@ func (b *BoltStore) ListVersions(appId string) ([]string, error) {
 	return versionList, nil
 }
 
-func (b *BoltStore) FetchVersion(versionId string) (*types.Version, error) {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) FetchVersion(versionId string) (*types.Version, error) {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return nil, err
 	}
@@ -78,8 +78,8 @@ func (b *BoltStore) FetchVersion(versionId string) (*types.Version, error) {
 	return &version, nil
 }
 
-func (b *BoltStore) DeleteVersion(versionId string) error {
-	tx, err := b.conn.Begin(true)
+func (store *ManagerStore) DeleteVersion(versionId string) error {
+	tx, err := store.BoltbDb.Begin(true)
 	if err != nil {
 		return err
 	}
