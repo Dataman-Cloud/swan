@@ -68,6 +68,8 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 
 // start starts the scheduler and subscribes to event stream
 func (s *Scheduler) Start() error {
+	logrus.Infof("scheduler starting now")
+
 	var err error
 	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
 	state, err := stateFromMasters(s.config.MesosMasters)
@@ -88,6 +90,8 @@ func (s *Scheduler) Start() error {
 		logrus.Error(err)
 		return err
 	}
+
+	logrus.Infof("scheduler started ")
 
 	return nil
 }
