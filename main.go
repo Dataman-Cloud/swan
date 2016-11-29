@@ -110,7 +110,11 @@ func main() {
 		doneCh := make(chan bool)
 		node, _ := NewNode(config, db)
 		go func() {
-			node.Start(context.Background())
+			err := node.Start(context.Background())
+			if err != nil {
+				logrus.Errorf("got error when start node %s", err)
+				doneCh <- true
+			}
 		}()
 
 		<-doneCh

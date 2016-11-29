@@ -70,7 +70,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		Standalone: c.Bool("standablone"),
 		HttpListener: HttpListener{
 			TCPAddr:  c.String("addr"),
-			UnixAddr: c.String("unix_addr"),
+			UnixAddr: c.String("sock"),
 		},
 
 		Scheduler: Scheduler{

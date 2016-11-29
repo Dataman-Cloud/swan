@@ -2,9 +2,11 @@ package main
 
 import (
 	"fmt"
-	"github.com/Dataman-Cloud/swan/src/cli/command"
-	"github.com/urfave/cli"
 	"os"
+
+	"github.com/Dataman-Cloud/swan/src/cli/command"
+
+	"github.com/urfave/cli"
 )
 
 func main() {

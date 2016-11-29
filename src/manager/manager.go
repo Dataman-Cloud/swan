@@ -12,10 +12,10 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/util"
-	"github.com/boltdb/bolt"
-	events "github.com/docker/go-events"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
+	events "github.com/docker/go-events"
 	"golang.org/x/net/context"
 )
 
@@ -71,7 +71,7 @@ func (manager *Manager) Stop() error {
 	return nil
 }
 
-func (manager *Manager) Start() error {
+func (manager *Manager) becameLeader() error {
 	var wg sync.WaitGroup
 	var err error
 	wg.Add(4)
@@ -98,11 +98,14 @@ func (manager *Manager) Start() error {
 
 	wg.Wait()
 
+	return err
+
+}
+
+func (manager *Manager) Start() error {
 	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
 	defer cancel()
-
-	go handleLeadershipEvents(context.TODO(), leadershipCh)
-
+	go manager.handleLeadershipEvents(context.TODO(), leadershipCh)
 	ctx := context.Background()
 	go func() {
 		err := manager.raftNode.StartRaft(ctx)
@@ -115,10 +118,10 @@ func (manager *Manager) Start() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
-func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
+func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
 	for {
 		select {
 		case leadershipEvent := <-leadershipCh:
@@ -127,6 +130,11 @@ func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event)
 
 			if newState == raft.IsLeader {
 				fmt.Println("Now i am a leader !!!!!")
+				err := manager.becameLeader()
+				if err != nil {
+					logrus.Errorf("error when became leader %s", err)
+				}
+
 			} else if newState == raft.IsFollower {
 				fmt.Println("Now i am a follower !!!!!")
 			}

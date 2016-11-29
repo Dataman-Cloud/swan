@@ -1,9 +1,9 @@
 package apiserver
 
 import (
-	"fmt"
 	"net"
 	"net/http"
+	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/router"
 
@@ -59,7 +59,11 @@ func (s *ApiServer) AppendRouter(routers ...router.Router) {
 }
 
 func (s *ApiServer) ListenAndServe() error {
-	var chError = make(chan error)
+	var wg sync.WaitGroup
+	var e error
+
+	wg.Add(2)
+
 	go func() {
 		srv := &http.Server{
 			Addr:    s.addr,
@@ -69,9 +73,10 @@ func (s *ApiServer) ListenAndServe() error {
 		ln, err := net.Listen("tcp", s.addr)
 		if err != nil {
 			logrus.Errorf("Listen on %s error: %s", s.addr, err)
-			chError <- err
+			e = err
 		}
-		chError <- srv.Serve(ln)
+		wg.Done()
+		srv.Serve(ln)
 	}()
 
 	go func() {
@@ -79,16 +84,20 @@ func (s *ApiServer) ListenAndServe() error {
 			Addr:    s.sock,
 			Handler: s.createMux(),
 		}
+		logrus.Infof("API Server listen on %s", s.sock)
 		ln, err := net.ListenUnix("unix", &net.UnixAddr{
 			Name: s.sock,
 			Net:  "unix",
 		})
 		if err != nil {
-			chError <- fmt.Errorf("can't create unix socket %s: %v", s.sock, err)
+			logrus.Errorf("Listen on %s error: %s", s.sock, err)
+			e = err
 		}
 
-		chError <- srv.Serve(ln)
+		wg.Done()
+		srv.Serve(ln)
 	}()
 
-	return <-chError
+	wg.Wait()
+	return e
 }
