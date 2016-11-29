@@ -28,8 +28,29 @@ var (
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 	if err := db.Update(func(tx *bolt.Tx) error {
-		_, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps)
-		return err
+		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps); err != nil {
+			return err
+		}
+
+		// Create all the buckets
+		if _, err := tx.CreateBucketIfNotExists([]byte("swan")); err != nil {
+			return err
+		}
+
+		if _, err := tx.CreateBucketIfNotExists([]byte("tasks")); err != nil {
+			return err
+		}
+
+		if _, err := tx.CreateBucketIfNotExists([]byte("versions")); err != nil {
+			return err
+		}
+
+		if _, err := tx.CreateBucketIfNotExists([]byte("checks")); err != nil {
+			return err
+		}
+
+		return nil
+
 	}); err != nil {
 		return nil, err
 	}

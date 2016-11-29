@@ -17,7 +17,6 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
 	"github.com/golang/protobuf/proto"
-	"github.com/urfave/cli"
 )
 
 // Scheduler represents a Mesos scheduler
@@ -40,8 +39,6 @@ type Scheduler struct {
 	config    util.Scheduler
 
 	HealthCheckManager *health.HealthCheckManager
-
-	cliContext *cli.Context
 }
 
 // NewScheduler returns a pointer to new Scheduler
@@ -218,7 +215,7 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 
 			// as a scheduler should not interact directly with the cli context,
 			// scheduler are way to deep and should not care about user action
-			if s.cliContext.Bool("enable-local-healthcheck") {
+			if s.config.EnableLocalHealthcheck {
 				go func() {
 					s.HealthCheckManager.Init()
 					s.HealthCheckManager.Start()
