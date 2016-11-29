@@ -28,17 +28,18 @@ func (store *ManagerStore) SaveCheck(task *types.Task, port uint32, appId string
 			Timeout:  int(healthCheck.TimeoutSeconds),
 		}
 
-		if healthCheck.Command != nil {
-			check.Command = healthCheck.Command
-		}
+		// TODO(pwzgorilla clear unuse code)
+		//if healthCheck.Command != nil {
+		//	check.Command = healthCheck.Command
+		//}
 
-		if healthCheck.Path != nil {
-			check.Path = *healthCheck.Path
-		}
+		//if healthCheck.Path != nil {
+		//	check.Path = *healthCheck.Path
+		//}
 
-		if healthCheck.ConsecutiveFailures != 0 {
-			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-		}
+		//if healthCheck.ConsecutiveFailures != 0 {
+		//	check.MaxFailures = int(healthCheck.ConsecutiveFailures)
+		//}
 
 		data, err := json.Marshal(&check)
 		if err != nil {

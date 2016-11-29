@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
 )
@@ -130,37 +129,38 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 					return err
 				}
 
-				if len(version.HealthChecks) != 0 {
-					if err := b.store.SaveCheck(task,
-						*taskInfo.Container.Docker.PortMappings[0].HostPort,
-						app.ID); err != nil {
-					}
-					for _, healthCheck := range task.HealthChecks {
-						check := types.Check{
-							ID:       task.Name,
-							Address:  *task.AgentHostname,
-							Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
-							TaskID:   task.Name,
-							AppID:    app.ID,
-							Protocol: healthCheck.Protocol,
-							Interval: int(healthCheck.IntervalSeconds),
-							Timeout:  int(healthCheck.TimeoutSeconds),
-						}
-						if healthCheck.Command != nil {
-							check.Command = healthCheck.Command
-						}
+				// TODO: (pwzgorilla) clear unuse code
+				//if len(version.HealthChecks) != 0 {
+				//	if err := b.store.SaveCheck(task,
+				//		*taskInfo.Container.Docker.PortMappings[0].HostPort,
+				//		app.ID); err != nil {
+				//	}
+				//	for _, healthCheck := range task.HealthChecks {
+				//		check := types.Check{
+				//			ID:       task.Name,
+				//			Address:  *task.AgentHostname,
+				//			Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+				//			TaskID:   task.Name,
+				//			AppID:    app.ID,
+				//			Protocol: healthCheck.Protocol,
+				//			Interval: int(healthCheck.IntervalSeconds),
+				//			Timeout:  int(healthCheck.TimeoutSeconds),
+				//		}
+				//		if healthCheck.Command != nil {
+				//			check.Command = healthCheck.Command
+				//		}
 
-						if healthCheck.Path != nil {
-							check.Path = *healthCheck.Path
-						}
+				//		if healthCheck.Path != nil {
+				//			check.Path = *healthCheck.Path
+				//		}
 
-						if healthCheck.ConsecutiveFailures != 0 {
-							check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-						}
+				//		if healthCheck.ConsecutiveFailures != 0 {
+				//			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
+				//		}
 
-						b.sched.HealthCheckManager.Add(&check)
-					}
-				}
+				//		b.sched.HealthCheckManager.Add(&check)
+				//	}
+				//}
 
 				// Increase application task count
 				if err := b.store.IncreaseApplicationInstances(version.ID); err != nil {

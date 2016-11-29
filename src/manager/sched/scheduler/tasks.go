@@ -197,7 +197,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 							Http: &mesos.HealthCheck_HTTPCheckInfo{
 								Scheme:   proto.String("http"),
 								Port:     proto.Uint32(uint32(hostPort)),
-								Path:     healthCheck.Path,
+								Path:     &healthCheck.Path,
 								Statuses: []uint32{uint32(200)},
 							},
 						}
@@ -353,37 +353,38 @@ func (s *Scheduler) ReschedulerTask() {
 				return
 			}
 
-			if len(task.HealthChecks) != 0 {
-				if err := s.store.SaveCheck(task,
-					*taskInfo.Container.Docker.PortMappings[0].HostPort,
-					msg.AppID); err != nil {
-				}
-				for _, healthCheck := range task.HealthChecks {
-					check := types.Check{
-						ID:       task.Name,
-						Address:  *task.AgentHostname,
-						Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
-						TaskID:   task.Name,
-						AppID:    msg.AppID,
-						Protocol: healthCheck.Protocol,
-						Interval: int(healthCheck.IntervalSeconds),
-						Timeout:  int(healthCheck.TimeoutSeconds),
-					}
-					if healthCheck.Command != nil {
-						check.Command = healthCheck.Command
-					}
+			// TODO: (pwzgorilla) clear unuse code
+			//if len(task.HealthChecks) != 0 {
+			//	if err := s.store.SaveCheck(task,
+			//		*taskInfo.Container.Docker.PortMappings[0].HostPort,
+			//		msg.AppID); err != nil {
+			//	}
+			//	for _, healthCheck := range task.HealthChecks {
+			//		check := types.Check{
+			//			ID:       task.Name,
+			//			Address:  *task.AgentHostname,
+			//			Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+			//			TaskID:   task.Name,
+			//			AppID:    msg.AppID,
+			//			Protocol: healthCheck.Protocol,
+			//			Interval: int(healthCheck.IntervalSeconds),
+			//			Timeout:  int(healthCheck.TimeoutSeconds),
+			//		}
+			//		if healthCheck.Command != nil {
+			//			check.Command = healthCheck.Command
+			//		}
 
-					if healthCheck.Path != nil {
-						check.Path = *healthCheck.Path
-					}
+			//		if healthCheck.Path != nil {
+			//			check.Path = *healthCheck.Path
+			//		}
 
-					if healthCheck.ConsecutiveFailures != 0 {
-						check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-					}
+			//		if healthCheck.ConsecutiveFailures != 0 {
+			//			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
+			//		}
 
-					s.HealthCheckManager.Add(&check)
-				}
-			}
+			//		s.HealthCheckManager.Add(&check)
+			//	}
+			//}
 
 			msg.Err <- nil
 

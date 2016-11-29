@@ -43,6 +43,10 @@ message StoreAction {
 	StoreActionKind action = 1;
 	oneof target {
         Application application = 2;
+        Framework framework = 3; 
 	}
 }
 
+message Framework {
+    string id = 1 [(gogoproto.customname) = "ID"];
+}
