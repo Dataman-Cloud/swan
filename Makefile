@@ -24,6 +24,9 @@ install:
 	install -v bin/swan /usr/local/bin
 	install -v bin/swancfg /usr/local/bin
 
+generate:
+	protoc --proto_path=./vendor/github.com/gogo/protobuf/:./src/types/:. --gogo_out=./src/types/ ./src/types/*.proto
+
 clean:
 	rm -rf bin/*
 
