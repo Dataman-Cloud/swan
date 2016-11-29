@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/Dataman-Cloud/swan/src/util"
 	"github.com/boltdb/bolt"
@@ -25,6 +27,24 @@ func setupLogger(logLevel string) {
 		TimestampFormat: "2006-01-02 15:04:05",
 		FullTimestamp:   true,
 	})
+}
+
+// waitForSignals wait for signals and do some clean up job.
+func waitForSignals(unixSock string) {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	for sig := range signals {
+		logrus.Debugf("Received signal %s , clean up...", sig)
+		if _, err := os.Stat(unixSock); err == nil {
+			logrus.Debugf("Remove %s", unixSock)
+			if err := os.Remove(unixSock); err != nil {
+				logrus.Errorf("Remove %s failed: %s", unixSock, err.Error())
+			}
+		}
+
+		os.Exit(0)
+	}
 }
 
 func main() {
@@ -107,13 +127,12 @@ func main() {
 			return err
 		}
 
-		doneCh := make(chan bool)
 		node, _ := NewNode(config, db)
 		go func() {
 			node.Start(context.Background())
 		}()
 
-		<-doneCh
+		waitForSignals(config.HttpListener.UnixAddr)
 
 		return nil
 	}
