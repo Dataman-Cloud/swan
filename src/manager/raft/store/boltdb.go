@@ -15,15 +15,17 @@ type BoltbDb struct {
 var (
 	bucketKeyStorageVersion = []byte("v1")
 	bucketKeyApps           = []byte("apps")
+	bucketKeyFramework      = []byte("framework")
 
 	BucketKeyData = []byte("data")
 )
 
 var (
-	ErrAppUnknown             = errors.New("boltdb: app unknow")
-	ErrNilStoreAction         = errors.New("boltdb: nil store action")
-	ErrUndefineStoreAction    = errors.New("boltdb: undefine store action")
-	ErrUndefineAppStoreAction = errors.New("boltdb: undefine app store action")
+	ErrAppUnknown              = errors.New("boltdb: app unknow")
+	ErrNilStoreAction          = errors.New("boltdb: nil store action")
+	ErrUndefineStoreAction     = errors.New("boltdb: undefine store action")
+	ErrUndefineAppStoreAction  = errors.New("boltdb: undefine app store action")
+	ErrUndefineFrameworkAction = errors.New("boltdb: undefine framework store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -32,8 +34,7 @@ func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 			return err
 		}
 
-		// Create all the buckets
-		if _, err := tx.CreateBucketIfNotExists([]byte("swan")); err != nil {
+		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework); err != nil {
 			return err
 		}
 
@@ -96,7 +97,7 @@ func (db *BoltbDb) DoStoreActions(actions []*types.StoreAction) error {
 	defer tx.Rollback()
 
 	for _, storeAction := range actions {
-		if err := db.doStoreAction(tx, storeAction); err != nil {
+		if err := doStoreAction(tx, storeAction); err != nil {
 			return err
 		}
 	}
@@ -104,7 +105,7 @@ func (db *BoltbDb) DoStoreActions(actions []*types.StoreAction) error {
 	return tx.Commit()
 }
 
-func (db *BoltbDb) doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
+func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 	if action == nil {
 		return ErrNilStoreAction
 	}
@@ -116,13 +117,15 @@ func (db *BoltbDb) doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 
 	switch actionTarget.(type) {
 	case *types.StoreAction_Application:
-		return db.doAppStoreAction(tx, action.Action, action.GetApplication())
+		return doAppStoreAction(tx, action.Action, action.GetApplication())
+	case *types.StoreAction_Framework:
+		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
 	default:
 		return ErrUndefineStoreAction
 	}
 }
 
-func (db *BoltbDb) doAppStoreAction(tx *bolt.Tx, action types.StoreActionKind, app *types.Application) error {
+func doAppStoreAction(tx *bolt.Tx, action types.StoreActionKind, app *types.Application) error {
 	switch action {
 	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
 		return putApp(tx, app)
@@ -130,5 +133,16 @@ func (db *BoltbDb) doAppStoreAction(tx *bolt.Tx, action types.StoreActionKind, a
 		return removeApp(tx, app.ID)
 	default:
 		return ErrUndefineAppStoreAction
+	}
+}
+
+func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework *types.Framework) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putFramework(tx, framework)
+	case types.StoreActionKindRemove:
+		return removeFramework(tx)
+	default:
+		return ErrUndefineFrameworkAction
 	}
 }

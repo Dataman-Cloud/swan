@@ -1,49 +1,46 @@
 package store
 
+import (
+	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
+	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/boltdb/bolt"
+
+	"golang.org/x/net/context"
+)
+
 func (store *ManagerStore) SaveFrameworkID(frameworkId string) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	framework := &types.Framework{frameworkId}
 
-	bucket := tx.Bucket([]byte("swan"))
-	if err := bucket.Put([]byte("frameworkId"), []byte(frameworkId)); err != nil {
-		return err
-	}
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Framework{framework},
+	}}
 
-	return tx.Commit()
+	return store.RaftNode.ProposeValue(context.TODO(), storeActions, nil)
 }
 
 func (store *ManagerStore) FetchFrameworkID() (string, error) {
-	tx, err := store.BoltbDb.Begin(false)
-	if err != nil {
+	framework := &types.Framework{}
+
+	if err := store.BoltbDb.View(func(tx *bolt.Tx) error {
+		return raftstore.WithFrameworkBucket(tx, func(bkt *bolt.Bucket) error {
+			p := bkt.Get(raftstore.BucketKeyData)
+
+			return framework.Unmarshal(p)
+		})
+
+	}); err != nil {
 		return "", err
 	}
-	defer tx.Rollback()
 
-	bucket := tx.Bucket([]byte("swan"))
-	val := bucket.Get([]byte("frameworkId"))
-
-	if val == nil {
-		return "", nil
-	}
-	return string(val[:]), nil
+	return framework.ID, nil
 }
 
 func (store *ManagerStore) HasFrameworkID() (bool, error) {
-	tx, err := store.BoltbDb.Begin(false)
+	_, err := store.FetchFrameworkID()
 	if err != nil {
 		return false, err
 	}
-	defer tx.Rollback()
 
-	bucket := tx.Bucket([]byte("swan"))
-	val := bucket.Get([]byte("frameworkId"))
-
-	if val != nil {
-		return true, nil
-	}
-
-	return false, nil
+	return true, nil
 }
