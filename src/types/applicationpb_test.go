@@ -7,10 +7,13 @@ Package types is a generated protocol buffer package.
 
 It is generated from these files:
 	application.proto
+	health.proto
 	raft.proto
 
 It has these top-level messages:
 	Application
+	HealthCheck
+	Command
 	InternalRaftRequest
 	StoreAction
 	Framework

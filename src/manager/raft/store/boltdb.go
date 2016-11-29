@@ -21,7 +21,7 @@ var (
 )
 
 var (
-	ErrAppUnknown              = errors.New("boltdb: app unknow")
+	ErrAppUnknown              = errors.New("boltdb: app unknown")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefine store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefine app store action")
