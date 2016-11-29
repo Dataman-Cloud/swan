@@ -58,8 +58,9 @@ type IPAM struct {
 }
 
 type Raft struct {
-	Cluster string `json:"cluster"`
-	RaftId  int    `json:"raftid"`
+	Cluster   string `json:"cluster"`
+	RaftId    int    `json:"raftid"`
+	StorePath string `json:"store_path"`
 }
 
 func NewConfig(c *cli.Context) (SwanConfig, error) {
@@ -89,12 +90,13 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		},
 
 		IPAM: IPAM{
-			StorePath: ".ipam-store.db",
+			StorePath: c.String("work-dir"),
 		},
 
 		Raft: Raft{
-			Cluster: c.String("cluster"),
-			RaftId:  c.Int("raftid"),
+			Cluster:   c.String("cluster"),
+			RaftId:    c.Int("raftid"),
+			StorePath: c.String("work-dir"),
 		},
 	}
 

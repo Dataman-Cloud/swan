@@ -86,6 +86,11 @@ func main() {
 			Value: "mixed",
 			Usage: "Server mode, manager|agent|mixed ",
 		},
+		cli.StringFlag{
+			Name:  "work-dir",
+			Value: "./data/",
+			Usage: "swan data store dir",
+		},
 	}
 
 	app.Action = func(c *cli.Context) error {
@@ -96,7 +101,7 @@ func main() {
 
 		setupLogger(config.LogLevel)
 
-		db, err := bolt.Open(fmt.Sprintf(".bolt.db.%d", config.Raft.RaftId), 0600, nil)
+		db, err := bolt.Open(fmt.Sprintf(c.String("work-dir")+".bolt.db.%d", config.Raft.RaftId), 0600, nil)
 		if err != nil {
 			logrus.Errorf("Init store engine failed:%s", err)
 			return err

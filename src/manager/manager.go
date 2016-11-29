@@ -2,7 +2,6 @@ package manager
 
 import (
 	"fmt"
-	"strings"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
@@ -39,7 +38,7 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 		config: config,
 	}
 
-	raftNode, err := raft.NewNode(config.Raft.RaftId, strings.Split(config.Raft.Cluster, ","), db)
+	raftNode, err := raft.NewNode(config.Raft, db)
 	if err != nil {
 		logrus.Errorf("inti raft node failed. Error: %s", err.Error())
 		return nil, err
@@ -55,6 +54,7 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 			manager.config.HttpListener.UnixAddr),
 	}
 
+	manager.swanContext.Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
 	manager.ipamAdapter, err = ipam.New(manager.swanContext)
 	if err != nil {
 		logrus.Errorf("init ipam adapter failed. Error: ", err.Error())

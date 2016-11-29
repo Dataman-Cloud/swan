@@ -46,37 +46,37 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 			taskInfo := b.sched.BuildTaskInfo(offer, resources, task)
 			tasks = append(tasks, taskInfo)
 
-			if len(task.HealthChecks) != 0 {
-				if err := b.store.SaveCheck(task,
-					*taskInfo.Container.Docker.PortMappings[0].HostPort,
-					version.ID); err != nil {
-				}
-				for _, healthCheck := range task.HealthChecks {
-					check := types.Check{
-						ID:       task.Name,
-						Address:  *task.AgentHostname,
-						Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
-						TaskID:   task.Name,
-						AppID:    version.ID,
-						Protocol: healthCheck.Protocol,
-						Interval: int(healthCheck.IntervalSeconds),
-						Timeout:  int(healthCheck.TimeoutSeconds),
-					}
-					if healthCheck.Command != nil {
-						check.Command = healthCheck.Command
-					}
+			//if len(task.HealthChecks) != 0 {
+			//	if err := b.store.SaveCheck(task,
+			//		*taskInfo.Container.Docker.PortMappings[0].HostPort,
+			//		version.ID); err != nil {
+			//	}
+			//	for _, healthCheck := range task.HealthChecks {
+			//		check := types.Check{
+			//			ID:       task.Name,
+			//			Address:  *task.AgentHostname,
+			//			Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
+			//			TaskID:   task.Name,
+			//			AppID:    version.ID,
+			//			Protocol: healthCheck.Protocol,
+			//			Interval: int(healthCheck.IntervalSeconds),
+			//			Timeout:  int(healthCheck.TimeoutSeconds),
+			//		}
+			//		if healthCheck.Command != nil {
+			//			check.Command = healthCheck.Command
+			//		}
 
-					if healthCheck.Path != nil {
-						check.Path = *healthCheck.Path
-					}
+			//		if healthCheck.Path != nil {
+			//			check.Path = *healthCheck.Path
+			//		}
 
-					if healthCheck.ConsecutiveFailures != 0 {
-						check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-					}
+			//		if healthCheck.ConsecutiveFailures != 0 {
+			//			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
+			//		}
 
-					b.sched.HealthCheckManager.Add(&check)
-				}
-			}
+			//		b.sched.HealthCheckManager.Add(&check)
+			//	}
+			//}
 
 			b.sched.TaskLaunched++
 			cpus -= version.Cpus

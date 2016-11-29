@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -14,9 +15,10 @@ import (
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/boltdb/bolt"
 	"github.com/coreos/etcd/etcdserver/stats"
 	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/coreos/etcd/pkg/idutil"
@@ -116,12 +118,12 @@ type applyResult struct {
 	err  error
 }
 
-func NewNode(id int, peers []string, db *bolt.DB) (*Node, error) {
+func NewNode(config util.Raft, db *bolt.DB) (*Node, error) {
 	n := Node{
-		id:          id,
-		peers:       peers,
-		waldir:      fmt.Sprintf("node-%d", id),
-		snapdir:     fmt.Sprintf("node-%d-snap", id),
+		id:          config.RaftId,
+		peers:       strings.Split(config.Cluster, ","),
+		waldir:      fmt.Sprintf(config.StorePath+"node-%d", config.RaftId),
+		snapdir:     fmt.Sprintf(config.StorePath+"node-%d-snap", config.RaftId),
 		raftStorage: raft.NewMemoryStorage(),
 		snapCount:   defaultSnapshotCount,
 		stopC:       make(chan struct{}),

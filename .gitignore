@@ -4,8 +4,5 @@ coverage.out
 coverage.html
 .bolt.db
 .bolt-foobar.db
-node-1
-node-2
-tmp/
+data/
 bin/*
-.ipam-store.db
