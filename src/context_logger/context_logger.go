@@ -1,4 +1,4 @@
-package log
+package context_logger
 
 import (
 	"path"
