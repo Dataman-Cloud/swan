@@ -49,8 +49,8 @@ type DNS struct {
 }
 
 type HttpListener struct {
-	TCPAddr  string `json:"tcp-addr"`
-	UnixAddr string `json:"unix-addr"`
+	TCPAddr  string `json:"addr"`
+	UnixAddr string `json:"sock"`
 }
 
 type IPAM struct {
@@ -70,7 +70,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		Standalone: c.Bool("standablone"),
 		HttpListener: HttpListener{
 			TCPAddr:  c.String("addr"),
-			UnixAddr: c.String("unix_addr"),
+			UnixAddr: c.String("sock"),
 		},
 
 		Scheduler: Scheduler{

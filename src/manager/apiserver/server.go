@@ -79,6 +79,7 @@ func (s *ApiServer) ListenAndServe() error {
 			Addr:    s.sock,
 			Handler: s.createMux(),
 		}
+		logrus.Infof("unix://%s", s.sock)
 		ln, err := net.ListenUnix("unix", &net.UnixAddr{
 			Name: s.sock,
 			Net:  "unix",
