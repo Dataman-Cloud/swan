@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/utils"
+	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -32,7 +33,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	app, err := r.backend.FetchApplication(version.ID)
-	if err != nil {
+	if err != nil && err != store.ErrAppUnknown {
 		return err
 	}
 

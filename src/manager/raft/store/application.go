@@ -37,7 +37,7 @@ func putApp(tx *bolt.Tx, app *types.Application) error {
 	return withCreateAppBucketIfNotExists(tx, app.ID, func(bkt *bolt.Bucket) error {
 		p, err := proto.Marshal(app)
 		if err != nil {
-			return nil
+			return err
 		}
 
 		return bkt.Put(BucketKeyData, p)
