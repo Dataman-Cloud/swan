@@ -30,6 +30,10 @@ func NewRunCommand() cli.Command {
 				Name:  "image",
 				Usage: "Image to run",
 			},
+			cli.StringFlag{
+				Name:  "run-as",
+				Usage: "Run app as some role",
+			},
 			cli.IntFlag{
 				Name:  "instances",
 				Usage: "Instances to be run",
@@ -127,6 +131,13 @@ func runApplication(c *cli.Context) error {
 			}
 		}
 
+		if c.IsSet("run-as") {
+			runas := c.String("run-as")
+			if runas != "" {
+				version.RunAs = runas
+			}
+		}
+
 		if c.IsSet("image") {
 			image := c.String("image")
 			if image != "" {
@@ -204,7 +215,13 @@ func runApplication(c *cli.Context) error {
 			return errors.New("image can't be empty")
 		}
 
+		runas := c.String("run-as")
+		if runas == "" {
+			runas = "defaultGroup"
+		}
+
 		version.ID = name
+		version.RunAs = runas
 
 		forcePullImage := c.IsSet("force-pull-image")
 		privileged := c.IsSet("privileged")

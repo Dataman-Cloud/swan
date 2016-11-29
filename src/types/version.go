@@ -7,6 +7,7 @@ type Version struct {
 	Mem          float64            `json:"mem"`
 	Disk         float64            `json:"disk"`
 	Instances    int                `json:"instances"`
+	RunAs        string             `json:"runAs"`
 	Container    *Container         `json:"container"`
 	Labels       *map[string]string `json:"labels"`
 	HealthChecks []*HealthCheck     `json:"healthChecks"`

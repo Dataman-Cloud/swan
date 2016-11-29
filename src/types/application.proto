@@ -21,7 +21,7 @@ message Application {
     uint64 updatedInstances = 4;
     uint64 runningInstances = 5;
     uint64 rollbackInstances = 6;
-    string userId = 7;
+    string runAs = 7;
     string clusterId = 8;
     string status = 9;
     int64 created = 10;
