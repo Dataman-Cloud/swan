@@ -116,5 +116,6 @@ func validateAndFormatConfig(config SwanConfig) (c SwanConfig, e error) {
 			return config, errors.New("no permission to run DNS server, run as root or sudoer")
 		}
 	}
+
 	return config, nil
 }

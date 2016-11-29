@@ -7,13 +7,15 @@ import (
 	"net/http"
 )
 
+const DEFAULT_SWAN_SOCK = "/tmp/swan.sock"
+
 type Client struct {
 	url    string
 	client *http.Client
 }
 
 func UnixDialer(proto, sock string) (net.Conn, error) {
-	return net.Dial("unix", "/var/run/swan.sock")
+	return net.Dial("unix", DEFAULT_SWAN_SOCK)
 }
 
 func NewHTTPClient(path string) *Client {
