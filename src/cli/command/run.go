@@ -127,7 +127,7 @@ func runApplication(c *cli.Context) error {
 		if c.IsSet("name") {
 			name := c.String("name")
 			if name != "" {
-				version.ID = name
+				version.AppId = name
 			}
 		}
 
@@ -220,7 +220,7 @@ func runApplication(c *cli.Context) error {
 			runas = "defaultGroup"
 		}
 
-		version.ID = name
+		version.AppId = name
 		version.RunAs = runas
 
 		forcePullImage := c.IsSet("force-pull-image")

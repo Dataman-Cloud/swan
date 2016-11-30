@@ -19,13 +19,13 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 
 	task.Name = name
 	if task.Name == "" {
-		app, err := s.store.FetchApplication(version.ID)
+		app, err := s.store.FetchApplication(version.AppId)
 		if err != nil {
 			return nil, err
 		}
 
 		if app == nil {
-			return nil, fmt.Errorf("Application %s not found.", version.ID)
+			return nil, fmt.Errorf("Application %s not found.", version.AppId)
 		}
 
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.RunAs, app.ClusterId)
@@ -35,7 +35,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 		}
 	}
 
-	task.AppId = version.ID
+	task.AppId = version.AppId
 	task.ID = fmt.Sprintf("%d-%s", time.Now().UnixNano(), task.Name)
 
 	task.Image = version.Container.Docker.Image

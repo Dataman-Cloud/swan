@@ -30,7 +30,7 @@ func (b *Backend) RollbackApplication(appId string) error {
 		return err
 	}
 
-	versions, err := b.store.ListVersions(appId)
+	versions, err := b.store.ListVersionId(appId)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (b *Backend) RollbackApplication(appId string) error {
 	sort.Strings(versions)
 
 	rollbackVer := versions[len(versions)-2]
-	version, err := b.store.FetchVersion(rollbackVer)
+	version, err := b.store.FetchVersion(appId, rollbackVer)
 	if err != nil {
 		return err
 	}
