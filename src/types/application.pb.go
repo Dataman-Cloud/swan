@@ -9,6 +9,9 @@
 		application.proto
 		health.proto
 		raft.proto
+		task.proto
+		update.proto
+		version.proto
 
 	It has these top-level messages:
 		Application
@@ -17,6 +20,16 @@
 		InternalRaftRequest
 		StoreAction
 		Framework
+		Task
+		PortMappings
+		UpdatePolicy
+		Version
+		Container
+		Docker
+		Parameter
+		PortMapping
+		Volume
+		KillPolicy
 */
 package types
 

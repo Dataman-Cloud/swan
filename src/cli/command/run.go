@@ -141,14 +141,14 @@ func runApplication(c *cli.Context) error {
 		if c.IsSet("image") {
 			image := c.String("image")
 			if image != "" {
-				version.Container.Docker.Image = &image
+				version.Container.Docker.Image = image
 			}
 		}
 
 		if c.IsSet("instances") {
 			instances := c.Int("instances")
 			if instances > 0 {
-				version.Instances = instances
+				version.Instances = int32(instances)
 			}
 		}
 
@@ -188,12 +188,12 @@ func runApplication(c *cli.Context) error {
 
 		if c.IsSet("privileged") {
 			p := true
-			version.Container.Docker.Privileged = &p
+			version.Container.Docker.Privileged = p
 		}
 
 		if c.IsSet("force-pull-image") {
 			f := true
-			version.Container.Docker.ForcePullImage = &f
+			version.Container.Docker.ForcePullImage = f
 		}
 	} else {
 
@@ -229,9 +229,9 @@ func runApplication(c *cli.Context) error {
 		version.Container = &types.Container{
 			Type: "DOCKER",
 			Docker: &types.Docker{
-				Image:          &image,
-				ForcePullImage: &forcePullImage,
-				Privileged:     &privileged,
+				Image:          image,
+				ForcePullImage: forcePullImage,
+				Privileged:     privileged,
 				Network:        c.String("network"),
 			},
 		}
@@ -240,9 +240,9 @@ func runApplication(c *cli.Context) error {
 			if !c.IsSet("port-protocol") {
 				return errors.New("--port-protocol must be specified with --port")
 			}
-			version.Container.Docker.PortMappings = &[]types.PortMapping{
-				{
-					ContainerPort: c.Int("port"),
+			version.Container.Docker.PortMappings = []*types.PortMapping{
+				&types.PortMapping{
+					ContainerPort: int32(c.Int("port")),
 					Protocol:      c.String("port-protocol"),
 				},
 			}
@@ -251,7 +251,7 @@ func runApplication(c *cli.Context) error {
 		version.Cpus = c.Float64("cpus")
 		version.Mem = c.Float64("mem")
 		version.Disk = c.Float64("disk")
-		version.Instances = c.Int("instances")
+		version.Instances = int32(c.Int("instances"))
 	}
 
 	b, err := json.Marshal(&version)
