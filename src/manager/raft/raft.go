@@ -248,7 +248,6 @@ func (n *Node) serveRaft() error {
 			log.L.Fatalf("serveRaft: failed to serve rafthttp %v", err)
 		}
 
-		close(n.httpstopC)
 	}()
 
 	return nil
@@ -308,8 +307,9 @@ func (n *Node) Run(ctx context.Context) error {
 			n.raftStorage.Append(rd.Entries)
 			n.transport.Send(rd.Messages)
 
-			if ok := n.publishEntries(n.entriesToApply(rd.CommittedEntries)); !ok {
-				return errors.New("publishEntries failed")
+			if err := n.publishEntries(n.entriesToApply(rd.CommittedEntries)); err != nil {
+				log.L.Errorf("raft: store data failed. Error: %s", err.Error())
+				continue
 			}
 
 			n.maybeTriggerSnapshot()
@@ -486,26 +486,30 @@ func (n *Node) entriesToApply(ents []raftpb.Entry) []raftpb.Entry {
 	return nents
 }
 
-func (n *Node) publishEntries(ents []raftpb.Entry) bool {
+func (n *Node) saveToStorage(data []byte) (*swan.InternalRaftRequest, error) {
+	r := &swan.InternalRaftRequest{}
+	if len(data) == 0 {
+		return r, nil
+	}
+
+	if err := r.Unmarshal(data); err != nil {
+		return r, err
+	}
+
+	if err := n.store.DoStoreActions(r.Action); err != nil {
+		return r, err
+	}
+
+	return r, nil
+}
+
+func (n *Node) publishEntries(ents []raftpb.Entry) error {
 	for i := range ents {
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
-			if len(ents[i].Data) == 0 {
-				break
-			}
+			r, err := n.saveToStorage(ents[i].Data)
 
-			r := &swan.InternalRaftRequest{}
-			if err := r.Unmarshal(ents[i].Data); err != nil {
-				log.L.Errorf("store data got error", err.Error())
-				return false
-			}
-
-			if err := n.store.DoStoreActions(r.Action); err != nil {
-				log.L.Errorf("raft: store data failed. Error: %s", err.Error())
-				return false
-			}
-
-			if !n.wait.trigger(r.ID, &applyResult{resp: r, err: nil}) {
+			if !n.wait.trigger(r.ID, &applyResult{resp: r, err: err}) {
 				n.wait.cancelAll()
 			}
 
@@ -539,7 +543,7 @@ func (n *Node) publishEntries(ents []raftpb.Entry) bool {
 		}
 	}
 
-	return true
+	return nil
 }
 
 // returns a WAL ready for reading
