@@ -195,7 +195,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 						taskInfo.HealthCheck = &mesos.HealthCheck{
 							Type: mesos.HealthCheck_TCP.Enum(),
 							Tcp: &mesos.HealthCheck_TCPCheckInfo{
-								Port: proto.Uint32(31000),
+								Port: proto.Uint32(uint32(hostPort)),
 							},
 						}
 					}

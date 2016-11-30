@@ -2,7 +2,6 @@ package manager
 
 import (
 	"fmt"
-	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
@@ -72,36 +71,17 @@ func (manager *Manager) Stop() error {
 }
 
 func (manager *Manager) Start() error {
-	var wg sync.WaitGroup
-	var err error
-	wg.Add(4)
-
 	go func() {
-		err = manager.resolver.Start()
-		wg.Done()
+		manager.resolver.Start()
 	}()
 
 	go func() {
-		err = manager.sched.Start()
-		wg.Done()
+		manager.ipamAdapter.Start()
 	}()
-
-	go func() {
-		err = manager.swanContext.ApiServer.ListenAndServe()
-		wg.Done()
-	}()
-
-	go func() {
-		err = manager.ipamAdapter.Start()
-		wg.Done()
-	}()
-
-	wg.Wait()
 
 	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
-	defer cancel()
 
-	go handleLeadershipEvents(context.TODO(), leadershipCh)
+	go manager.handleLeadershipEvents(context.TODO(), leadershipCh, cancel)
 
 	ctx := context.Background()
 	go func() {
@@ -115,10 +95,12 @@ func (manager *Manager) Start() error {
 		return err
 	}
 
-	return err
+	return nil
 }
 
-func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
+func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event, cancel func()) {
+	defer cancel()
+
 	for {
 		select {
 		case leadershipEvent := <-leadershipCh:
@@ -126,9 +108,12 @@ func handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event)
 			newState := leadershipEvent.(raft.LeadershipState)
 
 			if newState == raft.IsLeader {
-				fmt.Println("Now i am a leader !!!!!")
+				manager.sched.Start()
+				go func() {
+					manager.swanContext.ApiServer.ListenAndServe()
+				}()
 			} else if newState == raft.IsFollower {
-				fmt.Println("Now i am a follower !!!!!")
+				manager.sched.Stop()
 			}
 		case <-ctx.Done():
 			return
