@@ -71,14 +71,6 @@ func (manager *Manager) Stop() error {
 }
 
 func (manager *Manager) Start() error {
-	go func() {
-		manager.resolver.Start()
-	}()
-
-	go func() {
-		manager.ipamAdapter.Start()
-	}()
-
 	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
 
 	go manager.handleLeadershipEvents(context.TODO(), leadershipCh, cancel)
@@ -95,10 +87,21 @@ func (manager *Manager) Start() error {
 		return err
 	}
 
-	return nil
+	var err error
+
+	go func() {
+		manager.resolver.Start()
+	}()
+
+	go func() {
+		manager.ipamAdapter.Start()
+	}()
+
+	return err
 }
 
 func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event, cancel func()) {
+	// TODO remove to stop
 	defer cancel()
 
 	for {

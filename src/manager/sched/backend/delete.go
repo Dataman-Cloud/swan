@@ -29,27 +29,6 @@ func (b *Backend) DeleteApplication(appId string) error {
 			b.sched.DeclineResource(&task.OfferId)
 		}
 
-		// Delete task from db
-		if err := b.store.DeleteTask(appId, task.Name); err != nil {
-			logrus.Errorf("Delete task %s from db failed: %s", task.ID, err.Error())
-		}
-
-		// Delete task health check
-		if err := b.store.DeleteCheck(task.Name); err != nil {
-			logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
-		}
-
-	}
-
-	versions, err := b.store.ListVersionId(appId)
-	if err != nil {
-		return err
-	}
-
-	for _, version := range versions {
-		if err := b.store.DeleteVersion(appId, version); err != nil {
-			return err
-		}
 	}
 
 	return b.store.DeleteApplication(appId)

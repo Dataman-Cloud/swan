@@ -52,12 +52,12 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
 		STATUS = "STAGING"
-		if err := s.store.UpdateTaskStatus(appId, taskId, "STAGING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, ID, "STAGING"); err != nil {
 			logrus.Errorf("updating task %s status to STAGING failed", taskId)
 		}
 	case mesos.TaskState_TASK_STARTING:
 		STATUS = "STARTING"
-		if err := s.store.UpdateTaskStatus(appId, taskId, "STARTING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, ID, "STARTING"); err != nil {
 			logrus.Errorf("updating task %s status to STARTING failed", taskId)
 		}
 	case mesos.TaskState_TASK_RUNNING:
@@ -66,7 +66,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 			logrus.Errorf("Updating application got error: %s", err.Error())
 		}
 
-		if err := s.store.UpdateTaskStatus(appId, taskId, "RUNNING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, ID, "RUNNING"); err != nil {
 			logrus.Errorf("updating task %s status to RUNNING failed: %s", taskId, err.Error())
 			return
 		}
@@ -96,7 +96,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		STATUS = "RESCHEDULING"
 	}
 
-	task, err := s.store.FetchTask(appId, taskId)
+	task, err := s.store.FetchTask(appId, ID)
 	if err != nil {
 		logrus.Errorf("Fetch task %s failed: %s", taskId, err.Error())
 		return
