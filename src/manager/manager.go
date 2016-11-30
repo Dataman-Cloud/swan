@@ -41,7 +41,7 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 
 	raftNode, err := raft.NewNode(config.Raft, db)
 	if err != nil {
-		logrus.Errorf("inti raft node failed. Error: %s", err.Error())
+		logrus.Errorf("init raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
 	manager.raftNode = raftNode

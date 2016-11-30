@@ -33,6 +33,8 @@ message Version {
     UpdatePolicy updatePolicy = 14;
     repeated string constraints = 15;
     repeated string uris = 16;
+    repeated string ip = 15;
+    string mode = 16;
 }
 
 message Container {

@@ -1,18 +1,14 @@
 {
-  "appId": "nginx0051",
+  "id": "nginx0055",
   "cmd": null,
   "cpus": 0.01,
   "mem": 5,
   "disk": 0,
-  "instances": 5,
-  "constraints": [ 
-	  "hostname:UNIQUE",
-          "vcluster:LIKE:dataman"
-  ], 
+  "instances": 2,
   "container": {
     "docker": {
-      "image": "nginx:1.10",
-      "network": "BRIDGE",
+      "image": "nginx",
+      "network": "swan",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
@@ -38,9 +34,6 @@
       }
     ]
   },
-  "uris": [
-      "https://nginx.org/download/nginx-1.8.1.tar.gz"
-  ],
   "env": {
     "DB": "mysql"
   },
@@ -66,5 +59,8 @@
 	  "maxRetries": 3,
 	  "maxFailovers": 3,
 	  "action": "rollback"
-  }
+  },
+
+  "mode": "fixed",
+  "ip": ["192.168.1.210","192.168.1.211"]
 }

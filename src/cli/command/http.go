@@ -18,10 +18,10 @@ func UnixDialer(proto, sock string) (net.Conn, error) {
 
 func NewHTTPClient(path string) *Client {
 	return &Client{
-		url: "http://unix.sock" + path,
+		url: "http://localhost:9999" + path,
 		client: &http.Client{
 			Transport: &http.Transport{
-				Dial: UnixDialer,
+			//Dial: UnixDialer,
 			},
 		},
 	}
