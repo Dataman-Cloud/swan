@@ -30,7 +30,7 @@ func (b *Backend) DeleteApplication(appId string) error {
 		}
 
 		// Delete task from db
-		if err := b.store.DeleteTask(task.Name); err != nil {
+		if err := b.store.DeleteTask(appId, task.Name); err != nil {
 			logrus.Errorf("Delete task %s from db failed: %s", task.ID, err.Error())
 		}
 
@@ -69,7 +69,7 @@ func (b *Backend) DeleteApplicationTasks(id string) error {
 		}
 
 		// Delete task from db
-		if err := b.store.DeleteTask(task.ID); err != nil {
+		if err := b.store.DeleteTask(id, task.ID); err != nil {
 			logrus.Errorf("Delete task %s from db failed: %s", task.ID, err.Error())
 		}
 	}
@@ -78,12 +78,12 @@ func (b *Backend) DeleteApplicationTasks(id string) error {
 }
 
 func (b *Backend) DeleteApplicationTask(applicationId, taskId string) error {
-	task, err := b.store.FetchTask(taskId)
+	task, err := b.store.FetchTask(applicationId, taskId)
 	if err != nil {
 		return err
 	}
 
-	if err := b.store.DeleteTask(taskId); err != nil {
+	if err := b.store.DeleteTask(applicationId, taskId); err != nil {
 		return err
 	}
 

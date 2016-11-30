@@ -1,129 +1,85 @@
 package store
 
 import (
-	"encoding/json"
 	"errors"
 
+	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/types"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
+	"golang.org/x/net/context"
 )
 
 func (store *ManagerStore) SaveTask(task *types.Task) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Task{task},
+	}}
 
-	bucket := tx.Bucket([]byte("tasks"))
-
-	data, err := json.Marshal(task)
-	if err != nil {
-		logrus.Errorf("Marshal application failed: %s", err.Error())
-		return err
-	}
-
-	if err := bucket.Put([]byte(task.Name), data); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-
+	return store.RaftNode.ProposeValue(context.TODO(), storeActions, nil)
 }
 
-func (store *ManagerStore) ListTasks(applicationId string) ([]*types.Task, error) {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+func (store *ManagerStore) ListTasks(appId string) ([]*types.Task, error) {
+	var tasks []*types.Task
 
-	bucket := tx.Bucket([]byte("tasks"))
-
-	var tasksList []*types.Task
-
-	bucket.ForEach(func(k, v []byte) error {
-		var task types.Task
-		if err := json.Unmarshal(v, &task); err != nil {
-			return err
-		}
-		if task.AppId == applicationId {
-			tasksList = append(tasksList, &task)
+	if err := store.BoltbDb.View(func(tx *bolt.Tx) error {
+		bkt := raftstore.GetTasksBucket(tx, appId)
+		if bkt == nil {
+			tasks = []*types.Task{}
+			return nil
 		}
 
-		return nil
-	})
+		return bkt.ForEach(func(k, v []byte) error {
+			taskBkt := raftstore.GetTaskBucket(tx, appId, string(k))
+			if taskBkt == nil {
+				return nil
+			}
 
-	return tasksList, nil
-}
-
-func (store *ManagerStore) DeleteApplicationTasks(appId string) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	bucket := tx.Bucket([]byte("tasks"))
-
-	bucket.ForEach(func(k, v []byte) error {
-		var task types.Task
-		if err := json.Unmarshal(v, &task); err != nil {
-			return err
-		}
-		if task.AppId == appId {
-			if err := bucket.Delete([]byte(task.Name)); err != nil {
+			task := &types.Task{}
+			p := taskBkt.Get(raftstore.BucketKeyData)
+			if err := task.Unmarshal(p); err != nil {
 				return err
 			}
-		}
 
-		return nil
-	})
+			tasks = append(tasks, task)
+			return nil
+		})
 
-	return tx.Commit()
-}
-
-func (store *ManagerStore) DeleteTask(taskId string) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-
-	bucket := tx.Bucket([]byte("tasks"))
-
-	if err := bucket.Delete([]byte(taskId)); err != nil {
-		return err
-	}
-
-	return tx.Commit()
-}
-
-func (store *ManagerStore) FetchTask(taskId string) (*types.Task, error) {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	bucket := tx.Bucket([]byte("tasks"))
-
-	data := bucket.Get([]byte(taskId))
-	if data == nil {
-		return nil, errors.New("Not Found")
-	}
-
-	var task types.Task
-	if err := json.Unmarshal(data, &task); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
-	return &task, nil
+	return tasks, nil
 }
 
-func (store *ManagerStore) UpdateTaskStatus(taskId string, status string) error {
-	task, err := store.FetchTask(taskId)
+func (store *ManagerStore) DeleteTask(appId, taskId string) error {
+	task := &types.Task{Name: taskId, AppId: appId}
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindRemove,
+		Target: &types.StoreAction_Task{task},
+	}}
+
+	return store.RaftNode.ProposeValue(context.TODO(), storeActions, nil)
+}
+
+func (store *ManagerStore) FetchTask(appId, taskId string) (*types.Task, error) {
+	task := &types.Task{}
+
+	if err := store.BoltbDb.View(func(tx *bolt.Tx) error {
+		return raftstore.WithTaskBucket(tx, appId, taskId, func(bkt *bolt.Bucket) error {
+			p := bkt.Get(raftstore.BucketKeyData)
+
+			return task.Unmarshal(p)
+		})
+	}); err != nil {
+		return nil, err
+	}
+
+	return task, nil
+}
+
+func (store *ManagerStore) UpdateTaskStatus(appId, taskId string, status string) error {
+	task, err := store.FetchTask(appId, taskId)
 	if err != nil {
 		return err
 	}

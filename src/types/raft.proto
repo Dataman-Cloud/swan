@@ -4,6 +4,10 @@ package types;
 
 import weak "gogoproto/gogo.proto";
 import "application.proto";
+import "task.proto";
+import "version.proto";
+import weak "health.proto";
+import weak "update.proto";
 
 option (gogoproto.populate_all) = true;
 option (gogoproto.testgen_all) = true;
@@ -44,6 +48,8 @@ message StoreAction {
 	oneof target {
         Application application = 2;
         Framework framework = 3; 
+        Task task = 4;
+        Version version = 5;
 	}
 }
 

@@ -65,7 +65,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 					}
 
 					if _, err := b.sched.KillTask(task); err == nil {
-						b.store.DeleteTask(task.ID)
+						b.store.DeleteTask(task.AppId, task.ID)
 					}
 
 					// reduce application tasks count
@@ -76,7 +76,8 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 
 					logrus.Infof("Remove health check for task %s", task.Name)
 
-					if err := b.store.DeleteTask(task.Name); err != nil {
+					//TODO(@niuminguo) why not use task.ID
+					if err := b.store.DeleteTask(task.AppId, task.Name); err != nil {
 						logrus.Errorf("Delete task %s failed: %s", task.Name, err.Error())
 					}
 

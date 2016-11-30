@@ -58,16 +58,16 @@ type Store interface {
 	SaveTask(*types.Task) error
 
 	// list all tasks belong to a application
-	ListTasks(string) ([]*types.Task, error)
+	ListTasks(appId string) ([]*types.Task, error)
 
 	// fetch task from db
-	FetchTask(string) (*types.Task, error)
+	FetchTask(appId, taskId string) (*types.Task, error)
 
 	// delete task from db
-	DeleteTask(string) error
+	DeleteTask(appId, taskId string) error
 
 	// update task status
-	UpdateTaskStatus(string, string) error
+	UpdateTaskStatus(appId, taskId, status string) error
 
 	// version
 
