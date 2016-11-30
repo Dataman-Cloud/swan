@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package types;
+
+import weak "gogoproto/gogo.proto";
+import "health.proto";
+import "update.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+message Version {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string command = 2;
+    double cpus = 3;
+    double mem = 4;
+    double disk = 5;
+    int32 instances = 6;
+    string runAs = 7;
+    Container container = 8;
+    map<string,string> labels = 9;
+    repeated HealthCheck healthChecks = 10;
+    map<string,string> env = 11;
+    KillPolicy killPolicy = 12;
+    UpdatePolicy updatePolicy = 13;
+}
+
+message Container {
+    string type = 1;
+    Docker docker = 2;
+    repeated Volume volumes = 3;
+}
+
+message Docker {
+    bool forcePullImage = 1;
+    string image = 2;
+    string network = 3;
+    repeated Parameter parameters = 4;
+    repeated PortMapping portMappings = 5;
+    bool privileged = 6;
+}
+
+message Parameter {
+    string key = 1;
+    string value = 2;
+}
+
+message PortMapping {
+    int32 containerPort = 1;
+    string name = 2;
+    string protocol = 3;
+}
+
+message Volume {
+    string containerPath = 1;
+    string hostPath = 2;
+    string mode = 3;
+}
+
+message KillPolicy {
+    int64 duration = 1;
+}

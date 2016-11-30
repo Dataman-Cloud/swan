@@ -30,7 +30,7 @@ func (b *Backend) LaunchApplication(version *types.Version) error {
 	for _, offer := range offers {
 		cpus, mem, disk := b.sched.OfferedResources(offer)
 		var tasks []*mesos.TaskInfo
-		for b.sched.TaskLaunched < version.Instances &&
+		for b.sched.TaskLaunched < int(version.Instances) &&
 			cpus >= version.Cpus &&
 			mem >= version.Mem &&
 			disk >= version.Disk {

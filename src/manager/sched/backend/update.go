@@ -211,7 +211,7 @@ func (b *Backend) doCheck(addr string, update *types.UpdatePolicy) error {
 	failureTimes := 0
 
 	for {
-		if failureTimes >= update.MaxFailovers {
+		if failureTimes >= int(update.MaxFailovers) {
 			return fmt.Errorf("Service Update Failed")
 		}
 

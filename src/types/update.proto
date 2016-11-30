@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package types;
+
+import weak "gogoproto/gogo.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+message UpdatePolicy {
+    int32 updateDelay = 1;
+    int32 maxRetries = 2;
+    int32 maxFailovers = 3;
+    string action = 4; 
+}

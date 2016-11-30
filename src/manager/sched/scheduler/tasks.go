@@ -42,7 +42,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	task.Network = version.Container.Docker.Network
 
 	if version.Container.Docker.Parameters != nil {
-		for _, parameter := range *version.Container.Docker.Parameters {
+		for _, parameter := range version.Container.Docker.Parameters {
 			task.Parameters = append(task.Parameters, &types.Parameter{
 				Key:   parameter.Key,
 				Value: parameter.Value,
@@ -51,7 +51,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	}
 
 	if version.Container.Docker.PortMappings != nil {
-		for _, portMapping := range *version.Container.Docker.PortMappings {
+		for _, portMapping := range version.Container.Docker.PortMappings {
 			task.PortMappings = append(task.PortMappings, &types.PortMappings{
 				Port:     uint32(portMapping.ContainerPort),
 				Protocol: portMapping.Protocol,
@@ -59,16 +59,9 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 		}
 	}
 
-	if version.Container.Docker.Privileged != nil {
-		task.Privileged = version.Container.Docker.Privileged
-	}
-
-	if version.Container.Docker.ForcePullImage != nil {
-		task.ForcePullImage = version.Container.Docker.ForcePullImage
-	}
-
+	task.Privileged = version.Container.Docker.Privileged
+	task.ForcePullImage = version.Container.Docker.ForcePullImage
 	task.Env = version.Env
-
 	task.Volumes = version.Container.Volumes
 
 	if version.Labels != nil {
@@ -79,9 +72,9 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	task.Mem = version.Mem
 	task.Disk = version.Disk
 
-	task.OfferId = offer.GetId().Value
-	task.AgentId = offer.AgentId.Value
-	task.AgentHostname = offer.Hostname
+	task.OfferId = *offer.GetId().Value
+	task.AgentId = *offer.AgentId.Value
+	task.AgentHostname = *offer.Hostname
 
 	if version.KillPolicy != nil {
 		task.KillPolicy = version.KillPolicy
@@ -110,18 +103,13 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 		Container: &mesos.ContainerInfo{
 			Type: mesos.ContainerInfo_DOCKER.Enum(),
 			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image: task.Image,
+				Image: &task.Image,
 			},
 		},
 	}
 
-	if task.Privileged != nil {
-		taskInfo.Container.Docker.Privileged = task.Privileged
-	}
-
-	if task.ForcePullImage != nil {
-		taskInfo.Container.Docker.ForcePullImage = task.ForcePullImage
-	}
+	taskInfo.Container.Docker.Privileged = &task.Privileged
+	taskInfo.Container.Docker.ForcePullImage = &task.ForcePullImage
 
 	for _, parameter := range task.Parameters {
 		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
@@ -156,7 +144,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 
 	if task.Labels != nil {
 		labels := make([]*mesos.Label, 0)
-		for k, v := range *task.Labels {
+		for k, v := range task.Labels {
 			labels = append(labels, &mesos.Label{
 				Key:   proto.String(k),
 				Value: proto.String(v),
@@ -275,7 +263,7 @@ func (s *Scheduler) KillTask(task *types.Task) (*http.Response, error) {
 				Value: proto.String(task.ID),
 			},
 			AgentId: &mesos.AgentID{
-				Value: task.AgentId,
+				Value: &task.AgentId,
 			},
 		},
 	}

@@ -26,7 +26,7 @@ func (b *Backend) DeleteApplication(appId string) error {
 
 		// Decline offer
 		if resp.StatusCode == http.StatusAccepted {
-			b.sched.DeclineResource(task.OfferId)
+			b.sched.DeclineResource(&task.OfferId)
 		}
 
 		// Delete task from db

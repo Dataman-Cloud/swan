@@ -19,7 +19,7 @@ func (store *ManagerStore) SaveCheck(task *types.Task, port uint32, appId string
 
 		check := types.Check{
 			ID:       task.Name,
-			Address:  *task.AgentHostname,
+			Address:  task.AgentHostname,
 			Port:     int(port),
 			TaskID:   task.Name,
 			AppID:    appId,
