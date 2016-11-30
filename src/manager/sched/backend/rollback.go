@@ -80,7 +80,7 @@ func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error 
 		}
 
 		if _, err := b.sched.KillTask(task); err == nil {
-			b.store.DeleteTask(task.ID)
+			b.store.DeleteTask(task.AppId, task.ID)
 		}
 
 		b.sched.Status = "busy"

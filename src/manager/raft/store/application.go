@@ -4,7 +4,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/boltdb/bolt"
-	"github.com/gogo/protobuf/proto"
 )
 
 func withCreateAppBucketIfNotExists(tx *bolt.Tx, id string, fn func(bkt *bolt.Bucket) error) error {
@@ -35,7 +34,7 @@ func GetAppsBucket(tx *bolt.Tx) *bolt.Bucket {
 
 func putApp(tx *bolt.Tx, app *types.Application) error {
 	return withCreateAppBucketIfNotExists(tx, app.ID, func(bkt *bolt.Bucket) error {
-		p, err := proto.Marshal(app)
+		p, err := app.Marshal()
 		if err != nil {
 			return err
 		}

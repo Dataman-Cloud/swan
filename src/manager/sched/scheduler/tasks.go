@@ -286,7 +286,7 @@ func (s *Scheduler) ReschedulerTask() {
 	for {
 		select {
 		case msg := <-s.ReschedQueue:
-			task, err := s.store.FetchTask(msg.TaskID)
+			task, err := s.store.FetchTask(msg.AppID, msg.TaskID)
 			if err != nil {
 				msg.Err <- fmt.Errorf("Rescheduling task failed: %s", err.Error())
 				return

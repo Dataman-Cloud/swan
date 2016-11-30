@@ -16,16 +16,20 @@ var (
 	bucketKeyStorageVersion = []byte("v1")
 	bucketKeyApps           = []byte("apps")
 	bucketKeyFramework      = []byte("framework")
+	bucketKeyTasks          = []byte("tasks")
 
 	BucketKeyData = []byte("data")
 )
 
 var (
 	ErrAppUnknown              = errors.New("boltdb: app unknown")
+	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefine store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefine app store action")
 	ErrUndefineFrameworkAction = errors.New("boltdb: undefine framework store action")
+	ErrUndefineTaskkAction     = errors.New("boltdb: undefine task store action")
+	ErrUndefineVersionAction   = errors.New("boltdb: undefine version store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -35,10 +39,6 @@ func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 		}
 
 		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework); err != nil {
-			return err
-		}
-
-		if _, err := tx.CreateBucketIfNotExists([]byte("tasks")); err != nil {
 			return err
 		}
 
@@ -120,6 +120,10 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doAppStoreAction(tx, action.Action, action.GetApplication())
 	case *types.StoreAction_Framework:
 		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
+	case *types.StoreAction_Task:
+		return doTaskStoreAction(tx, action.Action, action.GetTask())
+	case *types.StoreAction_Version:
+		return doVersionStoreAction(tx, action.Action, action.GetVersion())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -145,4 +149,27 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 	default:
 		return ErrUndefineFrameworkAction
 	}
+}
+
+func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putTask(tx, task)
+	case types.StoreActionKindRemove:
+		return removeTask(tx, task.AppId, task.Name)
+	default:
+		return ErrUndefineTaskkAction
+	}
+}
+
+func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
+	return ErrUndefineVersionAction
+	//switch action {
+	//case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+	//	return putVersion(tx, version)
+	//case types.StoreActionKindRemove:
+	//	return removeVersion(tx, version.AppId, version.ID)
+	//default:
+	//	return ErrUndefineVersionAction
+	//}
 }
