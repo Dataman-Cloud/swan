@@ -155,70 +155,70 @@ func extensionToGoStringUpdate(m github_com_gogo_protobuf_proto.Message) string 
 	s += strings.Join(ss, ",") + "})"
 	return s
 }
-func (m *UpdatePolicy) Marshal() (dAtA []byte, err error) {
+func (m *UpdatePolicy) Marshal() (data []byte, err error) {
 	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
+	data = make([]byte, size)
+	n, err := m.MarshalTo(data)
 	if err != nil {
 		return nil, err
 	}
-	return dAtA[:n], nil
+	return data[:n], nil
 }
 
-func (m *UpdatePolicy) MarshalTo(dAtA []byte) (int, error) {
+func (m *UpdatePolicy) MarshalTo(data []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.UpdateDelay != 0 {
-		dAtA[i] = 0x8
+		data[i] = 0x8
 		i++
-		i = encodeVarintUpdate(dAtA, i, uint64(m.UpdateDelay))
+		i = encodeVarintUpdate(data, i, uint64(m.UpdateDelay))
 	}
 	if m.MaxRetries != 0 {
-		dAtA[i] = 0x10
+		data[i] = 0x10
 		i++
-		i = encodeVarintUpdate(dAtA, i, uint64(m.MaxRetries))
+		i = encodeVarintUpdate(data, i, uint64(m.MaxRetries))
 	}
 	if m.MaxFailovers != 0 {
-		dAtA[i] = 0x18
+		data[i] = 0x18
 		i++
-		i = encodeVarintUpdate(dAtA, i, uint64(m.MaxFailovers))
+		i = encodeVarintUpdate(data, i, uint64(m.MaxFailovers))
 	}
 	if len(m.Action) > 0 {
-		dAtA[i] = 0x22
+		data[i] = 0x22
 		i++
-		i = encodeVarintUpdate(dAtA, i, uint64(len(m.Action)))
-		i += copy(dAtA[i:], m.Action)
+		i = encodeVarintUpdate(data, i, uint64(len(m.Action)))
+		i += copy(data[i:], m.Action)
 	}
 	return i, nil
 }
 
-func encodeFixed64Update(dAtA []byte, offset int, v uint64) int {
-	dAtA[offset] = uint8(v)
-	dAtA[offset+1] = uint8(v >> 8)
-	dAtA[offset+2] = uint8(v >> 16)
-	dAtA[offset+3] = uint8(v >> 24)
-	dAtA[offset+4] = uint8(v >> 32)
-	dAtA[offset+5] = uint8(v >> 40)
-	dAtA[offset+6] = uint8(v >> 48)
-	dAtA[offset+7] = uint8(v >> 56)
+func encodeFixed64Update(data []byte, offset int, v uint64) int {
+	data[offset] = uint8(v)
+	data[offset+1] = uint8(v >> 8)
+	data[offset+2] = uint8(v >> 16)
+	data[offset+3] = uint8(v >> 24)
+	data[offset+4] = uint8(v >> 32)
+	data[offset+5] = uint8(v >> 40)
+	data[offset+6] = uint8(v >> 48)
+	data[offset+7] = uint8(v >> 56)
 	return offset + 8
 }
-func encodeFixed32Update(dAtA []byte, offset int, v uint32) int {
-	dAtA[offset] = uint8(v)
-	dAtA[offset+1] = uint8(v >> 8)
-	dAtA[offset+2] = uint8(v >> 16)
-	dAtA[offset+3] = uint8(v >> 24)
+func encodeFixed32Update(data []byte, offset int, v uint32) int {
+	data[offset] = uint8(v)
+	data[offset+1] = uint8(v >> 8)
+	data[offset+2] = uint8(v >> 16)
+	data[offset+3] = uint8(v >> 24)
 	return offset + 4
 }
-func encodeVarintUpdate(dAtA []byte, offset int, v uint64) int {
+func encodeVarintUpdate(data []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
-		dAtA[offset] = uint8(v&0x7f | 0x80)
+		data[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
-	dAtA[offset] = uint8(v)
+	data[offset] = uint8(v)
 	return offset + 1
 }
 func NewPopulatedUpdatePolicy(r randyUpdate, easy bool) *UpdatePolicy {
@@ -235,7 +235,7 @@ func NewPopulatedUpdatePolicy(r randyUpdate, easy bool) *UpdatePolicy {
 	if r.Intn(2) == 0 {
 		this.MaxFailovers *= -1
 	}
-	this.Action = string(randStringUpdate(r))
+	this.Action = randStringUpdate(r)
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -267,7 +267,7 @@ func randStringUpdate(r randyUpdate) string {
 	}
 	return string(tmps)
 }
-func randUnrecognizedUpdate(r randyUpdate, maxFieldNumber int) (dAtA []byte) {
+func randUnrecognizedUpdate(r randyUpdate, maxFieldNumber int) (data []byte) {
 	l := r.Intn(5)
 	for i := 0; i < l; i++ {
 		wire := r.Intn(4)
@@ -275,43 +275,43 @@ func randUnrecognizedUpdate(r randyUpdate, maxFieldNumber int) (dAtA []byte) {
 			wire = 5
 		}
 		fieldNumber := maxFieldNumber + r.Intn(100)
-		dAtA = randFieldUpdate(dAtA, r, fieldNumber, wire)
+		data = randFieldUpdate(data, r, fieldNumber, wire)
 	}
-	return dAtA
+	return data
 }
-func randFieldUpdate(dAtA []byte, r randyUpdate, fieldNumber int, wire int) []byte {
+func randFieldUpdate(data []byte, r randyUpdate, fieldNumber int, wire int) []byte {
 	key := uint32(fieldNumber)<<3 | uint32(wire)
 	switch wire {
 	case 0:
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(key))
+		data = encodeVarintPopulateUpdate(data, uint64(key))
 		v2 := r.Int63()
 		if r.Intn(2) == 0 {
 			v2 *= -1
 		}
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(v2))
+		data = encodeVarintPopulateUpdate(data, uint64(v2))
 	case 1:
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(key))
-		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		data = encodeVarintPopulateUpdate(data, uint64(key))
+		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	case 2:
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(key))
+		data = encodeVarintPopulateUpdate(data, uint64(key))
 		ll := r.Intn(100)
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(ll))
+		data = encodeVarintPopulateUpdate(data, uint64(ll))
 		for j := 0; j < ll; j++ {
-			dAtA = append(dAtA, byte(r.Intn(256)))
+			data = append(data, byte(r.Intn(256)))
 		}
 	default:
-		dAtA = encodeVarintPopulateUpdate(dAtA, uint64(key))
-		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		data = encodeVarintPopulateUpdate(data, uint64(key))
+		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	}
-	return dAtA
+	return data
 }
-func encodeVarintPopulateUpdate(dAtA []byte, v uint64) []byte {
+func encodeVarintPopulateUpdate(data []byte, v uint64) []byte {
 	for v >= 1<<7 {
-		dAtA = append(dAtA, uint8(uint64(v)&0x7f|0x80))
+		data = append(data, uint8(uint64(v)&0x7f|0x80))
 		v >>= 7
 	}
-	dAtA = append(dAtA, uint8(v))
-	return dAtA
+	data = append(data, uint8(v))
+	return data
 }
 func (m *UpdatePolicy) Size() (n int) {
 	var l int
@@ -345,8 +345,8 @@ func sovUpdate(x uint64) (n int) {
 func sozUpdate(x uint64) (n int) {
 	return sovUpdate(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
+func (m *UpdatePolicy) Unmarshal(data []byte) error {
+	l := len(data)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -358,7 +358,7 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := dAtA[iNdEx]
+			b := data[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -386,7 +386,7 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := dAtA[iNdEx]
+				b := data[iNdEx]
 				iNdEx++
 				m.UpdateDelay |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -405,7 +405,7 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := dAtA[iNdEx]
+				b := data[iNdEx]
 				iNdEx++
 				m.MaxRetries |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -424,7 +424,7 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := dAtA[iNdEx]
+				b := data[iNdEx]
 				iNdEx++
 				m.MaxFailovers |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -443,7 +443,7 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := dAtA[iNdEx]
+				b := data[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -458,11 +458,11 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Action = string(dAtA[iNdEx:postIndex])
+			m.Action = string(data[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipUpdate(dAtA[iNdEx:])
+			skippy, err := skipUpdate(data[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -481,8 +481,8 @@ func (m *UpdatePolicy) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func skipUpdate(dAtA []byte) (n int, err error) {
-	l := len(dAtA)
+func skipUpdate(data []byte) (n int, err error) {
+	l := len(data)
 	iNdEx := 0
 	for iNdEx < l {
 		var wire uint64
@@ -493,7 +493,7 @@ func skipUpdate(dAtA []byte) (n int, err error) {
 			if iNdEx >= l {
 				return 0, io.ErrUnexpectedEOF
 			}
-			b := dAtA[iNdEx]
+			b := data[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -511,7 +511,7 @@ func skipUpdate(dAtA []byte) (n int, err error) {
 					return 0, io.ErrUnexpectedEOF
 				}
 				iNdEx++
-				if dAtA[iNdEx-1] < 0x80 {
+				if data[iNdEx-1] < 0x80 {
 					break
 				}
 			}
@@ -528,7 +528,7 @@ func skipUpdate(dAtA []byte) (n int, err error) {
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
 				}
-				b := dAtA[iNdEx]
+				b := data[iNdEx]
 				iNdEx++
 				length |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -551,7 +551,7 @@ func skipUpdate(dAtA []byte) (n int, err error) {
 					if iNdEx >= l {
 						return 0, io.ErrUnexpectedEOF
 					}
-					b := dAtA[iNdEx]
+					b := data[iNdEx]
 					iNdEx++
 					innerWire |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -562,7 +562,7 @@ func skipUpdate(dAtA []byte) (n int, err error) {
 				if innerWireType == 4 {
 					break
 				}
-				next, err := skipUpdate(dAtA[start:])
+				next, err := skipUpdate(data[start:])
 				if err != nil {
 					return 0, err
 				}
