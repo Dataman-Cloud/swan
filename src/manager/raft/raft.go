@@ -172,8 +172,8 @@ func (n *Node) StartRaft(ctx context.Context) error {
 
 	n.Config = &raft.Config{
 		ID:              uint64(n.id),
-		ElectionTick:    10,
-		HeartbeatTick:   2,
+		ElectionTick:    3,
+		HeartbeatTick:   1,
 		Storage:         n.raftStorage,
 		MaxSizePerMsg:   1024 * 1024,
 		MaxInflightMsgs: 256,
