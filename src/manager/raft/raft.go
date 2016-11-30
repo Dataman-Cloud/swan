@@ -30,7 +30,6 @@ import (
 	"github.com/coreos/etcd/wal"
 	"github.com/coreos/etcd/wal/walpb"
 	events "github.com/docker/go-events"
-	"github.com/docker/swarmkit/watch"
 	"github.com/gogo/protobuf/proto"
 	"github.com/pivotal-golang/clock"
 	"golang.org/x/net/context"
@@ -92,7 +91,8 @@ type Node struct {
 	signalledLeadership uint32
 	isMember            uint32
 	ticker              clock.Ticker
-	leadershipBroadcast *watch.Queue
+	//leadershipBroadcast *watch.Queue
+	leadershipBroadcast *Queue
 	store               *store.BoltbDb
 
 	stoppedC  chan struct{}
@@ -132,7 +132,7 @@ func NewNode(config util.Raft, db *bolt.DB) (*Node, error) {
 		stoppedC:    make(chan struct{}),
 	}
 
-	n.leadershipBroadcast = watch.NewQueue()
+	n.leadershipBroadcast = NewQueue()
 	n.ticker = clock.NewClock().NewTicker(time.Second)
 	n.reqIDGen = idutil.NewGenerator(uint16(n.id), time.Now())
 	n.wait = newWait()

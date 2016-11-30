@@ -32,3 +32,7 @@ func (s *Sched) Start() error {
 
 	return nil
 }
+
+func (s *Sched) Stop() {
+	s.scheduler.Stop()
+}
