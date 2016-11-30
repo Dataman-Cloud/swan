@@ -1,95 +1,76 @@
 package store
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"time"
 
+	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/boltdb/bolt"
+
+	"golang.org/x/net/context"
 )
 
 func (store *ManagerStore) SaveVersion(version *types.Version) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
+	version.ID = fmt.Sprintf("%d", time.Now().UnixNano())
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Version{version},
+	}}
 
-	bucket := tx.Bucket([]byte("versions"))
-
-	data, err := json.Marshal(version)
-	if err != nil {
-		return err
-	}
-
-	if err := bucket.Put([]byte(fmt.Sprintf("%d", time.Now().UnixNano())), data); err != nil {
-		return err
-	}
-
-	return tx.Commit()
+	return store.RaftNode.ProposeValue(context.TODO(), storeActions, nil)
 }
 
-func (store *ManagerStore) ListVersions(appId string) ([]string, error) {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
+func (store *ManagerStore) ListVersionId(appId string) ([]string, error) {
+	var versionIdList []string
 
-	bucket := tx.Bucket([]byte("versions"))
-
-	var versionList []string
-
-	bucket.ForEach(func(k, v []byte) error {
-		var version types.Version
-		if err := json.Unmarshal(v, &version); err != nil {
-			return err
-		}
-		if version.ID == appId {
-			versionList = append(versionList, string(k[:]))
+	if err := store.BoltbDb.View(func(tx *bolt.Tx) error {
+		bkt := raftstore.GetVersionsBucket(tx, appId)
+		if bkt == nil {
+			versionIdList = []string{}
+			return nil
 		}
 
-		return nil
-	})
+		return bkt.ForEach(func(k, v []byte) error {
+			versionBkt := raftstore.GetVersionBucket(tx, appId, string(k))
+			if versionBkt == nil {
+				return nil
+			}
 
-	return versionList, nil
-}
+			versionIdList = append(versionIdList, string(k))
+			return nil
+		})
 
-func (store *ManagerStore) FetchVersion(versionId string) (*types.Version, error) {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return nil, err
-	}
-	defer tx.Rollback()
-
-	bucket := tx.Bucket([]byte("versions"))
-
-	data := bucket.Get([]byte(versionId))
-	if data == nil {
-		return nil, errors.New("Not Found")
-	}
-
-	var version types.Version
-	if err := json.Unmarshal(data, &version); err != nil {
+	}); err != nil {
 		return nil, err
 	}
 
-	return &version, nil
+	return versionIdList, nil
 }
 
-func (store *ManagerStore) DeleteVersion(versionId string) error {
-	tx, err := store.BoltbDb.Begin(true)
-	if err != nil {
-		return err
+func (store *ManagerStore) FetchVersion(appId, versionId string) (*types.Version, error) {
+	version := &types.Version{}
+
+	if err := store.BoltbDb.View(func(tx *bolt.Tx) error {
+		return raftstore.WithVersionBucket(tx, appId, versionId, func(bkt *bolt.Bucket) error {
+			p := bkt.Get(raftstore.BucketKeyData)
+
+			return version.Unmarshal(p)
+		})
+
+	}); err != nil {
+		return nil, err
 	}
-	defer tx.Rollback()
 
-	bucket := tx.Bucket([]byte("versions"))
+	return version, nil
+}
 
-	if err := bucket.Delete([]byte(versionId)); err != nil {
-		return err
-	}
+func (store *ManagerStore) DeleteVersion(appId, versionId string) error {
+	version := &types.Version{ID: versionId, AppId: appId}
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindRemove,
+		Target: &types.StoreAction_Version{version},
+	}}
 
-	return tx.Commit()
+	return store.RaftNode.ProposeValue(context.TODO(), storeActions, nil)
 }

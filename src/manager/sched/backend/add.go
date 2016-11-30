@@ -14,7 +14,7 @@ func (b *Backend) SaveApplication(application *types.Application) error {
 
 // RegisterApplicationVersion register application version in db.
 func (b *Backend) SaveVersion(appId string, version *types.Version) error {
-	versions, err := b.store.ListVersions(appId)
+	versions, err := b.store.ListVersionId(appId)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func (b *Backend) SaveVersion(appId string, version *types.Version) error {
 	if len(versions) != 0 {
 		sort.Strings(versions)
 
-		newestVersion, err := b.store.FetchVersion(versions[len(versions)-1])
+		newestVersion, err := b.store.FetchVersion(appId, versions[len(versions)-1])
 		if err != nil {
 			return err
 		}

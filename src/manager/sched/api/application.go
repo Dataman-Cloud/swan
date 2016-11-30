@@ -32,7 +32,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	app, err := r.backend.FetchApplication(version.ID)
+	app, err := r.backend.FetchApplication(version.AppId)
 	if err != nil && err != store.ErrAppUnknown {
 		return err
 	}
@@ -47,8 +47,8 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 	}
 
 	application := types.Application{
-		ID:                version.ID,
-		Name:              version.ID,
+		ID:                version.AppId,
+		Name:              version.AppId,
 		Instances:         0,
 		UpdatedInstances:  0,
 		RunningInstances:  0,
@@ -64,12 +64,12 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	if err := r.backend.SaveVersion(version.ID, &version); err != nil {
+	if err := r.backend.SaveVersion(version.AppId, &version); err != nil {
 		return err
 	}
 
 	if err := r.backend.LaunchApplication(&version); err != nil {
-		logrus.Infof("Launch application %s failed with error: %s", version.ID, err.Error())
+		logrus.Infof("Launch application %s failed with error: %s", version.AppId, err.Error())
 		return err
 	}
 

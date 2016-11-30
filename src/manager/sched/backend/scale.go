@@ -30,7 +30,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 		return err
 	}
 
-	versions, err := b.store.ListVersions(appId)
+	versions, err := b.store.ListVersionId(appId)
 	if err != nil {
 		return err
 	}
@@ -38,7 +38,7 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 	sort.Strings(versions)
 
 	newestVersion := versions[len(versions)-1]
-	version, err := b.store.FetchVersion(newestVersion)
+	version, err := b.store.FetchVersion(appId, newestVersion)
 	if err != nil {
 		return err
 	}
@@ -164,8 +164,8 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 				//}
 
 				// Increase application task count
-				if err := b.store.IncreaseApplicationInstances(version.ID); err != nil {
-					logrus.Errorf("Updating application %s instance count failed: %s", version.ID, err.Error())
+				if err := b.store.IncreaseApplicationInstances(version.AppId); err != nil {
+					logrus.Errorf("Updating application %s instance count failed: %s", version.AppId, err.Error())
 					return err
 				}
 
@@ -174,8 +174,8 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 		}
 
 		// Update application status to RUNNING
-		if err := b.store.UpdateApplicationStatus(version.ID, "RUNNING"); err != nil {
-			logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.ID, err.Error())
+		if err := b.store.UpdateApplicationStatus(version.AppId, "RUNNING"); err != nil {
+			logrus.Errorf("Updating application %s status to RUNNING failed: %s", version.AppId, err.Error())
 			return err
 		}
 

@@ -14,5 +14,5 @@ func (b *Backend) ListApplicationTasks(appId string) ([]*types.Task, error) {
 
 // ListApplicationVersions is used to list all versions for application from db specified by application id.
 func (b *Backend) ListApplicationVersions(appId string) ([]string, error) {
-	return b.store.ListVersions(appId)
+	return b.store.ListVersionId(appId)
 }

@@ -41,13 +41,13 @@ func (b *Backend) DeleteApplication(appId string) error {
 
 	}
 
-	versions, err := b.store.ListVersions(appId)
+	versions, err := b.store.ListVersionId(appId)
 	if err != nil {
 		return err
 	}
 
 	for _, version := range versions {
-		if err := b.store.DeleteVersion(version); err != nil {
+		if err := b.store.DeleteVersion(appId, version); err != nil {
 			return err
 		}
 	}

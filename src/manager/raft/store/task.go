@@ -7,7 +7,7 @@ import (
 )
 
 func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appId, taskId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), []byte(taskId))
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyTasks, []byte(taskId))
 	if err != nil {
 		return err
 	}
@@ -43,11 +43,11 @@ func putTask(tx *bolt.Tx, task *types.Task) error {
 	})
 }
 
-func removeTask(tx *bolt.Tx, appId, taskName string) error {
+func removeTask(tx *bolt.Tx, appId, taskId string) error {
 	tasksBkt := GetTasksBucket(tx, appId)
 	if tasksBkt == nil {
 		return nil
 	}
 
-	return tasksBkt.DeleteBucket([]byte(taskName))
+	return tasksBkt.DeleteBucket([]byte(taskId))
 }

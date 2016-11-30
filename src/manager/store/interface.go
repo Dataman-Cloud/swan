@@ -75,13 +75,13 @@ type Store interface {
 	SaveVersion(*types.Version) error
 
 	// list all versions
-	ListVersions(string) ([]string, error)
+	ListVersionId(appId string) ([]string, error)
 
 	// fetch version from db by version id
-	FetchVersion(string) (*types.Version, error)
+	FetchVersion(appId, versionId string) (*types.Version, error)
 
 	// delete version from db
-	DeleteVersion(string) error
+	DeleteVersion(appId, versionId string) error
 
 	// check
 
