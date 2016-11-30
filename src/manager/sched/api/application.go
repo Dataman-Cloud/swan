@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -58,7 +59,13 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		Status:            "STAGING",
 		Created:           time.Now().Unix(),
 		Updated:           time.Now().Unix(),
+		Mode:              version.Mode,
 	}
+
+	fmt.Println("xxxxxxxxxxxxxxxxxxx")
+	fmt.Println(application)
+	fmt.Println(application.Mode)
+	fmt.Println(version)
 
 	if err := r.backend.SaveApplication(&application); err != nil {
 		return err

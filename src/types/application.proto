@@ -25,5 +25,6 @@ message Application {
     string clusterId = 8;
     string status = 9;
     int64 created = 10;
-    int64 updated = 11;    
+    int64 updated = 11;
+    string mode = 12;
 }
