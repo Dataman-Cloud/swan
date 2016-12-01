@@ -55,15 +55,10 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	}
 
 	// check if app run in fixed mode and has reserved enough IP
-	fmt.Println("xxxxxxxxxxxxxxxxxx")
-	fmt.Println(app.Mode)
-	fmt.Println(app.RunningInstances)
-	fmt.Println(len(version.Ip))
-	fmt.Println("xxxxxxxxxxxxxxxxx")
-	if app.Mode == "fixed" && len(version.Ip) >= int(app.RunningInstances) {
+	if app.Mode == "fixed" && len(version.Ip) >= int(app.Instances) {
 		task.Parameters = append(task.Parameters, &types.Parameter{
 			Key:   "ip",
-			Value: version.Ip[app.RunningInstances],
+			Value: version.Ip[app.Instances],
 		})
 	}
 
