@@ -61,7 +61,7 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "sock",
-			Value: "/var/run/swan.sock",
+			Value: "/tmp/swan.sock",
 			Usage: "Unix socket for listening",
 		},
 		cli.StringFlag{

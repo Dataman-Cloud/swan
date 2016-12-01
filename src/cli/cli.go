@@ -14,6 +14,14 @@ func main() {
 	swan.Version = "0.1"
 	swan.Copyright = "(c) 2016 Dataman Cloud"
 
+	swan.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "sock",
+			Value: "/tmp/swan.sock",
+			Usage: "default swan unix sock",
+		},
+	}
+
 	swan.Commands = []cli.Command{
 		command.NewRunCommand(),
 		command.NewShowCommand(),
