@@ -1,8 +1,6 @@
 package ipam
 
-import (
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
-)
+import "github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 type IpamAdapter struct {
 	IPAM     *IPAM
@@ -25,6 +23,7 @@ func New(scontext *swancontext.SwanContext) (*IpamAdapter, error) {
 	return adapter, nil
 }
 
+// TODO(chunmingxu) if IpamAdapter is not a server may call it register
 func (ipamAdapter *IpamAdapter) Start() error {
 	ipamAdapter.scontext.ApiServer.AppendRouter(NewRouter(ipamAdapter.IPAM))
 	return nil

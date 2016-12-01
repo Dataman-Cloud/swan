@@ -13,6 +13,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
+	"golang.org/x/net/context"
 )
 
 func New(config util.DNS) *Resolver {
@@ -37,20 +38,23 @@ func New(config util.DNS) *Resolver {
 	return res
 }
 
-func (res *Resolver) Stop() error {
-	return nil
+func (res *Resolver) Stop() {
+	res.stopC <- struct{}{}
+	return
 }
 
-func (res *Resolver) Start() error {
-	res.stopC, _ = res.Run()
-	return nil
+func (res *Resolver) Start(ctx context.Context) error {
+	var errCh <-chan error
+	res.stopC, errCh = res.Run(ctx)
+	return <-errCh
 }
 
-func (res *Resolver) Run() (stopc chan struct{}, errCh <-chan error) {
+func (res *Resolver) Run(ctx context.Context) (chan struct{}, <-chan error) {
 	// Handers for Mesos requests
 	dns.HandleFunc(res.config.Domain+".", panicRecover(res.HandleMesos))
 	dns.HandleFunc(".", panicRecover(res.HandleNonMesos(res.defaultFwd)))
 
+	var errCh chan error
 	go func() {
 		_, errCh = res.Serve()
 
@@ -58,6 +62,12 @@ func (res *Resolver) Run() (stopc chan struct{}, errCh <-chan error) {
 			select {
 			case <-res.stopC:
 				res.Stop()
+				errCh <- nil
+				return
+			case <-ctx.Done():
+				res.Stop()
+				errCh <- ctx.Err()
+				return
 			}
 		}
 	}()
@@ -264,7 +274,7 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 	return exs
 }
 
-func (res *Resolver) Serve() (<-chan struct{}, <-chan error) {
+func (res *Resolver) Serve() (<-chan struct{}, chan error) {
 	ch := make(chan struct{})
 	server := &dns.Server{
 		Addr:              net.JoinHostPort(res.config.Listener, strconv.Itoa(res.config.Port)),

@@ -12,9 +12,9 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/util"
 	"github.com/boltdb/bolt"
-	events "github.com/docker/go-events"
 
 	"github.com/Sirupsen/logrus"
+	events "github.com/docker/go-events"
 	"golang.org/x/net/context"
 )
 
@@ -27,6 +27,7 @@ type Manager struct {
 	resolver    *ns.Resolver
 	sched       *sched.Sched
 	raftNode    *raft.Node
+	CancelFunc  context.CancelFunc
 
 	swanContext *swancontext.SwanContext
 	config      util.SwanConfig
@@ -66,57 +67,62 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 	return manager, nil
 }
 
-func (manager *Manager) Stop() error {
-	return nil
+func (manager *Manager) Stop(cancel context.CancelFunc) {
+	cancel()
+	return
 }
 
-func (manager *Manager) Start() error {
-	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
+func (manager *Manager) Start(ctx context.Context) error {
+	errCh := make(chan error)
+	leadershipCh, QueueCancel := manager.raftNode.SubscribeLeadership()
+	defer QueueCancel()
 
-	go manager.handleLeadershipEvents(context.TODO(), leadershipCh, cancel)
+	eventCtx, _ := context.WithCancel(ctx)
+	go manager.handleLeadershipEvents(eventCtx, leadershipCh)
 
-	ctx := context.Background()
-	go func() {
-		err := manager.raftNode.StartRaft(ctx)
-		if err != nil {
-			logrus.Fatal(err)
-		}
-	}()
+	raftCtx, _ := context.WithCancel(ctx)
+	if err := manager.raftNode.StartRaft(raftCtx); err != nil {
+		return err
+	}
 
 	if err := manager.raftNode.WaitForLeader(ctx); err != nil {
 		return err
 	}
 
-	var err error
-
 	go func() {
-		manager.resolver.Start()
+		resolverCtx, _ := context.WithCancel(ctx)
+		errCh <- manager.resolver.Start(resolverCtx)
 	}()
 
 	go func() {
-		manager.ipamAdapter.Start()
+		if err := manager.ipamAdapter.Start(); err != nil {
+			errCh <- err
+			return
+		}
+
+		errCh <- manager.swanContext.ApiServer.ListenAndServe()
 	}()
 
-	return err
+	return <-errCh
 }
 
-func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event, cancel func()) {
-	// TODO remove to stop
-	defer cancel()
-
+func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
 	for {
 		select {
 		case leadershipEvent := <-leadershipCh:
 			// TODO lock it and if manager stop return
 			newState := leadershipEvent.(raft.LeadershipState)
 
+			var cancelFunc context.CancelFunc
 			if newState == raft.IsLeader {
-				manager.sched.Start()
-				go func() {
-					manager.swanContext.ApiServer.ListenAndServe()
-				}()
+				sechedCtx, cancel := context.WithCancel(ctx)
+				cancelFunc = cancel
+				manager.sched.Start(sechedCtx)
 			} else if newState == raft.IsFollower {
-				manager.sched.Stop()
+				if cancelFunc != nil {
+					cancelFunc()
+				}
+				cancelFunc = nil
 			}
 		case <-ctx.Done():
 			return

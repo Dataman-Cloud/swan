@@ -63,5 +63,11 @@ func (n *Node) runAgent(ctx context.Context) error {
 }
 
 func (n *Node) runManager(ctx context.Context) error {
-	return n.manager.Start()
+	managerCtx, cancel := context.WithCancel(ctx)
+	n.manager.CancelFunc = cancel
+	return n.manager.Start(managerCtx)
+}
+
+func (n *Node) stopManager() {
+	n.manager.Stop(n.manager.CancelFunc)
 }
