@@ -5,24 +5,29 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+
+	"github.com/satori/go.uuid"
 )
 
 var once sync.Once
 
-type HandlerFunc func(s *handler) *handler
+type HandlerFunc func(s *Handler) *Handler
 
 type HandlerFuncs []HandlerFunc
 
 type HandlerManager struct {
+	lock       sync.Mutex
 	handlers   map[string]*Handler
 	handlerMap map[sched.Event_Type]HandlerFuncs
 }
 
-var manager *HandlerManager
-
 func NewHanlderManager(installFun func(*HandlerManager)) *HandlerManager {
+	manager := &HandlerManager{
+		handlers:   make(map[string]*Handler),
+		handlerMap: make(map[sched.Event_Type]HandlerFuncs),
+		lock:       sync.Mutex{},
+	}
 	once.Do(func() {
-		manager := &HandlerManager{}
 		installFun(manager)
 	})
 
@@ -30,19 +35,25 @@ func NewHanlderManager(installFun func(*HandlerManager)) *HandlerManager {
 }
 
 func (m *HandlerManager) Register(etype sched.Event_Type, funcs ...HandlerFunc) {
-	m.handlerMap[etype] = HandlerFuncs(funcs...)
+	m.handlerMap[etype] = HandlerFuncs(funcs)
 }
 
-func (m *HandlerManager) HandlerFuncs(etype sched.Event_Type) HandlerFuns {
-	m.handlerMap[etype]
+func (m *HandlerManager) HandlerFuncs(etype sched.Event_Type) HandlerFuncs {
+	return m.handlerMap[etype]
 }
 
 func (m *HandlerManager) Handle(e *event.MesosEvent) *Handler {
-	return s
+	handlerId := uuid.NewV4().String()
+	h := NewHandler(handlerId, m, e)
+	m.lock.Lock()
+	m.handlers[handlerId] = h
+	m.lock.Unlock()
+
+	go h.Process()
+
+	return h
 }
 
 func (m *HandlerManager) RemoveHandler(handlerId string) {
-}
-
-func (m *HandlerManager) SweepHandlers() {
+	delete(m.handlers, handlerId)
 }

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event/handler"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event/handler/middleware"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
@@ -24,6 +26,8 @@ type Engine struct {
 	mesosCallChan    chan *sched.Call
 	mesosFailureChan chan error
 
+	handlerManager *handler.HandlerManager
+
 	stopC chan struct{}
 
 	apps map[string]*state.App
@@ -32,10 +36,22 @@ type Engine struct {
 func NewEngine(config util.SwanConfig) *Engine {
 	engine := &Engine{
 		scheduler:     scheduler.NewScheduler(config.Scheduler),
-		heartbeater:   time.NewTicker(1 * time.Second),
+		heartbeater:   time.NewTicker(10 * time.Second),
 		userEventChan: make(chan *event.UserEvent, 1024), // TODO
 		mesosCallChan: make(chan *sched.Call, 1024),      // 1024 TODO
 	}
+
+	RegiserFun := func(m *handler.HandlerManager) {
+		m.Register(sched.Event_SUBSCRIBED, middleware.SubscribedHandler)
+		m.Register(sched.Event_HEARTBEAT, middleware.DummyHandler)
+		m.Register(sched.Event_OFFERS, middleware.OfferHandler, middleware.DummyHandler)
+		m.Register(sched.Event_RESCIND, middleware.DummyHandler)
+		m.Register(sched.Event_FAILURE, middleware.DummyHandler)
+		m.Register(sched.Event_MESSAGE, middleware.DummyHandler)
+		m.Register(sched.Event_ERROR, middleware.DummyHandler)
+	}
+
+	engine.handlerManager = handler.NewHanlderManager(RegiserFun)
 	return engine
 }
 
@@ -60,7 +76,8 @@ func (engine *Engine) Run(ctx context.Context) error {
 	for {
 		select {
 		case e := <-engine.scheduler.MesosEventChan:
-			logrus.WithFields(logrus.Fields{"mesos": "yes"}).Debugf("event: %s", e)
+			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
+			engine.handlerMesosEvent(e)
 		case e := <-engine.userEventChan:
 			logrus.WithFields(logrus.Fields{"userevent": "yes"}).Debugf("event: %s", e)
 		case call := <-engine.mesosCallChan:
@@ -85,6 +102,7 @@ func (engine *Engine) Run(ctx context.Context) error {
 }
 
 func (engine *Engine) handlerMesosEvent(event *event.MesosEvent) {
+	engine.handlerManager.Handle(event)
 }
 
 func (engine *Engine) CreateApp(version *types.Version) error {

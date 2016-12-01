@@ -1,26 +1,40 @@
 package handler
 
 import (
+	"fmt"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 )
 
 type Handler struct {
-	manager  *HandlerManager
-	response *Response
+	Id         string
+	Manager    *HandlerManager
+	Response   *Response
+	MesosEvent *event.MesosEvent
 }
 
-func NewHandler(manager) *Handler {
-	s := &Handler{}
+func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handler {
+	s := &Handler{
+		Id:         id,
+		Manager:    manager,
+		MesosEvent: e,
+	}
+
+	s.Response = NewResponse()
 	return s
 }
 
-func (s *Handler) Process() {
-	funcs := s.manager.HandlerFuncs(s.event.Event_Type)
+func (h *Handler) Process() {
+	defer func() {
+		h.Manager.RemoveHandler(h.Id)
+	}()
+
+	funcs := h.Manager.HandlerFuncs(h.MesosEvent.EventType)
 	for _, fun := range funcs {
-		s = fun(s)
+		h = fun(h)
 	}
 
-	for _, c := range s.response.Calls {
+	for _, c := range h.Response.Calls {
+		fmt.Println(c)
 	}
+
 }

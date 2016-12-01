@@ -12,8 +12,8 @@ import (
 )
 
 type Framework struct {
-	Engine *engine.Engine
-	Api    *api.Api
+	Engine  *engine.Engine
+	HttpApi *api.Api
 
 	StopC chan struct{}
 }
@@ -23,7 +23,7 @@ func New(config util.SwanConfig) (*Framework, error) {
 		StopC: make(chan struct{}),
 	}
 	f.Engine = engine.NewEngine(config)
-	f.Api = api.NewApi()
+	f.HttpApi = api.NewApi()
 
 	return f, nil
 }
@@ -44,7 +44,7 @@ func (f *Framework) Start(ctx context.Context) error {
 	wg.Add(2)
 	go func() {
 		wg.Done()
-		err = f.Api.Start()
+		err = f.HttpApi.Start()
 	}()
 
 	go func() {
