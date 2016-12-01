@@ -6,6 +6,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/sched/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/util"
+
+	"golang.org/x/net/context"
 )
 
 type Sched struct {
@@ -25,12 +27,16 @@ func New(config util.Scheduler, scontext *swancontext.SwanContext) *Sched {
 	return s
 }
 
-func (s *Sched) Start() error {
-	if err := s.scheduler.Start(); err != nil {
-		return err
-	}
+//TODO (niumingguo) stop handle event when parent call cancel
+func (s *Sched) Start(ctx context.Context) error {
+	go func() {
+		select {
+		case <-ctx.Done():
+			s.Stop()
+		}
+	}()
 
-	return nil
+	return s.scheduler.Start()
 }
 
 func (s *Sched) Stop() {
