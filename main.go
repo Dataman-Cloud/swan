@@ -55,38 +55,36 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
+			Name:  "config-file",
+			Value: "./config.json",
+			Usage: "specify config file path",
+		},
+		cli.StringFlag{
 			Name:  "addr",
-			Value: "0.0.0.0:9999",
 			Usage: "API Server address <ip:port>",
 		},
 		cli.StringFlag{
 			Name:  "sock",
-			Value: "/var/run/swan.sock",
 			Usage: "Unix socket for listening",
 		},
 		cli.StringFlag{
 			Name:  "masters",
-			Value: "127.0.0.1:5050",
 			Usage: "masters address <ip:port>,<ip:port>...",
 		},
 		cli.StringFlag{
 			Name:  "user",
-			Value: "root",
 			Usage: "mesos framework user",
 		},
 		cli.StringFlag{
 			Name:  "log-level",
-			Value: "info",
 			Usage: "customize debug level [debug|info|error]",
 		},
 		cli.IntFlag{
 			Name:  "raftid",
-			Value: 1,
 			Usage: "raft node id",
 		},
 		cli.StringFlag{
 			Name:  "cluster",
-			Value: "http://127.0.0.1.2221",
 			Usage: "raft cluster peers addr",
 		},
 		cli.BoolFlag{
@@ -103,16 +101,13 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "mode",
-			Value: "mixed",
 			Usage: "Server mode, manager|agent|mixed ",
 		},
 		cli.StringFlag{
 			Name:  "work-dir",
-			Value: "./data/",
 			Usage: "swan data store dir",
 		},
 	}
-
 	app.Action = func(c *cli.Context) error {
 		config, err := util.NewConfig(c)
 		if err != nil {
