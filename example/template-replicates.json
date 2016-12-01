@@ -66,8 +66,5 @@
 	  "maxRetries": 3,
 	  "maxFailovers": 3,
 	  "action": "rollback"
-  },
-
-  "mode": "fixed",
-  "ip": ["192.168.1.210"]
+  }
 }
