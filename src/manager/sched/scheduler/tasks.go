@@ -32,7 +32,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 
 	task.Name = name
 	if task.Name == "" {
-		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.RunningInstances, app.ID, app.RunAs, app.ClusterId)
+		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.RunAs, app.ClusterId)
 
 		if err := s.store.IncreaseApplicationInstances(app.ID); err != nil {
 			return nil, err
