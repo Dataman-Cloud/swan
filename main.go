@@ -108,6 +108,11 @@ func main() {
 			Name:  "work-dir",
 			Usage: "swan data store dir",
 		},
+		cli.StringFlag{
+			Name:  "with-engine",
+			Value: "sched",
+			Usage: "select engine,framework|sched",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		config, err := util.NewConfig(c)

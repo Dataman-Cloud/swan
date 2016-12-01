@@ -15,6 +15,7 @@ type SwanConfig struct {
 	LogLevel   string `json:"log-level"`
 	Mode       string `json:"manager"` // manager, agent, mixed
 	Standalone bool   `json:"standalone"`
+	WithEngine string `json:"withEngine"`
 
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`

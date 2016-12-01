@@ -5,6 +5,7 @@ import (
 
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/ns"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
@@ -29,6 +30,8 @@ type Manager struct {
 	sched       *sched.Sched
 	raftNode    *raft.Node
 	CancelFunc  context.CancelFunc
+
+	framework *framework.Framework
 
 	swanContext *swancontext.SwanContext
 	config      util.SwanConfig
@@ -64,6 +67,11 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 
 	manager.resolver = ns.New(manager.config.DNS)
 	manager.sched = sched.New(manager.config.Scheduler, manager.swanContext)
+	manager.framework, err = framework.New(manager.config)
+	if err != nil {
+		logrus.Errorf("init framework failed. Error: ", err.Error())
+		return nil, err
+	}
 
 	return manager, nil
 }
@@ -121,13 +129,16 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
-				sechedCtx, cancel := context.WithCancel(ctx)
-				cancelFunc = cancel
-				if err := manager.sched.Start(sechedCtx); err != nil {
-					log.G(ctx).Error("Scheduler started unsuccessful")
-					return
+				if manager.config.WithEngine == "sched" {
+					sechedCtx, cancel := context.WithCancel(ctx)
+					cancelFunc = cancel
+					if err := manager.sched.Start(sechedCtx); err != nil {
+						log.G(ctx).Error("Scheduler started unsuccessful")
+						return
+					}
+					log.G(ctx).Info("Scheduler has been started")
+				} else {
 				}
-				log.G(ctx).Info("Scheduler has been started")
 
 			} else if newState == raft.IsFollower {
 				log.G(ctx).Info("Now i become a follower !!!")
