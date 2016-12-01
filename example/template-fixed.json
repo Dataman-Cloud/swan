@@ -1,0 +1,66 @@
+{
+  "appId": "nginx0055",
+  "cmd": null,
+  "cpus": 0.01,
+  "mem": 5,
+  "disk": 0,
+  "instances": 1,
+  "container": {
+    "docker": {
+      "image": "nginx",
+      "network": "swan",
+      "forcePullImage": false,
+      "privileged": true,
+      "parameters": [
+        {
+            "key": "label",
+	    "value": "APP_ID=nginx"
+        }
+      ],
+      "portMappings": [
+        {
+          "containerPort": 80,
+          "protocol": "tcp",
+          "name": "web"
+        }
+      ]
+    },
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "hostPath": "/home",
+        "containerPath": "/data",
+        "mode": "RW"
+      }
+    ]
+  },
+  "env": {
+    "DB": "mysql"
+  },
+  "label": {
+    "USER_ID": "1"
+  },
+  "killPolicy": {
+    "duration": 5
+  },
+  "healthChecks": [
+    {
+      "protocol": "TCP",
+      "path": "/",
+      "delaySeconds": 15,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 3,
+      "timeoutSeconds": 3,
+      "consecutiveFailures": 5
+    }
+ ],
+  "updatePolicy": {
+	  "updateDelay": 5,
+	  "maxRetries": 3,
+	  "maxFailovers": 3,
+	  "action": "rollback"
+  },
+
+  "mode": "fixed",
+  "ip": ["192.168.1.210","192.168.1.211"]
+}

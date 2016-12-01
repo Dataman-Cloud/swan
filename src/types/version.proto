@@ -31,6 +31,8 @@ message Version {
     map<string,string> env = 12;
     KillPolicy killPolicy = 13;
     UpdatePolicy updatePolicy = 14;
+    repeated string ip = 15;
+    string mode = 16;
 }
 
 message Container {

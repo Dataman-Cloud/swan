@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -32,6 +33,10 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
+	if err := validateVersion(version); err != nil {
+		return err
+	}
+
 	app, err := r.backend.FetchApplication(version.AppId)
 	if err != nil && err != store.ErrAppUnknown {
 		return err
@@ -58,6 +63,7 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		Status:            "STAGING",
 		Created:           time.Now().Unix(),
 		Updated:           time.Now().Unix(),
+		Mode:              version.Mode,
 	}
 
 	if err := r.backend.SaveApplication(&application); err != nil {
@@ -230,5 +236,12 @@ func (r *Router) RollbackApplication(w http.ResponseWriter, req *http.Request) e
 		return err
 	}
 
+	return nil
+}
+
+func validateVersion(version types.Version) error {
+	if version.Mode == "fixed" && int(version.Instances) != len(version.Ip) {
+		return errors.New(fmt.Sprintf("should have exactly %d unique accessible ip within VLAN", version.Instances))
+	}
 	return nil
 }

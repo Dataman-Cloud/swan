@@ -14,20 +14,24 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+const (
+	SWAN_RESERVED_NETWORK = "swan"
+)
+
 func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name string) (*types.Task, error) {
 	var task types.Task
 
+	app, err := s.store.FetchApplication(version.AppId)
+	if err != nil {
+		return nil, err
+	}
+
+	if app == nil {
+		return nil, fmt.Errorf("Application %s not found.", version.AppId)
+	}
+
 	task.Name = name
 	if task.Name == "" {
-		app, err := s.store.FetchApplication(version.AppId)
-		if err != nil {
-			return nil, err
-		}
-
-		if app == nil {
-			return nil, fmt.Errorf("Application %s not found.", version.AppId)
-		}
-
 		task.Name = fmt.Sprintf("%d.%s.%s.%s", app.Instances, app.ID, app.RunAs, app.ClusterId)
 
 		if err := s.store.IncreaseApplicationInstances(app.ID); err != nil {
@@ -48,6 +52,14 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 				Value: parameter.Value,
 			})
 		}
+	}
+
+	// check if app run in fixed mode and has reserved enough IP
+	if app.Mode == "fixed" && len(version.Ip) >= int(app.Instances) {
+		task.Parameters = append(task.Parameters, &types.Parameter{
+			Key:   "ip",
+			Value: version.Ip[app.Instances],
+		})
 	}
 
 	if version.Container.Docker.PortMappings != nil {
@@ -221,8 +233,15 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 			})
 		}
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_BRIDGE.Enum()
+	case SWAN_RESERVED_NETWORK:
+		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_USER.Enum()
+		taskInfo.Container.NetworkInfos = append(taskInfo.Container.NetworkInfos, &mesos.NetworkInfo{
+			Name: proto.String(SWAN_RESERVED_NETWORK),
+		})
+
 	default:
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
+
 	}
 
 	return &taskInfo
@@ -249,6 +268,8 @@ func (s *Scheduler) LaunchTasks(offer *mesos.Offer, tasks []*mesos.TaskInfo) (*h
 			Filters: &mesos.Filters{RefuseSeconds: proto.Float64(1)},
 		},
 	}
+
+	logrus.Debugf("sending LaunchTasks call to mesos, the payload: %s", call.String())
 
 	return s.send(call)
 }
