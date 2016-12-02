@@ -114,6 +114,9 @@ func (manager *Manager) Start(ctx context.Context) error {
 
 		errCh <- manager.swanContext.ApiServer.ListenAndServe()
 	}()
+	//go func() {
+	//manager.framework.Start()
+	//}()
 
 	return <-errCh
 }
