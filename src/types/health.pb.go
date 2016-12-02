@@ -317,163 +317,163 @@ func extensionToGoStringHealth(m github_com_gogo_protobuf_proto.Message) string 
 	s += strings.Join(ss, ",") + "})"
 	return s
 }
-func (m *HealthCheck) Marshal() (data []byte, err error) {
+func (m *HealthCheck) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *HealthCheck) MarshalTo(data []byte) (int, error) {
+func (m *HealthCheck) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.ID) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.ID)))
-		i += copy(data[i:], m.ID)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.ID)))
+		i += copy(dAtA[i:], m.ID)
 	}
 	if len(m.Address) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.Address)))
-		i += copy(data[i:], m.Address)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.Address)))
+		i += copy(dAtA[i:], m.Address)
 	}
 	if len(m.TaskID) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.TaskID)))
-		i += copy(data[i:], m.TaskID)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.TaskID)))
+		i += copy(dAtA[i:], m.TaskID)
 	}
 	if len(m.AppID) > 0 {
-		data[i] = 0x22
+		dAtA[i] = 0x22
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.AppID)))
-		i += copy(data[i:], m.AppID)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.AppID)))
+		i += copy(dAtA[i:], m.AppID)
 	}
 	if len(m.Protocol) > 0 {
-		data[i] = 0x2a
+		dAtA[i] = 0x2a
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.Protocol)))
-		i += copy(data[i:], m.Protocol)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.Protocol)))
+		i += copy(dAtA[i:], m.Protocol)
 	}
 	if m.Port != 0 {
-		data[i] = 0x30
+		dAtA[i] = 0x30
 		i++
-		i = encodeVarintHealth(data, i, uint64(m.Port))
+		i = encodeVarintHealth(dAtA, i, uint64(m.Port))
 	}
 	if m.PortIndex != 0 {
-		data[i] = 0x38
+		dAtA[i] = 0x38
 		i++
-		i = encodeVarintHealth(data, i, uint64(m.PortIndex))
+		i = encodeVarintHealth(dAtA, i, uint64(m.PortIndex))
 	}
 	if m.Command != nil {
-		data[i] = 0x42
+		dAtA[i] = 0x42
 		i++
-		i = encodeVarintHealth(data, i, uint64(m.Command.Size()))
-		n1, err := m.Command.MarshalTo(data[i:])
+		i = encodeVarintHealth(dAtA, i, uint64(m.Command.Size()))
+		n1, err := m.Command.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n1
 	}
 	if len(m.Path) > 0 {
-		data[i] = 0x4a
+		dAtA[i] = 0x4a
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.Path)))
-		i += copy(data[i:], m.Path)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.Path)))
+		i += copy(dAtA[i:], m.Path)
 	}
 	if m.DelaySeconds != 0 {
-		data[i] = 0x51
+		dAtA[i] = 0x51
 		i++
-		i = encodeFixed64Health(data, i, uint64(math.Float64bits(float64(m.DelaySeconds))))
+		i = encodeFixed64Health(dAtA, i, uint64(math.Float64bits(float64(m.DelaySeconds))))
 	}
 	if m.ConsecutiveFailures != 0 {
-		data[i] = 0x58
+		dAtA[i] = 0x58
 		i++
-		i = encodeVarintHealth(data, i, uint64(m.ConsecutiveFailures))
+		i = encodeVarintHealth(dAtA, i, uint64(m.ConsecutiveFailures))
 	}
 	if m.GracePeriodSeconds != 0 {
-		data[i] = 0x61
+		dAtA[i] = 0x61
 		i++
-		i = encodeFixed64Health(data, i, uint64(math.Float64bits(float64(m.GracePeriodSeconds))))
+		i = encodeFixed64Health(dAtA, i, uint64(math.Float64bits(float64(m.GracePeriodSeconds))))
 	}
 	if m.IntervalSeconds != 0 {
-		data[i] = 0x69
+		dAtA[i] = 0x69
 		i++
-		i = encodeFixed64Health(data, i, uint64(math.Float64bits(float64(m.IntervalSeconds))))
+		i = encodeFixed64Health(dAtA, i, uint64(math.Float64bits(float64(m.IntervalSeconds))))
 	}
 	if m.TimeoutSeconds != 0 {
-		data[i] = 0x71
+		dAtA[i] = 0x71
 		i++
-		i = encodeFixed64Health(data, i, uint64(math.Float64bits(float64(m.TimeoutSeconds))))
+		i = encodeFixed64Health(dAtA, i, uint64(math.Float64bits(float64(m.TimeoutSeconds))))
 	}
 	return i, nil
 }
 
-func (m *Command) Marshal() (data []byte, err error) {
+func (m *Command) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Command) MarshalTo(data []byte) (int, error) {
+func (m *Command) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.Value) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintHealth(data, i, uint64(len(m.Value)))
-		i += copy(data[i:], m.Value)
+		i = encodeVarintHealth(dAtA, i, uint64(len(m.Value)))
+		i += copy(dAtA[i:], m.Value)
 	}
 	return i, nil
 }
 
-func encodeFixed64Health(data []byte, offset int, v uint64) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
-	data[offset+4] = uint8(v >> 32)
-	data[offset+5] = uint8(v >> 40)
-	data[offset+6] = uint8(v >> 48)
-	data[offset+7] = uint8(v >> 56)
+func encodeFixed64Health(dAtA []byte, offset int, v uint64) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
+	dAtA[offset+4] = uint8(v >> 32)
+	dAtA[offset+5] = uint8(v >> 40)
+	dAtA[offset+6] = uint8(v >> 48)
+	dAtA[offset+7] = uint8(v >> 56)
 	return offset + 8
 }
-func encodeFixed32Health(data []byte, offset int, v uint32) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
+func encodeFixed32Health(dAtA []byte, offset int, v uint32) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
 	return offset + 4
 }
-func encodeVarintHealth(data []byte, offset int, v uint64) int {
+func encodeVarintHealth(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
-		data[offset] = uint8(v&0x7f | 0x80)
+		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
-	data[offset] = uint8(v)
+	dAtA[offset] = uint8(v)
 	return offset + 1
 }
 func NewPopulatedHealthCheck(r randyHealth, easy bool) *HealthCheck {
 	this := &HealthCheck{}
-	this.ID = randStringHealth(r)
-	this.Address = randStringHealth(r)
-	this.TaskID = randStringHealth(r)
-	this.AppID = randStringHealth(r)
-	this.Protocol = randStringHealth(r)
+	this.ID = string(randStringHealth(r))
+	this.Address = string(randStringHealth(r))
+	this.TaskID = string(randStringHealth(r))
+	this.AppID = string(randStringHealth(r))
+	this.Protocol = string(randStringHealth(r))
 	this.Port = int32(r.Int31())
 	if r.Intn(2) == 0 {
 		this.Port *= -1
@@ -485,7 +485,7 @@ func NewPopulatedHealthCheck(r randyHealth, easy bool) *HealthCheck {
 	if r.Intn(10) != 0 {
 		this.Command = NewPopulatedCommand(r, easy)
 	}
-	this.Path = randStringHealth(r)
+	this.Path = string(randStringHealth(r))
 	this.DelaySeconds = float64(r.Float64())
 	if r.Intn(2) == 0 {
 		this.DelaySeconds *= -1
@@ -510,7 +510,7 @@ func NewPopulatedHealthCheck(r randyHealth, easy bool) *HealthCheck {
 
 func NewPopulatedCommand(r randyHealth, easy bool) *Command {
 	this := &Command{}
-	this.Value = randStringHealth(r)
+	this.Value = string(randStringHealth(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -542,7 +542,7 @@ func randStringHealth(r randyHealth) string {
 	}
 	return string(tmps)
 }
-func randUnrecognizedHealth(r randyHealth, maxFieldNumber int) (data []byte) {
+func randUnrecognizedHealth(r randyHealth, maxFieldNumber int) (dAtA []byte) {
 	l := r.Intn(5)
 	for i := 0; i < l; i++ {
 		wire := r.Intn(4)
@@ -550,43 +550,43 @@ func randUnrecognizedHealth(r randyHealth, maxFieldNumber int) (data []byte) {
 			wire = 5
 		}
 		fieldNumber := maxFieldNumber + r.Intn(100)
-		data = randFieldHealth(data, r, fieldNumber, wire)
+		dAtA = randFieldHealth(dAtA, r, fieldNumber, wire)
 	}
-	return data
+	return dAtA
 }
-func randFieldHealth(data []byte, r randyHealth, fieldNumber int, wire int) []byte {
+func randFieldHealth(dAtA []byte, r randyHealth, fieldNumber int, wire int) []byte {
 	key := uint32(fieldNumber)<<3 | uint32(wire)
 	switch wire {
 	case 0:
-		data = encodeVarintPopulateHealth(data, uint64(key))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(key))
 		v2 := r.Int63()
 		if r.Intn(2) == 0 {
 			v2 *= -1
 		}
-		data = encodeVarintPopulateHealth(data, uint64(v2))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(v2))
 	case 1:
-		data = encodeVarintPopulateHealth(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	case 2:
-		data = encodeVarintPopulateHealth(data, uint64(key))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(key))
 		ll := r.Intn(100)
-		data = encodeVarintPopulateHealth(data, uint64(ll))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(ll))
 		for j := 0; j < ll; j++ {
-			data = append(data, byte(r.Intn(256)))
+			dAtA = append(dAtA, byte(r.Intn(256)))
 		}
 	default:
-		data = encodeVarintPopulateHealth(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateHealth(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	}
-	return data
+	return dAtA
 }
-func encodeVarintPopulateHealth(data []byte, v uint64) []byte {
+func encodeVarintPopulateHealth(dAtA []byte, v uint64) []byte {
 	for v >= 1<<7 {
-		data = append(data, uint8(uint64(v)&0x7f|0x80))
+		dAtA = append(dAtA, uint8(uint64(v)&0x7f|0x80))
 		v >>= 7
 	}
-	data = append(data, uint8(v))
-	return data
+	dAtA = append(dAtA, uint8(v))
+	return dAtA
 }
 func (m *HealthCheck) Size() (n int) {
 	var l int
@@ -666,8 +666,8 @@ func sovHealth(x uint64) (n int) {
 func sozHealth(x uint64) (n int) {
 	return sovHealth(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *HealthCheck) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *HealthCheck) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -679,7 +679,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -707,7 +707,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -722,7 +722,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ID = string(data[iNdEx:postIndex])
+			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -736,7 +736,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -751,7 +751,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Address = string(data[iNdEx:postIndex])
+			m.Address = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -765,7 +765,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -780,7 +780,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.TaskID = string(data[iNdEx:postIndex])
+			m.TaskID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -794,7 +794,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -809,7 +809,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.AppID = string(data[iNdEx:postIndex])
+			m.AppID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 5:
 			if wireType != 2 {
@@ -823,7 +823,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -838,7 +838,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Protocol = string(data[iNdEx:postIndex])
+			m.Protocol = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 6:
 			if wireType != 0 {
@@ -852,7 +852,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.Port |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -871,7 +871,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.PortIndex |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -890,7 +890,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -907,7 +907,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if m.Command == nil {
 				m.Command = &Command{}
 			}
-			if err := m.Command.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Command.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -923,7 +923,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -938,7 +938,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Path = string(data[iNdEx:postIndex])
+			m.Path = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 10:
 			if wireType != 1 {
@@ -949,14 +949,14 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.DelaySeconds = float64(math.Float64frombits(v))
 		case 11:
 			if wireType != 0 {
@@ -970,7 +970,7 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.ConsecutiveFailures |= (uint32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -986,14 +986,14 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.GracePeriodSeconds = float64(math.Float64frombits(v))
 		case 13:
 			if wireType != 1 {
@@ -1004,14 +1004,14 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.IntervalSeconds = float64(math.Float64frombits(v))
 		case 14:
 			if wireType != 1 {
@@ -1022,18 +1022,18 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.TimeoutSeconds = float64(math.Float64frombits(v))
 		default:
 			iNdEx = preIndex
-			skippy, err := skipHealth(data[iNdEx:])
+			skippy, err := skipHealth(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -1052,8 +1052,8 @@ func (m *HealthCheck) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Command) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Command) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -1065,7 +1065,7 @@ func (m *Command) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -1093,7 +1093,7 @@ func (m *Command) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1108,11 +1108,11 @@ func (m *Command) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Value = string(data[iNdEx:postIndex])
+			m.Value = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipHealth(data[iNdEx:])
+			skippy, err := skipHealth(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -1131,8 +1131,8 @@ func (m *Command) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func skipHealth(data []byte) (n int, err error) {
-	l := len(data)
+func skipHealth(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		var wire uint64
@@ -1143,7 +1143,7 @@ func skipHealth(data []byte) (n int, err error) {
 			if iNdEx >= l {
 				return 0, io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -1161,7 +1161,7 @@ func skipHealth(data []byte) (n int, err error) {
 					return 0, io.ErrUnexpectedEOF
 				}
 				iNdEx++
-				if data[iNdEx-1] < 0x80 {
+				if dAtA[iNdEx-1] < 0x80 {
 					break
 				}
 			}
@@ -1178,7 +1178,7 @@ func skipHealth(data []byte) (n int, err error) {
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				length |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1201,7 +1201,7 @@ func skipHealth(data []byte) (n int, err error) {
 					if iNdEx >= l {
 						return 0, io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					innerWire |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -1212,7 +1212,7 @@ func skipHealth(data []byte) (n int, err error) {
 				if innerWireType == 4 {
 					break
 				}
-				next, err := skipHealth(data[start:])
+				next, err := skipHealth(dAtA[start:])
 				if err != nil {
 					return 0, err
 				}

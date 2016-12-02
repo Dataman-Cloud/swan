@@ -77,7 +77,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			MesosMasters:           []string{c.String("masters")},
 			MesosFrameworkUser:     c.String("user"),
 			Hostname:               hostname(),
-			EnableLocalHealthcheck: c.Bool("local-healthcheck"),
+			EnableLocalHealthcheck: c.Bool("enable-local-healthcheck"),
 		},
 
 		DNS: DNS{
