@@ -50,14 +50,14 @@ chmod +x swan
 ```
 ### Run as standalone mode
 ```
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111 --sock=./data/swam.sock
 ```
 
 ### Run as HA mode
 ```
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
-swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9999 --raftid=1 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam1.sock
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9998 --raftid=2 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam2.sock
+swan --masters=192.168.1.50:5050 --addr=0.0.0.0:9997 --raftid=3 --cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam3.sock
 ```
 Use `swan --help` to see usage.
 
