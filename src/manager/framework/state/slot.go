@@ -15,8 +15,8 @@ const (
 	SLOT_STATE_PENDING_OFFER     = "pending_offer"
 	SLOT_STATE_TASK_DISPATCHED   = "task_dispatched"
 	SLOT_STATE_TASK_RUNING       = "task_running"
-	SLOT_STATE_TASK_FAILED       = "task_failed"
-	SLOT_STATE_TASK_RESCHEDULING = "task_reschuduling"
+	SLOT_STATE_TASK_FAILED       = "task_need_reschedue"
+	SLOT_STATE_TASK_RESCHEDULING = "task_rescheduling"
 	SLOT_STATE_TASK_STOPPING     = "task_stopping"
 	SLOT_STATE_TASK_STOPPED      = "task_stopped"
 )

@@ -76,6 +76,7 @@ func (engine *Engine) Start() error {
 // main loop
 func (engine *Engine) Run(ctx context.Context) error {
 	if err := engine.Scheduler.ConnectToMesosAndAcceptEvent(); err != nil {
+		logrus.Errorf("ConnectToMesosAndAcceptEvent got error %s", err)
 		return err
 	}
 

@@ -32,8 +32,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 				if match {
 					slot.SetState(state.SLOT_STATE_TASK_DISPATCHED)
 
-					//TODO the following code logic complex, need improvement
-
+					// TODO the following code logic complex, need improvement
 					// offerWrapper cpu/mem/disk deduction recorded within the obj itself
 					_, taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
 					h.EngineRef.Allocator.SetOfferIdForSlotName(offer.GetId(), slot.Name)

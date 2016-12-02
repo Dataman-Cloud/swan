@@ -78,7 +78,3 @@ func (app *App) Update(version *types.Version) error {
 func (app *App) checkProposedVersionValid(version *types.Version) error {
 	return nil
 }
-
-func (app *App) AsJson() string {
-	return app.AppId
-}

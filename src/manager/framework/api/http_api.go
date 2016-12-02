@@ -10,6 +10,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	API_PREFIX = "v_try"
+)
+
 type Api struct {
 	port   string
 	Engine *engine.Engine
@@ -25,9 +29,21 @@ func NewApi(eng *engine.Engine) *Api {
 func (api *Api) Start(ctx context.Context) error {
 	router := gin.Default()
 
-	router.GET("/v-try/apps", api.ListApp)
-	router.POST("/v-try/apps", api.CreateApp)
-	router.GET("/v-try/apps/:app_id", api.GetApp)
+	group := router.Group(API_PREFIX)
+	group.GET("/apps", api.ListApp)
+	group.POST("/apps", api.CreateApp)
+	group.GET("/apps/:app_id", api.GetApp)
+	group.POST("/apps/:app_id/update", api.GetApp)
+	group.POST("/apps/:app_id/scale", api.GetApp)
+	group.POST("/apps/:app_id/rollback", api.GetApp)
+
+	group.GET("/apps/:app_id/tasks", api.GetApp)
+	group.DELETE("/apps/:app_id/tasks", api.GetApp) // pending
+	group.DELETE("/apps/:app_id/tasks/:task_id", api.GetApp)
+
+	group.GET("/apps/:app_id/versions", api.GetApp)
+	group.GET("/apps/:app_id/versions/:version_id", api.GetApp)
+
 	router.Run(api.port)
 	return nil
 }
@@ -55,7 +71,7 @@ func (api *Api) GetApp(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"app": app.AsJson()})
+		c.JSON(http.StatusOK, gin.H{"app": app.CurrentVersion})
 	}
 }
 

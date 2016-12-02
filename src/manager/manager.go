@@ -109,14 +109,14 @@ func (manager *Manager) Start(ctx context.Context) error {
 			return
 		}
 
-		managerRoute := NewRouter(manager)
-		manager.swanContext.ApiServer.AppendRouter(managerRoute)
+		//managerRoute := NewRouter(manager)
+		//manager.swanContext.ApiServer.AppendRouter(managerRoute)
 
-		errCh <- manager.swanContext.ApiServer.ListenAndServe()
+		//errCh <- manager.swanContext.ApiServer.ListenAndServe()
 	}()
-	//go func() {
-	//manager.framework.Start()
-	//}()
+	go func() {
+		manager.framework.Start()
+	}()
 
 	return <-errCh
 }
