@@ -7,7 +7,7 @@ import (
 )
 
 func withCreateFrameworkBucketIfNotExists(tx *bolt.Tx, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyFramework)
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework)
 	if err != nil {
 		return err
 	}
