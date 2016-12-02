@@ -5,8 +5,6 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/event/handler"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/event/handler/middleware"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
@@ -26,7 +24,7 @@ type Engine struct {
 	mesosCallChan    chan *sched.Call
 	mesosFailureChan chan error
 
-	handlerManager *handler.HandlerManager
+	handlerManager *HandlerManager
 
 	stopC chan struct{}
 
@@ -41,17 +39,17 @@ func NewEngine(config util.SwanConfig) *Engine {
 		mesosCallChan: make(chan *sched.Call, 1024),      // 1024 TODO
 	}
 
-	RegiserFun := func(m *handler.HandlerManager) {
-		m.Register(sched.Event_SUBSCRIBED, middleware.SubscribedHandler)
-		m.Register(sched.Event_HEARTBEAT, middleware.DummyHandler)
-		m.Register(sched.Event_OFFERS, middleware.OfferHandler, middleware.DummyHandler)
-		m.Register(sched.Event_RESCIND, middleware.DummyHandler)
-		m.Register(sched.Event_FAILURE, middleware.DummyHandler)
-		m.Register(sched.Event_MESSAGE, middleware.DummyHandler)
-		m.Register(sched.Event_ERROR, middleware.DummyHandler)
+	RegiserFun := func(m *HandlerManager) {
+		m.Register(sched.Event_SUBSCRIBED, SubscribedHandler)
+		m.Register(sched.Event_HEARTBEAT, DummyHandler)
+		m.Register(sched.Event_OFFERS, OfferHandler, DummyHandler)
+		m.Register(sched.Event_RESCIND, DummyHandler)
+		m.Register(sched.Event_FAILURE, DummyHandler)
+		m.Register(sched.Event_MESSAGE, DummyHandler)
+		m.Register(sched.Event_ERROR, DummyHandler)
 	}
 
-	engine.handlerManager = handler.NewHanlderManager(RegiserFun)
+	engine.handlerManager = NewHanlderManager(RegiserFun)
 	return engine
 }
 

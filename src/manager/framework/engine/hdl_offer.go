@@ -1,15 +1,14 @@
-package middleware
+package engine
 
 import (
-	"github.com/Dataman-Cloud/swan/src/manager/framework/event/handler"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+	//"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+	//"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
+	//"github.com/golang/protobuf/proto"
 )
 
-func OfferHandler(h *handler.Handler) *handler.Handler {
+func OfferHandler(h *Handler) *Handler {
 	logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("")
 
 	//call := &sched.Call{
