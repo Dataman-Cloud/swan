@@ -11,7 +11,7 @@ import (
 
 var once sync.Once
 
-type HandlerFunc func(s *Handler) *Handler
+type HandlerFunc func(s *Handler) (*Handler, error)
 
 type HandlerFuncs []HandlerFunc
 
@@ -19,13 +19,16 @@ type HandlerManager struct {
 	lock       sync.Mutex
 	handlers   map[string]*Handler
 	handlerMap map[sched.Event_Type]HandlerFuncs
+
+	EngineRef *Engine
 }
 
-func NewHanlderManager(installFun func(*HandlerManager)) *HandlerManager {
+func NewHanlderManager(engine *Engine, installFun func(*HandlerManager)) *HandlerManager {
 	manager := &HandlerManager{
 		handlers:   make(map[string]*Handler),
 		handlerMap: make(map[sched.Event_Type]HandlerFuncs),
 		lock:       sync.Mutex{},
+		EngineRef:  engine,
 	}
 	once.Do(func() {
 		installFun(manager)

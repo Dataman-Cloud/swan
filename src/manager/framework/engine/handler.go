@@ -1,8 +1,9 @@
 package engine
 
 import (
-	"fmt"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type Handler struct {
@@ -10,6 +11,8 @@ type Handler struct {
 	Manager    *HandlerManager
 	Response   *Response
 	MesosEvent *event.MesosEvent
+
+	EngineRef *Engine
 }
 
 func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handler {
@@ -17,6 +20,7 @@ func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handle
 		Id:         id,
 		Manager:    manager,
 		MesosEvent: e,
+		EngineRef:  manager.EngineRef,
 	}
 
 	s.Response = NewResponse()
@@ -24,17 +28,20 @@ func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handle
 }
 
 func (h *Handler) Process() {
+	// remove this handler
 	defer func() {
 		h.Manager.RemoveHandler(h.Id)
 	}()
 
 	funcs := h.Manager.HandlerFuncs(h.MesosEvent.EventType)
 	for _, fun := range funcs {
-		h = fun(h)
+		h, err := fun(h)
+		if err != nil {
+			logrus.Errorf("%s, %s", h, err)
+		}
 	}
 
 	for _, c := range h.Response.Calls {
-		fmt.Println(c)
+		h.EngineRef.MesosCallChan <- c
 	}
-
 }

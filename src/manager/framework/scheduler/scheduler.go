@@ -21,7 +21,6 @@ type Scheduler struct {
 	// mesos framework related
 	clusterId        string
 	master           string
-	framework        *mesos.FrameworkInfo
 	client           *MesosHttpClient
 	mastersUrls      []string
 	lastHearBeatTime time.Time
@@ -29,6 +28,7 @@ type Scheduler struct {
 
 	// TODO make sure this chan doesn't explode
 	MesosEventChan chan *event.MesosEvent
+	Framework      *mesos.FrameworkInfo
 }
 
 func NewScheduler(config util.Scheduler) *Scheduler {
@@ -42,7 +42,7 @@ func NewScheduler(config util.Scheduler) *Scheduler {
 // start starts the scheduler and subscribes to event stream
 func (s *Scheduler) ConnectToMesosAndAcceptEvent() error {
 	var err error
-	s.framework, err = createOrLoadFrameworkInfo(s.config)
+	s.Framework, err = createOrLoadFrameworkInfo(s.config)
 	state, err := stateFromMasters(s.config.MesosMasters)
 	if err != nil {
 		logrus.Errorf("%s, check your mesos mastger configuration", err)
@@ -70,13 +70,13 @@ func (s *Scheduler) subscribe() error {
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
-			FrameworkInfo: s.framework,
+			FrameworkInfo: s.Framework,
 		},
 	}
 
-	if s.framework.Id != nil {
+	if s.Framework.Id != nil {
 		call.FrameworkId = &mesos.FrameworkID{
-			Value: proto.String(s.framework.Id.GetValue()),
+			Value: proto.String(s.Framework.Id.GetValue()),
 		}
 	}
 
@@ -165,6 +165,5 @@ func (s *Scheduler) Send(call *sched.Call) (*http.Response, error) {
 }
 
 func (s *Scheduler) AddEvent(eventType sched.Event_Type, e *sched.Event) {
-	logrus.WithFields(logrus.Fields{"scheduler": eventType}).Debug("Received event from master.")
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }

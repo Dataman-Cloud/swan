@@ -12,23 +12,28 @@ var (
 )
 
 type App struct {
-	Versions []*types.Version
-	Slots    []*Slot
+	AppId    string           `json:"appId"`
+	Versions []*types.Version `json:"versions"`
+	Slots    []*Slot          `json:"slots"`
 
-	CurrentVersion  *types.Version
-	ProposedVersion *types.Version
-	Mode            AppMode // fixed or repliactes
+	CurrentVersion    *types.Version `json:"current_version"`
+	ProposedVersion   *types.Version `json:"proposed_version"`
+	Mode              AppMode        `json:"mode"` // fixed or repliactes
+	OfferAllocatorRef *OfferAllocator
 }
 
-func NewApp(version *types.Version) (*App, error) {
+func NewApp(version *types.Version, allocator *OfferAllocator) (*App, error) {
 	app := &App{
-		Versions:       []*types.Version{version},
-		Slots:          make([]*Slot, 0),
-		CurrentVersion: version,
+		Versions:          []*types.Version{version},
+		Slots:             make([]*Slot, 0),
+		CurrentVersion:    version,
+		OfferAllocatorRef: allocator,
 	}
 
 	for i := 0; i < int(version.Instances); i++ {
-		app.Slots = append(app.Slots, NewSlot(app, version, i))
+		slot := NewSlot(app, version, i)
+		app.Slots = append(app.Slots, slot)
+		app.OfferAllocatorRef.AppendPendingSlot(slot)
 	}
 
 	return app, nil
@@ -66,4 +71,8 @@ func (app *App) Update(version *types.Version) error {
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
 	return nil
+}
+
+func (app *App) AsJson() string {
+	return app.AppId
 }

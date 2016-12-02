@@ -23,7 +23,7 @@ func New(config util.SwanConfig) (*Framework, error) {
 		StopC: make(chan struct{}),
 	}
 	f.Engine = engine.NewEngine(config)
-	f.HttpApi = api.NewApi()
+	f.HttpApi = api.NewApi(f.Engine)
 
 	return f, nil
 }

@@ -1,12 +1,10 @@
 package engine
 
-import (
-	"fmt"
-)
+import ()
 
-func SubscribedHandler(h *Handler) *Handler {
+func SubscribedHandler(h *Handler) (*Handler, error) {
 	sub := h.MesosEvent.Event.GetSubscribed()
-	fmt.Println(sub)
+	h.EngineRef.Scheduler.Framework.Id = sub.FrameworkId
 
-	return h
+	return h, nil
 }
