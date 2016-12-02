@@ -14,9 +14,6 @@ func (b *Backend) DeleteApplication(appId string) error {
 	}
 
 	for _, task := range tasks {
-		// Stop task health check
-		b.sched.HealthCheckManager.StopCheck(task.Name)
-
 		// Kill task via mesos
 		resp, err := b.sched.KillTask(task)
 		if err != nil {

@@ -39,6 +39,7 @@ message Task {
     string status = 20;
     string appId = 21;
     KillPolicy killPolicy = 22;
+    repeated string uris = 23;
 }
 
 message PortMappings {

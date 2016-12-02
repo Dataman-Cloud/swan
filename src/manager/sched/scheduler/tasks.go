@@ -41,6 +41,10 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 	task.Image = version.Container.Docker.Image
 	task.Network = version.Container.Docker.Network
 
+	if len(version.Uris) != 0 {
+		task.Uris = version.Uris
+	}
+
 	if version.Container.Docker.Parameters != nil {
 		for _, parameter := range version.Container.Docker.Parameters {
 			task.Parameters = append(task.Parameters, &types.Parameter{
@@ -130,16 +134,27 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 		})
 	}
 
-	vars := make([]*mesos.Environment_Variable, 0)
+	envs := make([]*mesos.Environment_Variable, 0)
 	for k, v := range task.Env {
-		vars = append(vars, &mesos.Environment_Variable{
+		envs = append(envs, &mesos.Environment_Variable{
 			Name:  proto.String(k),
 			Value: proto.String(v),
 		})
 	}
 
 	taskInfo.Command.Environment = &mesos.Environment{
-		Variables: vars,
+		Variables: envs,
+	}
+
+	uris := make([]*mesos.CommandInfo_URI, 0)
+	for _, v := range task.Uris {
+		uris = append(uris, &mesos.CommandInfo_URI{
+			Value: proto.String(v),
+		})
+	}
+
+	if len(uris) > 0 {
+		taskInfo.Command.Uris = uris
 	}
 
 	if task.Labels != nil {

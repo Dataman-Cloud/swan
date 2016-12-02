@@ -32,6 +32,7 @@ message Version {
     KillPolicy killPolicy = 13;
     UpdatePolicy updatePolicy = 14;
     repeated string constraints = 15;
+    repeated string uris = 16;
 }
 
 message Container {
