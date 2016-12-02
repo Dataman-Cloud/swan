@@ -12,13 +12,18 @@ var (
 )
 
 type App struct {
+	// app name
 	AppId    string           `json:"appId"`
 	Versions []*types.Version `json:"versions"`
 	Slots    []*Slot          `json:"slots"`
 
-	CurrentVersion    *types.Version `json:"current_version"`
-	ProposedVersion   *types.Version `json:"proposed_version"`
-	Mode              AppMode        `json:"mode"` // fixed or repliactes
+	// app run with CurrentVersion config
+	CurrentVersion *types.Version `json:"current_version"`
+	// use when app updated, ProposedVersion can either be commit or revert
+	ProposedVersion *types.Version `json:"proposed_version"`
+
+	Mode AppMode `json:"mode"` // fixed or repliactes
+
 	OfferAllocatorRef *OfferAllocator
 }
 
@@ -28,6 +33,7 @@ func NewApp(version *types.Version, allocator *OfferAllocator) (*App, error) {
 		Slots:             make([]*Slot, 0),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
+		AppId:             version.AppId,
 	}
 
 	for i := 0; i < int(version.Instances); i++ {
