@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -11,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"

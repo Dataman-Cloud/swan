@@ -1,5 +1,12 @@
 package engine
 
+import (
+	"errors"
+
+	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/types"
+)
+
 func (engine *Engine) CreateApp(version *types.Version) error {
 	_, appExists := engine.Apps[version.AppId]
 	if appExists {
