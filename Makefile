@@ -39,7 +39,7 @@ test:
 collect-cover-data:
 	@echo "mode: count" > coverage-all.out
 	$(foreach pkg,$(TEST_PACKAGES),\
-		go test -v -coverprofile=coverage.out -covermode=count $(pkg) || exit $$?;\
+		go test -v -coverprofile=coverage.out -covermode=count $(pkg) || exit $?;\
 		if [ -f coverage.out ]; then\
 			tail -n +2 coverage.out >> coverage-all.out;\
 		fi\

@@ -1,0 +1,39 @@
+{
+    "log-level": "info",
+    "manager": "mixed",
+    "standalone": false,
+    "scheduler": {
+	    "mesos-masters": ["127.0.0.1:5050"],
+	    "mesos-framwork-user": "root",
+	    "hostname": "",
+	    "local-healthcheck": false
+    },
+    "dns": {
+	    "enable-dns-proxy": false,
+	    "domain": "swan",
+	    "recurse_on": true,
+	    "ip": "0.0.0.0",
+	    "port": 53,
+	    "soarname": "",
+	    "soamname": "",
+	    "soaserial": 0,
+	    "soarefresh": 0,
+	    "soaretry": 0,
+	    "soaexpire": 0,
+	    "ttl": 0,
+	    "resolvers": ["114.114.114.114"],
+	    "exchange_timeout": 1
+    },
+    "httpListener": {
+	    "addr": "0.0.0.0:9999" ,
+	    "sock": "/var/run/swan.sock"
+    },
+    "ipam": {
+	    "store_path": "./data/"
+    },
+    "raft": {
+	    "cluster": "http://127.0.0.1.2221",
+	    "raftid": 1,
+	    "store_path": "./data/"
+    }
+}
