@@ -3,6 +3,7 @@ package manager
 import (
 	"fmt"
 
+	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/ns"
@@ -100,6 +101,9 @@ func (manager *Manager) Start(ctx context.Context) error {
 			return
 		}
 
+		managerRoute := NewRouter(manager)
+		manager.swanContext.ApiServer.AppendRouter(managerRoute)
+
 		errCh <- manager.swanContext.ApiServer.ListenAndServe()
 	}()
 
@@ -114,13 +118,19 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			newState := leadershipEvent.(raft.LeadershipState)
 
 			var cancelFunc context.CancelFunc
+			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
+				log.G(ctx).Info("Now i become a leader !!!")
 				sechedCtx, cancel := context.WithCancel(ctx)
 				cancelFunc = cancel
 				manager.sched.Start(sechedCtx)
+				log.G(ctx).Info("Scheduler has been started")
+
 			} else if newState == raft.IsFollower {
+				log.G(ctx).Info("Now i become a follower !!!")
 				if cancelFunc != nil {
 					cancelFunc()
+					log.G(ctx).Info("Scheduler has been stopped")
 				}
 				cancelFunc = nil
 			}

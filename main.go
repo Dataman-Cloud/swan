@@ -129,7 +129,9 @@ func main() {
 
 		node, _ := NewNode(config, db)
 		go func() {
-			node.Start(context.Background())
+			if err := node.Start(context.Background()); err != nil {
+				logrus.Errorf("strart node got error: %s", err.Error())
+			}
 		}()
 
 		waitForSignals(config.HttpListener.UnixAddr)
