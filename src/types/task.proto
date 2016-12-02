@@ -45,4 +45,5 @@ message Task {
 message PortMappings {
     uint32 port = 1;
     string protocol = 2;
+    string name = 3;
 }

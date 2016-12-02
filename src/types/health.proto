@@ -21,11 +21,11 @@ message HealthCheck {
     string appid = 4 [(gogoproto.customname) = "AppID"];
     string protocol = 5;
     int32 port = 6;
-    int32 portIndex = 7;
-    Command command = 8;
-    string path = 9;
-    double delaySeconds = 10;
-    uint32 consecutiveFailures = 11;
+    int32 portIndex = 7 ; 
+    string portName = 8 ;
+    Command command = 9;
+    string path = 10;
+    uint32 maxConsecutiveFailures = 11;
     double gracePeriodSeconds = 12;
     double intervalSeconds = 13;
     double timeoutSeconds = 14;
