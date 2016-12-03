@@ -71,6 +71,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 			task.PortMappings = append(task.PortMappings, &types.PortMappings{
 				Port:     uint32(portMapping.ContainerPort),
 				Protocol: portMapping.Protocol,
+				Name:     portMapping.Name,
 			})
 		}
 	}
@@ -96,7 +97,7 @@ func (s *Scheduler) BuildTask(offer *mesos.Offer, version *types.Version, name s
 		task.KillPolicy = version.KillPolicy
 	}
 
-	if version.HealthChecks != nil {
+	if len(version.HealthChecks) > 0 {
 		task.HealthChecks = version.HealthChecks
 	}
 
@@ -194,6 +195,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 			logrus.Errorf("No ports resource defined")
 			break
 		}
+
 		for _, m := range task.PortMappings {
 			hostPort := ports[s.TaskLaunched]
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
@@ -203,37 +205,7 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 					Protocol:      proto.String(m.Protocol),
 				},
 			)
-			if len(task.HealthChecks) > 0 {
-				for _, healthCheck := range task.HealthChecks {
-					protocol := strings.ToLower(healthCheck.Protocol)
-					if protocol == "http" {
-						taskInfo.HealthCheck = &mesos.HealthCheck{
-							Type: mesos.HealthCheck_HTTP.Enum(),
-							Http: &mesos.HealthCheck_HTTPCheckInfo{
-								Scheme:   proto.String("http"),
-								Port:     proto.Uint32(uint32(hostPort)),
-								Path:     &healthCheck.Path,
-								Statuses: []uint32{uint32(200)},
-							},
-						}
-					}
 
-					if protocol == "tcp" {
-						taskInfo.HealthCheck = &mesos.HealthCheck{
-							Type: mesos.HealthCheck_TCP.Enum(),
-							Tcp: &mesos.HealthCheck_TCPCheckInfo{
-								Port: proto.Uint32(uint32(hostPort)),
-							},
-						}
-					}
-
-					taskInfo.HealthCheck.DelaySeconds = proto.Float64(healthCheck.DelaySeconds)
-					taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
-					taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
-					taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
-					taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
-				}
-			}
 			taskInfo.Resources = append(taskInfo.Resources, &mesos.Resource{
 				Name: proto.String("ports"),
 				Type: mesos.Value_RANGES.Enum(),
@@ -257,6 +229,66 @@ func (s *Scheduler) BuildTaskInfo(offer *mesos.Offer, resources []*mesos.Resourc
 	default:
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 
+	}
+
+	if len(task.HealthChecks) > 0 {
+		for _, healthCheck := range task.HealthChecks {
+			if healthCheck.PortIndex < 0 || int(healthCheck.PortIndex) > len(taskInfo.Container.Docker.PortMappings) {
+				healthCheck.PortIndex = 0
+			}
+
+			hostPort := proto.Uint32(0)
+
+			for _, portMapping := range taskInfo.Container.Docker.PortMappings {
+				if portMapping.ContainerPort == proto.Uint32(uint32(healthCheck.Port)) {
+					hostPort = portMapping.HostPort
+				}
+			}
+
+			if healthCheck.PortName != "" {
+				for _, portMapping := range task.PortMappings {
+					if portMapping.Name == healthCheck.PortName {
+						containerPort := portMapping.Port
+						for _, portMapping := range taskInfo.Container.Docker.PortMappings {
+							if containerPort == *portMapping.ContainerPort {
+								hostPort = portMapping.HostPort
+							}
+						}
+					}
+				}
+			}
+
+			if *hostPort == 0 {
+				hostPort = taskInfo.Container.Docker.PortMappings[healthCheck.PortIndex].HostPort
+			}
+
+			protocol := strings.ToLower(healthCheck.Protocol)
+			if protocol == "http" {
+				taskInfo.HealthCheck = &mesos.HealthCheck{
+					Type: mesos.HealthCheck_HTTP.Enum(),
+					Http: &mesos.HealthCheck_HTTPCheckInfo{
+						Scheme:   proto.String("http"),
+						Port:     hostPort,
+						Path:     &healthCheck.Path,
+						Statuses: []uint32{uint32(200)},
+					},
+				}
+			}
+
+			if protocol == "tcp" {
+				taskInfo.HealthCheck = &mesos.HealthCheck{
+					Type: mesos.HealthCheck_TCP.Enum(),
+					Tcp: &mesos.HealthCheck_TCPCheckInfo{
+						Port: hostPort,
+					},
+				}
+			}
+
+			taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
+			taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
+			taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.MaxConsecutiveFailures)
+			taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
+		}
 	}
 
 	return &taskInfo
