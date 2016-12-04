@@ -1,6 +1,7 @@
 package state
 
 import (
+	"errors"
 	"fmt"
 	"time"
 
@@ -18,10 +19,12 @@ var (
 )
 
 const (
-	APP_STATE_NORMAL            = "normal"
-	APP_STATE_SCLAEING          = "sclaling"
-	APP_STATE_MARK_FOR_DELETION = "deleting"
-	APP_STATE_MARK_FOR_UPDATING = "updating"
+	APP_STATE_NORMAL              = "normal"
+	APP_STATE_MARK_FOR_CREATING   = "creating"
+	APP_STATE_MARK_FOR_DELETION   = "deleting"
+	APP_STATE_MARK_FOR_UPDATING   = "updating"
+	APP_STATE_MARK_FOR_SCALE_UP   = "scale_up"
+	APP_STATE_MARK_FOR_SCALE_DOWN = "scale_down"
 )
 
 type App struct {
@@ -58,7 +61,7 @@ func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *schedu
 		Created: time.Now(),
 		Updated: time.Now(),
 
-		State: APP_STATE_NORMAL,
+		State: APP_STATE_MARK_FOR_CREATING,
 	}
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
@@ -70,6 +73,41 @@ func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *schedu
 	}
 
 	return app, nil
+}
+
+// also need user pass ip here
+func (app *App) ScaleUp(to int) error {
+	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
+	if to <= int(app.CurrentVersion.Instances) {
+		return errors.New("scale up expected instances size no less than current size")
+	}
+
+	for i := int(app.CurrentVersion.Instances); i < to; i++ {
+		slot := NewSlot(app, app.CurrentVersion, i)
+		app.Slots = append(app.Slots, slot)
+		app.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
+	}
+	app.CurrentVersion.Instances = int32(to)
+	app.Updated = time.Now()
+
+	return nil
+}
+
+func (app *App) ScaleDown(to int) error {
+	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
+	if to >= int(app.CurrentVersion.Instances) {
+		return errors.New("scale down expected instances size no bigger than current size")
+	}
+
+	for i := int(app.CurrentVersion.Instances); i > to; i-- {
+		slot := app.Slots[i-1]
+		slot.SetState(SLOT_STATE_PENDING_KILL)
+	}
+
+	app.CurrentVersion.Instances = int32(to)
+	app.Updated = time.Now()
+
+	return nil
 }
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
@@ -89,19 +127,6 @@ func (app *App) SetState(state string) {
 
 func (app *App) StateIs(state string) bool {
 	return app.State == state
-}
-
-// scale a application, both up and down
-// provide enough ip if mode is fixed
-func (app *App) Scale(version *types.Version) error {
-	err := app.checkProposedVersionValid(version)
-	if err != nil {
-		panic(err)
-	}
-
-	app.ProposedVersion = version
-	// succedding operations
-	return nil
 }
 
 func (app *App) Update(version *types.Version) error {
@@ -149,4 +174,44 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 // TODO
 func (app *App) PersistToStorage() error {
 	return nil
+}
+
+func (app *App) InvalidateSlots() {
+	switch app.State {
+	case APP_STATE_MARK_FOR_DELETION:
+		slotLen := len(app.Slots)
+		for i := slotLen; i >= 0; i-- {
+			slot := app.Slots[i]
+			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+				app.Slots = app.Slots[0:i]
+				// TODO remove slot from OfferAllocator
+			}
+		}
+	case APP_STATE_MARK_FOR_CREATING:
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	case APP_STATE_MARK_FOR_SCALE_UP:
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	case APP_STATE_MARK_FOR_SCALE_DOWN:
+		slotLen := len(app.Slots)
+		for i := slotLen - 1; i >= 0; i-- {
+			slot := app.Slots[i]
+			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+				app.Slots = app.Slots[0:i]
+				fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+				// TODO remove slot from OfferAllocator
+			}
+		}
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	default:
+
+	}
 }

@@ -61,6 +61,9 @@ type Slot struct {
 	AgentHostName string
 
 	resourceReservationLock sync.Mutex
+
+	MarkForDeletion bool
+	MarkForUpdate   bool
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
@@ -73,6 +76,8 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.Scheduler.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
+		MarkForUpdate:           false,
+		MarkForDeletion:         false,
 	}
 
 	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
@@ -121,10 +126,12 @@ func (slot *Slot) StateIs(state string) bool {
 
 func (slot *Slot) SetState(state string) error {
 	slot.State = state
+
 	logrus.Infof("setting state for slot %s to %s", slot.Id, slot.State)
 
 	switch slot.State {
 	case SLOT_STATE_PENDING_KILL:
+		slot.MarkForDeletion = true
 		slot.CurrentTask.Kill()
 
 	case SLOT_STATE_TASK_KILLED:
@@ -136,5 +143,6 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
+	slot.App.InvalidateSlots()
 	return nil
 }

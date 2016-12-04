@@ -63,3 +63,19 @@ func (engine *Engine) ListApps() []*state.App {
 
 	return apps
 }
+
+func (engine *Engine) ScaleUp(appId string, to int) error {
+	app, appExists := engine.Apps[appId]
+	if !appExists {
+		return errors.New("app not exists")
+	}
+	return app.ScaleUp(to)
+}
+
+func (engine *Engine) ScaleDown(appId string, to int) error {
+	app, appExists := engine.Apps[appId]
+	if !appExists {
+		return errors.New("app not exists")
+	}
+	return app.ScaleDown(to)
+}

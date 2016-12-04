@@ -35,9 +35,11 @@ func (api *Api) Start(ctx context.Context) error {
 	group.POST("/apps", api.CreateApp)
 	group.GET("/apps/:app_id", api.GetApp)
 	group.DELETE("/apps/:app_id", api.DeleteApp)
-	group.POST("/apps/:app_id/update", api.GetApp)
-	group.POST("/apps/:app_id/scale", api.GetApp)
+	group.PUT("/apps/:app_id/scale_up", api.ScaleUp)
+	group.PUT("/apps/:app_id/scale_down", api.ScaleDown)
+
 	group.POST("/apps/:app_id/rollback", api.GetApp)
+	group.POST("/apps/:app_id/update", api.GetApp)
 
 	group.GET("/apps/:app_id/tasks", api.GetApp)
 	group.DELETE("/apps/:app_id/tasks", api.GetApp) // pending
@@ -80,6 +82,7 @@ func (api *Api) ListApp(c *gin.Context) {
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
+			State:             app.State,
 		})
 	}
 
@@ -103,6 +106,7 @@ func (api *Api) GetApp(c *gin.Context) {
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
+			State:             app.State,
 		}
 
 		appRet.Versions = make([]string, 0)
@@ -113,6 +117,41 @@ func (api *Api) GetApp(c *gin.Context) {
 		appRet.Tasks = FilterTasksFromApp(app)
 
 		c.JSON(http.StatusOK, gin.H{"app": appRet})
+	}
+}
+
+func (api *Api) ScaleDown(c *gin.Context) {
+	var param struct {
+		To int `json:"to"`
+	}
+
+	if c.BindJSON(&param) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{})
+		return
+	}
+
+	err := api.Engine.ScaleDown(c.Param("app_id"), param.To)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{})
+	}
+}
+
+func (api *Api) ScaleUp(c *gin.Context) {
+	var param struct {
+		To int `json:"to"`
+	}
+	if c.BindJSON(&param) != nil {
+		c.JSON(http.StatusBadRequest, gin.H{})
+		return
+	}
+
+	err := api.Engine.ScaleUp(c.Param("app_id"), param.To)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{})
 	}
 }
 
