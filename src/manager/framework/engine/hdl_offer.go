@@ -40,7 +40,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 
 				} else {
 					// put the slot back into the queue, in the end
-					h.EngineRef.Allocator.AppendPendingSlot(slot)
+					h.EngineRef.Allocator.PutSlotBackToPendingQueue(slot)
 				}
 			}
 			LaunchTaskInfos(h, offer, taskInfos)

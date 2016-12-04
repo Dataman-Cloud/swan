@@ -85,13 +85,17 @@ func (engine *Engine) Run(ctx context.Context) error {
 		case e := <-engine.Scheduler.MesosEventChan:
 			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
 			engine.handlerMesosEvent(e)
+
 		case e := <-engine.userEventChan:
 			fmt.Println(e)
 			logrus.WithFields(logrus.Fields{"user event": "yes"}).Debugf("")
+
 		case call := <-engine.MesosCallChan:
 			engine.handlerMesosCall(call)
+
 		case e := <-engine.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
+
 		case <-engine.heartbeater.C: // heartbeat timeout for now
 
 		case <-engine.stopC:

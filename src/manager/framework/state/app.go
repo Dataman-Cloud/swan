@@ -39,7 +39,7 @@ func NewApp(version *types.Version, allocator *OfferAllocator) (*App, error) {
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
 		app.Slots = append(app.Slots, slot)
-		app.OfferAllocatorRef.AppendPendingSlot(slot)
+		app.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
 	}
 
 	return app, nil

@@ -28,7 +28,7 @@ func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handle
 }
 
 func (h *Handler) Process() {
-	// remove this handler
+	// remove this handler handlerManager
 	defer func() {
 		h.Manager.RemoveHandler(h.Id)
 	}()

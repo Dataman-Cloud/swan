@@ -52,6 +52,8 @@ func (m *HandlerManager) Handle(e *event.MesosEvent) *Handler {
 	m.handlers[handlerId] = h
 	m.lock.Unlock()
 
+	// make the following Process statement timeoutable
+	// should pass a TimeoutContext in
 	go h.Process()
 
 	return h

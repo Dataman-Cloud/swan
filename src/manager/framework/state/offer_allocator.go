@@ -39,7 +39,7 @@ func (allocator *OfferAllocator) NextPendingOffer() *Slot {
 	return slot
 }
 
-func (allocator *OfferAllocator) AppendPendingSlot(slot *Slot) {
+func (allocator *OfferAllocator) PutSlotBackToPendingQueue(slot *Slot) {
 	allocator.pendingOfferWriteLock.Lock()
 	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots, slot)
 	allocator.pendingOfferWriteLock.Unlock()
