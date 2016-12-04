@@ -48,8 +48,8 @@ type TaskHistory struct {
 	AgentId       string `json:"agentId,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
-	State  string `json:"state,omitempty"`
-	Reason string `json:"reason,omitempty"`
-	Stdout string `json:"stdout,omitempty"`
-	Stderr string `json:"stderr,omitempty"`
+	State      string `json:"state,omitempty"`
+	ExitReason string `json:"exitReason,omitempty"`
+	Stdout     string `json:"stdout,omitempty"`
+	Stderr     string `json:"stderr,omitempty"`
 }

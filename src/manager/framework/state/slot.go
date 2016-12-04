@@ -25,8 +25,8 @@ type Slot struct {
 	Version *types.Version
 	State   string
 
-	CurrentTask  *Task
-	TasksHistory []*Task
+	CurrentTask *Task
+	TaskHistory []*Task
 
 	OfferId       string
 	AgentId       string
@@ -38,12 +38,12 @@ type Slot struct {
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
 	slot := &Slot{
-		Index:        index,
-		App:          app,
-		Version:      version,
-		TasksHistory: make([]*Task, 0),
-		State:        SLOT_STATE_PENDING_OFFER,
-		Id:           fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.ClusterId), // should be app.AppId
+		Index:       index,
+		App:         app,
+		Version:     version,
+		TaskHistory: make([]*Task, 0),
+		State:       SLOT_STATE_PENDING_OFFER,
+		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
 	}

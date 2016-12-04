@@ -124,5 +124,37 @@ func CheckVersion(version *types.Version) error {
 
 func FilterTasksFromApp(app *state.App) []*Task {
 	tasks := make([]*Task, 0)
+	for _, slot := range app.Slots {
+		task := &Task{ // aka Slot
+			ID:            slot.Id,
+			AppId:         slot.App.AppId, // either Name or Id, rename AppId later
+			VersionId:     slot.Version.ID,
+			Status:        string(slot.State),
+			OfferId:       slot.OfferId,
+			AgentId:       slot.AgentId,
+			AgentHostname: slot.AgentHostName,
+			History:       make([]*TaskHistory, 0), // aka Task
+		}
+
+		if len(slot.TaskHistory) > 0 {
+			for _, v := range slot.TaskHistory {
+				staleTask := &TaskHistory{
+					State:         v.State,
+					OfferId:       v.OfferId,
+					AgentId:       v.AgentId,
+					AgentHostname: v.AgentHostName,
+
+					Stderr:     v.Stderr,
+					Stdout:     v.Stdout,
+					ExitReason: v.ExitReason,
+				}
+
+				task.History = append(task.History, staleTask)
+			}
+		}
+
+		tasks = append(tasks, task)
+	}
+
 	return tasks
 }
