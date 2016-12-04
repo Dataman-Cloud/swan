@@ -40,15 +40,21 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 
 	case mesos.TaskState_TASK_FINISHED:
 		logrus.Infof("Task Finished, message: %s", taskStatus.GetMessage())
+		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_FINISHED)
+
 	case mesos.TaskState_TASK_FAILED:
 		logrus.Infof("Task Failed, message: %s", taskStatus.GetMessage())
 		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_FAILED)
+
 	case mesos.TaskState_TASK_KILLED:
 		logrus.Infof("Task Killed, message: %s", taskStatus.GetMessage())
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_FAILED)
+		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_KILLED)
+
 	case mesos.TaskState_TASK_LOST:
 		logrus.Infof("Task Lost, message: %s", taskStatus.GetMessage())
 	}
+
+	h.EngineRef.InvalidateApps()
 
 	return h, nil
 }

@@ -13,7 +13,7 @@ func (engine *Engine) CreateApp(version *types.Version) error {
 		return errors.New("app already exists")
 	}
 
-	app, err := state.NewApp(version, engine.Allocator, engine.Scheduler.ClusterId)
+	app, err := state.NewApp(version, engine.Allocator, engine.Scheduler)
 	if err != nil {
 		return err
 	}

@@ -50,7 +50,7 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 			}
 
 			for _, c := range h.Response.Calls {
-				h.EngineRef.MesosCallChan <- c
+				h.EngineRef.Scheduler.MesosCallChan <- c
 			}
 
 			return

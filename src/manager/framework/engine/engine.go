@@ -20,7 +20,6 @@ type Engine struct {
 	scontext         *swancontext.SwanContext
 	heartbeater      *time.Ticker
 	userEventChan    chan *event.UserEvent
-	MesosCallChan    chan *sched.Call
 	mesosFailureChan chan error
 
 	handlerManager *HandlerManager
@@ -39,7 +38,6 @@ func NewEngine(config util.SwanConfig) *Engine {
 		Scheduler:     scheduler.NewScheduler(config.Scheduler),
 		heartbeater:   time.NewTicker(10 * time.Second),
 		userEventChan: make(chan *event.UserEvent, 1024), // TODO
-		MesosCallChan: make(chan *sched.Call, 1024),      // 1024 TODO
 
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
@@ -58,6 +56,7 @@ func NewEngine(config util.SwanConfig) *Engine {
 
 	engine.handlerManager = NewHanlderManager(engine, RegiserFun)
 	engine.Allocator = state.NewOfferAllocator()
+
 	return engine
 }
 
@@ -69,6 +68,13 @@ func (engine *Engine) Stop() error {
 
 // revive from crash or rotate from leader change
 func (engine *Engine) Start() error {
+
+	// temp solution
+	go func() {
+		ctx, _ := context.WithCancel(context.Background())
+		engine.Scheduler.Start(ctx)
+	}()
+
 	engine.Run(context.Background()) // context as a placeholder
 	return nil
 }
@@ -90,9 +96,6 @@ func (engine *Engine) Run(ctx context.Context) error {
 			fmt.Println(e)
 			logrus.WithFields(logrus.Fields{"user event": "yes"}).Debugf("")
 
-		case call := <-engine.MesosCallChan:
-			engine.handlerMesosCall(call)
-
 		case e := <-engine.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
 
@@ -109,13 +112,17 @@ func (engine *Engine) handlerMesosEvent(event *event.MesosEvent) {
 	engine.handlerManager.Handle(event)
 }
 
-func (engine *Engine) handlerMesosCall(call *sched.Call) {
-	logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("")
-	resp, err := engine.Scheduler.Send(call)
-	if err != nil {
-		logrus.Errorf("%s", err)
+func (engine *Engine) InvalidateApps() {
+	appsPendingRemove := make([]string, 0)
+	for _, app := range engine.Apps {
+		if app.CanBeCleanAfterDeletion() {
+			appsPendingRemove = append(appsPendingRemove, app.AppId)
+		}
 	}
-	if resp.StatusCode != 202 {
-		logrus.Infof("send response not 202 but %d", resp.StatusCode)
+
+	engine.appLock.Lock()
+	defer engine.appLock.Unlock()
+	for _, appId := range appsPendingRemove {
+		delete(engine.Apps, appId)
 	}
 }

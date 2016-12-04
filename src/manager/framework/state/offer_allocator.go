@@ -8,8 +8,9 @@ import (
 )
 
 type OfferAllocator struct {
-	PendingOfferSlots     []*Slot
-	AllocatedOffer        map[string]*mesos.OfferID // record allocated offers that map slot
+	PendingOfferSlots []*Slot
+	AllocatedOffer    map[string]*mesos.OfferID // record allocated offers that map slot
+
 	pendingOfferWriteLock sync.Mutex
 	allocatedOfferLock    sync.Mutex
 }

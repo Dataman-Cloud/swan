@@ -15,6 +15,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
 	"github.com/golang/protobuf/proto"
+	"golang.org/x/net/context"
 )
 
 type Scheduler struct {
@@ -26,6 +27,8 @@ type Scheduler struct {
 	lastHearBeatTime time.Time
 	config           util.Scheduler
 
+	MesosCallChan chan *sched.Call
+
 	// TODO make sure this chan doesn't explode
 	MesosEventChan chan *event.MesosEvent
 	Framework      *mesos.FrameworkInfo
@@ -36,6 +39,7 @@ func NewScheduler(config util.Scheduler) *Scheduler {
 		mastersUrls:    []string{"192.168.1.175:5050"},
 		config:         config,
 		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
+		MesosCallChan:  make(chan *sched.Call, 1024),
 	}
 }
 
@@ -166,4 +170,22 @@ func (s *Scheduler) Send(call *sched.Call) (*http.Response, error) {
 
 func (s *Scheduler) AddEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
+}
+
+func (s *Scheduler) Start(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case call := <-s.MesosCallChan:
+			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("")
+			resp, err := s.Send(call)
+			if err != nil {
+				logrus.Errorf("%s", err)
+			}
+			if resp.StatusCode != 202 {
+				logrus.Infof("send response not 202 but %d", resp.StatusCode)
+			}
+		}
+	}
 }

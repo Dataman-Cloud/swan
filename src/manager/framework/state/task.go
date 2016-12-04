@@ -2,6 +2,7 @@ package state
 
 import (
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -180,4 +181,32 @@ func createRangeResource(name string, begin, end uint64) *mesos.Resource {
 			},
 		},
 	}
+}
+
+func (task *Task) Kill() {
+	logrus.Infof("Kill task %s", task.Slot.Id)
+	call := &sched.Call{
+		FrameworkId: task.App.Scheduler.Framework.GetId(),
+		Type:        sched.Call_KILL.Enum(),
+		Kill: &sched.Call_Kill{
+			TaskId: &mesos.TaskID{
+				Value: proto.String(task.Slot.Id),
+			},
+			AgentId: &mesos.AgentID{
+				Value: &task.AgentId,
+			},
+		},
+	}
+
+	if task.Version.KillPolicy != nil {
+		if task.Version.KillPolicy.Duration != 0 {
+			call.Kill.KillPolicy = &mesos.KillPolicy{
+				GracePeriod: &mesos.DurationInfo{
+					Nanoseconds: proto.Int64(task.Version.KillPolicy.Duration * 1000 * 1000),
+				},
+			}
+		}
+	}
+
+	task.App.Scheduler.MesosCallChan <- call
 }

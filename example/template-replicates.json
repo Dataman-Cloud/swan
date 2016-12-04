@@ -1,10 +1,10 @@
 {
-  "appId": "nginx0052",
+  "appId": "nginx0051",
   "cmd": null,
   "cpus": 0.01,
   "mem": 5,
   "disk": 0,
-  "instances": 5,
+  "instances": 3,
   "constraints": [ 
 	  "hostname:UNIQUE",
           "vcluster:LIKE:dataman"

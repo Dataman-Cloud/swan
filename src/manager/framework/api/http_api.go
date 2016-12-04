@@ -34,6 +34,7 @@ func (api *Api) Start(ctx context.Context) error {
 	group.GET("/apps", api.ListApp)
 	group.POST("/apps", api.CreateApp)
 	group.GET("/apps/:app_id", api.GetApp)
+	group.DELETE("/apps/:app_id", api.DeleteApp)
 	group.POST("/apps/:app_id/update", api.GetApp)
 	group.POST("/apps/:app_id/scale", api.GetApp)
 	group.POST("/apps/:app_id/rollback", api.GetApp)
@@ -75,7 +76,7 @@ func (api *Api) ListApp(c *gin.Context) {
 			RunningInstances:  app.RunningInstances(),
 			RollbackInstances: app.RollbackInstances(),
 			RunAs:             version.RunAs,
-			ClusterId:         app.ClusterId,
+			ClusterId:         app.Scheduler.ClusterId,
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
@@ -98,7 +99,7 @@ func (api *Api) GetApp(c *gin.Context) {
 			RunningInstances:  app.RunningInstances(),
 			RollbackInstances: app.RollbackInstances(),
 			RunAs:             version.RunAs,
-			ClusterId:         app.ClusterId,
+			ClusterId:         app.Scheduler.ClusterId,
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
@@ -112,6 +113,15 @@ func (api *Api) GetApp(c *gin.Context) {
 		appRet.Tasks = FilterTasksFromApp(app)
 
 		c.JSON(http.StatusOK, gin.H{"app": appRet})
+	}
+}
+
+func (api *Api) DeleteApp(c *gin.Context) {
+	err := api.Engine.DeleteApp(c.Param("app_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{})
 	}
 }
 

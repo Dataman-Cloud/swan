@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/types"
+
+	"github.com/Sirupsen/logrus"
 )
 
 type AppMode string
@@ -12,6 +15,13 @@ type AppMode string
 var (
 	APP_MODE_FIXED      AppMode = "fixed"
 	APP_MODE_REPLICATES AppMode = "replicates"
+)
+
+const (
+	APP_STATE_NORMAL            = "normal"
+	APP_STATE_SCLAEING          = "sclaling"
+	APP_STATE_MARK_FOR_DELETION = "deleting"
+	APP_STATE_MARK_FOR_UPDATING = "updating"
 )
 
 type App struct {
@@ -31,20 +41,24 @@ type App struct {
 	Created           time.Time
 	Updated           time.Time
 
-	ClusterId string
+	State string
+
+	Scheduler *scheduler.Scheduler
 }
 
-func NewApp(version *types.Version, allocator *OfferAllocator, ClusterId string) (*App, error) {
+func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *scheduler.Scheduler) (*App, error) {
 	app := &App{
 		Versions:          []*types.Version{version},
 		Slots:             make([]*Slot, 0),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
-		ClusterId:         ClusterId,
+		Scheduler:         Scheduler,
 
 		Created: time.Now(),
 		Updated: time.Now(),
+
+		State: APP_STATE_NORMAL,
 	}
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
@@ -60,7 +74,21 @@ func NewApp(version *types.Version, allocator *OfferAllocator, ClusterId string)
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
+	app.SetState(APP_STATE_MARK_FOR_DELETION)
+	for _, slot := range app.Slots {
+		slot.SetState(SLOT_STATE_PENDING_KILL)
+	}
+
 	return nil
+}
+
+func (app *App) SetState(state string) {
+	app.State = state
+	logrus.Infof("app %s now has state %s", app.AppId, app.State)
+}
+
+func (app *App) StateIs(state string) bool {
+	return app.State == state
 }
 
 // scale a application, both up and down
@@ -105,4 +133,20 @@ func (app *App) RunningInstances() int {
 
 func (app *App) RollbackInstances() int {
 	return 0
+}
+
+func (app *App) CanBeCleanAfterDeletion() bool {
+	killedSlotCount := 0
+	for _, slot := range app.Slots {
+		if slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) {
+			killedSlotCount += 1
+		}
+	}
+
+	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && killedSlotCount == int(app.CurrentVersion.Instances)
+}
+
+// TODO
+func (app *App) PersistToStorage() error {
+	return nil
 }
