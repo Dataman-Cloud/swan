@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/health"
 	"github.com/Dataman-Cloud/swan/src/manager/sched/client"
@@ -17,6 +19,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
 	"github.com/golang/protobuf/proto"
+	"github.com/samuel/go-zookeeper/zk"
 )
 
 // Scheduler represents a Mesos scheduler
@@ -69,8 +72,20 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 // start starts the scheduler and subscribes to event stream
 func (s *Scheduler) Start() error {
 	var err error
-	s.framework, err = createOrLoadFrameworkInfo(s.config, s.store)
-	state, err := stateFromMasters(s.config.MesosMasters)
+	s.framework, err = buildFrameworkInfo(s.config, s.store)
+	masters := make([]string, 0)
+	if strings.HasPrefix(s.config.MesosMasters, "zk://") {
+		master, err := getMasterFromZK(s.config.MesosMasters)
+		if err != nil {
+			logrus.Error(err)
+			return err
+		}
+		masters = append(masters, master)
+	} else {
+		masters = strings.Split(s.config.MesosMasters, ",")
+	}
+
+	state, err := stateFromMasters(masters)
 	if err != nil {
 		logrus.Errorf("%s, check your mesos mastger configuration", err)
 		return err
@@ -92,9 +107,8 @@ func (s *Scheduler) Start() error {
 	return nil
 }
 
-// create frameworkInfo on initial start
-// OR load preexisting frameworkId make mesos believe it's a RESTART of framework
-func createOrLoadFrameworkInfo(config util.Scheduler, store store.Store) (*mesos.FrameworkInfo, error) {
+// build frameworkInfo on initial start
+func buildFrameworkInfo(config util.Scheduler, store store.Store) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
 		Name:            proto.String("swan"),
@@ -126,6 +140,39 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 
 	mesos := megos.NewClient(masterUrls, nil)
 	return mesos.GetStateFromCluster()
+}
+
+func getMasterFromZK(zks string) (string, error) {
+	masterInfo := new(mesos.MasterInfo)
+
+	url, err := url.Parse(zks)
+	if err != nil {
+		return "", err
+	}
+
+	conn, _, err := zk.Connect(strings.Split(url.Host, ","), time.Second)
+	defer conn.Close()
+	if err != nil {
+		return "", fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+	}
+
+	// find mesos master
+	children, _, err := conn.Children(url.Path)
+	if err != nil {
+		return "", fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+	}
+
+	for _, name := range children {
+		data, _, err := conn.Get(url.Path + "/" + name)
+		if err != nil {
+			return "", fmt.Errorf("%s", err.Error())
+		}
+		if err := proto.Unmarshal(data, masterInfo); err != nil {
+			break
+		}
+	}
+
+	return fmt.Sprintf("%s:%d", masterInfo.GetHostname(), masterInfo.GetPort()), nil
 }
 
 func (s *Scheduler) Stop() {

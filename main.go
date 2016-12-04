@@ -68,8 +68,9 @@ func main() {
 			Usage: "Unix socket for listening",
 		},
 		cli.StringFlag{
-			Name:  "masters",
-			Usage: "masters address <ip:port>,<ip:port>...",
+			Name:  "master",
+			Value: "127.0.0.1:5050",
+			Usage: "master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
 		},
 		cli.StringFlag{
 			Name:  "user",
