@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -46,6 +47,8 @@ func NewApp(version *types.Version, allocator *OfferAllocator, ClusterId string)
 		Updated: time.Now(),
 	}
 
+	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
 		app.Slots = append(app.Slots, slot)
@@ -90,7 +93,14 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 }
 
 func (app *App) RunningInstances() int {
-	return 0
+	runningInstances := 0
+	for _, slot := range app.Slots {
+		if slot.StateIs(SLOT_STATE_TASK_RUNNING) {
+			runningInstances += 1
+		}
+	}
+
+	return runningInstances
 }
 
 func (app *App) RollbackInstances() int {

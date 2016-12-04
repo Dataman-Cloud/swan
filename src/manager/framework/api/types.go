@@ -17,4 +17,39 @@ type App struct {
 	Created           time.Time `json:"created,omitempty"`
 	Updated           time.Time `json:"updated,omitempty"`
 	Mode              string    `json:"mode,omitempty"`
+
+	// use task for compatability now, should be slot here
+	Tasks    []*Task  `json:"tasks,omitempty"`
+	Versions []string `json:"versions,omitempty"`
+}
+
+// use task for compatability now, should be slot here
+// and together with task history
+type Task struct {
+	ID        string `json:"id,omitempty"`
+	AppId     string `json:"appId,omitempty"`
+	VersionId string `json:"versionId,omitempty"`
+
+	Status string `json:"status,omitempty"`
+
+	OfferId       string `json:"offerId,omitempty"`
+	AgentId       string `json:"agentId,omitempty"`
+	AgentHostname string `json:"agentHostname,omitempty"`
+
+	History []*TaskHistory `json:"history,omitempty"`
+}
+
+type TaskHistory struct {
+	ID        string `json:"id,omitempty"`
+	AppId     string `json:"appId,omitempty"`
+	VersionId string `json:"versionId,omitempty"`
+
+	OfferId       string `json:"offerId,omitempty"`
+	AgentId       string `json:"agentId,omitempty"`
+	AgentHostname string `json:"agentHostname,omitempty"`
+
+	State  string `json:"state,omitempty"`
+	Reason string `json:"reason,omitempty"`
+	Stdout string `json:"stdout,omitempty"`
+	Stderr string `json:"stderr,omitempty"`
 }

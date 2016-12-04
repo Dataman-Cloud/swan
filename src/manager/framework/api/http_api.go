@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/engine"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/gin-gonic/gin"
@@ -103,6 +104,13 @@ func (api *Api) GetApp(c *gin.Context) {
 			Mode:              string(app.Mode),
 		}
 
+		appRet.Versions = make([]string, 0)
+		for _, v := range app.Versions {
+			appRet.Versions = append(appRet.Versions, v.ID)
+		}
+
+		appRet.Tasks = FilterTasksFromApp(app)
+
 		c.JSON(http.StatusOK, gin.H{"app": appRet})
 	}
 }
@@ -112,4 +120,9 @@ func CheckVersion(version *types.Version) error {
 	// mode valid
 	// instance exists
 	return nil
+}
+
+func FilterTasksFromApp(app *state.App) []*Task {
+	tasks := make([]*Task, 0)
+	return tasks
 }

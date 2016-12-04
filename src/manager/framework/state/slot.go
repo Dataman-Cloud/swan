@@ -6,45 +6,49 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
-
-	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
 )
 
 const (
-	SLOT_STATE_PENDING_OFFER     = "pending_offer"
-	SLOT_STATE_TASK_DISPATCHED   = "task_dispatched"
-	SLOT_STATE_TASK_RUNING       = "task_running"
-	SLOT_STATE_TASK_FAILED       = "task_need_reschedue"
-	SLOT_STATE_TASK_RESCHEDULING = "task_rescheduling"
-	SLOT_STATE_TASK_STOPPING     = "task_stopping"
-	SLOT_STATE_TASK_STOPPED      = "task_stopped"
+	SLOT_STATE_PENDING_OFFER     = "slot_task_pending_offer"
+	SLOT_STATE_TASK_DISPATCHED   = "slot_task_dispatched"
+	SLOT_STATE_TASK_RUNNING      = "slot_task_running"
+	SLOT_STATE_TASK_FAILED       = "slot_task_need_reschedue"
+	SLOT_STATE_TASK_RESCHEDULING = "slot_task_rescheduling"
+	SLOT_STATE_TASK_STOPPING     = "slot_task_stopping"
+	SLOT_STATE_TASK_STOPPED      = "slot_task_stopped"
 )
 
 type Slot struct {
-	Id      int
-	Name    string
+	Index   int
+	Id      string
 	App     *App
 	Version *types.Version
 	State   string
 
-	RunningTask *Task
-	Tasks       []*Task
+	CurrentTask  *Task
+	TasksHistory []*Task
+
+	OfferId       string
+	AgentId       string
+	Ip            string
+	AgentHostName string
 
 	resourceReservationLock sync.Mutex
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
 	slot := &Slot{
-		Id:      index,
-		App:     app,
-		Version: version,
-		Tasks:   make([]*Task, 0),
-		State:   SLOT_STATE_PENDING_OFFER,
-		Name:    fmt.Sprintf("%d-%s", index, version.AppId), // should be app.AppId
+		Index:        index,
+		App:          app,
+		Version:      version,
+		TasksHistory: make([]*Task, 0),
+		State:        SLOT_STATE_PENDING_OFFER,
+		Id:           fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
 	}
+
+	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
 
 	return slot
 }
@@ -63,7 +67,7 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 	ow.MemUsed += slot.Version.Mem
 	ow.DiskUsed += slot.Version.Disk
 
-	return ow, slot.BuildTaskInfo(ow.Offer)
+	return ow, slot.CurrentTask.PrepareTaskInfo(ow.Offer)
 }
 
 func (slot *Slot) Resources() []*mesos.Resource {
@@ -84,13 +88,17 @@ func (slot *Slot) Resources() []*mesos.Resource {
 	return resources
 }
 
+func (slot *Slot) StateIs(state string) bool {
+	return slot.State == state
+}
+
 func (slot *Slot) SetState(state string) {
 	slot.State = state
 
 	switch slot.State {
 	case SLOT_STATE_TASK_DISPATCHED:
 		fmt.Println(slot.State)
-	case SLOT_STATE_TASK_RUNING:
+	case SLOT_STATE_TASK_RUNNING:
 		fmt.Println(slot.State)
 	case SLOT_STATE_TASK_FAILED:
 		fmt.Println(slot.State)
@@ -98,137 +106,4 @@ func (slot *Slot) SetState(state string) {
 	default:
 	}
 	// persist to db
-}
-
-func (slot *Slot) BuildTaskInfo(offer *mesos.Offer) *mesos.TaskInfo {
-	logrus.Infof("Prepared task for launch with offer %s", *offer.GetId().Value)
-	taskInfo := mesos.TaskInfo{
-		Name: proto.String(slot.Name),
-		TaskId: &mesos.TaskID{
-			Value: proto.String(slot.Name),
-		},
-		AgentId:   offer.AgentId,
-		Resources: slot.Resources(),
-		Command: &mesos.CommandInfo{
-			Shell: proto.Bool(false),
-			Value: nil,
-		},
-		Container: &mesos.ContainerInfo{
-			Type: mesos.ContainerInfo_DOCKER.Enum(),
-			Docker: &mesos.ContainerInfo_DockerInfo{
-				Image: &slot.Version.Container.Docker.Image,
-			},
-		},
-	}
-
-	taskInfo.Container.Docker.Privileged = &slot.Version.Container.Docker.Privileged
-	taskInfo.Container.Docker.ForcePullImage = &slot.Version.Container.Docker.ForcePullImage
-
-	for _, parameter := range slot.Version.Container.Docker.Parameters {
-		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
-			Key:   proto.String(parameter.Key),
-			Value: proto.String(parameter.Value),
-		})
-	}
-
-	for _, volume := range slot.Version.Container.Volumes {
-		mode := mesos.Volume_RO
-		if volume.Mode == "RW" {
-			mode = mesos.Volume_RW
-		}
-		taskInfo.Container.Volumes = append(taskInfo.Container.Volumes, &mesos.Volume{
-			ContainerPath: proto.String(volume.ContainerPath),
-			HostPath:      proto.String(volume.HostPath),
-			Mode:          &mode,
-		})
-	}
-
-	vars := make([]*mesos.Environment_Variable, 0)
-	for k, v := range slot.Version.Env {
-		vars = append(vars, &mesos.Environment_Variable{
-			Name:  proto.String(k),
-			Value: proto.String(v),
-		})
-	}
-
-	taskInfo.Command.Environment = &mesos.Environment{
-		Variables: vars,
-	}
-
-	if slot.Version.Labels != nil {
-		labels := make([]*mesos.Label, 0)
-		for k, v := range slot.Version.Labels {
-			labels = append(labels, &mesos.Label{
-				Key:   proto.String(k),
-				Value: proto.String(v),
-			})
-		}
-
-		taskInfo.Labels = &mesos.Labels{
-			Labels: labels,
-		}
-	}
-
-	switch slot.Version.Container.Docker.Network {
-	case "NONE":
-		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
-	case "HOST":
-		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
-	case "BRIDGE":
-		//ports := GetPorts(offer)
-		//if len(ports) == 0 {
-		//logrus.Errorf("No ports resource defined")
-		//break
-		//}
-		//for _, m := range task.PortMappings {
-		//hostPort := ports[s.TaskLaunched]
-		//taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
-		//&mesos.ContainerInfo_DockerInfo_PortMapping{
-		//HostPort:      proto.Uint32(uint32(hostPort)),
-		//ContainerPort: proto.Uint32(m.Port),
-		//Protocol:      proto.String(m.Protocol),
-		//},
-		//)
-		//taskInfo.Resources = append(taskInfo.Resources, &mesos.Resource{
-		//Name: proto.String("ports"),
-		//Type: mesos.Value_RANGES.Enum(),
-		//Ranges: &mesos.Value_Ranges{
-		//Range: []*mesos.Value_Range{
-		//{
-		//Begin: proto.Uint64(uint64(hostPort)),
-		//End:   proto.Uint64(uint64(hostPort)),
-		//},
-		//},
-		//},
-		//})
-		//}
-		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_BRIDGE.Enum()
-	default:
-		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
-	}
-
-	return &taskInfo
-}
-
-func createScalarResource(name string, value float64) *mesos.Resource {
-	return &mesos.Resource{
-		Name:   &name,
-		Type:   mesos.Value_SCALAR.Enum(),
-		Scalar: &mesos.Value_Scalar{Value: &value},
-	}
-}
-
-func createRangeResource(name string, begin, end uint64) *mesos.Resource {
-	return &mesos.Resource{
-		Name: &name,
-		Type: mesos.Value_RANGES.Enum(),
-		Ranges: &mesos.Value_Ranges{
-			Range: []*mesos.Value_Range{
-				{
-					Begin: proto.Uint64(begin),
-					End:   proto.Uint64(end),
-				},
-			},
-		},
-	}
 }

@@ -45,13 +45,13 @@ func (allocator *OfferAllocator) PutSlotBackToPendingQueue(slot *Slot) {
 	allocator.pendingOfferWriteLock.Unlock()
 }
 
-func (allocator *OfferAllocator) SetOfferIdForSlotName(offerId *mesos.OfferID, slotName string) {
+func (allocator *OfferAllocator) SetOfferIdForSlotId(offerId *mesos.OfferID, slotName string) {
 	allocator.allocatedOfferLock.Lock()
 	allocator.AllocatedOffer[slotName] = offerId
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) DeleteSlotNameOfferIdMap(offerId *mesos.OfferID) {
+func (allocator *OfferAllocator) DeleteSlotIdOfferIdMap(offerId *mesos.OfferID) {
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
 		if v.Value == offerId.Value {
@@ -64,7 +64,7 @@ func (allocator *OfferAllocator) DeleteSlotNameOfferIdMap(offerId *mesos.OfferID
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) RetriveSlotNameOfferId(offerId *mesos.OfferID) (string, error) {
+func (allocator *OfferAllocator) RetriveSlotIdOfferId(offerId *mesos.OfferID) (string, error) {
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
 		if v.Value == offerId.Value {

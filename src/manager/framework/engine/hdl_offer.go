@@ -35,7 +35,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 					// TODO the following code logic complex, need improvement
 					// offerWrapper cpu/mem/disk deduction recorded within the obj itself
 					_, taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
-					h.EngineRef.Allocator.SetOfferIdForSlotName(offer.GetId(), slot.Name)
+					h.EngineRef.Allocator.SetOfferIdForSlotId(offer.GetId(), slot.Id)
 					taskInfos = append(taskInfos, taskInfo)
 
 				} else {

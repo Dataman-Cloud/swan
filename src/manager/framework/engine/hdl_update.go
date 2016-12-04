@@ -36,7 +36,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	case mesos.TaskState_TASK_STAGING:
 	case mesos.TaskState_TASK_STARTING:
 	case mesos.TaskState_TASK_RUNNING:
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_RUNING)
+		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_RUNNING)
 
 	case mesos.TaskState_TASK_FINISHED:
 		logrus.Infof("Task Finished, message: %s", taskStatus.GetMessage())
