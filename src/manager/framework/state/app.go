@@ -203,7 +203,6 @@ func (app *App) InvalidateSlots() {
 			slot := app.Slots[i]
 			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
 				app.Slots = app.Slots[0:i]
-				fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
 				// TODO remove slot from OfferAllocator
 			}
 		}
