@@ -2,11 +2,13 @@ package engine
 
 import (
 	"sync"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/satori/go.uuid"
+	"golang.org/x/net/context"
 )
 
 var once sync.Once
@@ -52,9 +54,8 @@ func (m *HandlerManager) Handle(e *event.MesosEvent) *Handler {
 	m.handlers[handlerId] = h
 	m.lock.Unlock()
 
-	// make the following Process statement timeoutable
-	// should pass a TimeoutContext in
-	go h.Process()
+	timeoutCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
+	go h.Process(timeoutCtx)
 
 	return h
 }

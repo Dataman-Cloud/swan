@@ -19,7 +19,7 @@ import (
 
 type Scheduler struct {
 	// mesos framework related
-	clusterId        string
+	ClusterId        string
 	master           string
 	client           *MesosHttpClient
 	mastersUrls      []string
@@ -54,7 +54,7 @@ func (s *Scheduler) ConnectToMesosAndAcceptEvent() error {
 	if cluster == "" {
 		cluster = "Unnamed"
 	}
-	s.clusterId = cluster
+	s.ClusterId = cluster
 	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
 
 	if err := s.subscribe(); err != nil {

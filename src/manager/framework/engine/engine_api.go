@@ -13,7 +13,7 @@ func (engine *Engine) CreateApp(version *types.Version) error {
 		return errors.New("app already exists")
 	}
 
-	app, err := state.NewApp(version, engine.Allocator)
+	app, err := state.NewApp(version, engine.Allocator, engine.Scheduler.ClusterId)
 	if err != nil {
 		return err
 	}
@@ -53,4 +53,13 @@ func (engine *Engine) DeleteApp(appId string) error {
 		return errors.New("app not exists")
 	}
 	return app.Delete()
+}
+
+func (engine *Engine) ListApps() []*state.App {
+	apps := make([]*state.App, 0)
+	for _, v := range engine.Apps {
+		apps = append(apps, v)
+	}
+
+	return apps
 }

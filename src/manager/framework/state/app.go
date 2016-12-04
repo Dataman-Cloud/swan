@@ -1,6 +1,8 @@
 package state
 
 import (
+	"time"
+
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
@@ -25,15 +27,23 @@ type App struct {
 	Mode AppMode `json:"mode"` // fixed or repliactes
 
 	OfferAllocatorRef *OfferAllocator
+	Created           time.Time
+	Updated           time.Time
+
+	ClusterId string
 }
 
-func NewApp(version *types.Version, allocator *OfferAllocator) (*App, error) {
+func NewApp(version *types.Version, allocator *OfferAllocator, ClusterId string) (*App, error) {
 	app := &App{
 		Versions:          []*types.Version{version},
 		Slots:             make([]*Slot, 0),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
+		ClusterId:         ClusterId,
+
+		Created: time.Now(),
+		Updated: time.Now(),
 	}
 
 	for i := 0; i < int(version.Instances); i++ {
@@ -77,4 +87,12 @@ func (app *App) Update(version *types.Version) error {
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
 	return nil
+}
+
+func (app *App) RunningInstances() int {
+	return 0
+}
+
+func (app *App) RollbackInstances() int {
+	return 0
 }

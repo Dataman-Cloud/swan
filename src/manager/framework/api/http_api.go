@@ -64,6 +64,24 @@ func (api *Api) CreateApp(c *gin.Context) {
 }
 
 func (api *Api) ListApp(c *gin.Context) {
+	appsRet := make([]*App, 0)
+	for _, app := range api.Engine.ListApps() {
+		version := app.CurrentVersion
+		appsRet = append(appsRet, &App{
+			ID:                version.AppId,
+			Name:              version.AppId,
+			Instances:         int(version.Instances),
+			RunningInstances:  app.RunningInstances(),
+			RollbackInstances: app.RollbackInstances(),
+			RunAs:             version.RunAs,
+			ClusterId:         app.ClusterId,
+			Created:           app.Created,
+			Updated:           app.Updated,
+			Mode:              string(app.Mode),
+		})
+	}
+
+	c.JSON(http.StatusOK, gin.H{"apps": appsRet})
 }
 
 func (api *Api) GetApp(c *gin.Context) {
@@ -71,7 +89,21 @@ func (api *Api) GetApp(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
-		c.JSON(http.StatusOK, gin.H{"app": app.CurrentVersion})
+		version := app.CurrentVersion
+		appRet := &App{
+			ID:                version.AppId,
+			Name:              version.AppId,
+			Instances:         int(version.Instances),
+			RunningInstances:  app.RunningInstances(),
+			RollbackInstances: app.RollbackInstances(),
+			RunAs:             version.RunAs,
+			ClusterId:         app.ClusterId,
+			Created:           app.Created,
+			Updated:           app.Updated,
+			Mode:              string(app.Mode),
+		}
+
+		c.JSON(http.StatusOK, gin.H{"app": appRet})
 	}
 }
 
