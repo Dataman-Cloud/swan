@@ -24,10 +24,10 @@ type SwanConfig struct {
 }
 
 type Scheduler struct {
-	MesosMasters           []string `json:"mesos-masters"`
-	MesosFrameworkUser     string   `json:"mesos-framwork-user"`
-	Hostname               string   `json:"hostname"`
-	EnableLocalHealthcheck bool     `json:"local-healthcheck"`
+	MesosMasters           string `json:"mesos-masters"`
+	MesosFrameworkUser     string `json:"mesos-framwork-user"`
+	Hostname               string `json:"hostname"`
+	EnableLocalHealthcheck bool   `json:"local-healthcheck"`
 }
 
 type DNS struct {
@@ -100,8 +100,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("sock") != "" {
 		swanConfig.HttpListener.UnixAddr = c.String("sock")
 	}
-	if c.String("masters") != "" {
-		swanConfig.Scheduler.MesosMasters = []string{c.String("masters")}
+	if c.String("master") != "" {
+		swanConfig.Scheduler.MesosMasters = c.String("master")
 	}
 	if c.String("user") != "" {
 		swanConfig.Scheduler.MesosFrameworkUser = c.String("user")

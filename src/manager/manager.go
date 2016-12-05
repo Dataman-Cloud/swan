@@ -123,7 +123,10 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a leader !!!")
 				sechedCtx, cancel := context.WithCancel(ctx)
 				cancelFunc = cancel
-				manager.sched.Start(sechedCtx)
+				if err := manager.sched.Start(sechedCtx); err != nil {
+					log.G(ctx).Error("Scheduler started unsuccessful")
+					return
+				}
 				log.G(ctx).Info("Scheduler has been started")
 
 			} else if newState == raft.IsFollower {
