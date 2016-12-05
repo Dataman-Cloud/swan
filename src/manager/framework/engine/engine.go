@@ -112,10 +112,11 @@ func (engine *Engine) handlerMesosEvent(event *event.MesosEvent) {
 	engine.handlerManager.Handle(event)
 }
 
+// reevaluation of apps state, clean up stale apps
 func (engine *Engine) InvalidateApps() {
 	appsPendingRemove := make([]string, 0)
 	for _, app := range engine.Apps {
-		if app.CanBeCleanAfterDeletion() {
+		if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
 			appsPendingRemove = append(appsPendingRemove, app.AppId)
 		}
 	}
