@@ -32,7 +32,7 @@
 	    "store_path": "./data/"
     },
     "raft": {
-	    "cluster": "http://127.0.0.1.2221",
+	    "cluster": "http://127.0.0.1:2221",
 	    "raftid": 1,
 	    "store_path": "./data/"
     }
