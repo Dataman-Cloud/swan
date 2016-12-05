@@ -69,16 +69,6 @@ func (b *Backend) RollbackApplication(appId string) error {
 
 func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error {
 	for _, task := range tasks {
-		// Stop task health check
-		if b.sched.HealthCheckManager.HasCheck(task.Name) {
-			b.sched.HealthCheckManager.StopCheck(task.Name)
-		}
-
-		// Delete task health check
-		if err := b.store.DeleteCheck(task.Name); err != nil {
-			logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
-		}
-
 		if _, err := b.sched.KillTask(task); err == nil {
 			b.store.DeleteTask(task.AppId, task.ID)
 		}
@@ -123,39 +113,6 @@ func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error 
 		if err := b.store.SaveTask(task); err != nil {
 			return err
 		}
-
-		// TODO: (pwzgorilla) clear unuse code
-		//if len(task.HealthChecks) != 0 {
-		//	if err := b.store.SaveCheck(task,
-		//		*taskInfo.Container.Docker.PortMappings[0].HostPort,
-		//		task.AppId); err != nil {
-		//	}
-		//	for _, healthCheck := range task.HealthChecks {
-		//		check := types.Check{
-		//			ID:       task.Name,
-		//			Address:  *task.AgentHostname,
-		//			Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
-		//			TaskID:   task.Name,
-		//			AppID:    task.AppId,
-		//			Protocol: healthCheck.Protocol,
-		//			Interval: int(healthCheck.IntervalSeconds),
-		//			Timeout:  int(healthCheck.TimeoutSeconds),
-		//		}
-		//		if healthCheck.Command != nil {
-		//			check.Command = healthCheck.Command
-		//		}
-
-		//		if healthCheck.Path != nil {
-		//			check.Path = *healthCheck.Path
-		//		}
-
-		//		if healthCheck.ConsecutiveFailures != 0 {
-		//			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-		//		}
-
-		//		b.sched.HealthCheckManager.Add(&check)
-		//	}
-		//}
 
 		b.sched.Status = "idle"
 	}

@@ -68,13 +68,5 @@ func (b *Backend) DeleteApplicationTask(applicationId, taskId string) error {
 		return err
 	}
 
-	logrus.Infof("Stop health check for task %s", task.Name)
-	b.sched.HealthCheckManager.StopCheck(task.Name)
-
-	// Delete task health check
-	if err := b.store.DeleteCheck(task.Name); err != nil {
-		logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
-	}
-
 	return nil
 }

@@ -82,15 +82,4 @@ type Store interface {
 
 	// delete version from db
 	DeleteVersion(appId, versionId string) error
-
-	// check
-
-	// save check to db
-	SaveCheck(*types.Task, uint32, string) error
-
-	// list all checks
-	ListChecks() ([]*types.Check, error)
-
-	// delete check from db
-	DeleteCheck(string) error
 }
