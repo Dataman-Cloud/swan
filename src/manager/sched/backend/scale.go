@@ -57,13 +57,6 @@ func (b *Backend) ScaleApplication(appId string, instances int) error {
 				}
 
 				if taskIndex+1 > instances {
-					b.sched.HealthCheckManager.StopCheck(task.Name)
-
-					if err := b.store.DeleteCheck(task.Name); err != nil {
-						logrus.Errorf("Remove health check for %s failed: %s", task.Name, err.Error())
-						return err
-					}
-
 					if _, err := b.sched.KillTask(task); err == nil {
 						b.store.DeleteTask(task.AppId, task.ID)
 					}

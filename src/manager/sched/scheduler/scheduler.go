@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/health"
 	"github.com/Dataman-Cloud/swan/src/manager/sched/client"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
@@ -40,8 +39,6 @@ type Scheduler struct {
 
 	ClusterId string
 	config    util.Scheduler
-
-	HealthCheckManager *health.HealthCheckManager
 }
 
 // NewScheduler returns a pointer to new Scheduler
@@ -51,14 +48,7 @@ func NewScheduler(config util.Scheduler, store store.Store) *Scheduler {
 		store:    store,
 		doneChan: make(chan struct{}),
 		events: Events{
-			sched.Event_SUBSCRIBED: make(chan *sched.Event, 64),
-			sched.Event_OFFERS:     make(chan *sched.Event, 64),
-			sched.Event_RESCIND:    make(chan *sched.Event, 64),
-			sched.Event_UPDATE:     make(chan *sched.Event, 64),
-			sched.Event_MESSAGE:    make(chan *sched.Event, 64),
-			sched.Event_FAILURE:    make(chan *sched.Event, 64),
-			sched.Event_ERROR:      make(chan *sched.Event, 64),
-			sched.Event_HEARTBEAT:  make(chan *sched.Event, 64),
+			sched.Event_OFFERS: make(chan *sched.Event, 64),
 		},
 		Status: "idle",
 	}
@@ -258,17 +248,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				s.framework.Id = sub.FrameworkId
 			}
 
-			s.AddEvent(sched.Event_SUBSCRIBED, event)
-
-			// as a scheduler should not interact directly with the cli context,
-			// scheduler are way to deep and should not care about user action
-			if s.config.EnableLocalHealthcheck {
-				go func() {
-					s.HealthCheckManager.Init()
-					s.HealthCheckManager.Start()
-				}()
-			}
-
 			go func() {
 				s.ReschedulerTask()
 			}()
@@ -284,7 +263,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 			}
 		case sched.Event_RESCIND:
 			logrus.Info("Received rescind offers")
-			s.AddEvent(sched.Event_RESCIND, event)
 
 		case sched.Event_UPDATE:
 			status := event.GetUpdate().GetStatus()
@@ -294,10 +272,8 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				s.status(status)
 			}()
 
-			s.AddEvent(sched.Event_UPDATE, event)
 		case sched.Event_MESSAGE:
 			logrus.Info("Received message event")
-			s.AddEvent(sched.Event_MESSAGE, event)
 
 		case sched.Event_FAILURE:
 			logrus.Error("Received failure event")
@@ -314,14 +290,12 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				}
 			}
 
-			s.AddEvent(sched.Event_FAILURE, event)
 		case sched.Event_ERROR:
 			err := event.GetError().GetMessage()
 			logrus.Error(err)
-			s.AddEvent(sched.Event_ERROR, event)
 
 		case sched.Event_HEARTBEAT:
-			s.AddEvent(sched.Event_HEARTBEAT, event)
+			logrus.Debug("Received heartbeat msg")
 		}
 
 	}

@@ -69,16 +69,6 @@ func (b *Backend) RollbackApplication(appId string) error {
 
 func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error {
 	for _, task := range tasks {
-		// Stop task health check
-		if b.sched.HealthCheckManager.HasCheck(task.Name) {
-			b.sched.HealthCheckManager.StopCheck(task.Name)
-		}
-
-		// Delete task health check
-		if err := b.store.DeleteCheck(task.Name); err != nil {
-			logrus.Errorf("Delete task health check %s from db failed: %s", task.ID, err.Error())
-		}
-
 		if _, err := b.sched.KillTask(task); err == nil {
 			b.store.DeleteTask(task.AppId, task.ID)
 		}
