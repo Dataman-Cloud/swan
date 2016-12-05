@@ -114,39 +114,6 @@ func (b *Backend) doRollback(tasks []*types.Task, version *types.Version) error 
 			return err
 		}
 
-		// TODO: (pwzgorilla) clear unuse code
-		//if len(task.HealthChecks) != 0 {
-		//	if err := b.store.SaveCheck(task,
-		//		*taskInfo.Container.Docker.PortMappings[0].HostPort,
-		//		task.AppId); err != nil {
-		//	}
-		//	for _, healthCheck := range task.HealthChecks {
-		//		check := types.Check{
-		//			ID:       task.Name,
-		//			Address:  *task.AgentHostname,
-		//			Port:     int(*taskInfo.Container.Docker.PortMappings[0].HostPort),
-		//			TaskID:   task.Name,
-		//			AppID:    task.AppId,
-		//			Protocol: healthCheck.Protocol,
-		//			Interval: int(healthCheck.IntervalSeconds),
-		//			Timeout:  int(healthCheck.TimeoutSeconds),
-		//		}
-		//		if healthCheck.Command != nil {
-		//			check.Command = healthCheck.Command
-		//		}
-
-		//		if healthCheck.Path != nil {
-		//			check.Path = *healthCheck.Path
-		//		}
-
-		//		if healthCheck.ConsecutiveFailures != 0 {
-		//			check.MaxFailures = int(healthCheck.ConsecutiveFailures)
-		//		}
-
-		//		b.sched.HealthCheckManager.Add(&check)
-		//	}
-		//}
-
 		b.sched.Status = "idle"
 	}
 

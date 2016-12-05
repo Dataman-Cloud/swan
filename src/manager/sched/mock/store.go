@@ -72,20 +72,8 @@ func (s *Store) DeleteVersion(versionId string) error {
 	return nil
 }
 
-func (s *Store) SaveCheck(task *types.Task, port uint32, appId string) error {
-	return nil
-}
-
-func (s *Store) DeleteCheck(checkId string) error {
-	return nil
-}
-
 func (s *Store) UpdateTaskStatus(taskId, status string) error {
 	return nil
-}
-
-func (s *Store) ListChecks() ([]*types.Check, error) {
-	return nil, nil
 }
 
 func (s *Store) IncreaseApplicationInstances(appId string) error {
