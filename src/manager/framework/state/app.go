@@ -18,6 +18,8 @@ var (
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
 
+type AppInvalidateCallbackFuncs func(app *App)
+
 const (
 	APP_STATE_NORMAL              = "normal"
 	APP_STATE_MARK_FOR_CREATING   = "creating"
@@ -44,7 +46,8 @@ type App struct {
 	Created           time.Time
 	Updated           time.Time
 
-	State string
+	State               string
+	InvalidateCallbacks map[string][]AppInvalidateCallbackFuncs
 
 	Scheduler *scheduler.Scheduler
 }
@@ -61,7 +64,7 @@ func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *schedu
 		Created: time.Now(),
 		Updated: time.Now(),
 
-		State: APP_STATE_MARK_FOR_CREATING,
+		InvalidateCallbacks: make(map[string][]AppInvalidateCallbackFuncs),
 	}
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
@@ -72,15 +75,30 @@ func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *schedu
 		app.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
 	}
 
+	afterAllTasksRunning := func(app *App) {
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+	}
+	app.SetState(APP_STATE_MARK_FOR_CREATING)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_CREATING, afterAllTasksRunning)
+
 	return app, nil
 }
 
 // also need user pass ip here
 func (app *App) ScaleUp(to int) error {
-	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
 	if to <= int(app.CurrentVersion.Instances) {
 		return errors.New("scale up expected instances size no less than current size")
 	}
+
+	afterScaleUp := func(app *App) {
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+	}
+	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_UP, afterScaleUp)
 
 	for i := int(app.CurrentVersion.Instances); i < to; i++ {
 		slot := NewSlot(app, app.CurrentVersion, i)
@@ -94,14 +112,30 @@ func (app *App) ScaleUp(to int) error {
 }
 
 func (app *App) ScaleDown(to int) error {
-	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
 	if to >= int(app.CurrentVersion.Instances) {
 		return errors.New("scale down expected instances size no bigger than current size")
 	}
 
+	afterScaleDown := func(app *App) {
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+	}
+	removeSlot := func(app *App) {
+		for k, slot := range app.Slots {
+			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+				// TODO remove slot from OfferAllocator
+				delete(app.Slots, k)
+				break
+			}
+		}
+	}
+	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_DOWN, afterScaleDown, removeSlot)
+
 	for i := int(app.CurrentVersion.Instances); i > to; i-- {
 		slot := app.Slots[i-1]
-		slot.SetState(SLOT_STATE_PENDING_KILL)
+		slot.Kill()
 	}
 
 	app.CurrentVersion.Instances = int32(to)
@@ -112,15 +146,30 @@ func (app *App) ScaleDown(to int) error {
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
+	removeSlot := func(app *App) {
+		for k, slot := range app.Slots {
+			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+				// TODO remove slot from OfferAllocator
+				delete(app.Slots, k)
+				break
+			}
+		}
+	}
+
 	app.SetState(APP_STATE_MARK_FOR_DELETION)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_DELETION, removeSlot)
+
 	for _, slot := range app.Slots {
-		slot.SetState(SLOT_STATE_PENDING_KILL)
+		slot.Kill()
 	}
 
 	return nil
 }
 
 func (app *App) SetState(state string) {
+	app.InvalidateCallbacks = make(map[string][]AppInvalidateCallbackFuncs)
+	logrus.Infof("now clearing all InvalidateCallbacks")
+
 	app.State = state
 	logrus.Infof("app %s now has state %s", app.AppId, app.State)
 }
@@ -132,12 +181,41 @@ func (app *App) StateIs(state string) bool {
 func (app *App) Update(version *types.Version) error {
 	err := app.checkProposedVersionValid(version)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	app.ProposedVersion = version
-	// succedding operations
+	app.SetState(APP_STATE_MARK_FOR_UPDATING)
+
+	// succeeding operations
 	return nil
+}
+
+// called when slot has any update
+func (app *App) InvalidateSlots() {
+	// handle callback
+	if len(app.InvalidateCallbacks[app.State]) > 0 {
+		for _, cb := range app.InvalidateCallbacks[app.State] {
+			cb(app)
+		}
+	}
+
+	switch app.State {
+	case APP_STATE_MARK_FOR_DELETION:
+	case APP_STATE_MARK_FOR_UPDATING:
+	case APP_STATE_MARK_FOR_CREATING:
+	case APP_STATE_MARK_FOR_SCALE_UP:
+	case APP_STATE_MARK_FOR_SCALE_DOWN:
+	default:
+	}
+}
+
+func (app *App) RegisterInvalidateCallbacks(state string, callback ...AppInvalidateCallbackFuncs) {
+	app.InvalidateCallbacks[state] = append(app.InvalidateCallbacks[state], callback...)
+}
+
+func (app *App) RemoveInvalidateCallbacks(state string) {
+	app.InvalidateCallbacks[state] = make([]AppInvalidateCallbackFuncs, 0)
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion
@@ -167,35 +245,4 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 // TODO
 func (app *App) PersistToStorage() error {
 	return nil
-}
-
-func (app *App) InvalidateSlots() {
-	switch app.State {
-	case APP_STATE_MARK_FOR_DELETION:
-	case APP_STATE_MARK_FOR_CREATING:
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
-	case APP_STATE_MARK_FOR_SCALE_UP:
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
-	case APP_STATE_MARK_FOR_SCALE_DOWN:
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
-	default:
-
-	}
-
-	for k, slot := range app.Slots {
-		if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
-			// TODO remove slot from OfferAllocator
-			delete(app.Slots, k)
-			break
-		}
-	}
 }

@@ -45,12 +45,15 @@ const (
 	SLOT_STATE_TASK_UNKNOWN          = "slot_task_unknown"
 )
 
+type SlotStateCallbackFuncs func(slot *Slot)
+
 type Slot struct {
-	Index   int
-	Id      string
-	App     *App
-	Version *types.Version
-	State   string
+	Index           int
+	Id              string
+	App             *App
+	Version         *types.Version
+	State           string
+	StatesCallbacks map[string][]SlotStateCallbackFuncs
 
 	CurrentTask *Task
 	TaskHistory []*Task
@@ -62,8 +65,8 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	MarkForDeletion bool
-	MarkForUpdate   bool
+	MarkForDeletion      bool
+	MarkForRollingUpdate bool
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
@@ -72,18 +75,54 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		State:       SLOT_STATE_PENDING_OFFER,
 		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.Scheduler.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
 
-		MarkForUpdate:   false,
-		MarkForDeletion: false,
+		MarkForRollingUpdate: false,
+		MarkForDeletion:      false,
+		StatesCallbacks:      make(map[string][]SlotStateCallbackFuncs),
 	}
 
-	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
+	slot.DispatchNewTask(slot.Version)
 
 	return slot
+}
+
+// kill task doesn't need cleanup slot from app.Slots
+func (slot *Slot) KillTask() {
+	slot.SetState(SLOT_STATE_PENDING_KILL)
+	slot.CurrentTask.Kill()
+}
+
+// kill task and make slot sweeped after successfully kill task
+func (slot *Slot) Kill() {
+	slot.MarkForDeletion = true
+	slot.SetState(SLOT_STATE_PENDING_KILL)
+
+	slot.CurrentTask.Kill()
+}
+
+func (slot *Slot) Archive() {
+	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
+}
+
+func (slot *Slot) DispatchNewTask(version *types.Version) {
+	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
+	slot.SetState(SLOT_STATE_PENDING_OFFER)
+}
+
+func (slot *Slot) Update(version *types.Version) {
+	slot.MarkForRollingUpdate = true // mark as in progress of rolling update
+
+	onSlotFinished := func(slot *Slot) {
+		slot.Archive()
+		slot.DispatchNewTask(version)
+	}
+
+	slot.RegisterStateCallbacks(SLOT_STATE_TASK_FINISHED, onSlotFinished)
+
+	slot.KillTask() // kill task but doesn't clean slot
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
@@ -128,16 +167,20 @@ func (slot *Slot) StateIs(state string) bool {
 func (slot *Slot) SetState(state string) error {
 	slot.State = state
 
+	// handle callback
+	if len(slot.StatesCallbacks[slot.State]) > 0 {
+		for _, cb := range slot.StatesCallbacks[slot.State] {
+			cb(slot)
+		}
+	}
+	slot.RemoveStateCallbacks(slot.State)
+
 	logrus.Infof("setting state for slot %s to %s", slot.Id, slot.State)
 
 	switch slot.State {
 	case SLOT_STATE_PENDING_KILL:
-		slot.MarkForDeletion = true
-		slot.CurrentTask.Kill()
-
 	case SLOT_STATE_TASK_KILLED:
 	case SLOT_STATE_TASK_FINISHED:
-
 	case SLOT_STATE_TASK_RUNNING:
 	case SLOT_STATE_TASK_FAILED:
 		// restart if needed
@@ -146,4 +189,12 @@ func (slot *Slot) SetState(state string) error {
 
 	slot.App.InvalidateSlots()
 	return nil
+}
+
+func (slot *Slot) RegisterStateCallbacks(state string, callback SlotStateCallbackFuncs) {
+	slot.StatesCallbacks[state] = append(slot.StatesCallbacks[state], callback)
+}
+
+func (slot *Slot) RemoveStateCallbacks(state string) {
+	slot.StatesCallbacks[state] = make([]SlotStateCallbackFuncs, 0)
 }
