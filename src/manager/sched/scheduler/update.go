@@ -34,39 +34,27 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		}
 	}
 
-	ID := status.TaskId.GetValue()
+	taskId := status.TaskId.GetValue()
 	state := status.GetState()
-	healthy := status.GetHealthy()
 
-	taskId := strings.Split(ID, "-")[1]
-	appId := strings.Split(taskId, ".")[1]
-
-	var STATUS string
-
-	logrus.WithFields(logrus.Fields{
-		"ID":      ID,
-		"State":   state,
-		"Healthy": healthy,
-	}).Info("xxxxxxx")
+	taskName := strings.Split(taskId, "-")[1]
+	appId := strings.Split(taskName, ".")[1]
 
 	switch state {
 	case mesos.TaskState_TASK_STAGING:
-		STATUS = "STAGING"
-		if err := s.store.UpdateTaskStatus(appId, ID, "STAGING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "STAGING"); err != nil {
 			logrus.Errorf("updating task %s status to STAGING failed", taskId)
 		}
 	case mesos.TaskState_TASK_STARTING:
-		STATUS = "STARTING"
-		if err := s.store.UpdateTaskStatus(appId, ID, "STARTING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "STARTING"); err != nil {
 			logrus.Errorf("updating task %s status to STARTING failed", taskId)
 		}
 	case mesos.TaskState_TASK_RUNNING:
-		STATUS = "RUNNING"
 		if err := s.store.IncreaseApplicationRunningInstances(appId); err != nil {
 			logrus.Errorf("Updating application got error: %s", err.Error())
 		}
 
-		if err := s.store.UpdateTaskStatus(appId, ID, "RUNNING"); err != nil {
+		if err := s.store.UpdateTaskStatus(appId, taskId, "RUNNING"); err != nil {
 			logrus.Errorf("updating task %s status to RUNNING failed: %s", taskId, err.Error())
 			return
 		}
@@ -84,19 +72,23 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 
 	case mesos.TaskState_TASK_FINISHED:
 		logrus.Infof("Task Finished, message: %s", status.GetMessage())
-		STATUS = "RESCHEDULING"
+		s.rescheduleTask(appId, taskId)
 	case mesos.TaskState_TASK_FAILED:
 		logrus.Infof("Task Failed, message: %s", status.GetMessage())
-		//STATUS = "RESCHEDULING"
+		s.rescheduleTask(appId, taskId)
 	case mesos.TaskState_TASK_KILLED:
 		logrus.Infof("Task Killed, message: %s", status.GetMessage())
-		STATUS = "KILLED"
+		s.rescheduleTask(appId, taskId)
 	case mesos.TaskState_TASK_LOST:
 		logrus.Infof("Task Lost, message: %s", status.GetMessage())
-		STATUS = "RESCHEDULING"
+		s.rescheduleTask(appId, taskId)
 	}
 
-	task, err := s.store.FetchTask(appId, ID)
+}
+
+func (s *Scheduler) rescheduleTask(appId, taskId string) {
+	logrus.Info("Rescheduler task %s", taskId)
+	task, err := s.store.FetchTask(appId, taskId)
 	if err != nil {
 		logrus.Errorf("Fetch task %s failed: %s", taskId, err.Error())
 		return
@@ -108,9 +100,7 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 		return
 	}
 
-	if STATUS == "RESCHEDULING" &&
-		len(task.HealthChecks) == 0 &&
-		task.Status != "RESCHEDULING" &&
+	if task.Status != "RESCHEDULING" &&
 		app.Status != "UPDATING" &&
 		app.Status != "ROLLINGBACK" {
 		if err := s.store.UpdateTaskStatus(appId, taskId, "RESCHEDULING"); err != nil {
@@ -126,26 +116,26 @@ func (s *Scheduler) status(status *mesos.TaskStatus) {
 			return
 		}
 
-		var choosedOffer *mesos.Offer
 		for _, offer := range offers {
 			cpus, mem, disk := s.OfferedResources(offer)
 			if cpus >= task.Cpus && mem >= task.Mem && disk >= task.Disk {
-				choosedOffer = offer
+				var taskInfos []*mesos.TaskInfo
+				taskInfo := s.BuildTaskInfo(offer, resources, task)
+				taskInfos = append(taskInfos, taskInfo)
+
+				resp, err := s.LaunchTasks(offer, taskInfos)
+				if err != nil {
+					logrus.Errorf("Launchs task failed: %s for rescheduling", err.Error())
+				}
+
+				if resp != nil && resp.StatusCode != http.StatusAccepted {
+					logrus.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
+				}
+
 				break
 			}
 		}
 
-		var taskInfos []*mesos.TaskInfo
-		taskInfo := s.BuildTaskInfo(choosedOffer, resources, task)
-		taskInfos = append(taskInfos, taskInfo)
-
-		resp, err := s.LaunchTasks(choosedOffer, taskInfos)
-		if err != nil {
-			logrus.Errorf("Launchs task failed: %s for rescheduling", err.Error())
-		}
-
-		if resp != nil && resp.StatusCode != http.StatusAccepted {
-			logrus.Errorf("Launchs task failed: status code %d for rescheduling", resp.StatusCode)
-		}
+		s.Status = "idle"
 	}
 }
