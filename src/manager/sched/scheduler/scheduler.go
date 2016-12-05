@@ -12,7 +12,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	sched "github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
@@ -27,10 +26,9 @@ type Scheduler struct {
 	framework *mesos.FrameworkInfo
 	store     store.Store
 
-	client       *client.Client
-	doneChan     chan struct{}
-	ReschedQueue chan types.ReschedulerMsg
-	events       Events
+	client   *client.Client
+	doneChan chan struct{}
+	events   Events
 
 	TaskLaunched int
 
@@ -248,9 +246,6 @@ func (s *Scheduler) handleEvents(resp *http.Response) {
 				s.framework.Id = sub.FrameworkId
 			}
 
-			go func() {
-				s.ReschedulerTask()
-			}()
 		case sched.Event_OFFERS:
 			if s.Status == "idle" {
 				// Refused all offers when scheduler is idle.
