@@ -4,6 +4,7 @@
   "cpus": 0.01,
   "mem": 5,
   "disk": 0,
+  "runAs": "xcm",
   "instances": 3,
   "constraints": [ 
 	  "hostname:UNIQUE",

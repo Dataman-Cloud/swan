@@ -31,7 +31,7 @@ type App struct {
 	// app name
 	AppId    string           `json:"appId"`
 	Versions []*types.Version `json:"versions"`
-	Slots    []*Slot          `json:"slots"`
+	Slots    map[int]*Slot    `json:"slots"`
 
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
@@ -52,7 +52,7 @@ type App struct {
 func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *scheduler.Scheduler) (*App, error) {
 	app := &App{
 		Versions:          []*types.Version{version},
-		Slots:             make([]*Slot, 0),
+		Slots:             make(map[int]*Slot),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
@@ -68,7 +68,7 @@ func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *schedu
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
-		app.Slots = append(app.Slots, slot)
+		app.Slots[i] = slot
 		app.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
 	}
 
@@ -84,7 +84,7 @@ func (app *App) ScaleUp(to int) error {
 
 	for i := int(app.CurrentVersion.Instances); i < to; i++ {
 		slot := NewSlot(app, app.CurrentVersion, i)
-		app.Slots = append(app.Slots, slot)
+		app.Slots[i] = slot
 		app.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
 	}
 	app.CurrentVersion.Instances = int32(to)
@@ -161,14 +161,7 @@ func (app *App) RollbackInstances() int {
 }
 
 func (app *App) CanBeCleanAfterDeletion() bool {
-	killedSlotCount := 0
-	for _, slot := range app.Slots {
-		if slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) {
-			killedSlotCount += 1
-		}
-	}
-
-	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && killedSlotCount == int(app.CurrentVersion.Instances)
+	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && len(app.Slots) == 0
 }
 
 // TODO
@@ -179,14 +172,6 @@ func (app *App) PersistToStorage() error {
 func (app *App) InvalidateSlots() {
 	switch app.State {
 	case APP_STATE_MARK_FOR_DELETION:
-		slotLen := len(app.Slots)
-		for i := slotLen; i >= 0; i-- {
-			slot := app.Slots[i]
-			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
-				app.Slots = app.Slots[0:i]
-				// TODO remove slot from OfferAllocator
-			}
-		}
 	case APP_STATE_MARK_FOR_CREATING:
 		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
 			app.SetState(APP_STATE_NORMAL)
@@ -198,19 +183,19 @@ func (app *App) InvalidateSlots() {
 		}
 
 	case APP_STATE_MARK_FOR_SCALE_DOWN:
-		slotLen := len(app.Slots)
-		for i := slotLen - 1; i >= 0; i-- {
-			slot := app.Slots[i]
-			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
-				app.Slots = app.Slots[0:i]
-				// TODO remove slot from OfferAllocator
-			}
-		}
 		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
 			app.SetState(APP_STATE_NORMAL)
 		}
 
 	default:
 
+	}
+
+	for k, slot := range app.Slots {
+		if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+			// TODO remove slot from OfferAllocator
+			delete(app.Slots, k)
+			break
+		}
 	}
 }

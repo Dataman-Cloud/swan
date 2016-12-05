@@ -28,24 +28,20 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
-	fmt.Println(AppId)
-	fmt.Println(slotIndex)
-	fmt.Println(h.EngineRef.Apps)
-
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:
 	case mesos.TaskState_TASK_STARTING:
 	case mesos.TaskState_TASK_RUNNING:
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_RUNNING)
+		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_RUNNING)
 
 	case mesos.TaskState_TASK_FINISHED:
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_FINISHED)
+		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FINISHED)
 
 	case mesos.TaskState_TASK_FAILED:
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_FAILED)
+		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FAILED)
 
 	case mesos.TaskState_TASK_KILLED:
-		h.EngineRef.Apps[AppId].Slots[slotIndex].SetState(state.SLOT_STATE_TASK_KILLED)
+		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_KILLED)
 
 	case mesos.TaskState_TASK_LOST:
 	}

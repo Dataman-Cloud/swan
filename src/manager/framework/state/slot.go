@@ -37,7 +37,7 @@ const (
 	SLOT_STATE_TASK_FAILED           = "slot_task_failed"
 	SLOT_STATE_TASK_KILLED           = "slot_task_killed"
 	SLOT_STATE_TASK_ERROR            = "slot_task_error"
-	SLOT_STATE_TASK_LOST             = "slot_task_list"
+	SLOT_STATE_TASK_LOST             = "slot_task_lost"
 	SLOT_STATE_TASK_DROPPED          = "slot_task_dropped"
 	SLOT_STATE_TASK_UNREACHABLE      = "slot_task_unreachable"
 	SLOT_STATE_TASK_GONE             = "slot_task_gone"
@@ -76,8 +76,9 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.Scheduler.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
-		MarkForUpdate:           false,
-		MarkForDeletion:         false,
+
+		MarkForUpdate:   false,
+		MarkForDeletion: false,
 	}
 
 	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
