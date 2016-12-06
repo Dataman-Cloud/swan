@@ -42,6 +42,8 @@ func NewTask(app *App, version *types.Version, slot *Slot) *Task {
 }
 
 func (task *Task) PrepareTaskInfo(offer *mesos.Offer) *mesos.TaskInfo {
+	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.Id, *offer.GetId().Value)
+
 	task.OfferId = *offer.GetId().Value
 	task.Slot.OfferId = *offer.GetId().Value
 
@@ -51,7 +53,6 @@ func (task *Task) PrepareTaskInfo(offer *mesos.Offer) *mesos.TaskInfo {
 	task.AgentHostName = offer.GetHostname()
 	task.Slot.AgentHostName = offer.GetHostname()
 
-	logrus.Infof("Prepared task for launch with offer %s", *offer.GetId().Value)
 	taskInfo := mesos.TaskInfo{
 		Name: proto.String(task.Slot.Id),
 		TaskId: &mesos.TaskID{

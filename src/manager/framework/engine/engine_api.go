@@ -26,19 +26,6 @@ func (engine *Engine) CreateApp(version *types.Version) error {
 	return nil
 }
 
-func (engine *Engine) UpdateApp(version *types.Version) error {
-	app, appExists := engine.Apps[version.AppId]
-	if !appExists {
-		return errors.New("app not exists")
-	}
-
-	if err := app.Update(version); err != nil {
-		return err
-	}
-
-	return nil
-}
-
 func (engine *Engine) InspectApp(appId string) (*state.App, error) {
 	app, appExists := engine.Apps[appId]
 	if !appExists {
@@ -78,4 +65,31 @@ func (engine *Engine) ScaleDown(appId string, to int) error {
 		return errors.New("app not exists")
 	}
 	return app.ScaleDown(to)
+}
+
+func (engine *Engine) UpdateApp(appId string, version *types.Version) error {
+	app, appExists := engine.Apps[appId]
+	if !appExists {
+		return errors.New("app doesn't exists, update failed")
+	}
+
+	return app.Update(version)
+}
+
+func (engine *Engine) CancelUpdate(appId string) error {
+	app, appExists := engine.Apps[appId]
+	if !appExists {
+		return errors.New("app doesn't exists, update failed")
+	}
+
+	return app.CancelUpdate()
+}
+
+func (engine *Engine) ProceedUpdate(appId string, instances int) error {
+	app, appExists := engine.Apps[appId]
+	if !appExists {
+		return errors.New("app doesn't exists, update failed")
+	}
+
+	return app.ProceedingRollingUpdate(instances)
 }

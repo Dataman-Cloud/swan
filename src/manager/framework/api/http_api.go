@@ -7,6 +7,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"
 )
@@ -37,9 +38,9 @@ func (api *Api) Start(ctx context.Context) error {
 	group.DELETE("/apps/:app_id", api.DeleteApp)
 	group.PUT("/apps/:app_id/scale_up", api.ScaleUp)
 	group.PUT("/apps/:app_id/scale_down", api.ScaleDown)
-
-	group.POST("/apps/:app_id/rollback", api.GetApp)
-	group.POST("/apps/:app_id/update", api.GetApp)
+	group.PUT("/apps/:app_id/update", api.UpdateApp)
+	group.PUT("/apps/:app_id/proceed_update", api.ProceedUpdate)
+	group.PUT("/apps/:app_id/cancel_update", api.CancelUpdate)
 
 	group.GET("/apps/:app_id/tasks", api.GetApp)
 	group.DELETE("/apps/:app_id/tasks", api.GetApp) // pending
@@ -164,6 +165,48 @@ func (api *Api) DeleteApp(c *gin.Context) {
 	}
 }
 
+func (api *Api) UpdateApp(c *gin.Context) {
+	var version types.Version
+
+	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
+		err := api.Engine.UpdateApp(c.Param("app_id"), &version)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"status": "version accepted"})
+		}
+	} else {
+		c.JSON(400, gin.H{"status": "unauthorized"})
+	}
+}
+
+func (api *Api) ProceedUpdate(c *gin.Context) {
+	var param struct {
+		Instances int `json:"instances"`
+	}
+
+	if c.BindJSON(&param) == nil {
+		err := api.Engine.ProceedUpdate(c.Param("app_id"), param.Instances)
+		if err != nil {
+			logrus.Errorf("%s", err)
+			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		} else {
+			c.JSON(http.StatusOK, gin.H{"status": "version accepted"})
+		}
+	} else {
+		c.JSON(400, gin.H{"status": "unauthorized"})
+	}
+}
+
+func (api *Api) CancelUpdate(c *gin.Context) {
+	err := api.Engine.CancelUpdate(c.Param("app_id"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+	} else {
+		c.JSON(http.StatusOK, gin.H{"status": "version accepted"})
+	}
+}
+
 func CheckVersion(version *types.Version) error {
 	// image format
 	// mode valid
@@ -183,6 +226,9 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			AgentId:       slot.AgentId,
 			AgentHostname: slot.AgentHostName,
 			History:       make([]*TaskHistory, 0), // aka Task
+			Cpu:           slot.Version.Cpus,
+			Mem:           slot.Version.Mem,
+			Disk:          slot.Version.Disk,
 		}
 
 		if len(slot.TaskHistory) > 0 {
@@ -192,6 +238,11 @@ func FilterTasksFromApp(app *state.App) []*Task {
 					OfferId:       v.OfferId,
 					AgentId:       v.AgentId,
 					AgentHostname: v.AgentHostName,
+					VersionId:     v.Version.ID,
+
+					Cpu:  v.Version.Cpus,
+					Mem:  v.Version.Mem,
+					Disk: v.Version.Disk,
 
 					Stderr:     v.Stderr,
 					Stdout:     v.Stdout,

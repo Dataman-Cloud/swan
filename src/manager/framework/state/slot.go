@@ -108,18 +108,29 @@ func (slot *Slot) Archive() {
 }
 
 func (slot *Slot) DispatchNewTask(version *types.Version) {
+	slot.Version = version
 	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
+	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
+
+	//onSlotRunning := func(slot *Slot) {
+	//if slot.MarkForRollingUpdate {
+	//}
+	//}
+	//slot.RegisterStateCallbacks(SLOT_STATE_TASK_RUNNING, onSlotRunning)
+
 }
 
 func (slot *Slot) Update(version *types.Version) {
+	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
+
 	slot.MarkForRollingUpdate = true // mark as in progress of rolling update
 
 	onSlotFinished := func(slot *Slot) {
+		logrus.Infof("onSlotFinished func")
 		slot.Archive()
 		slot.DispatchNewTask(version)
 	}
-
 	slot.RegisterStateCallbacks(SLOT_STATE_TASK_FINISHED, onSlotFinished)
 
 	slot.KillTask() // kill task but doesn't clean slot
@@ -187,11 +198,21 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	slot.App.InvalidateSlots()
+	// skip app invalidation if slot state is not mesos driven
+	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
+		(slot.State != SLOT_STATE_PENDING_KILL) {
+		slot.App.InvalidateSlots()
+	}
 	return nil
 }
 
+func (slot *Slot) AppendStateCallbacks(state string, callback SlotStateCallbackFuncs) {
+	slot.StatesCallbacks[state] = append(slot.StatesCallbacks[state], callback)
+}
+
+// empty callback queue first
 func (slot *Slot) RegisterStateCallbacks(state string, callback SlotStateCallbackFuncs) {
+	slot.RemoveStateCallbacks(state)
 	slot.StatesCallbacks[state] = append(slot.StatesCallbacks[state], callback)
 }
 

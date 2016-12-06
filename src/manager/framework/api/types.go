@@ -9,7 +9,7 @@ type App struct {
 	Name              string    `json:"name,omitempty"`
 	Instances         int       `json:"instances,omitempty"`
 	UpdatedInstances  int       `json:"updatedInstances,omitempty"`
-	RunningInstances  int       `json:"runningInstances,omitempty"`
+	RunningInstances  int       `json:"runningInstances"`
 	RollbackInstances int       `json:"rollbackInstances,omitempty"`
 	RunAs             string    `json:"runAs,omitempty"`
 	ClusterId         string    `json:"clusterId,omitempty"`
@@ -37,6 +37,10 @@ type Task struct {
 	AgentId       string `json:"agentId,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
+	Cpu  float64 `json:"cpu,omitempty"`
+	Mem  float64 `json:"mem,omitempty"`
+	Disk float64 `json:"disk,omitempty"`
+
 	History []*TaskHistory `json:"history,omitempty"`
 }
 
@@ -48,6 +52,10 @@ type TaskHistory struct {
 	OfferId       string `json:"offerId,omitempty"`
 	AgentId       string `json:"agentId,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
+
+	Cpu  float64 `json:"cpu,omitempty"`
+	Mem  float64 `json:"mem,omitempty"`
+	Disk float64 `json:"disk,omitempty"`
 
 	State      string `json:"state,omitempty"`
 	ExitReason string `json:"exitReason,omitempty"`
