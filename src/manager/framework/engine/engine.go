@@ -67,11 +67,10 @@ func (engine *Engine) Stop() error {
 }
 
 // revive from crash or rotate from leader change
-func (engine *Engine) Start() error {
+func (engine *Engine) Start(ctx context.Context) error {
 
 	// temp solution
 	go func() {
-		ctx, _ := context.WithCancel(context.Background())
 		engine.Scheduler.Start(ctx)
 	}()
 

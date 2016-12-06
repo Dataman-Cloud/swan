@@ -44,12 +44,12 @@ func (f *Framework) Start(ctx context.Context) error {
 	wg.Add(2)
 	go func() {
 		wg.Done()
-		err = f.HttpApi.Start()
+		err = f.HttpApi.Start(ctx)
 	}()
 
 	go func() {
 		wg.Done()
-		err = f.Engine.Start()
+		err = f.Engine.Start(ctx)
 	}()
 
 	wg.Wait()

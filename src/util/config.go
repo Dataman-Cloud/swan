@@ -125,6 +125,10 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("work-dir") != "" {
 		swanConfig.Raft.StorePath = c.String("work-dir")
 	}
+
+	if c.String("with-engine") != "" {
+		swanConfig.WithEngine = c.String("with-engine")
+	}
 	return validateAndFormatConfig(swanConfig)
 }
 

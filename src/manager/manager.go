@@ -109,13 +109,12 @@ func (manager *Manager) Start(ctx context.Context) error {
 			return
 		}
 
-		//managerRoute := NewRouter(manager)
-		//manager.swanContext.ApiServer.AppendRouter(managerRoute)
+		if manager.config.WithEngine == "sched" {
+			managerRoute := NewRouter(manager)
+			manager.swanContext.ApiServer.AppendRouter(managerRoute)
 
-		//errCh <- manager.swanContext.ApiServer.ListenAndServe()
-	}()
-	go func() {
-		manager.framework.Start()
+			errCh <- manager.swanContext.ApiServer.ListenAndServe()
+		}
 	}()
 
 	return <-errCh
@@ -132,6 +131,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
+				fmt.Println(manager.config.WithEngine)
 				if manager.config.WithEngine == "sched" {
 					sechedCtx, cancel := context.WithCancel(ctx)
 					cancelFunc = cancel
@@ -141,6 +141,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					}
 					log.G(ctx).Info("Scheduler has been started")
 				} else {
+					frameworkCtx, _ := context.WithCancel(ctx)
+					manager.framework.Start(frameworkCtx)
 				}
 
 			} else if newState == raft.IsFollower {

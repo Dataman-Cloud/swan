@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
@@ -47,7 +48,7 @@ func NewScheduler(config util.Scheduler) *Scheduler {
 func (s *Scheduler) ConnectToMesosAndAcceptEvent() error {
 	var err error
 	s.Framework, err = createOrLoadFrameworkInfo(s.config)
-	state, err := stateFromMasters(s.config.MesosMasters)
+	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
 	if err != nil {
 		logrus.Errorf("%s, check your mesos mastger configuration", err)
 		return err
