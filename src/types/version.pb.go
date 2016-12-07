@@ -974,70 +974,70 @@ func extensionToGoStringVersion(m github_com_gogo_protobuf_proto.Message) string
 	s += strings.Join(ss, ",") + "})"
 	return s
 }
-func (m *Version) Marshal() (data []byte, err error) {
+func (m *Version) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Version) MarshalTo(data []byte) (int, error) {
+func (m *Version) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.ID) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.ID)))
-		i += copy(data[i:], m.ID)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.ID)))
+		i += copy(dAtA[i:], m.ID)
 	}
 	if len(m.AppId) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.AppId)))
-		i += copy(data[i:], m.AppId)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.AppId)))
+		i += copy(dAtA[i:], m.AppId)
 	}
 	if len(m.Command) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Command)))
-		i += copy(data[i:], m.Command)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Command)))
+		i += copy(dAtA[i:], m.Command)
 	}
 	if m.Cpus != 0 {
-		data[i] = 0x21
+		dAtA[i] = 0x21
 		i++
-		i = encodeFixed64Version(data, i, uint64(math.Float64bits(float64(m.Cpus))))
+		i = encodeFixed64Version(dAtA, i, uint64(math.Float64bits(float64(m.Cpus))))
 	}
 	if m.Mem != 0 {
-		data[i] = 0x29
+		dAtA[i] = 0x29
 		i++
-		i = encodeFixed64Version(data, i, uint64(math.Float64bits(float64(m.Mem))))
+		i = encodeFixed64Version(dAtA, i, uint64(math.Float64bits(float64(m.Mem))))
 	}
 	if m.Disk != 0 {
-		data[i] = 0x31
+		dAtA[i] = 0x31
 		i++
-		i = encodeFixed64Version(data, i, uint64(math.Float64bits(float64(m.Disk))))
+		i = encodeFixed64Version(dAtA, i, uint64(math.Float64bits(float64(m.Disk))))
 	}
 	if m.Instances != 0 {
-		data[i] = 0x38
+		dAtA[i] = 0x38
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.Instances))
+		i = encodeVarintVersion(dAtA, i, uint64(m.Instances))
 	}
 	if len(m.RunAs) > 0 {
-		data[i] = 0x42
+		dAtA[i] = 0x42
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.RunAs)))
-		i += copy(data[i:], m.RunAs)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.RunAs)))
+		i += copy(dAtA[i:], m.RunAs)
 	}
 	if m.Container != nil {
-		data[i] = 0x4a
+		dAtA[i] = 0x4a
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.Container.Size()))
-		n1, err := m.Container.MarshalTo(data[i:])
+		i = encodeVarintVersion(dAtA, i, uint64(m.Container.Size()))
+		n1, err := m.Container.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1045,27 +1045,27 @@ func (m *Version) MarshalTo(data []byte) (int, error) {
 	}
 	if len(m.Labels) > 0 {
 		for k, _ := range m.Labels {
-			data[i] = 0x52
+			dAtA[i] = 0x52
 			i++
 			v := m.Labels[k]
 			mapSize := 1 + len(k) + sovVersion(uint64(len(k))) + 1 + len(v) + sovVersion(uint64(len(v)))
-			i = encodeVarintVersion(data, i, uint64(mapSize))
-			data[i] = 0xa
+			i = encodeVarintVersion(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0xa
 			i++
-			i = encodeVarintVersion(data, i, uint64(len(k)))
-			i += copy(data[i:], k)
-			data[i] = 0x12
+			i = encodeVarintVersion(dAtA, i, uint64(len(k)))
+			i += copy(dAtA[i:], k)
+			dAtA[i] = 0x12
 			i++
-			i = encodeVarintVersion(data, i, uint64(len(v)))
-			i += copy(data[i:], v)
+			i = encodeVarintVersion(dAtA, i, uint64(len(v)))
+			i += copy(dAtA[i:], v)
 		}
 	}
 	if len(m.HealthChecks) > 0 {
 		for _, msg := range m.HealthChecks {
-			data[i] = 0x5a
+			dAtA[i] = 0x5a
 			i++
-			i = encodeVarintVersion(data, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(data[i:])
+			i = encodeVarintVersion(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
@@ -1074,36 +1074,36 @@ func (m *Version) MarshalTo(data []byte) (int, error) {
 	}
 	if len(m.Env) > 0 {
 		for k, _ := range m.Env {
-			data[i] = 0x62
+			dAtA[i] = 0x62
 			i++
 			v := m.Env[k]
 			mapSize := 1 + len(k) + sovVersion(uint64(len(k))) + 1 + len(v) + sovVersion(uint64(len(v)))
-			i = encodeVarintVersion(data, i, uint64(mapSize))
-			data[i] = 0xa
+			i = encodeVarintVersion(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0xa
 			i++
-			i = encodeVarintVersion(data, i, uint64(len(k)))
-			i += copy(data[i:], k)
-			data[i] = 0x12
+			i = encodeVarintVersion(dAtA, i, uint64(len(k)))
+			i += copy(dAtA[i:], k)
+			dAtA[i] = 0x12
 			i++
-			i = encodeVarintVersion(data, i, uint64(len(v)))
-			i += copy(data[i:], v)
+			i = encodeVarintVersion(dAtA, i, uint64(len(v)))
+			i += copy(dAtA[i:], v)
 		}
 	}
 	if m.KillPolicy != nil {
-		data[i] = 0x6a
+		dAtA[i] = 0x6a
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.KillPolicy.Size()))
-		n2, err := m.KillPolicy.MarshalTo(data[i:])
+		i = encodeVarintVersion(dAtA, i, uint64(m.KillPolicy.Size()))
+		n2, err := m.KillPolicy.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n2
 	}
 	if m.UpdatePolicy != nil {
-		data[i] = 0x72
+		dAtA[i] = 0x72
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.UpdatePolicy.Size()))
-		n3, err := m.UpdatePolicy.MarshalTo(data[i:])
+		i = encodeVarintVersion(dAtA, i, uint64(m.UpdatePolicy.Size()))
+		n3, err := m.UpdatePolicy.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1111,90 +1111,90 @@ func (m *Version) MarshalTo(data []byte) (int, error) {
 	}
 	if len(m.Constraints) > 0 {
 		for _, s := range m.Constraints {
-			data[i] = 0x7a
+			dAtA[i] = 0x7a
 			i++
 			l = len(s)
 			for l >= 1<<7 {
-				data[i] = uint8(uint64(l)&0x7f | 0x80)
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
 				l >>= 7
 				i++
 			}
-			data[i] = uint8(l)
+			dAtA[i] = uint8(l)
 			i++
-			i += copy(data[i:], s)
+			i += copy(dAtA[i:], s)
 		}
 	}
 	if len(m.Uris) > 0 {
 		for _, s := range m.Uris {
-			data[i] = 0x82
+			dAtA[i] = 0x82
 			i++
-			data[i] = 0x1
+			dAtA[i] = 0x1
 			i++
 			l = len(s)
 			for l >= 1<<7 {
-				data[i] = uint8(uint64(l)&0x7f | 0x80)
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
 				l >>= 7
 				i++
 			}
-			data[i] = uint8(l)
+			dAtA[i] = uint8(l)
 			i++
-			i += copy(data[i:], s)
+			i += copy(dAtA[i:], s)
 		}
 	}
 	if len(m.Ip) > 0 {
 		for _, s := range m.Ip {
-			data[i] = 0x8a
+			dAtA[i] = 0x8a
 			i++
-			data[i] = 0x1
+			dAtA[i] = 0x1
 			i++
 			l = len(s)
 			for l >= 1<<7 {
-				data[i] = uint8(uint64(l)&0x7f | 0x80)
+				dAtA[i] = uint8(uint64(l)&0x7f | 0x80)
 				l >>= 7
 				i++
 			}
-			data[i] = uint8(l)
+			dAtA[i] = uint8(l)
 			i++
-			i += copy(data[i:], s)
+			i += copy(dAtA[i:], s)
 		}
 	}
 	if len(m.Mode) > 0 {
-		data[i] = 0x92
+		dAtA[i] = 0x92
 		i++
-		data[i] = 0x1
+		dAtA[i] = 0x1
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Mode)))
-		i += copy(data[i:], m.Mode)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Mode)))
+		i += copy(dAtA[i:], m.Mode)
 	}
 	return i, nil
 }
 
-func (m *Container) Marshal() (data []byte, err error) {
+func (m *Container) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Container) MarshalTo(data []byte) (int, error) {
+func (m *Container) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.Type) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Type)))
-		i += copy(data[i:], m.Type)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Type)))
+		i += copy(dAtA[i:], m.Type)
 	}
 	if m.Docker != nil {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.Docker.Size()))
-		n4, err := m.Docker.MarshalTo(data[i:])
+		i = encodeVarintVersion(dAtA, i, uint64(m.Docker.Size()))
+		n4, err := m.Docker.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1202,10 +1202,10 @@ func (m *Container) MarshalTo(data []byte) (int, error) {
 	}
 	if len(m.Volumes) > 0 {
 		for _, msg := range m.Volumes {
-			data[i] = 0x1a
+			dAtA[i] = 0x1a
 			i++
-			i = encodeVarintVersion(data, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(data[i:])
+			i = encodeVarintVersion(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
@@ -1215,49 +1215,49 @@ func (m *Container) MarshalTo(data []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Docker) Marshal() (data []byte, err error) {
+func (m *Docker) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Docker) MarshalTo(data []byte) (int, error) {
+func (m *Docker) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.ForcePullImage {
-		data[i] = 0x8
+		dAtA[i] = 0x8
 		i++
 		if m.ForcePullImage {
-			data[i] = 1
+			dAtA[i] = 1
 		} else {
-			data[i] = 0
+			dAtA[i] = 0
 		}
 		i++
 	}
 	if len(m.Image) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Image)))
-		i += copy(data[i:], m.Image)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Image)))
+		i += copy(dAtA[i:], m.Image)
 	}
 	if len(m.Network) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Network)))
-		i += copy(data[i:], m.Network)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Network)))
+		i += copy(dAtA[i:], m.Network)
 	}
 	if len(m.Parameters) > 0 {
 		for _, msg := range m.Parameters {
-			data[i] = 0x22
+			dAtA[i] = 0x22
 			i++
-			i = encodeVarintVersion(data, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(data[i:])
+			i = encodeVarintVersion(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
@@ -1266,10 +1266,10 @@ func (m *Docker) MarshalTo(data []byte) (int, error) {
 	}
 	if len(m.PortMappings) > 0 {
 		for _, msg := range m.PortMappings {
-			data[i] = 0x2a
+			dAtA[i] = 0x2a
 			i++
-			i = encodeVarintVersion(data, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(data[i:])
+			i = encodeVarintVersion(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
@@ -1277,174 +1277,174 @@ func (m *Docker) MarshalTo(data []byte) (int, error) {
 		}
 	}
 	if m.Privileged {
-		data[i] = 0x30
+		dAtA[i] = 0x30
 		i++
 		if m.Privileged {
-			data[i] = 1
+			dAtA[i] = 1
 		} else {
-			data[i] = 0
+			dAtA[i] = 0
 		}
 		i++
 	}
 	return i, nil
 }
 
-func (m *Parameter) Marshal() (data []byte, err error) {
+func (m *Parameter) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Parameter) MarshalTo(data []byte) (int, error) {
+func (m *Parameter) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.Key) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Key)))
-		i += copy(data[i:], m.Key)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Key)))
+		i += copy(dAtA[i:], m.Key)
 	}
 	if len(m.Value) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Value)))
-		i += copy(data[i:], m.Value)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Value)))
+		i += copy(dAtA[i:], m.Value)
 	}
 	return i, nil
 }
 
-func (m *PortMapping) Marshal() (data []byte, err error) {
+func (m *PortMapping) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *PortMapping) MarshalTo(data []byte) (int, error) {
+func (m *PortMapping) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.ContainerPort != 0 {
-		data[i] = 0x8
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.ContainerPort))
+		i = encodeVarintVersion(dAtA, i, uint64(m.ContainerPort))
 	}
 	if len(m.Name) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Name)))
-		i += copy(data[i:], m.Name)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Name)))
+		i += copy(dAtA[i:], m.Name)
 	}
 	if len(m.Protocol) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Protocol)))
-		i += copy(data[i:], m.Protocol)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Protocol)))
+		i += copy(dAtA[i:], m.Protocol)
 	}
 	return i, nil
 }
 
-func (m *Volume) Marshal() (data []byte, err error) {
+func (m *Volume) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Volume) MarshalTo(data []byte) (int, error) {
+func (m *Volume) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.ContainerPath) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.ContainerPath)))
-		i += copy(data[i:], m.ContainerPath)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.ContainerPath)))
+		i += copy(dAtA[i:], m.ContainerPath)
 	}
 	if len(m.HostPath) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.HostPath)))
-		i += copy(data[i:], m.HostPath)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.HostPath)))
+		i += copy(dAtA[i:], m.HostPath)
 	}
 	if len(m.Mode) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintVersion(data, i, uint64(len(m.Mode)))
-		i += copy(data[i:], m.Mode)
+		i = encodeVarintVersion(dAtA, i, uint64(len(m.Mode)))
+		i += copy(dAtA[i:], m.Mode)
 	}
 	return i, nil
 }
 
-func (m *KillPolicy) Marshal() (data []byte, err error) {
+func (m *KillPolicy) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *KillPolicy) MarshalTo(data []byte) (int, error) {
+func (m *KillPolicy) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.Duration != 0 {
-		data[i] = 0x8
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintVersion(data, i, uint64(m.Duration))
+		i = encodeVarintVersion(dAtA, i, uint64(m.Duration))
 	}
 	return i, nil
 }
 
-func encodeFixed64Version(data []byte, offset int, v uint64) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
-	data[offset+4] = uint8(v >> 32)
-	data[offset+5] = uint8(v >> 40)
-	data[offset+6] = uint8(v >> 48)
-	data[offset+7] = uint8(v >> 56)
+func encodeFixed64Version(dAtA []byte, offset int, v uint64) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
+	dAtA[offset+4] = uint8(v >> 32)
+	dAtA[offset+5] = uint8(v >> 40)
+	dAtA[offset+6] = uint8(v >> 48)
+	dAtA[offset+7] = uint8(v >> 56)
 	return offset + 8
 }
-func encodeFixed32Version(data []byte, offset int, v uint32) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
+func encodeFixed32Version(dAtA []byte, offset int, v uint32) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
 	return offset + 4
 }
-func encodeVarintVersion(data []byte, offset int, v uint64) int {
+func encodeVarintVersion(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
-		data[offset] = uint8(v&0x7f | 0x80)
+		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
-	data[offset] = uint8(v)
+	dAtA[offset] = uint8(v)
 	return offset + 1
 }
 func NewPopulatedVersion(r randyVersion, easy bool) *Version {
 	this := &Version{}
-	this.ID = randStringVersion(r)
-	this.AppId = randStringVersion(r)
-	this.Command = randStringVersion(r)
+	this.ID = string(randStringVersion(r))
+	this.AppId = string(randStringVersion(r))
+	this.Command = string(randStringVersion(r))
 	this.Cpus = float64(r.Float64())
 	if r.Intn(2) == 0 {
 		this.Cpus *= -1
@@ -1461,7 +1461,7 @@ func NewPopulatedVersion(r randyVersion, easy bool) *Version {
 	if r.Intn(2) == 0 {
 		this.Instances *= -1
 	}
-	this.RunAs = randStringVersion(r)
+	this.RunAs = string(randStringVersion(r))
 	if r.Intn(10) != 0 {
 		this.Container = NewPopulatedContainer(r, easy)
 	}
@@ -1495,19 +1495,19 @@ func NewPopulatedVersion(r randyVersion, easy bool) *Version {
 	v4 := r.Intn(10)
 	this.Constraints = make([]string, v4)
 	for i := 0; i < v4; i++ {
-		this.Constraints[i] = randStringVersion(r)
+		this.Constraints[i] = string(randStringVersion(r))
 	}
 	v5 := r.Intn(10)
 	this.Uris = make([]string, v5)
 	for i := 0; i < v5; i++ {
-		this.Uris[i] = randStringVersion(r)
+		this.Uris[i] = string(randStringVersion(r))
 	}
 	v6 := r.Intn(10)
 	this.Ip = make([]string, v6)
 	for i := 0; i < v6; i++ {
-		this.Ip[i] = randStringVersion(r)
+		this.Ip[i] = string(randStringVersion(r))
 	}
-	this.Mode = randStringVersion(r)
+	this.Mode = string(randStringVersion(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1515,7 +1515,7 @@ func NewPopulatedVersion(r randyVersion, easy bool) *Version {
 
 func NewPopulatedContainer(r randyVersion, easy bool) *Container {
 	this := &Container{}
-	this.Type = randStringVersion(r)
+	this.Type = string(randStringVersion(r))
 	if r.Intn(10) != 0 {
 		this.Docker = NewPopulatedDocker(r, easy)
 	}
@@ -1534,8 +1534,8 @@ func NewPopulatedContainer(r randyVersion, easy bool) *Container {
 func NewPopulatedDocker(r randyVersion, easy bool) *Docker {
 	this := &Docker{}
 	this.ForcePullImage = bool(bool(r.Intn(2) == 0))
-	this.Image = randStringVersion(r)
-	this.Network = randStringVersion(r)
+	this.Image = string(randStringVersion(r))
+	this.Network = string(randStringVersion(r))
 	if r.Intn(10) != 0 {
 		v8 := r.Intn(5)
 		this.Parameters = make([]*Parameter, v8)
@@ -1558,8 +1558,8 @@ func NewPopulatedDocker(r randyVersion, easy bool) *Docker {
 
 func NewPopulatedParameter(r randyVersion, easy bool) *Parameter {
 	this := &Parameter{}
-	this.Key = randStringVersion(r)
-	this.Value = randStringVersion(r)
+	this.Key = string(randStringVersion(r))
+	this.Value = string(randStringVersion(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1571,8 +1571,8 @@ func NewPopulatedPortMapping(r randyVersion, easy bool) *PortMapping {
 	if r.Intn(2) == 0 {
 		this.ContainerPort *= -1
 	}
-	this.Name = randStringVersion(r)
-	this.Protocol = randStringVersion(r)
+	this.Name = string(randStringVersion(r))
+	this.Protocol = string(randStringVersion(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1580,9 +1580,9 @@ func NewPopulatedPortMapping(r randyVersion, easy bool) *PortMapping {
 
 func NewPopulatedVolume(r randyVersion, easy bool) *Volume {
 	this := &Volume{}
-	this.ContainerPath = randStringVersion(r)
-	this.HostPath = randStringVersion(r)
-	this.Mode = randStringVersion(r)
+	this.ContainerPath = string(randStringVersion(r))
+	this.HostPath = string(randStringVersion(r))
+	this.Mode = string(randStringVersion(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1625,7 +1625,7 @@ func randStringVersion(r randyVersion) string {
 	}
 	return string(tmps)
 }
-func randUnrecognizedVersion(r randyVersion, maxFieldNumber int) (data []byte) {
+func randUnrecognizedVersion(r randyVersion, maxFieldNumber int) (dAtA []byte) {
 	l := r.Intn(5)
 	for i := 0; i < l; i++ {
 		wire := r.Intn(4)
@@ -1633,43 +1633,43 @@ func randUnrecognizedVersion(r randyVersion, maxFieldNumber int) (data []byte) {
 			wire = 5
 		}
 		fieldNumber := maxFieldNumber + r.Intn(100)
-		data = randFieldVersion(data, r, fieldNumber, wire)
+		dAtA = randFieldVersion(dAtA, r, fieldNumber, wire)
 	}
-	return data
+	return dAtA
 }
-func randFieldVersion(data []byte, r randyVersion, fieldNumber int, wire int) []byte {
+func randFieldVersion(dAtA []byte, r randyVersion, fieldNumber int, wire int) []byte {
 	key := uint32(fieldNumber)<<3 | uint32(wire)
 	switch wire {
 	case 0:
-		data = encodeVarintPopulateVersion(data, uint64(key))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(key))
 		v11 := r.Int63()
 		if r.Intn(2) == 0 {
 			v11 *= -1
 		}
-		data = encodeVarintPopulateVersion(data, uint64(v11))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(v11))
 	case 1:
-		data = encodeVarintPopulateVersion(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	case 2:
-		data = encodeVarintPopulateVersion(data, uint64(key))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(key))
 		ll := r.Intn(100)
-		data = encodeVarintPopulateVersion(data, uint64(ll))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(ll))
 		for j := 0; j < ll; j++ {
-			data = append(data, byte(r.Intn(256)))
+			dAtA = append(dAtA, byte(r.Intn(256)))
 		}
 	default:
-		data = encodeVarintPopulateVersion(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateVersion(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	}
-	return data
+	return dAtA
 }
-func encodeVarintPopulateVersion(data []byte, v uint64) []byte {
+func encodeVarintPopulateVersion(dAtA []byte, v uint64) []byte {
 	for v >= 1<<7 {
-		data = append(data, uint8(uint64(v)&0x7f|0x80))
+		dAtA = append(dAtA, uint8(uint64(v)&0x7f|0x80))
 		v >>= 7
 	}
-	data = append(data, uint8(v))
-	return data
+	dAtA = append(dAtA, uint8(v))
+	return dAtA
 }
 func (m *Version) Size() (n int) {
 	var l int
@@ -1884,8 +1884,8 @@ func sovVersion(x uint64) (n int) {
 func sozVersion(x uint64) (n int) {
 	return sovVersion(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *Version) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Version) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -1897,7 +1897,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -1925,7 +1925,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1940,7 +1940,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ID = string(data[iNdEx:postIndex])
+			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -1954,7 +1954,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1969,7 +1969,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.AppId = string(data[iNdEx:postIndex])
+			m.AppId = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -1983,7 +1983,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1998,7 +1998,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Command = string(data[iNdEx:postIndex])
+			m.Command = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 1 {
@@ -2009,14 +2009,14 @@ func (m *Version) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.Cpus = float64(math.Float64frombits(v))
 		case 5:
 			if wireType != 1 {
@@ -2027,14 +2027,14 @@ func (m *Version) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.Mem = float64(math.Float64frombits(v))
 		case 6:
 			if wireType != 1 {
@@ -2045,14 +2045,14 @@ func (m *Version) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			iNdEx += 8
-			v = uint64(data[iNdEx-8])
-			v |= uint64(data[iNdEx-7]) << 8
-			v |= uint64(data[iNdEx-6]) << 16
-			v |= uint64(data[iNdEx-5]) << 24
-			v |= uint64(data[iNdEx-4]) << 32
-			v |= uint64(data[iNdEx-3]) << 40
-			v |= uint64(data[iNdEx-2]) << 48
-			v |= uint64(data[iNdEx-1]) << 56
+			v = uint64(dAtA[iNdEx-8])
+			v |= uint64(dAtA[iNdEx-7]) << 8
+			v |= uint64(dAtA[iNdEx-6]) << 16
+			v |= uint64(dAtA[iNdEx-5]) << 24
+			v |= uint64(dAtA[iNdEx-4]) << 32
+			v |= uint64(dAtA[iNdEx-3]) << 40
+			v |= uint64(dAtA[iNdEx-2]) << 48
+			v |= uint64(dAtA[iNdEx-1]) << 56
 			m.Disk = float64(math.Float64frombits(v))
 		case 7:
 			if wireType != 0 {
@@ -2066,7 +2066,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.Instances |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2085,7 +2085,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2100,7 +2100,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.RunAs = string(data[iNdEx:postIndex])
+			m.RunAs = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 9:
 			if wireType != 2 {
@@ -2114,7 +2114,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2131,7 +2131,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if m.Container == nil {
 				m.Container = &Container{}
 			}
-			if err := m.Container.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Container.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2147,7 +2147,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2169,7 +2169,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				keykey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2184,7 +2184,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLenmapkey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2199,7 +2199,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postStringIndexmapkey > l {
 				return io.ErrUnexpectedEOF
 			}
-			mapkey := string(data[iNdEx:postStringIndexmapkey])
+			mapkey := string(dAtA[iNdEx:postStringIndexmapkey])
 			iNdEx = postStringIndexmapkey
 			if m.Labels == nil {
 				m.Labels = make(map[string]string)
@@ -2213,7 +2213,7 @@ func (m *Version) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					valuekey |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2228,7 +2228,7 @@ func (m *Version) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					stringLenmapvalue |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2243,7 +2243,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if postStringIndexmapvalue > l {
 					return io.ErrUnexpectedEOF
 				}
-				mapvalue := string(data[iNdEx:postStringIndexmapvalue])
+				mapvalue := string(dAtA[iNdEx:postStringIndexmapvalue])
 				iNdEx = postStringIndexmapvalue
 				m.Labels[mapkey] = mapvalue
 			} else {
@@ -2263,7 +2263,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2278,7 +2278,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.HealthChecks = append(m.HealthChecks, &HealthCheck{})
-			if err := m.HealthChecks[len(m.HealthChecks)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.HealthChecks[len(m.HealthChecks)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2294,7 +2294,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2316,7 +2316,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				keykey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2331,7 +2331,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLenmapkey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2346,7 +2346,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postStringIndexmapkey > l {
 				return io.ErrUnexpectedEOF
 			}
-			mapkey := string(data[iNdEx:postStringIndexmapkey])
+			mapkey := string(dAtA[iNdEx:postStringIndexmapkey])
 			iNdEx = postStringIndexmapkey
 			if m.Env == nil {
 				m.Env = make(map[string]string)
@@ -2360,7 +2360,7 @@ func (m *Version) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					valuekey |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2375,7 +2375,7 @@ func (m *Version) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					stringLenmapvalue |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2390,7 +2390,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if postStringIndexmapvalue > l {
 					return io.ErrUnexpectedEOF
 				}
-				mapvalue := string(data[iNdEx:postStringIndexmapvalue])
+				mapvalue := string(dAtA[iNdEx:postStringIndexmapvalue])
 				iNdEx = postStringIndexmapvalue
 				m.Env[mapkey] = mapvalue
 			} else {
@@ -2410,7 +2410,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2427,7 +2427,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if m.KillPolicy == nil {
 				m.KillPolicy = &KillPolicy{}
 			}
-			if err := m.KillPolicy.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.KillPolicy.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2443,7 +2443,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2460,7 +2460,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if m.UpdatePolicy == nil {
 				m.UpdatePolicy = &UpdatePolicy{}
 			}
-			if err := m.UpdatePolicy.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.UpdatePolicy.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2476,7 +2476,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2491,7 +2491,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Constraints = append(m.Constraints, string(data[iNdEx:postIndex]))
+			m.Constraints = append(m.Constraints, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		case 16:
 			if wireType != 2 {
@@ -2505,7 +2505,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2520,7 +2520,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Uris = append(m.Uris, string(data[iNdEx:postIndex]))
+			m.Uris = append(m.Uris, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		case 17:
 			if wireType != 2 {
@@ -2534,7 +2534,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2549,7 +2549,7 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Ip = append(m.Ip, string(data[iNdEx:postIndex]))
+			m.Ip = append(m.Ip, string(dAtA[iNdEx:postIndex]))
 			iNdEx = postIndex
 		case 18:
 			if wireType != 2 {
@@ -2563,7 +2563,7 @@ func (m *Version) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2578,11 +2578,11 @@ func (m *Version) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Mode = string(data[iNdEx:postIndex])
+			m.Mode = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2601,8 +2601,8 @@ func (m *Version) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Container) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Container) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -2614,7 +2614,7 @@ func (m *Container) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2642,7 +2642,7 @@ func (m *Container) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2657,7 +2657,7 @@ func (m *Container) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Type = string(data[iNdEx:postIndex])
+			m.Type = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2671,7 +2671,7 @@ func (m *Container) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2688,7 +2688,7 @@ func (m *Container) Unmarshal(data []byte) error {
 			if m.Docker == nil {
 				m.Docker = &Docker{}
 			}
-			if err := m.Docker.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Docker.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2704,7 +2704,7 @@ func (m *Container) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2719,13 +2719,13 @@ func (m *Container) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Volumes = append(m.Volumes, &Volume{})
-			if err := m.Volumes[len(m.Volumes)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Volumes[len(m.Volumes)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2744,8 +2744,8 @@ func (m *Container) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Docker) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Docker) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -2757,7 +2757,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2785,7 +2785,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				v |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2805,7 +2805,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2820,7 +2820,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Image = string(data[iNdEx:postIndex])
+			m.Image = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2834,7 +2834,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2849,7 +2849,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Network = string(data[iNdEx:postIndex])
+			m.Network = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -2863,7 +2863,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2878,7 +2878,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Parameters = append(m.Parameters, &Parameter{})
-			if err := m.Parameters[len(m.Parameters)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Parameters[len(m.Parameters)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2894,7 +2894,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2909,7 +2909,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.PortMappings = append(m.PortMappings, &PortMapping{})
-			if err := m.PortMappings[len(m.PortMappings)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.PortMappings[len(m.PortMappings)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
@@ -2925,7 +2925,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				v |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2935,7 +2935,7 @@ func (m *Docker) Unmarshal(data []byte) error {
 			m.Privileged = bool(v != 0)
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2954,8 +2954,8 @@ func (m *Docker) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Parameter) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Parameter) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -2967,7 +2967,7 @@ func (m *Parameter) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2995,7 +2995,7 @@ func (m *Parameter) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3010,7 +3010,7 @@ func (m *Parameter) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Key = string(data[iNdEx:postIndex])
+			m.Key = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3024,7 +3024,7 @@ func (m *Parameter) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3039,11 +3039,11 @@ func (m *Parameter) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Value = string(data[iNdEx:postIndex])
+			m.Value = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -3062,8 +3062,8 @@ func (m *Parameter) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *PortMapping) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *PortMapping) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -3075,7 +3075,7 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -3103,7 +3103,7 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.ContainerPort |= (int32(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3122,7 +3122,7 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3137,7 +3137,7 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Name = string(data[iNdEx:postIndex])
+			m.Name = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -3151,7 +3151,7 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3166,11 +3166,11 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Protocol = string(data[iNdEx:postIndex])
+			m.Protocol = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -3189,8 +3189,8 @@ func (m *PortMapping) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Volume) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Volume) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -3202,7 +3202,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -3230,7 +3230,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3245,7 +3245,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ContainerPath = string(data[iNdEx:postIndex])
+			m.ContainerPath = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -3259,7 +3259,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3274,7 +3274,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.HostPath = string(data[iNdEx:postIndex])
+			m.HostPath = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -3288,7 +3288,7 @@ func (m *Volume) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3303,11 +3303,11 @@ func (m *Volume) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Mode = string(data[iNdEx:postIndex])
+			m.Mode = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -3326,8 +3326,8 @@ func (m *Volume) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *KillPolicy) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *KillPolicy) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -3339,7 +3339,7 @@ func (m *KillPolicy) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -3367,7 +3367,7 @@ func (m *KillPolicy) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.Duration |= (int64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3376,7 +3376,7 @@ func (m *KillPolicy) Unmarshal(data []byte) error {
 			}
 		default:
 			iNdEx = preIndex
-			skippy, err := skipVersion(data[iNdEx:])
+			skippy, err := skipVersion(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -3395,8 +3395,8 @@ func (m *KillPolicy) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func skipVersion(data []byte) (n int, err error) {
-	l := len(data)
+func skipVersion(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		var wire uint64
@@ -3407,7 +3407,7 @@ func skipVersion(data []byte) (n int, err error) {
 			if iNdEx >= l {
 				return 0, io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -3425,7 +3425,7 @@ func skipVersion(data []byte) (n int, err error) {
 					return 0, io.ErrUnexpectedEOF
 				}
 				iNdEx++
-				if data[iNdEx-1] < 0x80 {
+				if dAtA[iNdEx-1] < 0x80 {
 					break
 				}
 			}
@@ -3442,7 +3442,7 @@ func skipVersion(data []byte) (n int, err error) {
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				length |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -3465,7 +3465,7 @@ func skipVersion(data []byte) (n int, err error) {
 					if iNdEx >= l {
 						return 0, io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					innerWire |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -3476,7 +3476,7 @@ func skipVersion(data []byte) (n int, err error) {
 				if innerWireType == 4 {
 					break
 				}
-				next, err := skipVersion(data[start:])
+				next, err := skipVersion(dAtA[start:])
 				if err != nil {
 					return 0, err
 				}

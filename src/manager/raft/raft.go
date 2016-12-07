@@ -92,8 +92,13 @@ type Node struct {
 	signalledLeadership uint32
 	isMember            uint32
 	ticker              clock.Ticker
-	leadershipBroadcast *watch.Queue
 	store               *store.BoltbDb
+
+	// there has some diffrent between this two braodcast
+	// leadershipBroadcast notify myself identity have been switched
+	// leaderChangeBroadcast notify the leader have been switched
+	leadershipBroadcast   *watch.Queue
+	leaderChangeBroadcast *watch.Queue
 
 	stoppedC  chan struct{}
 	stopC     chan struct{}
@@ -133,6 +138,7 @@ func NewNode(config util.Raft, db *bolt.DB) (*Node, error) {
 	}
 
 	n.leadershipBroadcast = watch.NewQueue()
+	n.leaderChangeBroadcast = watch.NewQueue()
 	n.ticker = clock.NewClock().NewTicker(time.Second)
 	n.reqIDGen = idutil.NewGenerator(uint16(n.id), time.Now())
 	n.wait = newWait()
@@ -276,6 +282,7 @@ func (n *Node) Run(ctx context.Context) error {
 	}()
 
 	wasLeader := false
+	var leader uint64
 
 	for {
 		select {
@@ -319,6 +326,13 @@ func (n *Node) Run(ctx context.Context) error {
 					atomic.StoreUint32(&n.signalledLeadership, 1)
 					n.leadershipBroadcast.Publish(IsLeader)
 				}
+			}
+
+			//TODO(upccup) Use rd.SoftState.Lead will block in here why???
+			newLeader := n.leader()
+			if leader != newLeader {
+				n.leaderChangeBroadcast.Publish(newLeader)
+				leader = newLeader
 			}
 
 			n.raftNode.Advance()
@@ -446,6 +460,10 @@ func (n *Node) processInternalRaftRequest(ctx context.Context, r swan.InternalRa
 
 func (n *Node) SubscribeLeadership() (q chan events.Event, cancel func()) {
 	return n.leadershipBroadcast.Watch()
+}
+
+func (n *Node) SubcribeLeaderChange() (q chan events.Event, cancel func()) {
+	return n.leaderChangeBroadcast.Watch()
 }
 
 func (n *Node) saveSnap(snap raftpb.Snapshot) error {
@@ -673,6 +691,7 @@ func (n *Node) WaitForLeader(ctx context.Context) error {
 func (n *Node) stop(ctx context.Context) {
 	n.stopHTTP()
 	n.leadershipBroadcast.Close()
+	n.leaderChangeBroadcast.Close()
 	n.ticker.Stop()
 	n.raftNode.Stop()
 	atomic.StoreUint32(&n.isMember, 0)
