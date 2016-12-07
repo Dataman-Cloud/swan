@@ -546,6 +546,22 @@
 			"notests": true
 		},
 		{
+			"importpath": "gopkg.in/go-playground/assert.v1",
+			"repository": "https://gopkg.in/go-playground/assert.v1",
+			"vcs": "git",
+			"revision": "4f4dfbc7d1c48336cf93399deae81aa9067e88af",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "gopkg.in/go-playground/validator.v8",
+			"repository": "https://gopkg.in/go-playground/validator.v8",
+			"vcs": "git",
+			"revision": "5f57d2222ad794d0dffb07e664ea05e2ee07d60c",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "gopkg.in/mgo.v2/bson",
 			"repository": "https://gopkg.in/mgo.v2",
 			"vcs": "git",
