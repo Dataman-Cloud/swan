@@ -107,6 +107,17 @@ func (task *Task) PrepareTaskInfo(offer *mesos.Offer) *mesos.TaskInfo {
 		Variables: vars,
 	}
 
+	uris := make([]*mesos.CommandInfo_URI, 0)
+	for _, v := range task.Slot.Version.Uris {
+		uris = append(uris, &mesos.CommandInfo_URI{
+			Value: proto.String(v),
+		})
+	}
+
+	if len(uris) > 0 {
+		taskInfo.Command.Uris = uris
+	}
+
 	if task.Slot.Version.Labels != nil {
 		labels := make([]*mesos.Label, 0)
 		for k, v := range task.Slot.Version.Labels {
