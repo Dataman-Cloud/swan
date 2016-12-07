@@ -1,6 +1,8 @@
 package state
 
 import (
+	"strings"
+
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -143,31 +145,92 @@ func (task *Task) PrepareTaskInfo(offer *mesos.Offer) *mesos.TaskInfo {
 		//logrus.Errorf("No ports resource defined")
 		//break
 		//}
-		//for _, m := range task.PortMappings {
-		//hostPort := ports[s.TaskLaunched]
-		//taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
-		//&mesos.ContainerInfo_DockerInfo_PortMapping{
-		//HostPort:      proto.Uint32(uint32(hostPort)),
-		//ContainerPort: proto.Uint32(m.Port),
-		//Protocol:      proto.String(m.Protocol),
-		//},
-		//)
-		//taskInfo.Resources = append(taskInfo.Resources, &mesos.Resource{
-		//Name: proto.String("ports"),
-		//Type: mesos.Value_RANGES.Enum(),
-		//Ranges: &mesos.Value_Ranges{
-		//Range: []*mesos.Value_Range{
-		//{
-		//Begin: proto.Uint64(uint64(hostPort)),
-		//End:   proto.Uint64(uint64(hostPort)),
-		//},
-		//},
-		//},
-		//})
-		//}
+		for _, m := range task.Slot.Version.Container.Docker.PortMappings {
+			hostPort := 31000
+			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
+				&mesos.ContainerInfo_DockerInfo_PortMapping{
+					HostPort:      proto.Uint32(uint32(hostPort)),
+					ContainerPort: proto.Uint32(uint32(m.ContainerPort)),
+					Protocol:      proto.String(m.Protocol),
+				},
+			)
+			taskInfo.Resources = append(taskInfo.Resources, &mesos.Resource{
+				Name: proto.String("ports"),
+				Type: mesos.Value_RANGES.Enum(),
+				Ranges: &mesos.Value_Ranges{
+					Range: []*mesos.Value_Range{
+						{
+							Begin: proto.Uint64(uint64(hostPort)),
+							End:   proto.Uint64(uint64(hostPort)),
+						},
+					},
+				},
+			})
+		}
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_BRIDGE.Enum()
 	default:
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
+	}
+
+	// setup task health check
+	if len(task.Slot.Version.HealthChecks) > 0 {
+		for _, healthCheck := range task.Slot.Version.HealthChecks {
+			if healthCheck.PortIndex < 0 || int(healthCheck.PortIndex) > len(taskInfo.Container.Docker.PortMappings) {
+				healthCheck.PortIndex = 0
+			}
+
+			hostPort := proto.Uint32(0)
+
+			for _, portMapping := range taskInfo.Container.Docker.PortMappings {
+				if portMapping.ContainerPort == proto.Uint32(uint32(healthCheck.Port)) {
+					hostPort = portMapping.HostPort
+				}
+			}
+
+			if healthCheck.PortName != "" {
+				for _, portMapping := range task.Slot.Version.Container.Docker.PortMappings {
+					if portMapping.Name == healthCheck.PortName {
+						containerPort := portMapping.ContainerPort
+						for _, portMapping := range taskInfo.Container.Docker.PortMappings {
+							if uint32(containerPort) == *portMapping.ContainerPort {
+								hostPort = portMapping.HostPort
+							}
+						}
+					}
+				}
+			}
+
+			if *hostPort == 0 {
+				hostPort = taskInfo.Container.Docker.PortMappings[healthCheck.PortIndex].HostPort
+			}
+
+			protocol := strings.ToLower(healthCheck.Protocol)
+			if protocol == "http" {
+				taskInfo.HealthCheck = &mesos.HealthCheck{
+					Type: mesos.HealthCheck_HTTP.Enum(),
+					Http: &mesos.HealthCheck_HTTPCheckInfo{
+						Scheme:   proto.String("http"),
+						Port:     hostPort,
+						Path:     &healthCheck.Path,
+						Statuses: []uint32{uint32(200)},
+					},
+				}
+			}
+
+			if protocol == "tcp" {
+				taskInfo.HealthCheck = &mesos.HealthCheck{
+					Type: mesos.HealthCheck_TCP.Enum(),
+					Tcp: &mesos.HealthCheck_TCPCheckInfo{
+						Port: hostPort,
+					},
+				}
+			}
+
+			taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
+			taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
+			taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.MaxConsecutiveFailures)
+			taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
+		}
 	}
 
 	return &taskInfo
