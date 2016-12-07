@@ -1,4 +1,4 @@
-package engine
+package scheduler
 
 import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
@@ -14,7 +14,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 
 	for _, offer := range h.MesosEvent.Event.Offers.Offers {
 		// when no pending offer slot
-		if len(h.EngineRef.Allocator.PendingOfferSlots) == 0 {
+		if len(h.SchedulerRef.Allocator.PendingOfferSlots) == 0 {
 
 			RejectOffer(h, offer)
 		} else {
@@ -23,7 +23,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 			taskInfos := make([]*mesos.TaskInfo, 0)
 			for {
 				// loop through all pending offer slots
-				slot := h.EngineRef.Allocator.NextPendingOffer()
+				slot := h.SchedulerRef.Allocator.NextPendingOffer()
 				if slot == nil {
 					break
 				}
@@ -33,12 +33,12 @@ func OfferHandler(h *Handler) (*Handler, error) {
 					// TODO the following code logic complex, need improvement
 					// offerWrapper cpu/mem/disk deduction recorded within the obj itself
 					_, taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
-					h.EngineRef.Allocator.SetOfferIdForSlotId(offer.GetId(), slot.Id)
+					h.SchedulerRef.Allocator.SetOfferIdForSlotId(offer.GetId(), slot.Id)
 					taskInfos = append(taskInfos, taskInfo)
 
 				} else {
 					// put the slot back into the queue, in the end
-					h.EngineRef.Allocator.PutSlotBackToPendingQueue(slot)
+					h.SchedulerRef.Allocator.PutSlotBackToPendingQueue(slot)
 				}
 			}
 			LaunchTaskInfos(h, offer, taskInfos)
@@ -50,7 +50,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 
 func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo) {
 	call := &sched.Call{
-		FrameworkId: h.EngineRef.Scheduler.Framework.GetId(),
+		FrameworkId: h.SchedulerRef.MesosConnector.Framework.GetId(),
 		Type:        sched.Call_ACCEPT.Enum(),
 		Accept: &sched.Call_Accept{
 			OfferIds: []*mesos.OfferID{
@@ -73,7 +73,7 @@ func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo
 
 func RejectOffer(h *Handler, offer *mesos.Offer) {
 	call := &sched.Call{
-		FrameworkId: h.EngineRef.Scheduler.Framework.GetId(),
+		FrameworkId: h.SchedulerRef.MesosConnector.Framework.GetId(),
 		Type:        sched.Call_DECLINE.Enum(),
 		Decline: &sched.Call_Decline{
 			OfferIds: []*mesos.OfferID{

@@ -78,7 +78,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.Scheduler.ClusterId), // should be app.AppId
+		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.MesosConnector.ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
 

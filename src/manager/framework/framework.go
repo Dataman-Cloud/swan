@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/engine"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 
 	"github.com/Dataman-Cloud/swan/src/util"
 
@@ -12,8 +12,8 @@ import (
 )
 
 type Framework struct {
-	Engine  *engine.Engine
-	HttpApi *api.Api
+	Scheduler *scheduler.Scheduler
+	HttpApi   *api.Api
 
 	StopC chan struct{}
 }
@@ -22,20 +22,20 @@ func New(config util.SwanConfig) (*Framework, error) {
 	f := &Framework{
 		StopC: make(chan struct{}),
 	}
-	f.Engine = engine.NewEngine(config)
-	f.HttpApi = api.NewApi(f.Engine)
+	f.Scheduler = scheduler.NewScheduler(config)
+	f.HttpApi = api.NewApi(f.Scheduler)
 
 	return f, nil
 }
 
 func (f *Framework) Start(ctx context.Context) error {
 	apiStopC := make(chan struct{})
-	engineStopC := make(chan struct{})
+	schedulerStopC := make(chan struct{})
 
 	go func() {
 		<-ctx.Done()
 		apiStopC <- struct{}{}
-		engineStopC <- struct{}{}
+		schedulerStopC <- struct{}{}
 		f.StopC <- struct{}{}
 	}()
 
@@ -49,7 +49,7 @@ func (f *Framework) Start(ctx context.Context) error {
 
 	go func() {
 		wg.Done()
-		err = f.Engine.Start(ctx)
+		err = f.Scheduler.Start(ctx)
 	}()
 
 	wg.Wait()

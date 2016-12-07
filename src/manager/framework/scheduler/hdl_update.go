@@ -1,4 +1,4 @@
-package engine
+package scheduler
 
 import (
 	"strconv"
@@ -35,22 +35,22 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	case mesos.TaskState_TASK_STAGING:
 	case mesos.TaskState_TASK_STARTING:
 	case mesos.TaskState_TASK_RUNNING:
-		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_RUNNING)
+		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_RUNNING)
 
 	case mesos.TaskState_TASK_FINISHED:
-		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FINISHED)
+		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FINISHED)
 
 	case mesos.TaskState_TASK_FAILED:
-		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
-		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FAILED)
+		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FAILED)
 
 	case mesos.TaskState_TASK_KILLED:
-		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_KILLED)
+		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_KILLED)
 
 	case mesos.TaskState_TASK_LOST:
 	}
 
-	h.EngineRef.InvalidateApps()
+	h.SchedulerRef.InvalidateApps()
 
 	return h, nil
 }
@@ -58,7 +58,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
 	if taskStatus.GetUuid() != nil {
 		call := &sched.Call{
-			FrameworkId: h.EngineRef.Scheduler.Framework.GetId(),
+			FrameworkId: h.SchedulerRef.MesosConnector.Framework.GetId(),
 			Type:        sched.Call_ACKNOWLEDGE.Enum(),
 			Acknowledge: &sched.Call_Acknowledge{
 				AgentId: taskStatus.GetAgentId(),

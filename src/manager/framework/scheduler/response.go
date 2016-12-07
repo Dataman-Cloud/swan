@@ -1,4 +1,4 @@
-package engine
+package scheduler
 
 import (
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"

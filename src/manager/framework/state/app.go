@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -49,17 +49,17 @@ type App struct {
 	State               string
 	InvalidateCallbacks map[string][]AppInvalidateCallbackFuncs
 
-	Scheduler *scheduler.Scheduler
+	MesosConnector *mesos_connector.MesosConnector
 }
 
-func NewApp(version *types.Version, allocator *OfferAllocator, Scheduler *scheduler.Scheduler) (*App, error) {
+func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *mesos_connector.MesosConnector) (*App, error) {
 	app := &App{
 		Versions:          []*types.Version{version},
 		Slots:             make(map[int]*Slot),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
-		Scheduler:         Scheduler,
+		MesosConnector:    MesosConnector,
 
 		Created: time.Now(),
 		Updated: time.Now(),

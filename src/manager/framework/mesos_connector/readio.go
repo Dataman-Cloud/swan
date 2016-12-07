@@ -1,4 +1,4 @@
-package scheduler
+package mesos_connector
 
 import (
 	"bufio"

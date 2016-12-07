@@ -1,4 +1,4 @@
-package engine
+package scheduler
 
 import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
@@ -13,15 +13,15 @@ type Handler struct {
 	Response   *Response
 	MesosEvent *event.MesosEvent
 
-	EngineRef *Engine
+	SchedulerRef *Scheduler
 }
 
 func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handler {
 	s := &Handler{
-		Id:         id,
-		Manager:    manager,
-		MesosEvent: e,
-		EngineRef:  manager.EngineRef,
+		Id:           id,
+		Manager:      manager,
+		MesosEvent:   e,
+		SchedulerRef: manager.SchedulerRef,
 	}
 
 	s.Response = NewResponse()
@@ -50,7 +50,7 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 			}
 
 			for _, c := range h.Response.Calls {
-				h.EngineRef.Scheduler.MesosCallChan <- c
+				h.SchedulerRef.MesosConnector.MesosCallChan <- c
 			}
 
 			return

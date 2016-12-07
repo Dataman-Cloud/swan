@@ -3,7 +3,7 @@ package api
 import (
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/engine"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -17,14 +17,14 @@ const (
 )
 
 type Api struct {
-	port   string
-	Engine *engine.Engine
+	port      string
+	Scheduler *scheduler.Scheduler
 }
 
-func NewApi(eng *engine.Engine) *Api {
+func NewApi(eng *scheduler.Scheduler) *Api {
 	return &Api{
-		port:   ":12306",
-		Engine: eng,
+		port:      ":12306",
+		Scheduler: eng,
 	}
 }
 
@@ -57,7 +57,7 @@ func (api *Api) CreateApp(c *gin.Context) {
 	var version types.Version
 
 	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
-		err := api.Engine.CreateApp(&version)
+		err := api.Scheduler.CreateApp(&version)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		} else {
@@ -70,7 +70,7 @@ func (api *Api) CreateApp(c *gin.Context) {
 
 func (api *Api) ListApp(c *gin.Context) {
 	appsRet := make([]*App, 0)
-	for _, app := range api.Engine.ListApps() {
+	for _, app := range api.Scheduler.ListApps() {
 		version := app.CurrentVersion
 		appsRet = append(appsRet, &App{
 			ID:                version.AppId,
@@ -79,7 +79,7 @@ func (api *Api) ListApp(c *gin.Context) {
 			RunningInstances:  app.RunningInstances(),
 			RollbackInstances: app.RollbackInstances(),
 			RunAs:             version.RunAs,
-			ClusterId:         app.Scheduler.ClusterId,
+			ClusterId:         app.MesosConnector.ClusterId,
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
@@ -91,7 +91,7 @@ func (api *Api) ListApp(c *gin.Context) {
 }
 
 func (api *Api) GetApp(c *gin.Context) {
-	app, err := api.Engine.InspectApp(c.Param("app_id"))
+	app, err := api.Scheduler.InspectApp(c.Param("app_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
@@ -103,7 +103,7 @@ func (api *Api) GetApp(c *gin.Context) {
 			RunningInstances:  app.RunningInstances(),
 			RollbackInstances: app.RollbackInstances(),
 			RunAs:             version.RunAs,
-			ClusterId:         app.Scheduler.ClusterId,
+			ClusterId:         app.MesosConnector.ClusterId,
 			Created:           app.Created,
 			Updated:           app.Updated,
 			Mode:              string(app.Mode),
@@ -131,7 +131,7 @@ func (api *Api) ScaleDown(c *gin.Context) {
 		return
 	}
 
-	err := api.Engine.ScaleDown(c.Param("app_id"), param.To)
+	err := api.Scheduler.ScaleDown(c.Param("app_id"), param.To)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
@@ -148,7 +148,7 @@ func (api *Api) ScaleUp(c *gin.Context) {
 		return
 	}
 
-	err := api.Engine.ScaleUp(c.Param("app_id"), param.To)
+	err := api.Scheduler.ScaleUp(c.Param("app_id"), param.To)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
@@ -157,7 +157,7 @@ func (api *Api) ScaleUp(c *gin.Context) {
 }
 
 func (api *Api) DeleteApp(c *gin.Context) {
-	err := api.Engine.DeleteApp(c.Param("app_id"))
+	err := api.Scheduler.DeleteApp(c.Param("app_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {
@@ -169,7 +169,7 @@ func (api *Api) UpdateApp(c *gin.Context) {
 	var version types.Version
 
 	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
-		err := api.Engine.UpdateApp(c.Param("app_id"), &version)
+		err := api.Scheduler.UpdateApp(c.Param("app_id"), &version)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		} else {
@@ -186,7 +186,7 @@ func (api *Api) ProceedUpdate(c *gin.Context) {
 	}
 
 	if c.BindJSON(&param) == nil {
-		err := api.Engine.ProceedUpdate(c.Param("app_id"), param.Instances)
+		err := api.Scheduler.ProceedUpdate(c.Param("app_id"), param.Instances)
 		if err != nil {
 			logrus.Errorf("%s", err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
@@ -199,7 +199,7 @@ func (api *Api) ProceedUpdate(c *gin.Context) {
 }
 
 func (api *Api) CancelUpdate(c *gin.Context) {
-	err := api.Engine.CancelUpdate(c.Param("app_id"))
+	err := api.Scheduler.CancelUpdate(c.Param("app_id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err})
 	} else {

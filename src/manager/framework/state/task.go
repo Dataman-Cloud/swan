@@ -262,7 +262,7 @@ func createRangeResource(name string, begin, end uint64) *mesos.Resource {
 func (task *Task) Kill() {
 	logrus.Infof("Kill task %s", task.Slot.Id)
 	call := &sched.Call{
-		FrameworkId: task.App.Scheduler.Framework.GetId(),
+		FrameworkId: task.App.MesosConnector.Framework.GetId(),
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
@@ -284,5 +284,5 @@ func (task *Task) Kill() {
 		}
 	}
 
-	task.App.Scheduler.MesosCallChan <- call
+	task.App.MesosConnector.MesosCallChan <- call
 }

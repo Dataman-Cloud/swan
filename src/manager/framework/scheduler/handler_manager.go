@@ -1,4 +1,4 @@
-package engine
+package scheduler
 
 import (
 	"sync"
@@ -22,15 +22,15 @@ type HandlerManager struct {
 	handlers   map[string]*Handler
 	handlerMap map[sched.Event_Type]HandlerFuncs
 
-	EngineRef *Engine
+	SchedulerRef *Scheduler
 }
 
-func NewHanlderManager(engine *Engine, installFun func(*HandlerManager)) *HandlerManager {
+func NewHanlderManager(scheduler *Scheduler, installFun func(*HandlerManager)) *HandlerManager {
 	manager := &HandlerManager{
-		handlers:   make(map[string]*Handler),
-		handlerMap: make(map[sched.Event_Type]HandlerFuncs),
-		lock:       sync.Mutex{},
-		EngineRef:  engine,
+		handlers:     make(map[string]*Handler),
+		handlerMap:   make(map[sched.Event_Type]HandlerFuncs),
+		lock:         sync.Mutex{},
+		SchedulerRef: scheduler,
 	}
 	once.Do(func() {
 		installFun(manager)
