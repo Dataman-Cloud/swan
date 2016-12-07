@@ -19,7 +19,6 @@ import (
 type Scheduler struct {
 	scontext         *swancontext.SwanContext
 	heartbeater      *time.Ticker
-	userEventChan    chan *event.UserEvent
 	mesosFailureChan chan error
 
 	handlerManager *HandlerManager
@@ -37,7 +36,6 @@ func NewScheduler(config util.SwanConfig) *Scheduler {
 	scheduler := &Scheduler{
 		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
 		heartbeater:    time.NewTicker(10 * time.Second),
-		userEventChan:  make(chan *event.UserEvent, 1024), // TODO
 
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
@@ -90,10 +88,6 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 		case e := <-scheduler.MesosConnector.MesosEventChan:
 			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
 			scheduler.handlerMesosEvent(e)
-
-		case e := <-scheduler.userEventChan:
-			fmt.Println(e)
-			logrus.WithFields(logrus.Fields{"user event": "yes"}).Debugf("")
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
