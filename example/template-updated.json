@@ -1,8 +1,8 @@
 {
   "appId": "nginx0051",
   "cmd": null,
-  "cpus": 0.01,
-  "mem": 5,
+  "cpus": 0.02,
+  "mem": 6,
   "disk": 0,
   "runAs": "xcm",
   "instances": 3,
@@ -55,11 +55,11 @@
     {
       "protocol": "TCP",
       "path": "/",
-      "portName": "web",
+      "delaySeconds": 15,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 3,
       "timeoutSeconds": 3,
-      "maxConsecutiveFailures": 5
+      "consecutiveFailures": 5
     }
  ],
   "updatePolicy": {

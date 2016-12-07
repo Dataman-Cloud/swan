@@ -15,6 +15,7 @@ type SwanConfig struct {
 	LogLevel   string `json:"log-level"`
 	Mode       string `json:"manager"` // manager, agent, mixed
 	Standalone bool   `json:"standalone"`
+	WithEngine string `json:"withEngine"`
 
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
@@ -123,6 +124,10 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 	if c.String("work-dir") != "" {
 		swanConfig.Raft.StorePath = c.String("work-dir")
+	}
+
+	if c.String("with-engine") != "" {
+		swanConfig.WithEngine = c.String("with-engine")
 	}
 	return validateAndFormatConfig(swanConfig)
 }
