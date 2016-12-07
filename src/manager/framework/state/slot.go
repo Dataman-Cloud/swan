@@ -111,14 +111,8 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	slot.Version = version
 	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
+
 	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
-
-	//onSlotRunning := func(slot *Slot) {
-	//if slot.MarkForRollingUpdate {
-	//}
-	//}
-	//slot.RegisterStateCallbacks(SLOT_STATE_TASK_RUNNING, onSlotRunning)
-
 }
 
 func (slot *Slot) Update(version *types.Version) {
