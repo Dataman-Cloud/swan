@@ -20,15 +20,16 @@ type Task struct {
 	Version *types.Version
 	Slot    *Slot
 
-	State      string
-	ExitReason string
-	Stdout     string
-	Stderr     string
+	State  string
+	Stdout string
+	Stderr string
 
 	OfferId       string
 	AgentId       string
 	Ip            string
 	AgentHostName string
+
+	Reason string
 }
 
 func NewTask(app *App, version *types.Version, slot *Slot) *Task {

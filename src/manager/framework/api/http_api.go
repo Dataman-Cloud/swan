@@ -235,6 +235,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			for _, v := range slot.TaskHistory {
 				staleTask := &TaskHistory{
 					State:         v.State,
+					Reason:        v.Reason,
 					OfferId:       v.OfferId,
 					AgentId:       v.AgentId,
 					AgentHostname: v.AgentHostName,
@@ -244,9 +245,8 @@ func FilterTasksFromApp(app *state.App) []*Task {
 					Mem:  v.Version.Mem,
 					Disk: v.Version.Disk,
 
-					Stderr:     v.Stderr,
-					Stdout:     v.Stdout,
-					ExitReason: v.ExitReason,
+					Stderr: v.Stderr,
+					Stdout: v.Stdout,
 				}
 
 				task.History = append(task.History, staleTask)

@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -67,6 +68,8 @@ type Slot struct {
 
 	MarkForDeletion      bool
 	MarkForRollingUpdate bool
+
+	restartPolicy *RestartPolicy
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
@@ -86,17 +89,36 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 	slot.DispatchNewTask(slot.Version)
 
+	// initialize restart policy
+	testAndRestartFunc := func(s *Slot) bool {
+		if s.StateIs(SLOT_STATE_TASK_RUNNING) {
+			return true
+		} else {
+			s.Archive()
+			s.DispatchNewTask(slot.Version)
+		}
+
+		return false
+	}
+
+	//slot.restartPolicy = NewRestartPolicy(slot, slot.Version.BackoffSeconds,
+	//slot.Version.BackoffFactor, slot.Version.MaxLaunchDelaySeconds, testAndRestartFunc)
+	slot.restartPolicy = NewRestartPolicy(slot, time.Second*30, 1.2, time.Second*300, testAndRestartFunc)
+
 	return slot
 }
 
 // kill task doesn't need cleanup slot from app.Slots
 func (slot *Slot) KillTask() {
+	slot.StopRestartPolicy()
 	slot.SetState(SLOT_STATE_PENDING_KILL)
 	slot.CurrentTask.Kill()
 }
 
 // kill task and make slot sweeped after successfully kill task
 func (slot *Slot) Kill() {
+	slot.StopRestartPolicy()
+
 	slot.MarkForDeletion = true
 	slot.SetState(SLOT_STATE_PENDING_KILL)
 
@@ -113,6 +135,7 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
+
 }
 
 func (slot *Slot) Update(version *types.Version) {
@@ -185,8 +208,11 @@ func (slot *Slot) SetState(state string) error {
 	switch slot.State {
 	case SLOT_STATE_PENDING_KILL:
 	case SLOT_STATE_TASK_KILLED:
+		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_FINISHED:
+		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_RUNNING:
+
 	case SLOT_STATE_TASK_FAILED:
 		// restart if needed
 	default:
@@ -212,4 +238,11 @@ func (slot *Slot) RegisterStateCallbacks(state string, callback SlotStateCallbac
 
 func (slot *Slot) RemoveStateCallbacks(state string) {
 	slot.StatesCallbacks[state] = make([]SlotStateCallbackFuncs, 0)
+}
+
+func (slot *Slot) StopRestartPolicy() {
+	if slot.restartPolicy != nil {
+		slot.restartPolicy.Stop()
+		slot.restartPolicy = nil
+	}
 }

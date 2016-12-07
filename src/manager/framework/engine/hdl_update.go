@@ -19,6 +19,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 
 	slotName := taskStatus.TaskId.GetValue()
 	taskState := taskStatus.GetState()
+	reason := taskStatus.GetReason()
 	//healthy := taskStatus.GetHealthy()
 	//fmt.Println(healthy)
 	//fmt.Println(state)
@@ -26,6 +27,8 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	slotIndex_, AppId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
 
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
+
+	logrus.Infof("preparing set app %s slot %d to state %s", AppId, slotIndex, taskState)
 
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:
@@ -37,6 +40,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FINISHED)
 
 	case mesos.TaskState_TASK_FAILED:
+		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
 		h.EngineRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FAILED)
 
 	case mesos.TaskState_TASK_KILLED:
