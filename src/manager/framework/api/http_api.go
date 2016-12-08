@@ -73,17 +73,16 @@ func (api *Api) ListApp(c *gin.Context) {
 	for _, app := range api.Scheduler.ListApps() {
 		version := app.CurrentVersion
 		appsRet = append(appsRet, &App{
-			ID:                version.AppId,
-			Name:              version.AppId,
-			Instances:         int(version.Instances),
-			RunningInstances:  app.RunningInstances(),
-			RollbackInstances: app.RollbackInstances(),
-			RunAs:             version.RunAs,
-			ClusterId:         app.MesosConnector.ClusterId,
-			Created:           app.Created,
-			Updated:           app.Updated,
-			Mode:              string(app.Mode),
-			State:             app.State,
+			ID:               version.AppId,
+			Name:             version.AppId,
+			Instances:        int(version.Instances),
+			RunningInstances: app.RunningInstances(),
+			RunAs:            version.RunAs,
+			ClusterId:        app.MesosConnector.ClusterId,
+			Created:          app.Created,
+			Updated:          app.Updated,
+			Mode:             string(app.Mode),
+			State:            app.State,
 		})
 	}
 
@@ -97,17 +96,16 @@ func (api *Api) GetApp(c *gin.Context) {
 	} else {
 		version := app.CurrentVersion
 		appRet := &App{
-			ID:                version.AppId,
-			Name:              version.AppId,
-			Instances:         int(version.Instances),
-			RunningInstances:  app.RunningInstances(),
-			RollbackInstances: app.RollbackInstances(),
-			RunAs:             version.RunAs,
-			ClusterId:         app.MesosConnector.ClusterId,
-			Created:           app.Created,
-			Updated:           app.Updated,
-			Mode:              string(app.Mode),
-			State:             app.State,
+			ID:               version.AppId,
+			Name:             version.AppId,
+			Instances:        int(version.Instances),
+			RunningInstances: app.RunningInstances(),
+			RunAs:            version.RunAs,
+			ClusterId:        app.MesosConnector.ClusterId,
+			Created:          app.Created,
+			Updated:          app.Updated,
+			Mode:             string(app.Mode),
+			State:            app.State,
 		}
 
 		appRet.Versions = make([]string, 0)

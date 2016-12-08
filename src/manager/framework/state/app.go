@@ -184,18 +184,6 @@ func (app *App) Delete() error {
 	return nil
 }
 
-func (app *App) SetState(state string) {
-	app.InvalidateCallbacks = make(map[string][]AppInvalidateCallbackFuncs)
-	logrus.Infof("now clearing all InvalidateCallbacks")
-
-	app.State = state
-	logrus.Infof("app %s now has state %s", app.AppId, app.State)
-}
-
-func (app *App) StateIs(state string) bool {
-	return app.State == state
-}
-
 func (app *App) Update(version *types.Version) error {
 	if !app.StateIs(APP_STATE_NORMAL) {
 		return errors.New("app not in normal state")
@@ -286,6 +274,18 @@ func (app *App) CancelUpdate() error {
 	return nil
 }
 
+func (app *App) SetState(state string) {
+	app.InvalidateCallbacks = make(map[string][]AppInvalidateCallbackFuncs)
+	logrus.Infof("now clearing all InvalidateCallbacks")
+
+	app.State = state
+	logrus.Infof("app %s now has state %s", app.AppId, app.State)
+}
+
+func (app *App) StateIs(state string) bool {
+	return app.State == state
+}
+
 // called when slot has any update
 func (app *App) InvalidateSlots() {
 	// handle callback
@@ -353,10 +353,6 @@ func (app *App) MarkForDeletionInstances() int {
 	}
 
 	return markForDeletionInstances
-}
-
-func (app *App) RollbackInstances() int {
-	return 0
 }
 
 func (app *App) CanBeCleanAfterDeletion() bool {
