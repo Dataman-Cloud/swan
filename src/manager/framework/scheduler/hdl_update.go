@@ -22,32 +22,44 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	reason := taskStatus.GetReason()
 	healthy := taskStatus.GetHealthy()
 
-	//fmt.Println(state)
-
 	slotIndex_, AppId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
-
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
 	logrus.Infof("preparing set app %s slot %d to state %s", AppId, slotIndex, taskState)
 	logrus.Infof("got healthy report for slot %s => %s", slotName, healthy)
 
+	app, found := h.SchedulerRef.Apps[AppId]
+	if !found {
+		logrus.Errorf("app not found: %s", AppId)
+		return h, nil
+	}
+	logrus.Debugf("found app %s", app.AppId)
+
+	slot, found := h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)]
+	if !found {
+		logrus.Errorf("slot not found: %s", slotIndex)
+		return h, nil
+	}
+	logrus.Debugf("found slot %s", slot.Id)
+
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:
 	case mesos.TaskState_TASK_STARTING:
 	case mesos.TaskState_TASK_RUNNING:
-		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_RUNNING)
+		slot.SetState(state.SLOT_STATE_TASK_RUNNING)
 
 	case mesos.TaskState_TASK_FINISHED:
-		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FINISHED)
+		slot.SetState(state.SLOT_STATE_TASK_FINISHED)
 
 	case mesos.TaskState_TASK_FAILED:
-		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
-		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_FAILED)
+		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		slot.SetState(state.SLOT_STATE_TASK_FAILED)
 
 	case mesos.TaskState_TASK_KILLED:
-		h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)].SetState(state.SLOT_STATE_TASK_KILLED)
+		slot.SetState(state.SLOT_STATE_TASK_KILLED)
 
 	case mesos.TaskState_TASK_LOST:
+		slot.SetState(state.SLOT_STATE_TASK_LOST)
 	}
 
 	h.SchedulerRef.InvalidateApps()
