@@ -21,10 +21,6 @@ import (
 )
 
 type Manager struct {
-	store     *store.Store
-	apiserver *apiserver.ApiServer
-	//proxyserver
-
 	ipamAdapter *ipam.IpamAdapter
 	resolver    *ns.Resolver
 	sched       *sched.Sched
@@ -35,6 +31,7 @@ type Manager struct {
 
 	swanContext *swancontext.SwanContext
 	config      util.SwanConfig
+	cluster     []string
 }
 
 func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
@@ -65,6 +62,7 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 		return nil, err
 	}
 
+	manager.cluster = manager.config.SwanCluster
 	manager.resolver = ns.New(manager.config.DNS)
 	manager.sched = sched.New(manager.config.Scheduler, manager.swanContext)
 	manager.framework, err = framework.New(manager.config)
@@ -88,6 +86,12 @@ func (manager *Manager) Start(ctx context.Context) error {
 
 	eventCtx, _ := context.WithCancel(ctx)
 	go manager.handleLeadershipEvents(eventCtx, leadershipCh)
+
+	leaderChangeCh, leaderChangeQueueCancel := manager.raftNode.SubcribeLeaderChange()
+	defer leaderChangeQueueCancel()
+
+	leaderChangeEventCtx, _ := context.WithCancel(ctx)
+	go manager.handleLeaderChangeEvents(leaderChangeEventCtx, leaderChangeCh)
 
 	raftCtx, _ := context.WithCancel(ctx)
 	if err := manager.raftNode.StartRaft(raftCtx); err != nil {
@@ -131,7 +135,6 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
-				fmt.Println(manager.config.WithEngine)
 				if manager.config.WithEngine == "sched" {
 					sechedCtx, cancel := context.WithCancel(ctx)
 					cancelFunc = cancel
@@ -153,6 +156,22 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				}
 				cancelFunc = nil
 			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChangeCh chan events.Event) {
+	for {
+		select {
+		case leaderChangeEvent := <-leaderChangeCh:
+			leader := leaderChangeEvent.(uint64)
+
+			leaderAddr := manager.cluster[int(leader)-1]
+			log.G(ctx).Info("Now leader is change to ", leaderAddr)
+
+			manager.swanContext.ApiServer.UpdateLeaderAddr(leaderAddr)
 		case <-ctx.Done():
 			return
 		}

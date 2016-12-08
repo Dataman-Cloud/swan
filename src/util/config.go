@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -22,6 +23,7 @@ type SwanConfig struct {
 	HttpListener HttpListener `json:"httpListener"`
 	IPAM         IPAM         `json:"ipam"`
 	Raft         Raft         `json:"raft"`
+	SwanCluster  []string     `json:swanCluster`
 }
 
 type Scheduler struct {
@@ -92,11 +94,11 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("mode") != "" {
 		swanConfig.Mode = c.String("mode")
 	}
-	if c.Bool("standablone") != false {
-		swanConfig.Standalone = c.Bool("standablone")
+	if c.Bool("standalone") != false {
+		swanConfig.Standalone = c.Bool("standalone")
 	}
-	if c.String("addr") != "" {
-		swanConfig.HttpListener.TCPAddr = c.String("addr")
+	if c.String("cluster") != "" {
+		swanConfig.SwanCluster = strings.Split(c.String("cluster"), ",")
 	}
 	if c.String("sock") != "" {
 		swanConfig.HttpListener.UnixAddr = c.String("sock")
@@ -116,8 +118,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("work-dir") != "" {
 		swanConfig.IPAM.StorePath = c.String("work-dir")
 	}
-	if c.String("cluster") != "" {
-		swanConfig.Raft.Cluster = c.String("cluster")
+	if c.String("raft-cluster") != "" {
+		swanConfig.Raft.Cluster = c.String("raft-cluster")
 	}
 	if c.Int("raftid") != 0 {
 		swanConfig.Raft.RaftId = c.Int("raftid")
@@ -129,6 +131,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("with-engine") != "" {
 		swanConfig.WithEngine = c.String("with-engine")
 	}
+	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	return validateAndFormatConfig(swanConfig)
 }
 

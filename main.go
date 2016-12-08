@@ -60,7 +60,7 @@ func main() {
 			Usage: "specify config file path",
 		},
 		cli.StringFlag{
-			Name:  "addr",
+			Name:  "cluster",
 			Usage: "API Server address <ip:port>",
 		},
 		cli.StringFlag{
@@ -85,7 +85,7 @@ func main() {
 			Usage: "raft node id",
 		},
 		cli.StringFlag{
-			Name:  "cluster",
+			Name:  "raft-cluster",
 			Usage: "raft cluster peers addr",
 		},
 		cli.BoolFlag{

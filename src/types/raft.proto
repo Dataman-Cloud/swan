@@ -50,9 +50,15 @@ message StoreAction {
         Framework framework = 3; 
         Task task = 4;
         Version version = 5;
+        Manager manager = 6;
 	}
 }
 
 message Framework {
     string id = 1 [(gogoproto.customname) = "ID"];
+}
+
+message Manager {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string addr = 2;
 }

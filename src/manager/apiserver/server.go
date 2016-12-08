@@ -2,8 +2,10 @@ package apiserver
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/router"
 
@@ -12,9 +14,10 @@ import (
 )
 
 type ApiServer struct {
-	addr    string
-	sock    string
-	routers []router.Router
+	addr       string
+	sock       string
+	routers    []router.Router
+	leaderAddr string
 }
 
 func NewApiServer(addr, sock string) *ApiServer {
@@ -43,10 +46,81 @@ func (s *ApiServer) createMux() *mux.Router {
 
 func (s *ApiServer) makeHTTPHandler(handler router.APIFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			if s.addr != s.leaderAddr {
+				//TODO(upccup): we need know why this do not work
+
+				//leaderURL, err := url.Parse(s.leaderAddr + r.URL.Path)
+				//if err != nil {
+				//	logrus.Errorf("Handler for %s %s returned error: %v", r.Method, r.URL.Path, err)
+				//	http.Error(w, err.Error(), http.StatusInternalServerError)
+				//}
+				//if leaderURL.Scheme == "" {
+				//	leaderURL.Scheme = "http"
+				//}
+				//r.RequestURI = "http://" + s.addr + leaderURL.Path
+				//r.URL = leaderURL
+				//r.Host = r.URL.Host
+				//leaderProxry := httputil.NewSingleHostReverseProxy(leaderURL)
+				//leaderHandler := sameHost(leaderProxry)
+				//leaderHandler.ServeHTTP(w, r)
+				if err := s.proxy(w, r); err != nil {
+					logrus.Errorf("Handler for %s %s returned error: %v", r.Method, r.URL.Path, err)
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
+				return
+			}
+		}
 		logrus.WithFields(logrus.Fields{"from": r.RemoteAddr}).Infof("[%s] %s", r.Method, r.URL.Path)
 		if err := handler(w, r); err != nil {
 			logrus.Errorf("Handler for %s %s returned error: %v", r.Method, r.URL.Path, err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+	}
+}
+
+func (s *ApiServer) proxy(w http.ResponseWriter, r *http.Request) error {
+	leaderURL, err := url.Parse(s.leaderAddr + r.URL.Path)
+	if err != nil {
+		return err
+	}
+
+	if leaderURL.Scheme == "" {
+		leaderURL.Scheme = "http"
+	}
+
+	rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
+	if err != nil {
+		return err
+	}
+
+	copyHeader(r.Header, &rr.Header)
+
+	// Create a client and query the target
+	var transport http.Transport
+	resp, err := transport.RoundTrip(rr)
+	if err != nil {
+		return err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	dH := w.Header()
+	copyHeader(resp.Header, &dH)
+	dH.Add("Requested-Host", rr.Host)
+
+	w.Write(body)
+	return nil
+}
+
+func copyHeader(source http.Header, dest *http.Header) {
+	for n, v := range source {
+		for _, vv := range v {
+			dest.Add(n, vv)
 		}
 	}
 }
@@ -56,6 +130,10 @@ func (s *ApiServer) AppendRouter(routers ...router.Router) {
 	for _, r := range routers {
 		s.routers = append(s.routers, r)
 	}
+}
+
+func (s *ApiServer) UpdateLeaderAddr(addr string) {
+	s.leaderAddr = addr
 }
 
 func (s *ApiServer) ListenAndServe() error {
