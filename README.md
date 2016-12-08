@@ -1,5 +1,5 @@
 
-<img src="assets/img/swan.png" width="350">
+<img src="docs/assets/img/swan.png" width="350">
 
 ##
 
