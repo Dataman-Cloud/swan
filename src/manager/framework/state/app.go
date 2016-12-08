@@ -67,6 +67,11 @@ func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *m
 		InvalidateCallbacks: make(map[string][]AppInvalidateCallbackFuncs),
 	}
 
+	if version.Mode == "fixed" {
+		app.Mode = APP_MODE_FIXED
+	} else { // if no mode specified, default should be replicates
+		app.Mode = APP_MODE_REPLICATES
+	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
 	for i := 0; i < int(version.Instances); i++ {
@@ -88,6 +93,10 @@ func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *m
 
 // also need user pass ip here
 func (app *App) ScaleUp(to int) error {
+	if !app.StateIs(APP_STATE_NORMAL) {
+		return errors.New("app not in normal state")
+	}
+
 	if to <= int(app.CurrentVersion.Instances) {
 		return errors.New("scale up expected instances size no less than current size")
 	}
@@ -111,6 +120,10 @@ func (app *App) ScaleUp(to int) error {
 }
 
 func (app *App) ScaleDown(to int) error {
+	if !app.StateIs(APP_STATE_NORMAL) {
+		return errors.New("app not in normal state")
+	}
+
 	if to >= int(app.CurrentVersion.Instances) {
 		return errors.New("scale down expected instances size no bigger than current size")
 	}
@@ -122,6 +135,7 @@ func (app *App) ScaleDown(to int) error {
 			app.SetState(APP_STATE_NORMAL)
 		}
 	}
+
 	removeSlot := func(app *App) {
 		for k, slot := range app.Slots {
 			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
@@ -183,6 +197,10 @@ func (app *App) StateIs(state string) bool {
 }
 
 func (app *App) Update(version *types.Version) error {
+	if !app.StateIs(APP_STATE_NORMAL) {
+		return errors.New("app not in normal state")
+	}
+
 	if app.ProposedVersion != nil {
 		return errors.New("previous rolling update in progress")
 	}
@@ -241,6 +259,10 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 }
 
 func (app *App) CancelUpdate() error {
+	if app.ProposedVersion == nil {
+		return errors.New("app not in rolling update state")
+	}
+
 	afterRollbackDone := func(app *App) {
 		if app.Slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
 			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to acheive
@@ -344,4 +366,12 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 // TODO
 func (app *App) PersistToStorage() error {
 	return nil
+}
+
+func (app *App) IsReplicates() bool {
+	return app.Mode == APP_MODE_REPLICATES
+}
+
+func (app *App) IsFixed() bool {
+	return app.Mode == APP_MODE_FIXED
 }
