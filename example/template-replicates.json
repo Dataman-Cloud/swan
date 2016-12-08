@@ -67,5 +67,6 @@
 	  "maxRetries": 3,
 	  "maxFailovers": 3,
 	  "action": "rollback"
-  }
+  },
+  "mode": "replicates"
 }

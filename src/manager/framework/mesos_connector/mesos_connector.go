@@ -24,7 +24,6 @@ type MesosConnector struct {
 	ClusterId        string
 	master           string
 	client           *MesosHttpClient
-	mastersUrls      []string
 	lastHearBeatTime time.Time
 	config           util.Scheduler
 
@@ -36,8 +35,8 @@ type MesosConnector struct {
 }
 
 func NewMesosConnector(config util.Scheduler) *MesosConnector {
+
 	return &MesosConnector{
-		mastersUrls:    []string{"192.168.1.175:5050"},
 		config:         config,
 		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
 		MesosCallChan:  make(chan *sched.Call, 1024),
@@ -50,7 +49,7 @@ func (s *MesosConnector) ConnectToMesosAndAcceptEvent() error {
 	s.Framework, err = createOrLoadFrameworkInfo(s.config)
 	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
 	if err != nil {
-		logrus.Errorf("%s, check your mesos mastger configuration", err)
+		logrus.Errorf("%s Check your mesos mastger configuration", err)
 		return err
 	}
 

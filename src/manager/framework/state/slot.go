@@ -167,7 +167,13 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 	ow.MemUsed += slot.Version.Mem
 	ow.DiskUsed += slot.Version.Disk
 
-	return ow, slot.CurrentTask.PrepareTaskInfo(ow.Offer)
+	taskInfo := slot.CurrentTask.PrepareTaskInfo(ow)
+
+	if slot.App.IsReplicates() { // reserve port only for replicates application
+		ow.PortUsedSize += len(slot.Version.Container.Docker.PortMappings)
+	}
+
+	return ow, taskInfo
 }
 
 func (slot *Slot) Resources() []*mesos.Resource {
