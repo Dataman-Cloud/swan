@@ -24,6 +24,8 @@ type SwanConfig struct {
 	IPAM         IPAM         `json:"ipam"`
 	Raft         Raft         `json:"raft"`
 	SwanCluster  []string     `json:swanCluster`
+
+	ApiServerAddr string `json:apiServerAddr`
 }
 
 type Scheduler struct {
