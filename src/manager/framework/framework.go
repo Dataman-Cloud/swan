@@ -14,6 +14,7 @@ import (
 type Framework struct {
 	Scheduler *scheduler.Scheduler
 	HttpApi   *api.Api
+	RestApi   *api.AppService
 
 	StopC chan struct{}
 }
@@ -24,6 +25,7 @@ func New(config util.SwanConfig) (*Framework, error) {
 	}
 	f.Scheduler = scheduler.NewScheduler(config)
 	f.HttpApi = api.NewApi(f.Scheduler)
+	f.RestApi = api.NewAppService(f.Scheduler)
 
 	return f, nil
 }
