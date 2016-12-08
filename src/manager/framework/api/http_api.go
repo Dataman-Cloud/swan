@@ -6,11 +6,14 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/emicklei/go-restful"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"
+	//"github.com/emicklei/go-restful/swagger"
 )
 
 const (
@@ -27,6 +30,98 @@ func NewApi(eng *scheduler.Scheduler, config config.Scheduler) *Api {
 		Scheduler: eng,
 		config:    config,
 	}
+}
+
+// TODO(xychu): after we port all the apis to restful.WebService,
+//              we could remove Api and NewApi above.
+type AppService struct {
+	Scheduler *scheduler.Scheduler
+	swanapiserver.ApiRegister
+}
+
+func NewAndInstallAppService(apiServer *swanapiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
+	appService := &AppService{
+		Scheduler: eng,
+	}
+	swanapiserver.Install(apiServer, appService)
+	return appService
+}
+
+// NOTE(xychu): Every service need to registed to ApiServer need to impl
+//              a `Register` interface so that it can be added to ApiServer.Start
+func (api *AppService) Register(container *restful.Container) {
+	ws := new(restful.WebService)
+	ws.
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+	//ws.Path(API_PREFIX)
+
+	ws.Route(ws.GET("/apps").To(api.ListApp).
+		// docs
+		Doc("List Apps").
+		Operation("listApps").
+		Returns(200, "OK", []types.Application{}))
+
+	ws.Route(ws.POST("/apps").To(api.CreateApp).
+		// docs
+		Doc("Create App").
+		Operation("createApp").
+		Returns(201, "OK", []types.Application{}).
+		Writes(types.Application{}))
+	//ws.Route(ws.GET("/apps/{app_id}").To(api.GetApp).
+	//	// docs
+	//	Doc("Get an App").
+	//	Operation("getApp").
+	//	Returns(200, "OK", types.Application{}).
+	//	Writes(types.Application{}))
+	//ws.Route(ws.DELETE("/apps/{app_id}").To(api.DeleteApp).
+	//	// docs
+	//	Doc("Delete App").
+	//	Operation("deleteApp"))
+
+	container.Add(ws)
+}
+
+func (api *AppService) CreateApp(request *restful.Request, response *restful.Response) {
+	var version types.Version
+
+	err := request.ReadEntity(&version)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, err)
+	}
+
+	err = CheckVersion(&version)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, err)
+	}
+
+	app, err := api.Scheduler.CreateApp(&version)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+	} else {
+		response.WriteEntity(app)
+	}
+}
+
+func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
+	appsRet := make([]*App, 0)
+	for _, app := range api.Scheduler.ListApps() {
+		version := app.CurrentVersion
+		appsRet = append(appsRet, &App{
+			ID:               version.AppId,
+			Name:             version.AppId,
+			Instances:        int(version.Instances),
+			RunningInstances: app.RunningInstances(),
+			RunAs:            version.RunAs,
+			ClusterId:        app.MesosConnector.ClusterId,
+			Created:          app.Created,
+			Updated:          app.Updated,
+			Mode:             string(app.Mode),
+			State:            app.State,
+		})
+	}
+
+	response.WriteEntity(appsRet)
 }
 
 func (api *Api) Start(ctx context.Context) error {
@@ -58,7 +153,7 @@ func (api *Api) CreateApp(c *gin.Context) {
 	var version types.Version
 
 	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
-		err := api.Scheduler.CreateApp(&version)
+		_, err := api.Scheduler.CreateApp(&version)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		} else {
