@@ -7,6 +7,7 @@ import (
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
+	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
@@ -85,7 +86,8 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.resolver = nameserver.NewResolver(dnsConfig)
 	manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
 
-	manager.framework, err = framework.New(manager.swanContext, manager.config)
+	frameworkStore := fstore.NewStore(db, raftNode)
+	manager.framework, err = framework.New(manager.swanContext, manager.config, frameworkStore)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err

@@ -7,10 +7,12 @@ import (
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 type AppMode string
@@ -59,7 +61,7 @@ type App struct {
 func NewApp(version *types.Version,
 	allocator *OfferAllocator,
 	MesosConnector *mesos_connector.MesosConnector,
-	scontext *swancontext.SwanContext) (*App, error) {
+	scontext *swancontext.SwanContext, store store.Store) (*App, error) {
 	err := validateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
@@ -86,8 +88,10 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	//raftApp := AppToRaft(app)
-	//store.CreateApp(raftApp)
+	raftApp := AppToRaft(app)
+	if err := store.CreateApp(context.TODO(), raftApp, nil); err != nil {
+		return nil, err
+	}
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)

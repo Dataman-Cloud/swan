@@ -82,8 +82,4 @@ type Store interface {
 
 	// delete version from db
 	DeleteVersion(appId, versionId string) error
-
-	UpdateManagerInfo(id, addr string) error
-
-	GetManagerInfo(id string) (*types.Manager, error)
 }

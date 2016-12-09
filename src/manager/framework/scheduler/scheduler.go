@@ -8,6 +8,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/util"
@@ -30,9 +31,10 @@ type Scheduler struct {
 
 	Allocator      *state.OfferAllocator
 	MesosConnector *mesos_connector.MesosConnector
+	store          store.Store
 }
 
-func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext) *Scheduler {
+func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
 	scheduler := &Scheduler{
 		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
 		heartbeater:    time.NewTicker(10 * time.Second),
@@ -40,6 +42,7 @@ func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext) *Sc
 
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
+		store:   store,
 	}
 
 	RegiserFun := func(m *HandlerManager) {

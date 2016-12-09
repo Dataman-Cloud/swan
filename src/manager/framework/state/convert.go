@@ -60,6 +60,47 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 	return raftVersion
 }
 
+func VersionFromRaft() {
+	version := &types.Version{
+		ID:          raftVersion.ID,
+		Command:     raftVersion.Command,
+		Cpus:        raftVersion.Cpus,
+		Mem:         raftVersion.Mem,
+		Disk:        raftVersion.Disk,
+		Instances:   raftVersion.Instances,
+		RunAs:       raftVersion.RunAs,
+		Labels:      raftVersion.Labels,
+		Env:         raftVersion.Env,
+		Constraints: raftVersion.Constraints,
+		Uris:        raftVersion.Uris,
+		Ip:          raftVersion.Ip,
+		Mode:        raftVersion.Mode,
+	}
+
+	if raftVersion.Container != nil {
+		version.Container = ContainerFromContainer(raftVersion.Container)
+	}
+
+	if raftVersion.KillPolicy != nil {
+		version.KillPolicy = KillPolicyFromRaft(raftVersion.Container)
+	}
+
+	if raftVersion.UpdatePolicy != nil {
+		version.UpdatePolicy = UpdatePolicyFromRaft(raftVersion.UpdatePolicy)
+	}
+
+	if raftVersion.HealthChecks != nil {
+		var healthChecks []*types.HealthCheck
+		for _, healthCheck := range raftVersion.HealthChecks {
+			healthChecks = append(healthChecks, HealthCheckFromRaft(healthCheck))
+		}
+
+		version.HealthChecks = healthChecks
+	}
+
+	return version
+}
+
 func ContainerToRaft(container *types.Container) *rafttypes.Container {
 	raftContainer := &rafttypes.Container{
 		Type: container.Type,
@@ -80,6 +121,28 @@ func ContainerToRaft(container *types.Container) *rafttypes.Container {
 	}
 
 	return raftContainer
+}
+
+func ContainerFromContainer(raftContainer *rafttypes.Container) types.Container {
+	container := &types.Container{
+		Type: raftContainer.Type,
+	}
+
+	if raftContainer.Docker != nil {
+		contianer.Docker = DockerFromRaft(raftContainer.Docker)
+	}
+
+	if raftContainer.Volumes != nil {
+		var volumes []*types.Volume
+
+		for _, volume := range raftContainer.Volumes {
+			volumes = append(volumes, VolumeFromFaft(volume))
+		}
+
+		container.Volumes = volumes
+	}
+
+	return container
 }
 
 func DockerToRaft(docker *types.Docker) *rafttypes.Docker {
@@ -112,10 +175,46 @@ func DockerToRaft(docker *types.Docker) *rafttypes.Docker {
 	return raftDocker
 }
 
+func DockerFromRaft(raftDocker *rafttypes.Docker) *types.Docker {
+	docker := &types.Docker{
+		ForcePullImage: raftDocker.ForcePullImage,
+		Image:          raftDocker.ForcePullImage,
+		Network:        raftDockerk.Network,
+		Privileged:     raftDocer.Privileged,
+	}
+
+	if raftDocker.Parameters != nil {
+		var parameters []*types.Parameter
+		for _, parameter := range raftDockerk.Parameters {
+			parameters = append(parameters, ParameterFromRaft(parameter))
+		}
+
+		docker.Parameters = parameters
+	}
+
+	if docker.PortMappings != nil {
+		var portMappings []*types.PortMapping
+		for _, portMapping := range raftDocer.PortMappings {
+			portMappings = append(portMappings, PortMapping)
+		}
+
+		docker.PortMappings = portMappings
+	}
+
+	return docker
+}
+
 func ParameterToRaft(parameter *types.Parameter) *rafttypes.Parameter {
 	return &rafttypes.Parameter{
 		Key:   parameter.Key,
 		Value: parameter.Value,
+	}
+}
+
+func ParameterFromRaft(raftParameter *rafttypes.Parameter) *types.Parameter {
+	return &types.Parameter{
+		Key:   raftParameter.Key,
+		Value: raftParameter.Value,
 	}
 }
 
@@ -127,11 +226,27 @@ func PortMappingToRaft(portMapping *types.PortMapping) *rafttypes.PortMapping {
 	}
 }
 
+func PortMappingFromRaft(raftPortMapping *rafttypes.PortMapping) *types.PortMapping {
+	return &types.PortMapping{
+		ContainerPort: raftPortMapping.ContainerPort,
+		Name:          raftPortMapping.Name,
+		Protocol:      raftPortMapping.Protocol,
+	}
+}
+
 func VolumeToRaft(volume *types.Volume) *rafttypes.Volume {
 	return &rafttypes.Volume{
 		ContainerPath: volume.ContainerPath,
 		HostPath:      volume.HostPath,
 		Mode:          volume.Mode,
+	}
+}
+
+func VolumeFromFaft(raftVolume *rafttypes.Volume) *types.Volume {
+	return &types.Volume{
+		ContainerPath: raftVolume.ContainerPath,
+		HostPath:      raftVolume.HostPath,
+		Mode:          raftVolume.Mode,
 	}
 }
 
@@ -141,12 +256,27 @@ func KillPolicyToRaft(killPolicy *types.KillPolicy) *rafttypes.KillPolicy {
 	}
 }
 
+func KillPolicyFromRaft(raftKillPolicy *rafttypes.KillPolicy) *types.KillPolicy {
+	return &types.KillPolicy{
+		Duration: raftKillPolicy.Duration,
+	}
+}
+
 func UpdatePolicyToRaft(updatePolicy *types.UpdatePolicy) *rafttypes.UpdatePolicy {
 	return &rafttypes.UpdatePolicy{
 		UpdateDelay:  updatePolicy.UpdateDelay,
 		MaxRetries:   updatePolicy.MaxRetries,
 		MaxFailovers: updatePolicy.MaxFailovers,
 		Action:       updatePolicy.Action,
+	}
+}
+
+func UpdatePolicyFromRaft(raftUpdatePolicy *rafttypes.UpdatePolicy) *types.UpdatePolicy {
+	return &types.UpdatePolicy{
+		UpdateDelay:  raftUpdatePolicy.UpdateDelay,
+		MaxRetries:   raftUpdatePolicy.MaxRetries,
+		MaxFailovers: raftUpdatePolicy.MaxFailovers,
+		Action:       raftUpdatePolicy.Action,
 	}
 }
 
@@ -172,6 +302,34 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 	return raftHealthCheck
 }
 
+func HeadlthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCheck {
+	healthCheck := &types.HealthCheck{
+		ID:        raftHealthCheck.ID,
+		Address:   raftHealthCheck.Address,
+		Protocol:  raftHealthCheck.Protocol,
+		Port:      raftHealthCheck.Port,
+		PortIndex: raftHealthCheck.PortIndex,
+		PortName:  raftHealthCheck.PortName,
+		Path:      raftHealthCheck.Path,
+		MaxConsecutiveFailures: raftHealthCheck.MaxConsecutiveFailures,
+		GracePeriodSeconds:     raftHealthCheck.GracePeriodSeconds,
+		IntervalSeconds:        raftHealthCheck.IntervalSeconds,
+		TimeoutSeconds:         raftHealthCheck.TimeoutSeconds,
+	}
+
+	if raftHealthCheck.Command != nil {
+		healthCheck.Command = CommandFromRaft(raftHealthCheck.Command)
+	}
+
+	return healthCheck
+}
+
 func CommandToRaft(command *types.Command) *rafttypes.Command {
 	return &rafttypes.Command{command.Value}
+}
+
+func CommandFromRaft(raftCommand *rafttypes.Command) *types.Command {
+	return &types.Command{
+		Value: raftCommand.Value,
+	}
 }

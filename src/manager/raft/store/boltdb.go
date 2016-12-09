@@ -3,7 +3,7 @@ package store
 import (
 	"errors"
 
-	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 
 	"github.com/boltdb/bolt"
 )
@@ -18,7 +18,6 @@ var (
 	bucketKeyFramework      = []byte("framework")
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyVersions       = []byte("versions")
-	bucketKeyManager        = []byte("managers")
 
 	BucketKeyData = []byte("data")
 )
@@ -33,7 +32,6 @@ var (
 	ErrUndefineFrameworkAction = errors.New("boltdb: undefined framework store action")
 	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
-	ErrUndefineManagerAction   = errors.New("boltdb: undefined manager store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -112,12 +110,10 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doAppStoreAction(tx, action.Action, action.GetApplication())
 	case *types.StoreAction_Framework:
 		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
-	case *types.StoreAction_Task:
-		return doTaskStoreAction(tx, action.Action, action.GetTask())
-	case *types.StoreAction_Version:
-		return doVersionStoreAction(tx, action.Action, action.GetVersion())
-	case *types.StoreAction_Manager:
-		return doManagerStoreAction(tx, action.Action, action.GetManager())
+		//	case *types.StoreAction_Task:
+		//		return doTaskStoreAction(tx, action.Action, action.GetTask())
+		//	case *types.StoreAction_Version:
+		//		return doVersionStoreAction(tx, action.Action, action.GetVersion())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -145,33 +141,24 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 	}
 }
 
-func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
-	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putTask(tx, task)
-	case types.StoreActionKindRemove:
-		return removeTask(tx, task.AppId, task.Name)
-	default:
-		return ErrUndefineTaskAction
-	}
-}
-
-func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
-	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putVersion(tx, version)
-	case types.StoreActionKindRemove:
-		return removeVersion(tx, version.AppId, version.ID)
-	default:
-		return ErrUndefineVersionAction
-	}
-}
-
-func doManagerStoreAction(tx *bolt.Tx, action types.StoreActionKind, manager *types.Manager) error {
-	switch action {
-	case types.StoreActionKindUpdate:
-		return putManager(tx, manager)
-	default:
-		return ErrUndefineManagerAction
-	}
-}
+//func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
+//	switch action {
+//	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+//		return putTask(tx, task)
+//	case types.StoreActionKindRemove:
+//		return removeTask(tx, task.AppId, task.Name)
+//	default:
+//		return ErrUndefineTaskAction
+//	}
+//}
+//
+//func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
+//	switch action {
+//	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+//		return putVersion(tx, version)
+//	case types.StoreActionKindRemove:
+//		return removeVersion(tx, version.AppId, version.ID)
+//	default:
+//		return ErrUndefineVersionAction
+//	}
+//}

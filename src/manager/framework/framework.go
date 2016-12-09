@@ -5,6 +5,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 	"github.com/Dataman-Cloud/swan/src/util"
@@ -20,13 +21,13 @@ type Framework struct {
 	StopC chan struct{}
 }
 
-func New(SwanContext *swancontext.SwanContext, config util.SwanConfig) (*Framework, error) {
+func New(SwanContext *swancontext.SwanContext, config util.SwanConfig, store store.Store) (*Framework, error) {
 	f := &Framework{
 		StopC:       make(chan struct{}),
 		SwanContext: SwanContext,
 	}
 
-	f.Scheduler = scheduler.NewScheduler(config, SwanContext)
+	f.Scheduler = scheduler.NewScheduler(config, SwanContext, store)
 	f.HttpApi = api.NewApi(f.Scheduler, config.Scheduler)
 
 	return f, nil
