@@ -215,7 +215,7 @@ func (app *App) Delete() error {
 	return nil
 }
 
-func (app *App) Update(version *types.Version) error {
+func (app *App) Update(version *types.Version, store store.Store) error {
 	if !app.StateIs(APP_STATE_NORMAL) {
 		return errors.New("app not in normal state")
 	}
@@ -228,8 +228,14 @@ func (app *App) Update(version *types.Version) error {
 	if err != nil {
 		return err
 	}
+
+	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	app.ProposedVersion = version
-	app.ProposedVersion.ID = fmt.Sprintf("%d", time.Now().Unix())
+
+	raftVersion := VersionToRaft(version)
+	if err := store.UpdateAppVersion(context.TODO(), app.AppId, raftVersion, nil); err != nil {
+		return err
+	}
 
 	afterUpdateDone := func(app *App) {
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&

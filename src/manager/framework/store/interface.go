@@ -11,4 +11,5 @@ type Store interface {
 	GetApp(appId string) (*types.Application, error)
 	ListApplications() ([]*types.Application, error)
 	DeleteApplication(ctx context.Context, appId string, cb func()) error
+	UpdateAppVersion(ctx context.Context, appId string, version *types.Version, cb func()) error
 }

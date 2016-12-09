@@ -41,6 +41,7 @@ message StoreAction {
 	oneof target {
         Application application = 2;
         Framework framework = 3; 
+        Version version = 4;
 	}
 }
 
