@@ -74,9 +74,6 @@ func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *m
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	//raftApp := AppToRaft(app)
-	//store.CreateApp(raftApp)
-
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
 		app.Slots[i] = slot
