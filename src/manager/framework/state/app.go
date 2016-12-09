@@ -86,6 +86,9 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
+	//raftApp := AppToRaft(app)
+	//store.CreateApp(raftApp)
+
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
 		app.Slots[i] = slot
