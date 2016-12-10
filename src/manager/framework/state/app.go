@@ -5,7 +5,9 @@ import (
 	"fmt"
 	"time"
 
+	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
+	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -35,6 +37,8 @@ type App struct {
 	Versions []*types.Version `json:"versions"`
 	Slots    map[int]*Slot    `json:"slots"`
 
+	scontext *swancontext.SwanContext
+
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
 	// use when app updated, ProposedVersion can either be commit or revert
@@ -52,7 +56,10 @@ type App struct {
 	MesosConnector *mesos_connector.MesosConnector
 }
 
-func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *mesos_connector.MesosConnector) (*App, error) {
+func NewApp(version *types.Version,
+	allocator *OfferAllocator,
+	MesosConnector *mesos_connector.MesosConnector,
+	scontext *swancontext.SwanContext) (*App, error) {
 	err := validateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
@@ -65,9 +72,9 @@ func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *m
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
 		MesosConnector:    MesosConnector,
-
-		Created: time.Now(),
-		Updated: time.Now(),
+		scontext:          scontext,
+		Created:           time.Now(),
+		Updated:           time.Now(),
 
 		InvalidateCallbacks: make(map[string][]AppInvalidateCallbackFuncs),
 	}
@@ -409,4 +416,9 @@ func (app *App) IsReplicates() bool {
 
 func (app *App) IsFixed() bool {
 	return app.Mode == APP_MODE_FIXED
+}
+
+func (app *App) EmitEvent(swanEvent *swanevent.Event) {
+	logrus.Debugf("write event %s for app %s", swanEvent, app.AppId)
+	app.scontext.EventBus.EventChan <- swanEvent
 }

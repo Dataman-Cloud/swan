@@ -2,9 +2,11 @@ package state
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
+	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -213,14 +215,18 @@ func (slot *Slot) SetState(state string) error {
 
 	switch slot.State {
 	case SLOT_STATE_PENDING_KILL:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
+
 	case SLOT_STATE_TASK_KILLED:
 		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_FINISHED:
 		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_RUNNING:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskAdd)
 	case SLOT_STATE_TASK_LOST:
 
 	case SLOT_STATE_TASK_FAILED:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
 		// restart if needed
 	default:
 	}
@@ -251,5 +257,19 @@ func (slot *Slot) StopRestartPolicy() {
 	if slot.restartPolicy != nil {
 		slot.restartPolicy.Stop()
 		slot.restartPolicy = nil
+	}
+}
+
+func (slot *Slot) EmitTaskEvent(t string) {
+	for _, port := range slot.CurrentTask.HostPorts {
+		e := &swanevent.Event{Type: t}
+		e.Payload = &swanevent.TaskInfo{
+			Ip:     slot.AgentHostName,
+			Port:   fmt.Sprintf("%d", port),
+			TaskId: "task" + strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
+			Type:   "srv",
+		}
+
+		slot.App.EmitEvent(e)
 	}
 }

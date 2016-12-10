@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
@@ -31,10 +32,11 @@ type Scheduler struct {
 	MesosConnector *mesos_connector.MesosConnector
 }
 
-func NewScheduler(config util.SwanConfig) *Scheduler {
+func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext) *Scheduler {
 	scheduler := &Scheduler{
 		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
 		heartbeater:    time.NewTicker(10 * time.Second),
+		scontext:       scontext,
 
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
@@ -71,8 +73,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 		scheduler.MesosConnector.Start(ctx)
 	}()
 
-	scheduler.Run(context.Background()) // context as a placeholder
-	return nil
+	return scheduler.Run(context.Background()) // context as a placeholder
 }
 
 // main loop
@@ -118,4 +119,8 @@ func (scheduler *Scheduler) InvalidateApps() {
 	for _, appId := range appsPendingRemove {
 		delete(scheduler.Apps, appId)
 	}
+}
+
+func (scheduler *Scheduler) EmitEvent(swanEvent *swanevent.Event) {
+	scheduler.scontext.EventBus.EventChan <- swanEvent
 }

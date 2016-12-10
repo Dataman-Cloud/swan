@@ -34,6 +34,7 @@ type Task struct {
 	Stdout string
 	Stderr string
 
+	HostPorts     []uint64
 	OfferId       string
 	AgentId       string
 	Ip            string
@@ -44,10 +45,11 @@ type Task struct {
 
 func NewTask(app *App, version *types.Version, slot *Slot) *Task {
 	task := &Task{
-		Id:      strings.Replace(uuid.NewV4().String(), "-", "", -1),
-		App:     app,
-		Version: version,
-		Slot:    slot,
+		Id:        strings.Replace(uuid.NewV4().String(), "-", "", -1),
+		App:       app,
+		Version:   version,
+		Slot:      slot,
+		HostPorts: make([]uint64, 0),
 	}
 
 	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)
@@ -167,8 +169,10 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 			break
 		}
 
+		task.HostPorts = make([]uint64, 0)
 		for index, m := range task.Slot.Version.Container.Docker.PortMappings {
 			hostPort := ports[index]
+			task.HostPorts = append(task.HostPorts, hostPort)
 			taskInfo.Container.Docker.PortMappings = append(taskInfo.Container.Docker.PortMappings,
 				&mesos.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(hostPort)),

@@ -3,7 +3,7 @@
     "manager": "mixed",
     "standalone": false,
     "scheduler": {
-	    "mesos-masters": ["127.0.0.1:5050"],
+	    "mesos-masters": "127.0.0.1:5050",
 	    "mesos-framwork-user": "root",
 	    "hostname": "",
 	    "local-healthcheck": false

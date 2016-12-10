@@ -39,9 +39,6 @@
       }
     ]
   },
-  "uris": [
-      "https://nginx.org/download/nginx-1.8.1.tar.gz"
-  ],
   "env": {
     "DB": "mysql"
   },

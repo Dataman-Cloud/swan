@@ -5,6 +5,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
+	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 	"github.com/Dataman-Cloud/swan/src/util"
 
@@ -12,18 +13,21 @@ import (
 )
 
 type Framework struct {
-	Scheduler *scheduler.Scheduler
-	HttpApi   *api.Api
+	Scheduler   *scheduler.Scheduler
+	HttpApi     *api.Api
+	SwanContext *swancontext.SwanContext
 
 	StopC chan struct{}
 }
 
-func New(config util.SwanConfig) (*Framework, error) {
+func New(SwanContext *swancontext.SwanContext, config util.SwanConfig) (*Framework, error) {
 	f := &Framework{
-		StopC: make(chan struct{}),
+		StopC:       make(chan struct{}),
+		SwanContext: SwanContext,
 	}
-	f.Scheduler = scheduler.NewScheduler(config)
-	f.HttpApi = api.NewApi(f.Scheduler)
+
+	f.Scheduler = scheduler.NewScheduler(config, SwanContext)
+	f.HttpApi = api.NewApi(f.Scheduler, config.Scheduler)
 
 	return f, nil
 }
