@@ -1,7 +1,8 @@
 package state
 
 import (
-	//"strings"
+	"fmt"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
@@ -9,6 +10,11 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
+	"github.com/satori/go.uuid"
+)
+
+const (
+	SWAN_RESERVED_NETWORK = "swan"
 )
 
 const (
@@ -18,9 +24,11 @@ const (
 )
 
 type Task struct {
-	App     *App
-	Version *types.Version
-	Slot    *Slot
+	Id         string
+	TaskInfoId string
+	App        *App
+	Version    *types.Version
+	Slot       *Slot
 
 	State  string
 	Stdout string
@@ -36,10 +44,13 @@ type Task struct {
 
 func NewTask(app *App, version *types.Version, slot *Slot) *Task {
 	task := &Task{
+		Id:      strings.Replace(uuid.NewV4().String(), "-", "", -1),
 		App:     app,
 		Version: version,
 		Slot:    slot,
 	}
+
+	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)
 
 	return task
 }
@@ -59,9 +70,9 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	task.Slot.AgentHostName = offer.GetHostname()
 
 	taskInfo := mesos.TaskInfo{
-		Name: proto.String(task.Slot.Id),
+		Name: proto.String(task.TaskInfoId),
 		TaskId: &mesos.TaskID{
-			Value: proto.String(task.Slot.Id),
+			Value: proto.String(task.TaskInfoId),
 		},
 		AgentId:   offer.AgentId,
 		Resources: task.Slot.Resources(),
@@ -84,6 +95,14 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
 			Key:   proto.String(parameter.Key),
 			Value: proto.String(parameter.Value),
+		})
+	}
+
+	// check if app run in fixed mode and has reserved enough IP
+	if task.Slot.App.IsFixed() && (len(task.Version.Ip) >= int(task.Slot.Index)) {
+		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
+			Key:   proto.String("ip"),
+			Value: proto.String(task.Version.Ip[task.Slot.Index]),
 		})
 	}
 
@@ -171,12 +190,18 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 			})
 		}
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_BRIDGE.Enum()
+
+	case SWAN_RESERVED_NETWORK:
+		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_USER.Enum()
+		taskInfo.Container.NetworkInfos = append(taskInfo.Container.NetworkInfos, &mesos.NetworkInfo{
+			Name: proto.String(SWAN_RESERVED_NETWORK),
+		})
+
 	default:
 		taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	}
 
 	// setup task health check
-
 	//if len(task.Slot.Version.HealthChecks) > 0 {
 	//for _, healthCheck := range task.Slot.Version.HealthChecks {
 	//if healthCheck.PortIndex < 0 || int(healthCheck.PortIndex) > len(taskInfo.Container.Docker.PortMappings) {

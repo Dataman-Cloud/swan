@@ -121,7 +121,7 @@ func (api *Api) GetApp(c *gin.Context) {
 
 func (api *Api) ScaleDown(c *gin.Context) {
 	var param struct {
-		To int `json:"to"`
+		RemoveInstances int `json:"removeInstances"`
 	}
 
 	if c.BindJSON(&param) != nil {
@@ -129,9 +129,9 @@ func (api *Api) ScaleDown(c *gin.Context) {
 		return
 	}
 
-	err := api.Scheduler.ScaleDown(c.Param("app_id"), param.To)
+	err := api.Scheduler.ScaleDown(c.Param("app_id"), param.RemoveInstances)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	} else {
 		c.JSON(http.StatusOK, gin.H{})
 	}
@@ -139,16 +139,17 @@ func (api *Api) ScaleDown(c *gin.Context) {
 
 func (api *Api) ScaleUp(c *gin.Context) {
 	var param struct {
-		To int `json:"to"`
+		NewInstances int      `json:"instances"`
+		Ip           []string `json:"ip"`
 	}
 	if c.BindJSON(&param) != nil {
 		c.JSON(http.StatusBadRequest, gin.H{})
 		return
 	}
 
-	err := api.Scheduler.ScaleUp(c.Param("app_id"), param.To)
+	err := api.Scheduler.ScaleUp(c.Param("app_id"), param.NewInstances, param.Ip)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 	} else {
 		c.JSON(http.StatusOK, gin.H{})
 	}
@@ -232,6 +233,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 		if len(slot.TaskHistory) > 0 {
 			for _, v := range slot.TaskHistory {
 				staleTask := &TaskHistory{
+					ID:            v.Id,
 					State:         v.State,
 					Reason:        v.Reason,
 					OfferId:       v.OfferId,

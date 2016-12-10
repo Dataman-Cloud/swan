@@ -51,20 +51,20 @@ func (scheduler *Scheduler) ListApps() []*state.App {
 	return apps
 }
 
-func (scheduler *Scheduler) ScaleUp(appId string, to int) error {
+func (scheduler *Scheduler) ScaleUp(appId string, newInstances int, newIps []string) error {
 	app, appExists := scheduler.Apps[appId]
 	if !appExists {
 		return errors.New("app not exists")
 	}
-	return app.ScaleUp(to)
+	return app.ScaleUp(newInstances, newIps)
 }
 
-func (scheduler *Scheduler) ScaleDown(appId string, to int) error {
+func (scheduler *Scheduler) ScaleDown(appId string, removeInstances int) error {
 	app, appExists := scheduler.Apps[appId]
 	if !appExists {
 		return errors.New("app not exists")
 	}
-	return app.ScaleDown(to)
+	return app.ScaleDown(removeInstances)
 }
 
 func (scheduler *Scheduler) UpdateApp(appId string, version *types.Version) error {

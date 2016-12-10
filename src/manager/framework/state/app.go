@@ -53,6 +53,11 @@ type App struct {
 }
 
 func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *mesos_connector.MesosConnector) (*App, error) {
+	err := validateAndFormatVersion(version)
+	if err != nil {
+		return nil, err
+	}
+
 	app := &App{
 		Versions:          []*types.Version{version},
 		Slots:             make(map[int]*Slot),
@@ -92,44 +97,53 @@ func NewApp(version *types.Version, allocator *OfferAllocator, MesosConnector *m
 }
 
 // also need user pass ip here
-func (app *App) ScaleUp(to int) error {
+func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	if !app.StateIs(APP_STATE_NORMAL) {
 		return errors.New("app not in normal state")
 	}
 
-	if to <= int(app.CurrentVersion.Instances) {
-		return errors.New("scale up expected instances size no less than current size")
+	if newInstances <= 0 {
+		return errors.New("specify instances num want to increase")
 	}
 
+	if app.IsFixed() && len(newIps) != newInstances {
+		return errors.New(fmt.Sprintf("please provide %d unique ip", newInstances))
+	}
+
+	app.CurrentVersion.Ip = append(app.CurrentVersion.Ip, newIps...)
+
 	afterScaleUp := func(app *App) {
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			logrus.Infof("removeSlot func")
+		if app.StateIs(APP_STATE_MARK_FOR_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
 			app.SetState(APP_STATE_NORMAL)
 		}
 	}
 	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
 	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_UP, afterScaleUp)
 
-	for i := int(app.CurrentVersion.Instances); i < to; i++ {
-		app.Slots[i] = NewSlot(app, app.CurrentVersion, i)
+	for i := 0; i < newInstances; i++ {
+		slotIndex := int(app.CurrentVersion.Instances) + i
+		defer func(slotIndex int) {
+			app.Slots[slotIndex] = NewSlot(app, app.CurrentVersion, slotIndex)
+		}(slotIndex)
 	}
-	app.CurrentVersion.Instances = int32(to)
+	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
 	return nil
 }
 
-func (app *App) ScaleDown(to int) error {
+func (app *App) ScaleDown(removeInstances int) error {
 	if !app.StateIs(APP_STATE_NORMAL) {
 		return errors.New("app not in normal state")
 	}
 
-	if to >= int(app.CurrentVersion.Instances) {
-		return errors.New("scale down expected instances size no bigger than current size")
+	if removeInstances >= int(app.CurrentVersion.Instances) {
+		return errors.New(fmt.Sprintf("no more than %d instances can be shutdown", app.CurrentVersion.Instances))
 	}
 
 	afterScaleDown := func(app *App) {
-		if len(app.Slots) == int(app.CurrentVersion.Instances) &&
+		if app.StateIs(APP_STATE_MARK_FOR_SCALE_DOWN) &&
+			len(app.Slots) == int(app.CurrentVersion.Instances) &&
 			app.MarkForDeletionInstances() == 0 {
 			logrus.Infof("afterScaleDown func")
 			app.SetState(APP_STATE_NORMAL)
@@ -150,12 +164,15 @@ func (app *App) ScaleDown(to int) error {
 	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
 	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_DOWN, afterScaleDown, removeSlot)
 
-	for i := int(app.CurrentVersion.Instances); i > to; i-- {
-		slot := app.Slots[i-1]
-		slot.Kill()
+	for i := removeInstances; i > 0; i-- {
+		slotIndex := int(app.CurrentVersion.Instances) - 1 - i
+		defer func(slotIndex int) {
+			slot := app.Slots[slotIndex]
+			slot.Kill()
+		}(slotIndex)
 	}
 
-	app.CurrentVersion.Instances = int32(to)
+	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
 	app.Updated = time.Now()
 
 	return nil
@@ -165,7 +182,7 @@ func (app *App) ScaleDown(to int) error {
 func (app *App) Delete() error {
 	removeSlot := func(app *App) {
 		for k, slot := range app.Slots {
-			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
+			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
 				// TODO remove slot from OfferAllocator
 				logrus.Infof("removeSlot func")
 				delete(app.Slots, k)
@@ -361,6 +378,28 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 
 // TODO
 func (app *App) PersistToStorage() error {
+	return nil
+}
+
+func validateAndFormatVersion(version *types.Version) error {
+	if len(version.Mode) == 0 {
+		version.Mode = string(APP_MODE_REPLICATES)
+	}
+
+	if (version.Mode != string(APP_MODE_REPLICATES)) && (version.Mode != string(APP_MODE_FIXED)) {
+		return errors.New(fmt.Sprintf("enrecognized app mode %s", version.Mode))
+	}
+
+	if version.Mode == string(APP_MODE_FIXED) {
+		if len(version.Ip) != int(version.Instances) {
+			return errors.New(fmt.Sprintf("should provide exactly %d ip for FIXED type app", version.Instances))
+		}
+	}
+
+	return nil
+}
+
+func (app *App) validateUpdateVersion(version *types.Version) error {
 	return nil
 }
 

@@ -218,6 +218,7 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_TASK_FINISHED:
 		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_RUNNING:
+	case SLOT_STATE_TASK_LOST:
 
 	case SLOT_STATE_TASK_FAILED:
 		// restart if needed
