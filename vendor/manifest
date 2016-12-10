@@ -264,6 +264,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/emicklei/go-restful",
+			"repository": "https://github.com/emicklei/go-restful",
+			"vcs": "git",
+			"revision": "e9d6cfe95e4be7e9f85e79dab93bebb14a517f20",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/foize/go.fifo",
 			"repository": "https://github.com/foize/go.fifo",
 			"vcs": "git",
@@ -362,6 +370,14 @@
 			"repository": "https://github.com/mattn/go-isatty",
 			"vcs": "git",
 			"revision": "30a891c33c7cde7b02a981314b4228ec99380cca",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/gorilla/schema",
+			"repository": "https://github.com/gorilla/schema",
+			"vcs": "git",
+			"revision": "0164a00ab4cd01d814d8cd5bf63fd9fcea30e23b",
 			"branch": "master",
 			"notests": true
 		},

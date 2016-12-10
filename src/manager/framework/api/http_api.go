@@ -8,8 +8,10 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/emicklei/go-restful"
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"
+	//"github.com/emicklei/go-restful/swagger"
 )
 
 const (
@@ -26,6 +28,121 @@ func NewApi(eng *scheduler.Scheduler) *Api {
 		port:      ":12306",
 		Scheduler: eng,
 	}
+}
+
+type AppService struct {
+	addr      string
+	Scheduler *scheduler.Scheduler
+}
+
+func NewAppService(eng *scheduler.Scheduler) *AppService {
+	return &AppService{
+		addr:      ":8080",
+		Scheduler: eng,
+	}
+}
+
+func (api *AppService) Register(container *restful.Container) {
+	ws := new(restful.WebService)
+	ws.
+		Consumes(restful.MIME_JSON).
+		Produces(restful.MIME_JSON)
+	//ws.Path(API_PREFIX)
+
+	ws.Route(ws.GET("/apps").To(api.ListApp).
+		// docs
+		Doc("List Apps").
+		Operation("listApps").
+		Returns(200, "OK", []types.Application{}))
+
+	ws.Route(ws.POST("/apps").To(api.CreateApp).
+		// docs
+		Doc("Create App").
+		Operation("createApp").
+		Returns(201, "OK", []types.Application{}).
+		Writes(types.Application{}))
+	//ws.Route(ws.GET("/apps/{app_id}").To(api.GetApp).
+	//	// docs
+	//	Doc("Get an App").
+	//	Operation("getApp").
+	//	Returns(200, "OK", types.Application{}).
+	//	Writes(types.Application{}))
+	//ws.Route(ws.DELETE("/apps/{app_id}").To(api.DeleteApp).
+	//	// docs
+	//	Doc("Delete App").
+	//	Operation("deleteApp"))
+
+	container.Add(ws)
+}
+
+// TODO(xychu): Will move to a global place later
+func (api *AppService) Start() error {
+	wsContainer := restful.NewContainer()
+
+	api.Register(wsContainer)
+
+	//// Optionally, you can install the Swagger Service which provides a nice Web UI on your REST API
+	//// You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
+	//// Open http://localhost:8080/apidocs and enter http://localhost:8080/apidocs.json in the api input field.
+	//config := swagger.Config{
+	//	WebServices:    wsContainer.RegisteredWebServices(), // you control what services are visible
+	//	WebServicesUrl: "http://localhost:8080",
+	//	ApiPath:        "/apidocs.json",
+	//
+	//	// Optionally, specifiy where the UI is located
+	//	SwaggerPath:     "/apidocs/",
+	//	SwaggerFilePath: "/Users/chuxiangyang/go/src/github.com/Dataman-Cloud/swan/example/dist",
+	//	}
+	//swagger.RegisterSwaggerService(config, wsContainer)
+
+	logrus.Printf("start listening on %s", api.addr)
+	server := &http.Server{Addr: api.addr, Handler: wsContainer}
+	logrus.Fatal(server.ListenAndServe())
+
+	return nil
+}
+
+func (api *AppService) CreateApp(request *restful.Request, response *restful.Response) {
+	var version types.Version
+
+	err := request.ReadEntity(&version)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, err)
+	}
+
+	err = CheckVersion(&version)
+	if err != nil {
+		response.WriteError(http.StatusBadRequest, err)
+	}
+
+	app, err := api.Scheduler.CreateApp(&version)
+	if err != nil {
+		response.WriteError(http.StatusInternalServerError, err)
+	} else {
+		response.WriteEntity(app)
+	}
+}
+
+func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
+	appsRet := make([]*App, 0)
+	for _, app := range api.Scheduler.ListApps() {
+		version := app.CurrentVersion
+		appsRet = append(appsRet, &App{
+			ID:                version.AppId,
+			Name:              version.AppId,
+			Instances:         int(version.Instances),
+			RunningInstances:  app.RunningInstances(),
+			RollbackInstances: app.RollbackInstances(),
+			RunAs:             version.RunAs,
+			ClusterId:         app.MesosConnector.ClusterId,
+			Created:           app.Created,
+			Updated:           app.Updated,
+			Mode:              string(app.Mode),
+			State:             app.State,
+		})
+	}
+
+	response.WriteEntity(appsRet)
 }
 
 func (api *Api) Start(ctx context.Context) error {
@@ -57,7 +174,7 @@ func (api *Api) CreateApp(c *gin.Context) {
 	var version types.Version
 
 	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
-		err := api.Scheduler.CreateApp(&version)
+		_, err := api.Scheduler.CreateApp(&version)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err})
 		} else {

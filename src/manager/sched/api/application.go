@@ -79,7 +79,15 @@ func (r *Router) BuildApplication(w http.ResponseWriter, req *http.Request) erro
 		return err
 	}
 
-	return nil
+	// return nil
+	// return created app
+	app, err = r.backend.FetchApplication(version.AppId)
+	if err != nil {
+		logrus.Errorf("Fetch application %s failed: %s", version.AppId, err.Error())
+	}
+
+	return json.NewEncoder(w).Encode(app)
+
 }
 
 // ListApplication is used to list all applications.

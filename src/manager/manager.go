@@ -146,6 +146,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				} else {
 					frameworkCtx, _ := context.WithCancel(ctx)
 					manager.framework.Start(frameworkCtx)
+					// TODO(xychu): will reconsider when and where to start the global api server
+					manager.framework.RestApi.Start()
 				}
 
 			} else if newState == raft.IsFollower {
