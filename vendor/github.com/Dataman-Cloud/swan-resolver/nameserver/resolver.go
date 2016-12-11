@@ -1,4 +1,4 @@
-package ns
+package nameserver
 
 import (
 	"errors"
@@ -9,74 +9,65 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/util"
-
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
 )
 
-func New(config util.DNS) *Resolver {
+func NewResolver(config *Config) *Resolver {
 	res := &Resolver{
 		config: config,
 		stopC:  make(chan struct{}),
 	}
 
-	rr := RecordGenerator{}
+	rr := RecordGenerator{
+		RecordGeneratorChangeChan: make(chan *RecordGeneratorChangeEvent, 1),
+	}
+
+	rr.Domain = res.config.Domain
 	rr.As = make(map[string]map[string]struct{})
-	rr.As.add("swan.", "192.168.1.1")
-	rr.As.add("dm.swan.", "192.168.1.3")
-	rr.As.add("borg.dm.swan.", "192.168.1.2")
-	rr.As.add("a.borg.dm.swan.", "192.168.1.4")
-
 	rr.SRVs = make(map[string]map[string]struct{})
-	res.rs = &rr
 
-	res.defaultFwd = NewForwarder(
-		config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
+	res.rs = &rr
+	res.defaultFwd = NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
+
+	go func() {
+		res.rs.WatchEvent(context.Background())
+	}()
 
 	return res
 }
 
-func (res *Resolver) Stop() {
-	res.stopC <- struct{}{}
-	return
+func (res *Resolver) RecordGeneratorChangeChan() chan *RecordGeneratorChangeEvent {
+	return res.rs.RecordGeneratorChangeChan
 }
 
 func (res *Resolver) Start(ctx context.Context) error {
-	var errCh <-chan error
-	res.stopC, errCh = res.Run(ctx)
-	return <-errCh
+	return <-res.Run(ctx)
 }
 
-func (res *Resolver) Run(ctx context.Context) (chan struct{}, <-chan error) {
-	// Handers for Mesos requests
-	dns.HandleFunc(res.config.Domain+".", panicRecover(res.HandleMesos))
-	dns.HandleFunc(".", panicRecover(res.HandleNonMesos(res.defaultFwd)))
+func (res *Resolver) Run(ctx context.Context) <-chan error {
+	dns.HandleFunc(res.config.Domain+".", res.HandleSwan)
+	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
-	var errCh chan error
+	startedCh, errCh := res.Serve()
+	<-startedCh // when successfully listen
+
 	go func() {
-		_, errCh = res.Serve()
-
 		for {
 			select {
-			case <-res.stopC:
-				res.Stop()
-				errCh <- nil
-				return
 			case <-ctx.Done():
-				res.Stop()
 				errCh <- ctx.Err()
 				return
 			}
 		}
 	}()
 
-	return res.stopC, errCh
+	return errCh
 }
 
 type Resolver struct {
-	config util.DNS
+	config *Config
 
 	rs         *RecordGenerator
 	defaultFwd Forwarder
@@ -84,7 +75,7 @@ type Resolver struct {
 	startedC   chan struct{}
 }
 
-func (res *Resolver) HandleMesos(w dns.ResponseWriter, r *dns.Msg) {
+func (res *Resolver) HandleSwan(w dns.ResponseWriter, r *dns.Msg) {
 	m := &dns.Msg{MsgHdr: dns.MsgHdr{
 		Authoritative:      true,
 		RecursionAvailable: res.config.RecurseOn,
@@ -94,7 +85,9 @@ func (res *Resolver) HandleMesos(w dns.ResponseWriter, r *dns.Msg) {
 	var errs multiError
 	rs := res.records()
 	name := strings.ToLower(cleanWild(r.Question[0].Name))
+
 	logrus.Debugf("resolve dns hostname %s", name)
+
 	switch r.Question[0].Qtype {
 	case dns.TypeSRV:
 		errs.Add(res.handleSRV(rs, name, m, r))
@@ -131,6 +124,7 @@ func (res *Resolver) records() *RecordGenerator {
 func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) error {
 	var errs multiError
 	added := map[string]struct{}{} // track the A RR's we've already added, avoid dups
+
 	for srv := range rs.SRVs[name] {
 		srvRR, err := res.formatSRV(r.Question[0].Name, srv)
 		if err != nil {
@@ -141,9 +135,9 @@ func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) 
 		m.Answer = append(m.Answer, srvRR)
 		host := strings.Split(srv, ":")[0]
 		if _, found := added[host]; found {
-			// avoid dups
 			continue
 		}
+
 		if len(rs.As[host]) == 0 {
 			continue
 		}
@@ -195,7 +189,7 @@ func (res *Resolver) handleEmpty(rs *RecordGenerator, name string, m, r *dns.Msg
 
 	// Because we don't implement AAAA records, AAAA queries will always
 	// go via this path
-	// Unfortunately, we don't implement AAAA queries in Mesos-DNS,
+	// Unfortunately, we don't implement AAAA queries in Swan-DNS,
 	// and although the 'Not Implemented' error code seems more suitable,
 	// RFCs do not recommend it: https://tools.ietf.org/html/rfc4074
 	// Therefore we always return success, which is synonymous with NODATA
@@ -216,8 +210,7 @@ func (res *Resolver) handleEmpty(rs *RecordGenerator, name string, m, r *dns.Msg
 	return nil
 }
 
-func (res *Resolver) HandleNonMesos(fwd Forwarder) func(
-	dns.ResponseWriter, *dns.Msg) {
+func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.Msg) {
 	return func(w dns.ResponseWriter, r *dns.Msg) {
 		m, err := fwd(r, w.RemoteAddr().Network())
 		if err != nil {
@@ -232,23 +225,11 @@ func (res *Resolver) HandleNonMesos(fwd Forwarder) func(
 // reply writes the given dns.Msg out to the given dns.ResponseWriter,
 // compressing the message first and truncating it accordingly.
 func reply(w dns.ResponseWriter, m *dns.Msg) {
-	m.Compress = true // https://github.com/mesosphere/mesos-dns/issues/{170,173,174}
+	//m.Compress = true // https://github.com/mesosphere/mesos-dns/issues/{170,173,174}
 
-	if err := w.WriteMsg(truncate(m, isUDP(w))); err != nil {
+	//if err := w.WriteMsg(truncate(m, isUDP(w))); err != nil {
+	if err := w.WriteMsg(m); err != nil {
 		logrus.Errorf("%s", err)
-	}
-}
-
-func panicRecover(f func(w dns.ResponseWriter, r *dns.Msg)) func(w dns.ResponseWriter, r *dns.Msg) {
-	return func(w dns.ResponseWriter, r *dns.Msg) {
-		defer func() {
-			if rec := recover(); rec != nil {
-				m := new(dns.Msg)
-				m.SetRcode(r, 2)
-				_ = w.WriteMsg(m)
-			}
-		}()
-		f(w, r)
 	}
 }
 
@@ -274,7 +255,7 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 	return exs
 }
 
-func (res *Resolver) Serve() (<-chan struct{}, chan error) {
+func (res *Resolver) Serve() (startedCh <-chan struct{}, errCh chan error) {
 	ch := make(chan struct{})
 	server := &dns.Server{
 		Addr:              net.JoinHostPort(res.config.Listener, strconv.Itoa(res.config.Port)),
@@ -283,7 +264,6 @@ func (res *Resolver) Serve() (<-chan struct{}, chan error) {
 		NotifyStartedFunc: func() { close(ch) },
 	}
 
-	errCh := make(chan error)
 	go func() {
 		defer close(errCh)
 		err := server.ListenAndServe()
@@ -380,8 +360,8 @@ func (res *Resolver) formatSOA(dom string) *dns.SOA {
 			Class:  dns.ClassINET,
 			Ttl:    ttl,
 		},
-		Ns:      res.config.SOAMname,
-		Mbox:    res.config.SOARname,
+		Ns:      res.config.SOARname,
+		Mbox:    res.config.SOAMname,
 		Serial:  atomic.LoadUint32(&res.config.SOASerial),
 		Refresh: res.config.SOARefresh,
 		Retry:   res.config.SOARetry,

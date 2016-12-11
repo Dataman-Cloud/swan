@@ -3,11 +3,12 @@ package manager
 import (
 	"fmt"
 
+	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
-	"github.com/Dataman-Cloud/swan/src/manager/ns"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/sched"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
@@ -22,10 +23,14 @@ import (
 
 type Manager struct {
 	ipamAdapter *ipam.IpamAdapter
-	resolver    *ns.Resolver
-	sched       *sched.Sched
-	raftNode    *raft.Node
-	CancelFunc  context.CancelFunc
+
+	resolver           *nameserver.Resolver
+	resolverSubscriber *event.DNSSubscriber
+
+	sched      *sched.Sched
+	raftNode   *raft.Node
+	CancelFunc context.CancelFunc
+	eventBus   *event.EventBus
 
 	framework *framework.Framework
 
@@ -48,11 +53,14 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 
 	store := store.NewManagerStore(db, raftNode)
 
+	manager.eventBus = event.New()
+
 	manager.swanContext = &swancontext.SwanContext{
 		Config: config,
 		Store:  store,
 		ApiServer: apiserver.NewApiServer(manager.config.HttpListener.TCPAddr,
 			manager.config.HttpListener.UnixAddr),
+		EventBus: manager.eventBus,
 	}
 
 	manager.swanContext.Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
@@ -63,9 +71,27 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 
 	manager.cluster = manager.config.SwanCluster
-	manager.resolver = ns.New(manager.config.DNS)
+	dnsConfig := &nameserver.Config{
+		Domain:   manager.config.DNS.Domain,
+		Listener: manager.config.DNS.Listener,
+		Port:     manager.config.DNS.Port,
+
+		Resolvers:       manager.config.DNS.Resolvers,
+		ExchangeTimeout: manager.config.DNS.ExchangeTimeout,
+		SOARname:        manager.config.DNS.SOARname,
+		SOAMname:        manager.config.DNS.SOAMname,
+		SOASerial:       manager.config.DNS.SOASerial,
+		SOARefresh:      manager.config.DNS.SOARefresh,
+		SOARetry:        manager.config.DNS.SOARetry,
+		SOAExpire:       manager.config.DNS.SOAExpire,
+		RecurseOn:       manager.config.DNS.RecurseOn,
+		TTL:             manager.config.DNS.TTL,
+	}
+	manager.resolver = nameserver.NewResolver(dnsConfig)
+	manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
+
 	manager.sched = sched.New(manager.config.Scheduler, manager.swanContext)
-	manager.framework, err = framework.New(manager.config)
+	manager.framework, err = framework.New(manager.swanContext, manager.config)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
@@ -104,6 +130,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 
 	go func() {
 		resolverCtx, _ := context.WithCancel(ctx)
+		manager.resolverSubscriber.Subscribe(manager.eventBus)
 		errCh <- manager.resolver.Start(resolverCtx)
 	}()
 
@@ -135,6 +162,11 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
+				// TODO
+				go func() {
+					manager.eventBus.Start()
+				}()
+
 				if manager.config.WithEngine == "sched" {
 					sechedCtx, cancel := context.WithCancel(ctx)
 					cancelFunc = cancel

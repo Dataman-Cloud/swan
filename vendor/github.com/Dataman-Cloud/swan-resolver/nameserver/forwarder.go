@@ -1,4 +1,4 @@
-package ns
+package nameserver
 
 import (
 	"fmt"
@@ -7,21 +7,12 @@ import (
 	"github.com/miekg/dns"
 )
 
-// A Forwarder is a DNS message forwarder that transparently proxies messages
-// to DNS servers.
 type Forwarder func(*dns.Msg, string) (*dns.Msg, error)
 
-// Forward is an utility method that calls f itself.
 func (f Forwarder) Forward(m *dns.Msg, proto string) (*dns.Msg, error) {
 	return f(m, proto)
 }
 
-// NewForwarder returns a new Forwarder for the given addrs with the given
-// Exchangers map which maps network protocols to Exchangers.
-//
-// Every message will be exchanged with each address until no error is returned.
-// If no addresses or no matching protocol exchanger exist, a *ForwardError will
-// be returned.
 func NewForwarder(addrs []string, exs map[string]Exchanger) Forwarder {
 	// List of IP:port pairs from addrs with or without ports
 	normalized := make([]string, len(addrs))

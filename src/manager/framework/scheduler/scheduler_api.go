@@ -13,7 +13,7 @@ func (scheduler *Scheduler) CreateApp(version *types.Version) error {
 		return errors.New("app already exists")
 	}
 
-	app, err := state.NewApp(version, scheduler.Allocator, scheduler.MesosConnector)
+	app, err := state.NewApp(version, scheduler.Allocator, scheduler.MesosConnector, scheduler.scontext)
 	if err != nil {
 		return err
 	}

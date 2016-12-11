@@ -6,6 +6,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
@@ -17,14 +18,14 @@ const (
 )
 
 type Api struct {
-	port      string
+	config    util.Scheduler
 	Scheduler *scheduler.Scheduler
 }
 
-func NewApi(eng *scheduler.Scheduler) *Api {
+func NewApi(eng *scheduler.Scheduler, config util.Scheduler) *Api {
 	return &Api{
-		port:      ":12306",
 		Scheduler: eng,
+		config:    config,
 	}
 }
 
@@ -49,7 +50,7 @@ func (api *Api) Start(ctx context.Context) error {
 	group.GET("/apps/:app_id/versions", api.GetApp)
 	group.GET("/apps/:app_id/versions/:version_id", api.GetApp)
 
-	router.Run(api.port)
+	router.Run(api.config.HttpAddr)
 	return nil
 }
 

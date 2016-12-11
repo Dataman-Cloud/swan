@@ -56,7 +56,7 @@ func (s *MesosConnector) ConnectToMesosAndAcceptEvent() error {
 	s.master = state.Leader
 	cluster := state.Cluster
 	if cluster == "" {
-		cluster = "Unnamed"
+		cluster = "Unamed"
 	}
 	s.ClusterId = cluster
 	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")

@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/Dataman-Cloud/swan-resolver",
+			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
+			"vcs": "git",
+			"revision": "65e3965e0f1c4c6b3c4fd7949bbd157d88a7b987",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/Sirupsen/logrus",
 			"repository": "https://github.com/Sirupsen/logrus",
 			"vcs": "git",

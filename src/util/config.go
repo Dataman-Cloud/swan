@@ -2,7 +2,7 @@ package util
 
 import (
 	"encoding/json"
-	"errors"
+	//"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -31,6 +31,7 @@ type Scheduler struct {
 	MesosFrameworkUser     string `json:"mesos-framwork-user"`
 	Hostname               string `json:"hostname"`
 	EnableLocalHealthcheck bool   `json:"local-healthcheck"`
+	HttpAddr               string
 }
 
 type DNS struct {
@@ -112,9 +113,12 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.Bool("local-healthcheck") != false {
 		swanConfig.Scheduler.EnableLocalHealthcheck = c.Bool("local-healthcheck")
 	}
+
 	if c.Bool("enable-dns-proxy") != false {
 		swanConfig.DNS.EnableDnsProxy = c.Bool("enable-dns-proxy")
+		swanConfig.DNS.ExchangeTimeout = time.Second * 3
 	}
+
 	if c.String("work-dir") != "" {
 		swanConfig.IPAM.StorePath = c.String("work-dir")
 	}
@@ -132,6 +136,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.WithEngine = c.String("with-engine")
 	}
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
+	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
+
 	return validateAndFormatConfig(swanConfig)
 }
 
@@ -146,9 +152,9 @@ func hostname() string {
 
 func validateAndFormatConfig(config SwanConfig) (c SwanConfig, e error) {
 	if config.DNS.EnableDnsProxy {
-		if os.Getuid() == 0 || (len(os.Getenv("SUDO_UID")) > 0) {
-			return config, errors.New("no permission to run DNS server, run as root or sudoer")
-		}
+		//if os.Getuid() == 0 || (len(os.Getenv("SUDO_UID")) > 0) {
+		//return config, errors.New("no permission to run DNS server, run as root or sudoer")
+		//}
 	}
 	return config, nil
 }
