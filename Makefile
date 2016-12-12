@@ -15,7 +15,7 @@ default: build
 build: fmt build-swancfg build-swan
 
 build-swan:
-	go build  -ldflags "-X=github.com/Dataman-Cloud/swan/srv/version.BuildTime=`date -u +%Y-%m-%d:%H-%M-%S` -X=github.com/Dataman-Cloud/swan/src/version.Version 0.01-`git rev-parse --short HEAD`"  -v -o bin/swan main.go node.go
+	go build  -ldflags "-X github.com/Dataman-Cloud/swan/srv/version.BuildTime=`date -u +%Y-%m-%d:%H-%M-%S` -X github.com/Dataman-Cloud/swan/src/version.Version=0.01-`git rev-parse --short HEAD`"  -v -o bin/swan main.go node.go
 
 build-swancfg:
 	go build -v -o bin/swancfg src/cli/cli.go
