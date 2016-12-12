@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/Dataman-Cloud/swan/src/agent"
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager"
-	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/boltdb/bolt"
 	"golang.org/x/net/context"
@@ -16,13 +16,13 @@ const (
 )
 
 type Node struct {
-	agent   *agent.Agent     // hold reference to agent, take function when in agent mode
-	manager *manager.Manager // hold a instance of manager, make logic taking place
-	config  util.SwanConfig  // swan config
+	agent   *agent.Agent      // hold reference to agent, take function when in agent mode
+	manager *manager.Manager  // hold a instance of manager, make logic taking place
+	config  config.SwanConfig // swan config
 	ctx     context.Context
 }
 
-func NewNode(config util.SwanConfig, db *bolt.DB) (*Node, error) {
+func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 	m, err := manager.New(config, db)
 	if err != nil {
 		return nil, err
