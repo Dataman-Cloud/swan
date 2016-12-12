@@ -156,9 +156,69 @@ func (slot *Slot) Update(version *types.Version) {
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
+	if slot.Version.Constraints != nil && len(slot.Version.Constraints) > 0 {
+		constraints := slot.filterConstraints(slot.Version.Constraints)
+		for _, constraint := range constraints {
+			cons := strings.Split(constraint, ":")
+			if cons[1] == "LIKE" {
+				for _, attr := range ow.Offer.Attributes {
+					var value string
+					name := attr.GetName()
+					switch attr.GetType() {
+					case mesos.Value_SCALAR:
+						value = fmt.Sprintf("%d", *attr.GetScalar().Value)
+					case mesos.Value_TEXT:
+						value = fmt.Sprintf("%s", *attr.GetText().Value)
+					default:
+						logrus.Errorf("Unsupported attribute value: %s", attr.GetType())
+					}
+
+					if name == cons[0] &&
+						strings.Contains(value, cons[2]) &&
+						ow.CpuRemain() > slot.Version.Cpus &&
+						ow.MemRemain() > slot.Version.Mem &&
+						ow.DiskRemain() > slot.Version.Disk {
+						return true
+					}
+				}
+				return false
+			}
+		}
+	}
+
 	return ow.CpuRemain() > slot.Version.Cpus &&
 		ow.MemRemain() > slot.Version.Mem &&
 		ow.DiskRemain() > slot.Version.Disk
+}
+
+func (slot *Slot) filterConstraints(constraints []string) []string {
+	filteredConstraints := make([]string, 0)
+	for _, constraint := range constraints {
+		cons := strings.Split(constraint, ":")
+		if len(cons) > 3 || len(cons) < 2 {
+			logrus.Errorf("Malformed Constraints")
+			continue
+		}
+
+		if cons[1] != "UNIQUE" && cons[1] != "LIKE" {
+			logrus.Errorf("Constraints operator %s not supported", cons[1])
+			continue
+		}
+
+		if cons[1] == "UNIQUE" && strings.ToLower(cons[0]) != "hostname" {
+			logrus.Errorf("Constraints operator UNIQUE only support 'hostname': %s", cons[0])
+			continue
+		}
+
+		if cons[1] == "LIKE" && len(cons) < 3 {
+			logrus.Errorf("Constraints operator LIKE required two operands")
+			continue
+		}
+
+		filteredConstraints = append(filteredConstraints, constraint)
+	}
+
+	return filteredConstraints
 }
 
 func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrapper, *mesos.TaskInfo) {
