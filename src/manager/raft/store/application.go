@@ -1,7 +1,7 @@
 package store
 
 import (
-	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 
 	"github.com/boltdb/bolt"
 )

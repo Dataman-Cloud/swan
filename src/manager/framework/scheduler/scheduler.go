@@ -8,8 +8,10 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
@@ -30,9 +32,10 @@ type Scheduler struct {
 
 	Allocator      *state.OfferAllocator
 	MesosConnector *mesos_connector.MesosConnector
+	store          store.Store
 }
 
-func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext) *Scheduler {
+func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
 	scheduler := &Scheduler{
 		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
 		heartbeater:    time.NewTicker(10 * time.Second),
@@ -40,6 +43,7 @@ func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext) *Sc
 
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
+		store:   store,
 	}
 
 	RegiserFun := func(m *HandlerManager) {
@@ -67,6 +71,9 @@ func (scheduler *Scheduler) Stop() error {
 
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
+	if err := scheduler.LoadAppData(); err != nil {
+		return err
+	}
 
 	// temp solution
 	go func() {
@@ -74,6 +81,50 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}()
 
 	return scheduler.Run(context.Background()) // context as a placeholder
+}
+
+// load app data frm persistent data
+func (scheduler *Scheduler) LoadAppData() error {
+	raftApps, err := scheduler.store.ListApps()
+	if err != nil {
+		return err
+	}
+
+	apps := make(map[string]*state.App)
+
+	for _, raftApp := range raftApps {
+		app := &state.App{
+			AppId:               raftApp.ID,
+			CurrentVersion:      state.VersionFromRaft(raftApp.Version),
+			State:               raftApp.State,
+			Mode:                state.AppMode(raftApp.Version.Mode),
+			Created:             time.Unix(0, raftApp.CreatedAt),
+			Updated:             time.Unix(0, raftApp.UpdatedAt),
+			Scontext:            scheduler.scontext,
+			Slots:               make(map[int]*state.Slot),
+			InvalidateCallbacks: make(map[string][]state.AppInvalidateCallbackFuncs),
+			MesosConnector:      scheduler.MesosConnector,
+			OfferAllocatorRef:   scheduler.Allocator,
+		}
+
+		raftVersions, err := scheduler.store.ListVersions(raftApp.ID)
+		if err != nil {
+			return err
+		}
+
+		var versions []*types.Version
+		for _, raftVersion := range raftVersions {
+			versions = append(versions, state.VersionFromRaft(raftVersion))
+		}
+
+		app.Versions = versions
+
+		apps[app.AppId] = app
+	}
+
+	scheduler.Apps = apps
+
+	return nil
 }
 
 // main loop

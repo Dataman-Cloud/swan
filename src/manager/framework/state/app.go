@@ -7,10 +7,12 @@ import (
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 type AppMode string
@@ -37,7 +39,7 @@ type App struct {
 	Versions []*types.Version `json:"versions"`
 	Slots    map[int]*Slot    `json:"slots"`
 
-	scontext *swancontext.SwanContext
+	Scontext *swancontext.SwanContext
 
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
@@ -59,7 +61,7 @@ type App struct {
 func NewApp(version *types.Version,
 	allocator *OfferAllocator,
 	MesosConnector *mesos_connector.MesosConnector,
-	scontext *swancontext.SwanContext) (*App, error) {
+	scontext *swancontext.SwanContext, store store.Store) (*App, error) {
 	err := validateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
@@ -72,7 +74,7 @@ func NewApp(version *types.Version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
 		MesosConnector:    MesosConnector,
-		scontext:          scontext,
+		Scontext:          scontext,
 		Created:           time.Now(),
 		Updated:           time.Now(),
 
@@ -85,6 +87,11 @@ func NewApp(version *types.Version,
 		app.Mode = APP_MODE_REPLICATES
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+
+	raftApp := AppToRaft(app)
+	if err := store.CreateApp(context.TODO(), raftApp, nil); err != nil {
+		return nil, err
+	}
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
@@ -208,7 +215,7 @@ func (app *App) Delete() error {
 	return nil
 }
 
-func (app *App) Update(version *types.Version) error {
+func (app *App) Update(version *types.Version, store store.Store) error {
 	if !app.StateIs(APP_STATE_NORMAL) {
 		return errors.New("app not in normal state")
 	}
@@ -221,8 +228,14 @@ func (app *App) Update(version *types.Version) error {
 	if err != nil {
 		return err
 	}
+
+	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	app.ProposedVersion = version
-	app.ProposedVersion.ID = fmt.Sprintf("%d", time.Now().Unix())
+
+	raftVersion := VersionToRaft(version)
+	if err := store.UpdateVersion(context.TODO(), app.AppId, raftVersion, nil); err != nil {
+		return err
+	}
 
 	afterUpdateDone := func(app *App) {
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
@@ -420,5 +433,5 @@ func (app *App) IsFixed() bool {
 
 func (app *App) EmitEvent(swanEvent *swanevent.Event) {
 	logrus.Debugf("write event %s for app %s", swanEvent, app.AppId)
-	app.scontext.EventBus.EventChan <- swanEvent
+	app.Scontext.EventBus.EventChan <- swanEvent
 }

@@ -3,8 +3,6 @@ syntax = "proto3";
 package types;
 
 import weak "gogoproto/gogo.proto";
-import "health.proto";
-import "update.proto";
 
 option (gogoproto.populate_all) = true;
 option (gogoproto.testgen_all) = true;
@@ -16,9 +14,19 @@ option (gogoproto.sizer_all) = true;
 option (gogoproto.unmarshaler_all) = true;
 option (gogoproto.goproto_getters_all) = false;
 
+message Application {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string name = 2;
+    Version version = 3;
+    string clusterId = 4;
+    string state = 5;
+    int64 createdAt = 6;
+    int64 updatedAt = 7;
+}
+
 message Version {
     string id = 1 [(gogoproto.customname) = "ID"];
-    string appId = 2;
+    string perviousVersionID = 2;
     string command = 3;
     double cpus = 4;
     double mem = 5;
@@ -35,6 +43,7 @@ message Version {
     repeated string uris = 16;
     repeated string ip = 17;
     string mode = 18;
+    string appId = 19;
 }
 
 message Container {
@@ -71,4 +80,30 @@ message Volume {
 
 message KillPolicy {
     int64 duration = 1;
+}
+
+message UpdatePolicy {
+    int32 updateDelay = 1;
+    int32 maxRetries = 2;
+    int32 maxFailovers = 3;
+    string action = 4; 
+}
+
+message HealthCheck {
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string address = 2;
+    string protocol = 3;
+    int32 port = 4;
+    int32 portIndex = 5; 
+    string portName = 6;
+    Command command = 7;
+    string path = 8;
+    uint32 maxConsecutiveFailures = 9;
+    double gracePeriodSeconds = 10;
+    double intervalSeconds = 11;
+    double timeoutSeconds = 12;
+}
+
+message Command {
+    string value = 1;
 }

@@ -25,7 +25,7 @@ install:
 	install -v bin/swancfg /usr/local/bin
 
 generate:
-	protoc --proto_path=./vendor/github.com/gogo/protobuf/:./src/types/:. --gogo_out=./src/types/ ./src/types/*.proto
+	protoc --proto_path=./vendor/github.com/gogo/protobuf/:./src/manager/raft/types/:. --gogo_out=./src/manager/raft/types/ ./src/manager/raft/types/*.proto
 
 clean:
 	rm -rf bin/*

@@ -4,10 +4,6 @@ package types;
 
 import weak "gogoproto/gogo.proto";
 import "application.proto";
-import "task.proto";
-import "version.proto";
-import weak "health.proto";
-import weak "update.proto";
 
 option (gogoproto.populate_all) = true;
 option (gogoproto.testgen_all) = true;
@@ -28,9 +24,6 @@ message InternalRaftRequest {
 	repeated StoreAction action = 2;
 }
 
-// TODO(stevvooe): Storage actions may belong in another protobuf file. They
-// aren't necessarily first-class "types" in the cluster schema.
-
 // StoreActionKind defines the operation to take on the store for the target of
 // a storage action.
 enum StoreActionKind {
@@ -48,17 +41,10 @@ message StoreAction {
 	oneof target {
         Application application = 2;
         Framework framework = 3; 
-        Task task = 4;
-        Version version = 5;
-        Manager manager = 6;
+        Version version = 4;
 	}
 }
 
 message Framework {
     string id = 1 [(gogoproto.customname) = "ID"];
-}
-
-message Manager {
-    string id = 1 [(gogoproto.customname) = "ID"];
-    string addr = 2;
 }

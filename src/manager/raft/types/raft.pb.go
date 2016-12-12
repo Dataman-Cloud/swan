@@ -71,9 +71,7 @@ type StoreAction struct {
 	// Types that are valid to be assigned to Target:
 	//	*StoreAction_Application
 	//	*StoreAction_Framework
-	//	*StoreAction_Task
 	//	*StoreAction_Version
-	//	*StoreAction_Manager
 	Target isStoreAction_Target `protobuf_oneof:"target"`
 }
 
@@ -96,21 +94,13 @@ type StoreAction_Application struct {
 type StoreAction_Framework struct {
 	Framework *Framework `protobuf:"bytes,3,opt,name=framework,oneof"`
 }
-type StoreAction_Task struct {
-	Task *Task `protobuf:"bytes,4,opt,name=task,oneof"`
-}
 type StoreAction_Version struct {
-	Version *Version `protobuf:"bytes,5,opt,name=version,oneof"`
-}
-type StoreAction_Manager struct {
-	Manager *Manager `protobuf:"bytes,6,opt,name=manager,oneof"`
+	Version *Version `protobuf:"bytes,4,opt,name=version,oneof"`
 }
 
 func (*StoreAction_Application) isStoreAction_Target() {}
 func (*StoreAction_Framework) isStoreAction_Target()   {}
-func (*StoreAction_Task) isStoreAction_Target()        {}
 func (*StoreAction_Version) isStoreAction_Target()     {}
-func (*StoreAction_Manager) isStoreAction_Target()     {}
 
 func (m *StoreAction) GetTarget() isStoreAction_Target {
 	if m != nil {
@@ -133,23 +123,9 @@ func (m *StoreAction) GetFramework() *Framework {
 	return nil
 }
 
-func (m *StoreAction) GetTask() *Task {
-	if x, ok := m.GetTarget().(*StoreAction_Task); ok {
-		return x.Task
-	}
-	return nil
-}
-
 func (m *StoreAction) GetVersion() *Version {
 	if x, ok := m.GetTarget().(*StoreAction_Version); ok {
 		return x.Version
-	}
-	return nil
-}
-
-func (m *StoreAction) GetManager() *Manager {
-	if x, ok := m.GetTarget().(*StoreAction_Manager); ok {
-		return x.Manager
 	}
 	return nil
 }
@@ -159,9 +135,7 @@ func (*StoreAction) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) e
 	return _StoreAction_OneofMarshaler, _StoreAction_OneofUnmarshaler, _StoreAction_OneofSizer, []interface{}{
 		(*StoreAction_Application)(nil),
 		(*StoreAction_Framework)(nil),
-		(*StoreAction_Task)(nil),
 		(*StoreAction_Version)(nil),
-		(*StoreAction_Manager)(nil),
 	}
 }
 
@@ -179,19 +153,9 @@ func _StoreAction_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.Framework); err != nil {
 			return err
 		}
-	case *StoreAction_Task:
-		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Task); err != nil {
-			return err
-		}
 	case *StoreAction_Version:
-		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Version); err != nil {
-			return err
-		}
-	case *StoreAction_Manager:
-		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Manager); err != nil {
 			return err
 		}
 	case nil:
@@ -220,29 +184,13 @@ func _StoreAction_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Bu
 		err := b.DecodeMessage(msg)
 		m.Target = &StoreAction_Framework{msg}
 		return true, err
-	case 4: // target.task
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Task)
-		err := b.DecodeMessage(msg)
-		m.Target = &StoreAction_Task{msg}
-		return true, err
-	case 5: // target.version
+	case 4: // target.version
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(Version)
 		err := b.DecodeMessage(msg)
 		m.Target = &StoreAction_Version{msg}
-		return true, err
-	case 6: // target.manager
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Manager)
-		err := b.DecodeMessage(msg)
-		m.Target = &StoreAction_Manager{msg}
 		return true, err
 	default:
 		return false, nil
@@ -263,19 +211,9 @@ func _StoreAction_OneofSizer(msg proto.Message) (n int) {
 		n += proto.SizeVarint(3<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *StoreAction_Task:
-		s := proto.Size(x.Task)
-		n += proto.SizeVarint(4<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
 	case *StoreAction_Version:
 		s := proto.Size(x.Version)
-		n += proto.SizeVarint(5<<3 | proto.WireBytes)
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *StoreAction_Manager:
-		s := proto.Size(x.Manager)
-		n += proto.SizeVarint(6<<3 | proto.WireBytes)
+		n += proto.SizeVarint(4<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case nil:
@@ -294,21 +232,10 @@ func (m *Framework) String() string            { return proto.CompactTextString(
 func (*Framework) ProtoMessage()               {}
 func (*Framework) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{2} }
 
-type Manager struct {
-	ID   string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Addr string `protobuf:"bytes,2,opt,name=addr,proto3" json:"addr,omitempty"`
-}
-
-func (m *Manager) Reset()                    { *m = Manager{} }
-func (m *Manager) String() string            { return proto.CompactTextString(m) }
-func (*Manager) ProtoMessage()               {}
-func (*Manager) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{3} }
-
 func init() {
 	proto.RegisterType((*InternalRaftRequest)(nil), "types.InternalRaftRequest")
 	proto.RegisterType((*StoreAction)(nil), "types.StoreAction")
 	proto.RegisterType((*Framework)(nil), "types.Framework")
-	proto.RegisterType((*Manager)(nil), "types.Manager")
 	proto.RegisterEnum("types.StoreActionKind", StoreActionKind_name, StoreActionKind_value)
 }
 func (this *InternalRaftRequest) VerboseEqual(that interface{}) error {
@@ -486,36 +413,6 @@ func (this *StoreAction_Framework) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
-func (this *StoreAction_Task) VerboseEqual(that interface{}) error {
-	if that == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that == nil && this != nil")
-	}
-
-	that1, ok := that.(*StoreAction_Task)
-	if !ok {
-		that2, ok := that.(StoreAction_Task)
-		if ok {
-			that1 = &that2
-		} else {
-			return fmt.Errorf("that is not of type *StoreAction_Task")
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that is type *StoreAction_Task but is nil && this != nil")
-	} else if this == nil {
-		return fmt.Errorf("that is type *StoreAction_Task but is not nil && this == nil")
-	}
-	if !this.Task.Equal(that1.Task) {
-		return fmt.Errorf("Task this(%v) Not Equal that(%v)", this.Task, that1.Task)
-	}
-	return nil
-}
 func (this *StoreAction_Version) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
@@ -543,36 +440,6 @@ func (this *StoreAction_Version) VerboseEqual(that interface{}) error {
 	}
 	if !this.Version.Equal(that1.Version) {
 		return fmt.Errorf("Version this(%v) Not Equal that(%v)", this.Version, that1.Version)
-	}
-	return nil
-}
-func (this *StoreAction_Manager) VerboseEqual(that interface{}) error {
-	if that == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that == nil && this != nil")
-	}
-
-	that1, ok := that.(*StoreAction_Manager)
-	if !ok {
-		that2, ok := that.(StoreAction_Manager)
-		if ok {
-			that1 = &that2
-		} else {
-			return fmt.Errorf("that is not of type *StoreAction_Manager")
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that is type *StoreAction_Manager but is nil && this != nil")
-	} else if this == nil {
-		return fmt.Errorf("that is type *StoreAction_Manager but is not nil && this == nil")
-	}
-	if !this.Manager.Equal(that1.Manager) {
-		return fmt.Errorf("Manager this(%v) Not Equal that(%v)", this.Manager, that1.Manager)
 	}
 	return nil
 }
@@ -675,36 +542,6 @@ func (this *StoreAction_Framework) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *StoreAction_Task) Equal(that interface{}) bool {
-	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	}
-
-	that1, ok := that.(*StoreAction_Task)
-	if !ok {
-		that2, ok := that.(StoreAction_Task)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	} else if this == nil {
-		return false
-	}
-	if !this.Task.Equal(that1.Task) {
-		return false
-	}
-	return true
-}
 func (this *StoreAction_Version) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
@@ -731,36 +568,6 @@ func (this *StoreAction_Version) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.Version.Equal(that1.Version) {
-		return false
-	}
-	return true
-}
-func (this *StoreAction_Manager) Equal(that interface{}) bool {
-	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	}
-
-	that1, ok := that.(*StoreAction_Manager)
-	if !ok {
-		that2, ok := that.(StoreAction_Manager)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	} else if this == nil {
-		return false
-	}
-	if !this.Manager.Equal(that1.Manager) {
 		return false
 	}
 	return true
@@ -825,72 +632,6 @@ func (this *Framework) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Manager) VerboseEqual(that interface{}) error {
-	if that == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that == nil && this != nil")
-	}
-
-	that1, ok := that.(*Manager)
-	if !ok {
-		that2, ok := that.(Manager)
-		if ok {
-			that1 = &that2
-		} else {
-			return fmt.Errorf("that is not of type *Manager")
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return nil
-		}
-		return fmt.Errorf("that is type *Manager but is nil && this != nil")
-	} else if this == nil {
-		return fmt.Errorf("that is type *Manager but is not nil && this == nil")
-	}
-	if this.ID != that1.ID {
-		return fmt.Errorf("ID this(%v) Not Equal that(%v)", this.ID, that1.ID)
-	}
-	if this.Addr != that1.Addr {
-		return fmt.Errorf("Addr this(%v) Not Equal that(%v)", this.Addr, that1.Addr)
-	}
-	return nil
-}
-func (this *Manager) Equal(that interface{}) bool {
-	if that == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	}
-
-	that1, ok := that.(*Manager)
-	if !ok {
-		that2, ok := that.(Manager)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		if this == nil {
-			return true
-		}
-		return false
-	} else if this == nil {
-		return false
-	}
-	if this.ID != that1.ID {
-		return false
-	}
-	if this.Addr != that1.Addr {
-		return false
-	}
-	return true
-}
 func (this *InternalRaftRequest) GoString() string {
 	if this == nil {
 		return "nil"
@@ -908,7 +649,7 @@ func (this *StoreAction) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 10)
+	s := make([]string, 0, 8)
 	s = append(s, "&types.StoreAction{")
 	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	if this.Target != nil {
@@ -933,28 +674,12 @@ func (this *StoreAction_Framework) GoString() string {
 		`Framework:` + fmt.Sprintf("%#v", this.Framework) + `}`}, ", ")
 	return s
 }
-func (this *StoreAction_Task) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&types.StoreAction_Task{` +
-		`Task:` + fmt.Sprintf("%#v", this.Task) + `}`}, ", ")
-	return s
-}
 func (this *StoreAction_Version) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := strings.Join([]string{`&types.StoreAction_Version{` +
 		`Version:` + fmt.Sprintf("%#v", this.Version) + `}`}, ", ")
-	return s
-}
-func (this *StoreAction_Manager) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&types.StoreAction_Manager{` +
-		`Manager:` + fmt.Sprintf("%#v", this.Manager) + `}`}, ", ")
 	return s
 }
 func (this *Framework) GoString() string {
@@ -964,17 +689,6 @@ func (this *Framework) GoString() string {
 	s := make([]string, 0, 5)
 	s = append(s, "&types.Framework{")
 	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Manager) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 6)
-	s = append(s, "&types.Manager{")
-	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
-	s = append(s, "Addr: "+fmt.Sprintf("%#v", this.Addr)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1097,45 +811,17 @@ func (m *StoreAction_Framework) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Task) MarshalTo(dAtA []byte) (int, error) {
+func (m *StoreAction_Version) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Task != nil {
+	if m.Version != nil {
 		dAtA[i] = 0x22
 		i++
-		i = encodeVarintRaft(dAtA, i, uint64(m.Task.Size()))
-		n4, err := m.Task.MarshalTo(dAtA[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Version.Size()))
+		n4, err := m.Version.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n4
-	}
-	return i, nil
-}
-func (m *StoreAction_Version) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Version != nil {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintRaft(dAtA, i, uint64(m.Version.Size()))
-		n5, err := m.Version.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n5
-	}
-	return i, nil
-}
-func (m *StoreAction_Manager) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Manager != nil {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintRaft(dAtA, i, uint64(m.Manager.Size()))
-		n6, err := m.Manager.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n6
 	}
 	return i, nil
 }
@@ -1159,36 +845,6 @@ func (m *Framework) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintRaft(dAtA, i, uint64(len(m.ID)))
 		i += copy(dAtA[i:], m.ID)
-	}
-	return i, nil
-}
-
-func (m *Manager) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Manager) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	if len(m.ID) > 0 {
-		dAtA[i] = 0xa
-		i++
-		i = encodeVarintRaft(dAtA, i, uint64(len(m.ID)))
-		i += copy(dAtA[i:], m.ID)
-	}
-	if len(m.Addr) > 0 {
-		dAtA[i] = 0x12
-		i++
-		i = encodeVarintRaft(dAtA, i, uint64(len(m.Addr)))
-		i += copy(dAtA[i:], m.Addr)
 	}
 	return i, nil
 }
@@ -1238,18 +894,14 @@ func NewPopulatedInternalRaftRequest(r randyRaft, easy bool) *InternalRaftReques
 func NewPopulatedStoreAction(r randyRaft, easy bool) *StoreAction {
 	this := &StoreAction{}
 	this.Action = StoreActionKind([]int32{0, 1, 2, 3}[r.Intn(4)])
-	oneofNumber_Target := []int32{2, 3, 4, 5, 6}[r.Intn(5)]
+	oneofNumber_Target := []int32{2, 3, 4}[r.Intn(3)]
 	switch oneofNumber_Target {
 	case 2:
 		this.Target = NewPopulatedStoreAction_Application(r, easy)
 	case 3:
 		this.Target = NewPopulatedStoreAction_Framework(r, easy)
 	case 4:
-		this.Target = NewPopulatedStoreAction_Task(r, easy)
-	case 5:
 		this.Target = NewPopulatedStoreAction_Version(r, easy)
-	case 6:
-		this.Target = NewPopulatedStoreAction_Manager(r, easy)
 	}
 	if !easy && r.Intn(10) != 0 {
 	}
@@ -1266,33 +918,14 @@ func NewPopulatedStoreAction_Framework(r randyRaft, easy bool) *StoreAction_Fram
 	this.Framework = NewPopulatedFramework(r, easy)
 	return this
 }
-func NewPopulatedStoreAction_Task(r randyRaft, easy bool) *StoreAction_Task {
-	this := &StoreAction_Task{}
-	this.Task = NewPopulatedTask(r, easy)
-	return this
-}
 func NewPopulatedStoreAction_Version(r randyRaft, easy bool) *StoreAction_Version {
 	this := &StoreAction_Version{}
 	this.Version = NewPopulatedVersion(r, easy)
 	return this
 }
-func NewPopulatedStoreAction_Manager(r randyRaft, easy bool) *StoreAction_Manager {
-	this := &StoreAction_Manager{}
-	this.Manager = NewPopulatedManager(r, easy)
-	return this
-}
 func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
 	this := &Framework{}
 	this.ID = string(randStringRaft(r))
-	if !easy && r.Intn(10) != 0 {
-	}
-	return this
-}
-
-func NewPopulatedManager(r randyRaft, easy bool) *Manager {
-	this := &Manager{}
-	this.ID = string(randStringRaft(r))
-	this.Addr = string(randStringRaft(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1415,15 +1048,6 @@ func (m *StoreAction_Framework) Size() (n int) {
 	}
 	return n
 }
-func (m *StoreAction_Task) Size() (n int) {
-	var l int
-	_ = l
-	if m.Task != nil {
-		l = m.Task.Size()
-		n += 1 + l + sovRaft(uint64(l))
-	}
-	return n
-}
 func (m *StoreAction_Version) Size() (n int) {
 	var l int
 	_ = l
@@ -1433,33 +1057,10 @@ func (m *StoreAction_Version) Size() (n int) {
 	}
 	return n
 }
-func (m *StoreAction_Manager) Size() (n int) {
-	var l int
-	_ = l
-	if m.Manager != nil {
-		l = m.Manager.Size()
-		n += 1 + l + sovRaft(uint64(l))
-	}
-	return n
-}
 func (m *Framework) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.ID)
-	if l > 0 {
-		n += 1 + l + sovRaft(uint64(l))
-	}
-	return n
-}
-
-func (m *Manager) Size() (n int) {
-	var l int
-	_ = l
-	l = len(m.ID)
-	if l > 0 {
-		n += 1 + l + sovRaft(uint64(l))
-	}
-	l = len(m.Addr)
 	if l > 0 {
 		n += 1 + l + sovRaft(uint64(l))
 	}
@@ -1693,38 +1294,6 @@ func (m *StoreAction) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Task", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRaft
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthRaft
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Task{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Target = &StoreAction_Task{v}
-			iNdEx = postIndex
-		case 5:
-			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Version", wireType)
 			}
 			var msglen int
@@ -1754,38 +1323,6 @@ func (m *StoreAction) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Target = &StoreAction_Version{v}
-			iNdEx = postIndex
-		case 6:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Manager", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRaft
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= (int(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthRaft
-			}
-			postIndex := iNdEx + msglen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Manager{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Target = &StoreAction_Manager{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -1865,114 +1402,6 @@ func (m *Framework) Unmarshal(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.ID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipRaft(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthRaft
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Manager) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowRaft
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= (uint64(b) & 0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Manager: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Manager: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		case 1:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field ID", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRaft
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthRaft
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.ID = string(dAtA[iNdEx:postIndex])
-			iNdEx = postIndex
-		case 2:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Addr", wireType)
-			}
-			var stringLen uint64
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowRaft
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				stringLen |= (uint64(b) & 0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			intStringLen := int(stringLen)
-			if intStringLen < 0 {
-				return ErrInvalidLengthRaft
-			}
-			postIndex := iNdEx + intStringLen
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			m.Addr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2103,37 +1532,32 @@ var (
 func init() { proto.RegisterFile("raft.proto", fileDescriptorRaft) }
 
 var fileDescriptorRaft = []byte{
-	// 506 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x93, 0xc1, 0x6e, 0x12, 0x41,
-	0x18, 0xc7, 0xd9, 0x65, 0x59, 0xe4, 0x43, 0x2b, 0x4e, 0x15, 0xd7, 0x3d, 0xac, 0x88, 0x26, 0x36,
-	0x3d, 0xa0, 0xc1, 0xe8, 0x1d, 0xe8, 0x1a, 0x49, 0x53, 0x30, 0x53, 0xa8, 0x78, 0x6a, 0xc6, 0xee,
-	0x94, 0x12, 0x60, 0x67, 0x1d, 0xa6, 0x6d, 0x7c, 0x03, 0xe3, 0x3b, 0x78, 0xd2, 0x83, 0x07, 0x1f,
-	0xc0, 0xf8, 0x04, 0x3d, 0xfa, 0x04, 0xa6, 0xed, 0x0b, 0xe8, 0xd1, 0xa3, 0xb3, 0xc3, 0x50, 0x56,
-	0xa8, 0x87, 0x2f, 0x99, 0xfd, 0x7f, 0xbf, 0xff, 0x7c, 0x33, 0xff, 0xcc, 0x02, 0x70, 0xb2, 0x2f,
-	0x2a, 0x11, 0x67, 0x82, 0xa1, 0x8c, 0x78, 0x17, 0xd1, 0x89, 0x7b, 0xb3, 0xcf, 0xfa, 0x4c, 0x29,
-	0x8f, 0xe2, 0xd5, 0xb4, 0xe9, 0xde, 0x20, 0x51, 0x34, 0x1a, 0xec, 0x11, 0x31, 0x60, 0xa1, 0x96,
-	0x40, 0x90, 0xc9, 0x50, 0xaf, 0xaf, 0x1d, 0x51, 0x3e, 0x99, 0xb7, 0xae, 0x1e, 0x50, 0x32, 0x12,
-	0x07, 0xb3, 0xaf, 0xc3, 0x28, 0x20, 0x82, 0x4e, 0xbf, 0xca, 0xaf, 0x61, 0xb5, 0x19, 0x0a, 0xca,
-	0x43, 0x32, 0xc2, 0x72, 0x38, 0xa6, 0x6f, 0x0f, 0xe9, 0x44, 0xa0, 0x22, 0x98, 0x83, 0xc0, 0x31,
-	0x4a, 0xc6, 0x9a, 0x55, 0xb7, 0xcf, 0x7f, 0xde, 0x35, 0x9b, 0x1b, 0x58, 0x2a, 0x68, 0x1d, 0x6c,
-	0xb2, 0x17, 0x4f, 0x75, 0xcc, 0x52, 0x7a, 0x2d, 0x5f, 0x45, 0x15, 0x75, 0xcc, 0xca, 0xb6, 0x60,
-	0x9c, 0xd6, 0x54, 0x07, 0x6b, 0xa2, 0xfc, 0xd5, 0x84, 0x7c, 0x42, 0x47, 0x95, 0x0b, 0x6f, 0xbc,
-	0xef, 0x4a, 0xb5, 0xb8, 0xec, 0xdd, 0x1c, 0x84, 0xc1, 0xcc, 0x8f, 0x9e, 0x41, 0x3e, 0x71, 0x4d,
-	0x39, 0xd0, 0x48, 0x0c, 0xac, 0xcd, 0x3b, 0x2f, 0x52, 0x38, 0x09, 0xa2, 0xc7, 0x90, 0xdb, 0xe7,
-	0x64, 0x4c, 0x8f, 0x19, 0x1f, 0x3a, 0x69, 0xe5, 0x2a, 0x68, 0xd7, 0xf3, 0x99, 0x2e, 0x3d, 0x73,
-	0x08, 0xdd, 0x03, 0x2b, 0x4e, 0xcf, 0xb1, 0x14, 0x9c, 0xd7, 0x70, 0x47, 0x4a, 0x92, 0x53, 0x2d,
-	0x79, 0xf1, 0xac, 0x0e, 0xd5, 0xc9, 0x28, 0x6a, 0x45, 0x53, 0x3b, 0x53, 0x55, 0x82, 0x33, 0x20,
-	0x66, 0xc7, 0x24, 0x24, 0x7d, 0xca, 0x1d, 0xfb, 0x1f, 0x76, 0x6b, 0xaa, 0xc6, 0xac, 0x06, 0xea,
-	0x57, 0xc0, 0x16, 0x84, 0xf7, 0xa9, 0x28, 0xdf, 0x87, 0xdc, 0xc5, 0xf1, 0x12, 0xf9, 0xe7, 0x92,
-	0xf9, 0x97, 0x9f, 0x42, 0x56, 0x6f, 0xf2, 0x3f, 0x04, 0x21, 0xb0, 0x48, 0x10, 0x70, 0x95, 0x57,
-	0x0e, 0xab, 0xf5, 0xfa, 0x2f, 0x03, 0xae, 0x2f, 0xc4, 0x8c, 0x1e, 0x42, 0xb6, 0xdb, 0xda, 0x6c,
-	0xb5, 0x5f, 0xb5, 0x0a, 0x29, 0xd7, 0xfd, 0xf0, 0xb1, 0x54, 0x5c, 0x20, 0xba, 0xe1, 0x30, 0x64,
-	0xc7, 0x21, 0xaa, 0xc2, 0xea, 0x76, 0xa7, 0x8d, 0xfd, 0xdd, 0x5a, 0xa3, 0xd3, 0x6c, 0xb7, 0x76,
-	0x1b, 0xd8, 0xaf, 0x75, 0xfc, 0x82, 0xe1, 0xde, 0x91, 0xa6, 0x5b, 0x0b, 0xa6, 0x06, 0xa7, 0xf2,
-	0x71, 0x2d, 0x79, 0xba, 0x2f, 0x37, 0x62, 0x8f, 0x79, 0xa9, 0xa7, 0xab, 0x1e, 0xe4, 0x92, 0x07,
-	0xfb, 0x5b, 0xed, 0x1d, 0xbf, 0x90, 0xbe, 0xd4, 0x83, 0xe9, 0x98, 0x1d, 0x51, 0xf7, 0xf6, 0xfb,
-	0x4f, 0x5e, 0xea, 0xfb, 0x67, 0x6f, 0xf1, 0x76, 0xf5, 0x07, 0x27, 0x67, 0x5e, 0xea, 0xf4, 0xcc,
-	0x33, 0x7e, 0xcb, 0xfa, 0x23, 0xeb, 0xcb, 0xb9, 0x67, 0x7c, 0x93, 0x75, 0x22, 0xeb, 0x87, 0xac,
-	0x53, 0x59, 0xbd, 0x54, 0xcf, 0xea, 0x65, 0xde, 0xd8, 0xea, 0x57, 0x78, 0xf2, 0x37, 0x00, 0x00,
-	0xff, 0xff, 0x87, 0x84, 0x27, 0xf3, 0x7f, 0x03, 0x00, 0x00,
+	// 418 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2a, 0x4a, 0x4c, 0x2b,
+	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d, 0x96, 0x12, 0x49,
+	0xcf, 0x4f, 0xcf, 0x07, 0x8b, 0xe8, 0x83, 0x58, 0x10, 0x49, 0x29, 0xc1, 0xc4, 0x82, 0x82, 0x9c,
+	0xcc, 0xe4, 0xc4, 0x92, 0xcc, 0xfc, 0x3c, 0x88, 0x90, 0x52, 0x24, 0x97, 0xb0, 0x67, 0x5e, 0x49,
+	0x6a, 0x51, 0x5e, 0x62, 0x4e, 0x10, 0xd0, 0x94, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21,
+	0x31, 0x2e, 0xa6, 0xcc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0x16, 0x27, 0xb6, 0x47, 0xf7, 0xe4,
+	0x99, 0x3c, 0x5d, 0x82, 0x80, 0x22, 0x42, 0x5a, 0x5c, 0x6c, 0x89, 0xc9, 0x20, 0xed, 0x12, 0x4c,
+	0x0a, 0xcc, 0x1a, 0xdc, 0x46, 0x42, 0x7a, 0x60, 0xfb, 0xf4, 0x82, 0x4b, 0xf2, 0x8b, 0x52, 0x1d,
+	0xc1, 0x32, 0x41, 0x50, 0x15, 0x4a, 0x77, 0x19, 0xb9, 0xb8, 0x91, 0xc4, 0x85, 0xf4, 0xe0, 0x7a,
+	0x41, 0xe6, 0xf2, 0x19, 0x89, 0x61, 0xea, 0xf5, 0xce, 0xcc, 0x4b, 0x81, 0xe9, 0x17, 0x32, 0xe3,
+	0xe2, 0x46, 0x72, 0x2f, 0xd0, 0x42, 0x46, 0x24, 0x0b, 0x1d, 0x11, 0x32, 0x1e, 0x0c, 0x41, 0xc8,
+	0x0a, 0x85, 0x0c, 0xb8, 0x38, 0xd3, 0x8a, 0x12, 0x73, 0x53, 0xcb, 0xf3, 0x8b, 0xb2, 0x25, 0x98,
+	0xc1, 0xba, 0x04, 0xa0, 0xba, 0xdc, 0x60, 0xe2, 0x40, 0x3d, 0x08, 0x45, 0x40, 0x5f, 0xb1, 0x97,
+	0xa5, 0x16, 0x15, 0x83, 0x6c, 0x61, 0x01, 0xab, 0xe7, 0x83, 0xaa, 0x0f, 0x83, 0x88, 0x02, 0x55,
+	0xc3, 0x14, 0x38, 0x71, 0x70, 0xb1, 0x95, 0x24, 0x16, 0xa5, 0xa7, 0x96, 0x28, 0x29, 0x73, 0x71,
+	0xc2, 0xcd, 0x43, 0x0a, 0x30, 0x4e, 0xe4, 0x00, 0xd3, 0x7a, 0xcf, 0xc8, 0xc5, 0x8f, 0xe6, 0x41,
+	0x21, 0x75, 0x2e, 0xf6, 0x50, 0x3f, 0x6f, 0x3f, 0xff, 0x70, 0x3f, 0x01, 0x06, 0x29, 0xa9, 0xae,
+	0xb9, 0x0a, 0x62, 0x68, 0x2a, 0x42, 0xf3, 0xb2, 0xf3, 0xf2, 0xcb, 0xf3, 0x84, 0x8c, 0xb8, 0x84,
+	0x83, 0x43, 0xfc, 0x83, 0x5c, 0xe3, 0x1d, 0x9d, 0x43, 0x3c, 0xfd, 0xfd, 0xe2, 0x9d, 0x83, 0x5c,
+	0x1d, 0x43, 0x5c, 0x05, 0x18, 0xa5, 0x24, 0x81, 0x9a, 0x44, 0xd1, 0x34, 0x39, 0x17, 0xa5, 0x26,
+	0x96, 0xa4, 0x62, 0xe8, 0x09, 0x0d, 0x70, 0x01, 0xe9, 0x61, 0xc2, 0xaa, 0x27, 0xb4, 0x20, 0x05,
+	0x9b, 0x9e, 0x20, 0x57, 0x5f, 0xff, 0x30, 0x57, 0x01, 0x66, 0xac, 0x7a, 0x82, 0x52, 0x73, 0xf3,
+	0xcb, 0x52, 0xa5, 0xc4, 0x3b, 0x16, 0xcb, 0x31, 0xec, 0x5a, 0x22, 0x87, 0xee, 0x3b, 0x27, 0x95,
+	0x13, 0x0f, 0xe5, 0x18, 0x1e, 0x3c, 0x94, 0x63, 0xfc, 0x00, 0xc4, 0x3f, 0x80, 0x78, 0xc5, 0x23,
+	0x39, 0xc6, 0x1d, 0x40, 0x7c, 0x02, 0x88, 0x2f, 0x00, 0xf1, 0x03, 0x20, 0x8e, 0x60, 0x48, 0x62,
+	0x03, 0x27, 0x40, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x15, 0x70, 0xd0, 0xc4, 0xbe, 0x02,
+	0x00, 0x00,
 }
