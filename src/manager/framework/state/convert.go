@@ -60,7 +60,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 	return raftVersion
 }
 
-func VersionFromRaft() {
+func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 	version := &types.Version{
 		ID:          raftVersion.ID,
 		Command:     raftVersion.Command,
@@ -82,7 +82,7 @@ func VersionFromRaft() {
 	}
 
 	if raftVersion.KillPolicy != nil {
-		version.KillPolicy = KillPolicyFromRaft(raftVersion.Container)
+		version.KillPolicy = KillPolicyFromRaft(raftVersion.KillPolicy)
 	}
 
 	if raftVersion.UpdatePolicy != nil {
@@ -123,13 +123,13 @@ func ContainerToRaft(container *types.Container) *rafttypes.Container {
 	return raftContainer
 }
 
-func ContainerFromContainer(raftContainer *rafttypes.Container) types.Container {
+func ContainerFromContainer(raftContainer *rafttypes.Container) *types.Container {
 	container := &types.Container{
 		Type: raftContainer.Type,
 	}
 
 	if raftContainer.Docker != nil {
-		contianer.Docker = DockerFromRaft(raftContainer.Docker)
+		container.Docker = DockerFromRaft(raftContainer.Docker)
 	}
 
 	if raftContainer.Volumes != nil {
@@ -178,14 +178,14 @@ func DockerToRaft(docker *types.Docker) *rafttypes.Docker {
 func DockerFromRaft(raftDocker *rafttypes.Docker) *types.Docker {
 	docker := &types.Docker{
 		ForcePullImage: raftDocker.ForcePullImage,
-		Image:          raftDocker.ForcePullImage,
-		Network:        raftDockerk.Network,
-		Privileged:     raftDocer.Privileged,
+		Image:          raftDocker.Image,
+		Network:        raftDocker.Network,
+		Privileged:     raftDocker.Privileged,
 	}
 
 	if raftDocker.Parameters != nil {
 		var parameters []*types.Parameter
-		for _, parameter := range raftDockerk.Parameters {
+		for _, parameter := range raftDocker.Parameters {
 			parameters = append(parameters, ParameterFromRaft(parameter))
 		}
 
@@ -194,8 +194,8 @@ func DockerFromRaft(raftDocker *rafttypes.Docker) *types.Docker {
 
 	if docker.PortMappings != nil {
 		var portMappings []*types.PortMapping
-		for _, portMapping := range raftDocer.PortMappings {
-			portMappings = append(portMappings, PortMapping)
+		for _, portMapping := range raftDocker.PortMappings {
+			portMappings = append(portMappings, PortMappingFromRaft(portMapping))
 		}
 
 		docker.PortMappings = portMappings
@@ -302,7 +302,7 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 	return raftHealthCheck
 }
 
-func HeadlthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCheck {
+func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCheck {
 	healthCheck := &types.HealthCheck{
 		ID:        raftHealthCheck.ID,
 		Address:   raftHealthCheck.Address,
