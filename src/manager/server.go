@@ -30,11 +30,11 @@ func (r *Router) State(w http.ResponseWriter, req *http.Request) error {
 		Cluster: r.manager.config.Raft.Cluster,
 	}
 
-	frameworkId, err := r.manager.swanContext.Store.FetchFrameworkID()
-	if err != nil {
-		return err
-	}
-	managerState.FrameworkId = frameworkId
+	//frameworkId, err := r.manager.swanContext.Store.FetchFrameworkID()
+	//if err != nil {
+	//	return err
+	//}
+	//managerState.FrameworkId = frameworkId
 
 	leader, err := r.manager.raftNode.Leader()
 	if err != nil {
