@@ -4,15 +4,9 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/utils"
 )
 
 func (r *Router) AllocateIP(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
-
 	if err := req.ParseForm(); err != nil {
 		return err
 	}
@@ -31,10 +25,6 @@ func (r *Router) AllocateIP(w http.ResponseWriter, req *http.Request) error {
 }
 
 func (r *Router) AllocateNextAvailable(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
-
 	ip, err := r.ipam.AllocateNextAvailableIP()
 	if err != nil {
 		return err
@@ -44,9 +34,6 @@ func (r *Router) AllocateNextAvailable(w http.ResponseWriter, req *http.Request)
 }
 
 func (r *Router) ListAvailableIps(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
 
 	list, err := r.ipam.IPsAvailable()
 	if err != nil {
@@ -57,9 +44,6 @@ func (r *Router) ListAvailableIps(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (r *Router) ListAllocatedIps(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
 
 	list, err := r.ipam.IPsAllocated()
 	if err != nil {
@@ -70,9 +54,6 @@ func (r *Router) ListAllocatedIps(w http.ResponseWriter, req *http.Request) erro
 }
 
 func (r *Router) ReleaseIP(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
 
 	if err := req.ParseForm(); err != nil {
 		return err
@@ -96,9 +77,6 @@ func (r *Router) ReleaseIP(w http.ResponseWriter, req *http.Request) error {
 }
 
 func (r *Router) RefillIPs(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
 
 	if err := req.ParseForm(); err != nil {
 		return err
@@ -127,9 +105,6 @@ func (r *Router) RefillIPs(w http.ResponseWriter, req *http.Request) error {
 }
 
 func (r *Router) ListIPs(w http.ResponseWriter, req *http.Request) error {
-	if err := utils.CheckForJSON(req); err != nil {
-		return err
-	}
 
 	list, err := r.ipam.AllIPs()
 	if err != nil {

@@ -1,12 +1,7 @@
 package ipam
 
-import (
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/router"
-)
-
 type Router struct {
-	routes []*router.Route
-	ipam   *IPAM
+	ipam *IPAM
 }
 
 // NewRouter initializes a new ipam router.
@@ -15,22 +10,17 @@ func NewRouter(manager *IPAM) *Router {
 		ipam: manager,
 	}
 
-	r.initRoutes()
 	return r
 }
 
-func (r *Router) Routes() []*router.Route {
-	return r.routes
-}
-
-func (r *Router) initRoutes() {
-	r.routes = []*router.Route{
-		router.NewRoute("GET", "/v1/ipam/allocate_randomly", r.AllocateNextAvailable),
-		router.NewRoute("GET", "/v1/ipam/allocated_ips", r.ListAllocatedIps),
-		router.NewRoute("GET", "/v1/ipam/available_ips", r.ListAvailableIps),
-		router.NewRoute("POST", "/v1/ipam/release", r.ReleaseIP),
-		router.NewRoute("GET", "/v1/ipam/allocate", r.AllocateIP),
-		router.NewRoute("POST", "/v1/ipam/ips", r.RefillIPs),
-		router.NewRoute("GET", "/v1/ipam/ips", r.ListIPs),
-	}
-}
+//func (r *Router) initRoutes() {
+//r.routes = []*router.Route{
+//router.NewRoute("GET", "/v1/ipam/allocate_randomly", r.AllocateNextAvailable),
+//router.NewRoute("GET", "/v1/ipam/allocated_ips", r.ListAllocatedIps),
+//router.NewRoute("GET", "/v1/ipam/available_ips", r.ListAvailableIps),
+//router.NewRoute("POST", "/v1/ipam/release", r.ReleaseIP),
+//router.NewRoute("GET", "/v1/ipam/allocate", r.AllocateIP),
+//router.NewRoute("POST", "/v1/ipam/ips", r.RefillIPs),
+//router.NewRoute("GET", "/v1/ipam/ips", r.ListIPs),
+//}
+//}

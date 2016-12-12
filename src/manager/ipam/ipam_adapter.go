@@ -25,9 +25,9 @@ func New(scontext *swancontext.SwanContext) (*IpamAdapter, error) {
 
 // TODO(chunmingxu) if IpamAdapter is not a server may call it register
 func (ipamAdapter *IpamAdapter) Start() error {
-	ipamAdapter.scontext.ApiServer.AppendRouter(NewRouter(ipamAdapter.IPAM))
 	return nil
 }
+
 func (ipamAdapter *IpamAdapter) Stop() error {
 	return nil
 }

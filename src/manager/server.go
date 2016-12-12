@@ -3,12 +3,9 @@ package manager
 import (
 	"encoding/json"
 	"net/http"
-
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/router"
 )
 
 type Router struct {
-	routes  []*router.Route
 	manager *Manager
 }
 
@@ -17,14 +14,7 @@ func NewRouter(manager *Manager) *Router {
 		manager: manager,
 	}
 
-	r.initRoutes()
 	return r
-}
-
-func (r *Router) initRoutes() {
-	r.routes = []*router.Route{
-		router.NewRoute("GET", "/v1/manager/state", r.State),
-	}
 }
 
 type ManagerState struct {
@@ -32,10 +22,6 @@ type ManagerState struct {
 	RaftId      int
 	LeaderId    uint64
 	Cluster     string
-}
-
-func (r *Router) Routes() []*router.Route {
-	return r.routes
 }
 
 func (r *Router) State(w http.ResponseWriter, req *http.Request) error {

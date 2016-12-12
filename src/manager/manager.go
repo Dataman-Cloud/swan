@@ -5,12 +5,10 @@ import (
 
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	"github.com/Dataman-Cloud/swan/src/manager/sched"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/util"
@@ -27,7 +25,6 @@ type Manager struct {
 	resolver           *nameserver.Resolver
 	resolverSubscriber *event.DNSSubscriber
 
-	sched      *sched.Sched
 	raftNode   *raft.Node
 	CancelFunc context.CancelFunc
 	eventBus   *event.EventBus
@@ -56,10 +53,8 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.eventBus = event.New()
 
 	manager.swanContext = &swancontext.SwanContext{
-		Config: config,
-		Store:  store,
-		ApiServer: apiserver.NewApiServer(manager.config.HttpListener.TCPAddr,
-			manager.config.HttpListener.UnixAddr),
+		Config:   config,
+		Store:    store,
 		EventBus: manager.eventBus,
 	}
 
@@ -90,7 +85,6 @@ func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.resolver = nameserver.NewResolver(dnsConfig)
 	manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
 
-	manager.sched = sched.New(manager.config.Scheduler, manager.swanContext)
 	manager.framework, err = framework.New(manager.swanContext, manager.config)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
@@ -139,13 +133,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 			errCh <- err
 			return
 		}
-
-		if manager.config.WithEngine == "sched" {
-			managerRoute := NewRouter(manager)
-			manager.swanContext.ApiServer.AppendRouter(managerRoute)
-
-			errCh <- manager.swanContext.ApiServer.ListenAndServe()
-		}
 	}()
 
 	return <-errCh
@@ -167,18 +154,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					manager.eventBus.Start()
 				}()
 
-				if manager.config.WithEngine == "sched" {
-					sechedCtx, cancel := context.WithCancel(ctx)
-					cancelFunc = cancel
-					if err := manager.sched.Start(sechedCtx); err != nil {
-						log.G(ctx).Error("Scheduler started unsuccessful")
-						return
-					}
-					log.G(ctx).Info("Scheduler has been started")
-				} else {
-					frameworkCtx, _ := context.WithCancel(ctx)
-					manager.framework.Start(frameworkCtx)
-				}
+				frameworkCtx, _ := context.WithCancel(ctx)
+				manager.framework.Start(frameworkCtx)
 
 			} else if newState == raft.IsFollower {
 				log.G(ctx).Info("Now i become a follower !!!")
@@ -203,7 +180,6 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 			leaderAddr := manager.cluster[int(leader)-1]
 			log.G(ctx).Info("Now leader is change to ", leaderAddr)
 
-			manager.swanContext.ApiServer.UpdateLeaderAddr(leaderAddr)
 		case <-ctx.Done():
 			return
 		}
