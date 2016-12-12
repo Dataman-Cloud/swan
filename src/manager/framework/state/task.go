@@ -3,6 +3,7 @@ package state
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
@@ -40,7 +41,8 @@ type Task struct {
 	Ip            string
 	AgentHostName string
 
-	Reason string
+	Reason  string
+	Created time.Time
 }
 
 func NewTask(app *App, version *types.Version, slot *Slot) *Task {
@@ -50,6 +52,7 @@ func NewTask(app *App, version *types.Version, slot *Slot) *Task {
 		Version:   version,
 		Slot:      slot,
 		HostPorts: make([]uint64, 0),
+		Created:   time.Now(),
 	}
 
 	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)

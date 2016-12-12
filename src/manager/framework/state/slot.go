@@ -93,11 +93,11 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 	// initialize restart policy
 	testAndRestartFunc := func(s *Slot) bool {
-		if s.StateIs(SLOT_STATE_TASK_RUNNING) {
-			return true
-		} else {
+		if slot.Abnormal() {
 			s.Archive()
 			s.DispatchNewTask(slot.Version)
+		} else {
+			return true
 		}
 
 		return false
@@ -318,6 +318,14 @@ func (slot *Slot) StopRestartPolicy() {
 		slot.restartPolicy.Stop()
 		slot.restartPolicy = nil
 	}
+}
+
+func (slot *Slot) Abnormal() bool {
+	return slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FINISHED)
+}
+
+func (slot *Slot) Normal() bool {
+	return slot.StateIs(SLOT_STATE_PENDING_OFFER) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_STAGING)
 }
 
 func (slot *Slot) EmitTaskEvent(t string) {
