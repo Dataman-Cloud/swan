@@ -16,7 +16,7 @@ type SwanConfig struct {
 	LogLevel   string `json:"log-level"`
 	Mode       string `json:"manager"` // manager, agent, mixed
 	Standalone bool   `json:"standalone"`
-	WithEngine string `json:"withEngine"`
+	DataDir    string `json:"data-dir"`
 
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
@@ -95,6 +95,13 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("mode") != "" {
 		swanConfig.Mode = c.String("mode")
 	}
+
+	if c.String("data-dir") != "" {
+		swanConfig.DataDir = c.String("data-dir")
+		if !strings.HasSuffix(swanConfig.DataDir, "/") {
+			swanConfig.DataDir = swanConfig.DataDir + "/"
+		}
+	}
 	if c.Bool("standalone") != false {
 		swanConfig.Standalone = c.Bool("standalone")
 	}
@@ -119,22 +126,16 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.DNS.ExchangeTimeout = time.Second * 3
 	}
 
-	if c.String("work-dir") != "" {
-		swanConfig.IPAM.StorePath = c.String("work-dir")
-	}
 	if c.String("raft-cluster") != "" {
 		swanConfig.Raft.Cluster = c.String("raft-cluster")
 	}
 	if c.Int("raftid") != 0 {
 		swanConfig.Raft.RaftId = c.Int("raftid")
 	}
-	if c.String("work-dir") != "" {
-		swanConfig.Raft.StorePath = c.String("work-dir")
-	}
 
-	if c.String("with-engine") != "" {
-		swanConfig.WithEngine = c.String("with-engine")
-	}
+	swanConfig.IPAM.StorePath = swanConfig.DataDir
+	swanConfig.Raft.StorePath = swanConfig.DataDir
+
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
 
