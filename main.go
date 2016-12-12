@@ -7,6 +7,7 @@ import (
 	"syscall"
 
 	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/Dataman-Cloud/swan/src/version"
 	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
@@ -51,7 +52,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
 	app.Usage = "A general purpose mesos framework"
-	app.Version = "0.1"
+	app.Version = version.Version
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
