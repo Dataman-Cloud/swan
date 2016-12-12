@@ -98,8 +98,8 @@ func (scheduler *Scheduler) LoadAppData() error {
 			CurrentVersion:      state.VersionFromRaft(raftApp.Version),
 			State:               raftApp.State,
 			Mode:                state.AppMode(raftApp.Version.Mode),
-			Created:             time.Unix(raftApp.CreatedAt, 0),
-			Updated:             time.Unix(raftApp.UpdatedAt, 1),
+			Created:             time.Unix(0, raftApp.CreatedAt),
+			Updated:             time.Unix(0, raftApp.UpdatedAt),
 			Scontext:            scheduler.scontext,
 			Slots:               make(map[int]*state.Slot),
 			InvalidateCallbacks: make(map[string][]state.AppInvalidateCallbackFuncs),
@@ -119,10 +119,10 @@ func (scheduler *Scheduler) LoadAppData() error {
 
 		app.Versions = versions
 
-		scheduler.appLock.Lock()
 		apps[app.AppId] = app
-		scheduler.appLock.Unlock()
 	}
+
+	scheduler.Apps = apps
 
 	return nil
 }
