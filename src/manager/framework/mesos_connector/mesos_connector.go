@@ -49,7 +49,7 @@ func (s *MesosConnector) ConnectToMesosAndAcceptEvent() error {
 	s.Framework, err = createOrLoadFrameworkInfo(s.config)
 	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
 	if err != nil {
-		logrus.Errorf("%s Check your mesos mastger configuration", err)
+		logrus.Errorf("%s Check your mesos master configuration", err)
 		return err
 	}
 
