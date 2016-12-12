@@ -2,6 +2,7 @@
     "log-level": "info",
     "manager": "mixed",
     "standalone": false,
+    "swanCluster": ["0.0.0.0:9999"],
     "scheduler": {
 	    "mesos-masters": "127.0.0.1:5050",
 	    "mesos-framwork-user": "root",
@@ -26,13 +27,13 @@
     },
     "httpListener": {
 	    "addr": "0.0.0.0:9999" ,
-	    "sock": "/var/run/swan.sock"
+	    "sock": "./data/swan.sock"
     },
     "ipam": {
 	    "store_path": "./data/"
     },
     "raft": {
-	    "cluster": "http://127.0.0.1.2221",
+	    "cluster": "http://127.0.0.1:2111",
 	    "raftid": 1,
 	    "store_path": "./data/"
     }
