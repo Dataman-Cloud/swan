@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
+	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
@@ -12,7 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
-	"github.com/Dataman-Cloud/swan/src/util"
 	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
@@ -33,11 +33,11 @@ type Manager struct {
 	framework *framework.Framework
 
 	swanContext *swancontext.SwanContext
-	config      util.SwanConfig
+	config      config.SwanConfig
 	cluster     []string
 }
 
-func New(config util.SwanConfig, db *bolt.DB) (*Manager, error) {
+func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager := &Manager{
 		config: config,
 	}

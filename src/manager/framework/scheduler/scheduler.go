@@ -4,6 +4,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
@@ -12,7 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -35,7 +35,7 @@ type Scheduler struct {
 	store          store.Store
 }
 
-func NewScheduler(config util.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
+func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
 	scheduler := &Scheduler{
 		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
 		heartbeater:    time.NewTicker(10 * time.Second),

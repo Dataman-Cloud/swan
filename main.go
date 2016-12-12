@@ -6,7 +6,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/version"
 	"github.com/boltdb/bolt"
 
@@ -116,7 +116,7 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		config, err := util.NewConfig(c)
+		config, err := config.NewConfig(c)
 		if err != nil {
 			os.Exit(1)
 		}

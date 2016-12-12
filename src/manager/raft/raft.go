@@ -12,10 +12,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/manager/raft/types"
-	"github.com/Dataman-Cloud/swan/src/util"
 	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
@@ -123,7 +123,7 @@ type applyResult struct {
 	err  error
 }
 
-func NewNode(config util.Raft, db *bolt.DB) (*Node, error) {
+func NewNode(config config.Raft, db *bolt.DB) (*Node, error) {
 	n := Node{
 		id:          config.RaftId,
 		peers:       strings.Split(config.Cluster, ","),

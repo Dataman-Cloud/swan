@@ -1,14 +1,14 @@
 package agent
 
 import (
-	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/Dataman-Cloud/swan/src/config"
 )
 
 type Agent struct {
-	Config util.SwanConfig
+	Config config.SwanConfig
 }
 
-func New(config util.SwanConfig) (*Agent, error) {
+func New(config config.SwanConfig) (*Agent, error) {
 	agent := &Agent{
 		Config: config,
 	}

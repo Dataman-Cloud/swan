@@ -8,7 +8,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
-	"github.com/Dataman-Cloud/swan/src/util"
+	"github.com/Dataman-Cloud/swan/src/config"
 
 	"golang.org/x/net/context"
 )
@@ -21,7 +21,7 @@ type Framework struct {
 	StopC chan struct{}
 }
 
-func New(SwanContext *swancontext.SwanContext, config util.SwanConfig, store store.Store) (*Framework, error) {
+func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store) (*Framework, error) {
 	f := &Framework{
 		StopC:       make(chan struct{}),
 		SwanContext: SwanContext,

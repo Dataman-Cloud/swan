@@ -3,10 +3,10 @@ package api
 import (
 	"net/http"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
@@ -18,11 +18,11 @@ const (
 )
 
 type Api struct {
-	config    util.Scheduler
+	config    config.Scheduler
 	Scheduler *scheduler.Scheduler
 }
 
-func NewApi(eng *scheduler.Scheduler, config util.Scheduler) *Api {
+func NewApi(eng *scheduler.Scheduler, config config.Scheduler) *Api {
 	return &Api{
 		Scheduler: eng,
 		config:    config,

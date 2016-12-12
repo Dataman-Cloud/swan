@@ -8,10 +8,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/util"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
@@ -25,7 +25,7 @@ type MesosConnector struct {
 	master           string
 	client           *MesosHttpClient
 	lastHearBeatTime time.Time
-	config           util.Scheduler
+	config           config.Scheduler
 
 	MesosCallChan chan *sched.Call
 
@@ -34,7 +34,7 @@ type MesosConnector struct {
 	Framework      *mesos.FrameworkInfo
 }
 
-func NewMesosConnector(config util.Scheduler) *MesosConnector {
+func NewMesosConnector(config config.Scheduler) *MesosConnector {
 
 	return &MesosConnector{
 		config:         config,
@@ -138,7 +138,7 @@ func (s *MesosConnector) handleEvents(resp *http.Response) {
 
 // create frameworkInfo on initial start
 // OR load preexisting frameworkId make mesos believe it's a RESTART of framework
-func createOrLoadFrameworkInfo(config util.Scheduler) (*mesos.FrameworkInfo, error) {
+func createOrLoadFrameworkInfo(config config.Scheduler) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
 		Name:            proto.String("swan"),
