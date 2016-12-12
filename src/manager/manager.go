@@ -14,6 +14,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/boltdb/bolt"
 
+	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
+	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Sirupsen/logrus"
 	events "github.com/docker/go-events"
 	"golang.org/x/net/context"
@@ -24,6 +26,9 @@ type Manager struct {
 
 	resolver           *nameserver.Resolver
 	resolverSubscriber *event.DNSSubscriber
+
+	janitorServer     *janitor.JanitorServer
+	janitorSubscriber *event.JanitorSubscriber
 
 	raftNode   *raft.Node
 	CancelFunc context.CancelFunc
@@ -82,6 +87,14 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.resolver = nameserver.NewResolver(dnsConfig)
 	manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
 
+	if manager.config.Janitor.EnableProxy {
+		jConfig := jconfig.DefaultConfig()
+		jConfig.Listener.Mode = manager.config.Janitor.ListenerMode
+		jConfig.Listener.DefaultPort = manager.config.Janitor.Port
+		manager.janitorServer = janitor.NewJanitorServer(jConfig)
+		manager.janitorSubscriber = event.NewJanitorSubscriber(manager.janitorServer)
+	}
+
 	frameworkStore := fstore.NewStore(db, raftNode)
 	manager.framework, err = framework.New(manager.swanContext, manager.config, frameworkStore)
 	if err != nil {
@@ -132,6 +145,12 @@ func (manager *Manager) Start(ctx context.Context) error {
 			return
 		}
 	}()
+
+	// setup proxy service
+	if manager.config.Janitor.EnableProxy {
+		manager.janitorSubscriber.Subscribe(manager.eventBus)
+		go manager.janitorServer.Init().Run()
+	}
 
 	return <-errCh
 }

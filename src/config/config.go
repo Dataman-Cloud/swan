@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+
 	//"errors"
 	"io/ioutil"
 	"os"
@@ -24,6 +25,8 @@ type SwanConfig struct {
 	IPAM         IPAM         `json:"ipam"`
 	Raft         Raft         `json:"raft"`
 	SwanCluster  []string     `json:swanCluster`
+
+	Janitor Janitor `json:"janitor"`
 }
 
 type Scheduler struct {
@@ -68,6 +71,12 @@ type Raft struct {
 	Cluster   string `json:"cluster"`
 	RaftId    int    `json:"raftid"`
 	StorePath string `json:"store_path"`
+}
+
+type Janitor struct {
+	EnableProxy  bool   `json:"enableProxy"`
+	ListenerMode string `json:"listenerMode"`
+	Port         string `json:"port"`
 }
 
 func LoadConfig(configFile string) SwanConfig {
@@ -131,6 +140,9 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 	if c.Int("raftid") != 0 {
 		swanConfig.Raft.RaftId = c.Int("raftid")
+	}
+	if c.Bool("enable-proxy") != false {
+		swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
 	}
 
 	swanConfig.IPAM.StorePath = swanConfig.DataDir
