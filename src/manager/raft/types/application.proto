@@ -107,3 +107,34 @@ message HealthCheck {
 message Command {
     string value = 1;
 }
+
+message Slot {
+    int32 index = 1;
+    string id = 2;
+    string appId = 3;
+    string state = 4;
+    bool markForDeletion = 5;
+    bool markForRollingUpdate = 6;
+    Task CurrentTask = 7;
+    repeated string TaskHistory = 8;
+    RestartPolicy restartPolicy = 9;
+}
+
+message RestartPolicy {
+}
+
+message Task {
+    string id = 1;
+    string taskInfoId = 2;
+    string appId = 3;
+    int32 slotIndex = 4;
+    string state = 5;
+    string stdout = 6;
+    string stderr =  7;
+    repeated uint64 hostPorts = 8;
+    string offerId = 9;
+    string agentId = 10;
+    string ip = 11;
+    string agentHostName = 12;
+    string reason = 13;
+}

@@ -11,7 +11,6 @@ import (
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/boltdb/bolt"
 
@@ -49,13 +48,10 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 	manager.raftNode = raftNode
 
-	store := store.NewManagerStore(db, raftNode)
-
 	manager.eventBus = event.New()
 
 	manager.swanContext = &swancontext.SwanContext{
 		Config:   config,
-		Store:    store,
 		EventBus: manager.eventBus,
 	}
 

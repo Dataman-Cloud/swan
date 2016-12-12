@@ -72,6 +72,8 @@ type StoreAction struct {
 	//	*StoreAction_Application
 	//	*StoreAction_Framework
 	//	*StoreAction_Version
+	//	*StoreAction_Slot
+	//	*StoreAction_Task
 	Target isStoreAction_Target `protobuf_oneof:"target"`
 }
 
@@ -97,10 +99,18 @@ type StoreAction_Framework struct {
 type StoreAction_Version struct {
 	Version *Version `protobuf:"bytes,4,opt,name=version,oneof"`
 }
+type StoreAction_Slot struct {
+	Slot *Slot `protobuf:"bytes,5,opt,name=slot,oneof"`
+}
+type StoreAction_Task struct {
+	Task *Task `protobuf:"bytes,6,opt,name=task,oneof"`
+}
 
 func (*StoreAction_Application) isStoreAction_Target() {}
 func (*StoreAction_Framework) isStoreAction_Target()   {}
 func (*StoreAction_Version) isStoreAction_Target()     {}
+func (*StoreAction_Slot) isStoreAction_Target()        {}
+func (*StoreAction_Task) isStoreAction_Target()        {}
 
 func (m *StoreAction) GetTarget() isStoreAction_Target {
 	if m != nil {
@@ -130,12 +140,28 @@ func (m *StoreAction) GetVersion() *Version {
 	return nil
 }
 
+func (m *StoreAction) GetSlot() *Slot {
+	if x, ok := m.GetTarget().(*StoreAction_Slot); ok {
+		return x.Slot
+	}
+	return nil
+}
+
+func (m *StoreAction) GetTask() *Task {
+	if x, ok := m.GetTarget().(*StoreAction_Task); ok {
+		return x.Task
+	}
+	return nil
+}
+
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*StoreAction) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _StoreAction_OneofMarshaler, _StoreAction_OneofUnmarshaler, _StoreAction_OneofSizer, []interface{}{
 		(*StoreAction_Application)(nil),
 		(*StoreAction_Framework)(nil),
 		(*StoreAction_Version)(nil),
+		(*StoreAction_Slot)(nil),
+		(*StoreAction_Task)(nil),
 	}
 }
 
@@ -156,6 +182,16 @@ func _StoreAction_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *StoreAction_Version:
 		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Version); err != nil {
+			return err
+		}
+	case *StoreAction_Slot:
+		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Slot); err != nil {
+			return err
+		}
+	case *StoreAction_Task:
+		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
+		if err := b.EncodeMessage(x.Task); err != nil {
 			return err
 		}
 	case nil:
@@ -192,6 +228,22 @@ func _StoreAction_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Bu
 		err := b.DecodeMessage(msg)
 		m.Target = &StoreAction_Version{msg}
 		return true, err
+	case 5: // target.slot
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Slot)
+		err := b.DecodeMessage(msg)
+		m.Target = &StoreAction_Slot{msg}
+		return true, err
+	case 6: // target.task
+		if wire != proto.WireBytes {
+			return true, proto.ErrInternalBadWireType
+		}
+		msg := new(Task)
+		err := b.DecodeMessage(msg)
+		m.Target = &StoreAction_Task{msg}
+		return true, err
 	default:
 		return false, nil
 	}
@@ -214,6 +266,16 @@ func _StoreAction_OneofSizer(msg proto.Message) (n int) {
 	case *StoreAction_Version:
 		s := proto.Size(x.Version)
 		n += proto.SizeVarint(4<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *StoreAction_Slot:
+		s := proto.Size(x.Slot)
+		n += proto.SizeVarint(5<<3 | proto.WireBytes)
+		n += proto.SizeVarint(uint64(s))
+		n += s
+	case *StoreAction_Task:
+		s := proto.Size(x.Task)
+		n += proto.SizeVarint(6<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
 	case nil:
@@ -443,6 +505,66 @@ func (this *StoreAction_Version) VerboseEqual(that interface{}) error {
 	}
 	return nil
 }
+func (this *StoreAction_Slot) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*StoreAction_Slot)
+	if !ok {
+		that2, ok := that.(StoreAction_Slot)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *StoreAction_Slot")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *StoreAction_Slot but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *StoreAction_Slot but is not nil && this == nil")
+	}
+	if !this.Slot.Equal(that1.Slot) {
+		return fmt.Errorf("Slot this(%v) Not Equal that(%v)", this.Slot, that1.Slot)
+	}
+	return nil
+}
+func (this *StoreAction_Task) VerboseEqual(that interface{}) error {
+	if that == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that == nil && this != nil")
+	}
+
+	that1, ok := that.(*StoreAction_Task)
+	if !ok {
+		that2, ok := that.(StoreAction_Task)
+		if ok {
+			that1 = &that2
+		} else {
+			return fmt.Errorf("that is not of type *StoreAction_Task")
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return nil
+		}
+		return fmt.Errorf("that is type *StoreAction_Task but is nil && this != nil")
+	} else if this == nil {
+		return fmt.Errorf("that is type *StoreAction_Task but is not nil && this == nil")
+	}
+	if !this.Task.Equal(that1.Task) {
+		return fmt.Errorf("Task this(%v) Not Equal that(%v)", this.Task, that1.Task)
+	}
+	return nil
+}
 func (this *StoreAction) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
@@ -572,6 +694,66 @@ func (this *StoreAction_Version) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *StoreAction_Slot) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*StoreAction_Slot)
+	if !ok {
+		that2, ok := that.(StoreAction_Slot)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if !this.Slot.Equal(that1.Slot) {
+		return false
+	}
+	return true
+}
+func (this *StoreAction_Task) Equal(that interface{}) bool {
+	if that == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	}
+
+	that1, ok := that.(*StoreAction_Task)
+	if !ok {
+		that2, ok := that.(StoreAction_Task)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		if this == nil {
+			return true
+		}
+		return false
+	} else if this == nil {
+		return false
+	}
+	if !this.Task.Equal(that1.Task) {
+		return false
+	}
+	return true
+}
 func (this *Framework) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
@@ -649,7 +831,7 @@ func (this *StoreAction) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
+	s := make([]string, 0, 10)
 	s = append(s, "&types.StoreAction{")
 	s = append(s, "Action: "+fmt.Sprintf("%#v", this.Action)+",\n")
 	if this.Target != nil {
@@ -680,6 +862,22 @@ func (this *StoreAction_Version) GoString() string {
 	}
 	s := strings.Join([]string{`&types.StoreAction_Version{` +
 		`Version:` + fmt.Sprintf("%#v", this.Version) + `}`}, ", ")
+	return s
+}
+func (this *StoreAction_Slot) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&types.StoreAction_Slot{` +
+		`Slot:` + fmt.Sprintf("%#v", this.Slot) + `}`}, ", ")
+	return s
+}
+func (this *StoreAction_Task) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&types.StoreAction_Task{` +
+		`Task:` + fmt.Sprintf("%#v", this.Task) + `}`}, ", ")
 	return s
 }
 func (this *Framework) GoString() string {
@@ -825,6 +1023,34 @@ func (m *StoreAction_Version) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
+func (m *StoreAction_Slot) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Slot != nil {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintRaft(dAtA, i, uint64(m.Slot.Size()))
+		n5, err := m.Slot.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n5
+	}
+	return i, nil
+}
+func (m *StoreAction_Task) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Task != nil {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintRaft(dAtA, i, uint64(m.Task.Size()))
+		n6, err := m.Task.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n6
+	}
+	return i, nil
+}
 func (m *Framework) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -894,7 +1120,7 @@ func NewPopulatedInternalRaftRequest(r randyRaft, easy bool) *InternalRaftReques
 func NewPopulatedStoreAction(r randyRaft, easy bool) *StoreAction {
 	this := &StoreAction{}
 	this.Action = StoreActionKind([]int32{0, 1, 2, 3}[r.Intn(4)])
-	oneofNumber_Target := []int32{2, 3, 4}[r.Intn(3)]
+	oneofNumber_Target := []int32{2, 3, 4, 5, 6}[r.Intn(5)]
 	switch oneofNumber_Target {
 	case 2:
 		this.Target = NewPopulatedStoreAction_Application(r, easy)
@@ -902,6 +1128,10 @@ func NewPopulatedStoreAction(r randyRaft, easy bool) *StoreAction {
 		this.Target = NewPopulatedStoreAction_Framework(r, easy)
 	case 4:
 		this.Target = NewPopulatedStoreAction_Version(r, easy)
+	case 5:
+		this.Target = NewPopulatedStoreAction_Slot(r, easy)
+	case 6:
+		this.Target = NewPopulatedStoreAction_Task(r, easy)
 	}
 	if !easy && r.Intn(10) != 0 {
 	}
@@ -921,6 +1151,16 @@ func NewPopulatedStoreAction_Framework(r randyRaft, easy bool) *StoreAction_Fram
 func NewPopulatedStoreAction_Version(r randyRaft, easy bool) *StoreAction_Version {
 	this := &StoreAction_Version{}
 	this.Version = NewPopulatedVersion(r, easy)
+	return this
+}
+func NewPopulatedStoreAction_Slot(r randyRaft, easy bool) *StoreAction_Slot {
+	this := &StoreAction_Slot{}
+	this.Slot = NewPopulatedSlot(r, easy)
+	return this
+}
+func NewPopulatedStoreAction_Task(r randyRaft, easy bool) *StoreAction_Task {
+	this := &StoreAction_Task{}
+	this.Task = NewPopulatedTask(r, easy)
 	return this
 }
 func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
@@ -1053,6 +1293,24 @@ func (m *StoreAction_Version) Size() (n int) {
 	_ = l
 	if m.Version != nil {
 		l = m.Version.Size()
+		n += 1 + l + sovRaft(uint64(l))
+	}
+	return n
+}
+func (m *StoreAction_Slot) Size() (n int) {
+	var l int
+	_ = l
+	if m.Slot != nil {
+		l = m.Slot.Size()
+		n += 1 + l + sovRaft(uint64(l))
+	}
+	return n
+}
+func (m *StoreAction_Task) Size() (n int) {
+	var l int
+	_ = l
+	if m.Task != nil {
+		l = m.Task.Size()
 		n += 1 + l + sovRaft(uint64(l))
 	}
 	return n
@@ -1324,6 +1582,70 @@ func (m *StoreAction) Unmarshal(dAtA []byte) error {
 			}
 			m.Target = &StoreAction_Version{v}
 			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Slot", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRaft
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRaft
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &Slot{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Target = &StoreAction_Slot{v}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Task", wireType)
+			}
+			var msglen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRaft
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				msglen |= (int(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if msglen < 0 {
+				return ErrInvalidLengthRaft
+			}
+			postIndex := iNdEx + msglen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			v := &Task{}
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			m.Target = &StoreAction_Task{v}
+			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipRaft(dAtA[iNdEx:])
@@ -1532,32 +1854,34 @@ var (
 func init() { proto.RegisterFile("raft.proto", fileDescriptorRaft) }
 
 var fileDescriptorRaft = []byte{
-	// 418 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0xe2, 0xe2, 0x2a, 0x4a, 0x4c, 0x2b,
-	0xd1, 0x2b, 0x28, 0xca, 0x2f, 0xc9, 0x17, 0x62, 0x2d, 0xa9, 0x2c, 0x48, 0x2d, 0x96, 0x12, 0x49,
-	0xcf, 0x4f, 0xcf, 0x07, 0x8b, 0xe8, 0x83, 0x58, 0x10, 0x49, 0x29, 0xc1, 0xc4, 0x82, 0x82, 0x9c,
-	0xcc, 0xe4, 0xc4, 0x92, 0xcc, 0xfc, 0x3c, 0x88, 0x90, 0x52, 0x24, 0x97, 0xb0, 0x67, 0x5e, 0x49,
-	0x6a, 0x51, 0x5e, 0x62, 0x4e, 0x10, 0xd0, 0x94, 0xa0, 0xd4, 0xc2, 0xd2, 0xd4, 0xe2, 0x12, 0x21,
-	0x31, 0x2e, 0xa6, 0xcc, 0x14, 0x09, 0x46, 0x05, 0x46, 0x0d, 0x16, 0x27, 0xb6, 0x47, 0xf7, 0xe4,
-	0x99, 0x3c, 0x5d, 0x82, 0x80, 0x22, 0x42, 0x5a, 0x5c, 0x6c, 0x89, 0xc9, 0x20, 0xed, 0x12, 0x4c,
-	0x0a, 0xcc, 0x1a, 0xdc, 0x46, 0x42, 0x7a, 0x60, 0xfb, 0xf4, 0x82, 0x4b, 0xf2, 0x8b, 0x52, 0x1d,
-	0xc1, 0x32, 0x41, 0x50, 0x15, 0x4a, 0x77, 0x19, 0xb9, 0xb8, 0x91, 0xc4, 0x85, 0xf4, 0xe0, 0x7a,
-	0x41, 0xe6, 0xf2, 0x19, 0x89, 0x61, 0xea, 0xf5, 0xce, 0xcc, 0x4b, 0x81, 0xe9, 0x17, 0x32, 0xe3,
-	0xe2, 0x46, 0x72, 0x2f, 0xd0, 0x42, 0x46, 0x24, 0x0b, 0x1d, 0x11, 0x32, 0x1e, 0x0c, 0x41, 0xc8,
-	0x0a, 0x85, 0x0c, 0xb8, 0x38, 0xd3, 0x8a, 0x12, 0x73, 0x53, 0xcb, 0xf3, 0x8b, 0xb2, 0x25, 0x98,
-	0xc1, 0xba, 0x04, 0xa0, 0xba, 0xdc, 0x60, 0xe2, 0x40, 0x3d, 0x08, 0x45, 0x40, 0x5f, 0xb1, 0x97,
-	0xa5, 0x16, 0x15, 0x83, 0x6c, 0x61, 0x01, 0xab, 0xe7, 0x83, 0xaa, 0x0f, 0x83, 0x88, 0x02, 0x55,
-	0xc3, 0x14, 0x38, 0x71, 0x70, 0xb1, 0x95, 0x24, 0x16, 0xa5, 0xa7, 0x96, 0x28, 0x29, 0x73, 0x71,
-	0xc2, 0xcd, 0x43, 0x0a, 0x30, 0x4e, 0xe4, 0x00, 0xd3, 0x7a, 0xcf, 0xc8, 0xc5, 0x8f, 0xe6, 0x41,
-	0x21, 0x75, 0x2e, 0xf6, 0x50, 0x3f, 0x6f, 0x3f, 0xff, 0x70, 0x3f, 0x01, 0x06, 0x29, 0xa9, 0xae,
-	0xb9, 0x0a, 0x62, 0x68, 0x2a, 0x42, 0xf3, 0xb2, 0xf3, 0xf2, 0xcb, 0xf3, 0x84, 0x8c, 0xb8, 0x84,
-	0x83, 0x43, 0xfc, 0x83, 0x5c, 0xe3, 0x1d, 0x9d, 0x43, 0x3c, 0xfd, 0xfd, 0xe2, 0x9d, 0x83, 0x5c,
-	0x1d, 0x43, 0x5c, 0x05, 0x18, 0xa5, 0x24, 0x81, 0x9a, 0x44, 0xd1, 0x34, 0x39, 0x17, 0xa5, 0x26,
-	0x96, 0xa4, 0x62, 0xe8, 0x09, 0x0d, 0x70, 0x01, 0xe9, 0x61, 0xc2, 0xaa, 0x27, 0xb4, 0x20, 0x05,
-	0x9b, 0x9e, 0x20, 0x57, 0x5f, 0xff, 0x30, 0x57, 0x01, 0x66, 0xac, 0x7a, 0x82, 0x52, 0x73, 0xf3,
-	0xcb, 0x52, 0xa5, 0xc4, 0x3b, 0x16, 0xcb, 0x31, 0xec, 0x5a, 0x22, 0x87, 0xee, 0x3b, 0x27, 0x95,
-	0x13, 0x0f, 0xe5, 0x18, 0x1e, 0x3c, 0x94, 0x63, 0xfc, 0x00, 0xc4, 0x3f, 0x80, 0x78, 0xc5, 0x23,
-	0x39, 0xc6, 0x1d, 0x40, 0x7c, 0x02, 0x88, 0x2f, 0x00, 0xf1, 0x03, 0x20, 0x8e, 0x60, 0x48, 0x62,
-	0x03, 0x27, 0x40, 0x63, 0x40, 0x00, 0x00, 0x00, 0xff, 0xff, 0x15, 0x70, 0xd0, 0xc4, 0xbe, 0x02,
-	0x00, 0x00,
+	// 455 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x6c, 0x92, 0x41, 0x6e, 0xd3, 0x40,
+	0x14, 0x86, 0x6d, 0x27, 0x75, 0xc9, 0x44, 0x2a, 0x61, 0x0a, 0xc1, 0x78, 0x61, 0x42, 0x40, 0xa2,
+	0xea, 0x22, 0xa0, 0x20, 0xb1, 0x4f, 0x52, 0x23, 0xa2, 0x8a, 0x04, 0x4d, 0xed, 0x02, 0xab, 0x6a,
+	0x68, 0xa6, 0x91, 0x95, 0xd4, 0x63, 0xc6, 0x43, 0x2b, 0x6e, 0x80, 0xb8, 0x03, 0xab, 0xb2, 0xe0,
+	0x08, 0x88, 0x13, 0x74, 0xc9, 0x09, 0x50, 0xdb, 0x0b, 0xc0, 0x92, 0x25, 0x6f, 0x26, 0x71, 0xeb,
+	0x3a, 0x59, 0x3c, 0xc9, 0xfa, 0xdf, 0xf7, 0xcd, 0x9b, 0x79, 0x32, 0x42, 0x82, 0x1e, 0xc8, 0x56,
+	0x22, 0xb8, 0xe4, 0x78, 0x45, 0x7e, 0x4a, 0x58, 0xea, 0xde, 0x1e, 0xf3, 0x31, 0xd7, 0xc9, 0x13,
+	0xf5, 0x35, 0x6b, 0xba, 0xb7, 0x68, 0x92, 0x4c, 0xa3, 0x7d, 0x2a, 0x23, 0x1e, 0xcf, 0xa2, 0xe6,
+	0x3b, 0xb4, 0xde, 0x8f, 0x25, 0x13, 0x31, 0x9d, 0x12, 0x38, 0x85, 0xb0, 0x0f, 0x1f, 0x59, 0x2a,
+	0x71, 0x1d, 0x59, 0xd1, 0xc8, 0x31, 0x1b, 0xe6, 0x46, 0xb9, 0x6b, 0x5f, 0xfc, 0xbe, 0x6f, 0xf5,
+	0xb7, 0x08, 0x24, 0x78, 0x13, 0xd9, 0x74, 0x5f, 0xe9, 0x8e, 0xd5, 0x28, 0x6d, 0x54, 0xdb, 0xb8,
+	0xa5, 0xe7, 0xb5, 0x76, 0x24, 0x17, 0xac, 0xa3, 0x3b, 0x64, 0x4e, 0x34, 0x4f, 0x2c, 0x54, 0xcd,
+	0xe5, 0xb8, 0x75, 0xe9, 0xaa, 0x73, 0xd7, 0xda, 0xf5, 0x45, 0x77, 0x3b, 0x8a, 0x47, 0x99, 0x8f,
+	0x9f, 0xa3, 0x6a, 0xee, 0xbe, 0x30, 0xd0, 0xcc, 0x0d, 0xec, 0x5c, 0x75, 0x5e, 0x1a, 0x24, 0x0f,
+	0xe2, 0xa7, 0xa8, 0x72, 0x20, 0xe8, 0x21, 0x3b, 0xe6, 0x62, 0xe2, 0x94, 0xb4, 0x55, 0x9b, 0x5b,
+	0x2f, 0xb2, 0x1c, 0x9c, 0x2b, 0x08, 0x5e, 0xb5, 0x7a, 0xc4, 0x44, 0xaa, 0xa6, 0x94, 0x35, 0xbf,
+	0x36, 0xe7, 0x77, 0x67, 0x29, 0xd0, 0x19, 0x80, 0x1f, 0xa0, 0x72, 0x3a, 0xe5, 0xd2, 0x59, 0xd1,
+	0x60, 0x35, 0x7b, 0x03, 0x44, 0x40, 0xe9, 0x96, 0x42, 0x24, 0x4d, 0x27, 0x8e, 0x7d, 0x0d, 0x09,
+	0x20, 0x52, 0x88, 0x6a, 0x75, 0x6f, 0x20, 0x5b, 0x52, 0x31, 0x66, 0xb2, 0xf9, 0x10, 0x55, 0x2e,
+	0x6f, 0x95, 0x5b, 0x7b, 0x25, 0xbf, 0xf6, 0xcd, 0x3f, 0x26, 0xba, 0x59, 0x58, 0x13, 0x7e, 0x8c,
+	0x56, 0xc3, 0xc1, 0xf6, 0x60, 0xf8, 0x66, 0x50, 0x33, 0x5c, 0xf7, 0xcb, 0xd7, 0x46, 0xbd, 0x40,
+	0x84, 0xf1, 0x24, 0xe6, 0xc7, 0x31, 0x6e, 0xa3, 0xf5, 0x9d, 0x60, 0x48, 0xfc, 0xbd, 0x4e, 0x2f,
+	0xe8, 0x0f, 0x07, 0x7b, 0x3d, 0xe2, 0x77, 0x02, 0xbf, 0x66, 0xba, 0xf7, 0x40, 0xba, 0x53, 0x90,
+	0x7a, 0x82, 0x51, 0xc9, 0x16, 0x9c, 0xf0, 0xf5, 0x96, 0x72, 0xac, 0xa5, 0x4e, 0x98, 0x8c, 0x96,
+	0x39, 0xc4, 0x7f, 0x35, 0xdc, 0xf5, 0x6b, 0xa5, 0xa5, 0x0e, 0x61, 0x87, 0xfc, 0x88, 0xb9, 0x77,
+	0x3f, 0x9f, 0x78, 0xc6, 0xcf, 0x6f, 0x5e, 0xf1, 0x75, 0xdd, 0x47, 0xa7, 0xe7, 0x9e, 0x71, 0x76,
+	0xee, 0x99, 0x7f, 0xa1, 0xfe, 0x41, 0x7d, 0xbf, 0xf0, 0xcc, 0x1f, 0x50, 0xa7, 0x50, 0xbf, 0xa0,
+	0xce, 0xa0, 0xde, 0x1a, 0xef, 0x6d, 0xfd, 0x1b, 0x3f, 0xfb, 0x1f, 0x00, 0x00, 0xff, 0xff, 0xfd,
+	0x90, 0x22, 0x19, 0x04, 0x03, 0x00, 0x00,
 }
