@@ -35,6 +35,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 		Uris:        version.Uris,
 		Ip:          version.Ip,
 		Mode:        version.Mode,
+		AppId:       version.AppId,
 	}
 
 	if version.Container != nil {

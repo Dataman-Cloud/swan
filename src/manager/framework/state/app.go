@@ -39,7 +39,7 @@ type App struct {
 	Versions []*types.Version `json:"versions"`
 	Slots    map[int]*Slot    `json:"slots"`
 
-	scontext *swancontext.SwanContext
+	Scontext *swancontext.SwanContext
 
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
@@ -74,7 +74,7 @@ func NewApp(version *types.Version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
 		MesosConnector:    MesosConnector,
-		scontext:          scontext,
+		Scontext:          scontext,
 		Created:           time.Now(),
 		Updated:           time.Now(),
 
@@ -233,7 +233,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	app.ProposedVersion = version
 
 	raftVersion := VersionToRaft(version)
-	if err := store.UpdateAppVersion(context.TODO(), app.AppId, raftVersion, nil); err != nil {
+	if err := store.UpdateVersion(context.TODO(), app.AppId, raftVersion, nil); err != nil {
 		return err
 	}
 
@@ -433,5 +433,5 @@ func (app *App) IsFixed() bool {
 
 func (app *App) EmitEvent(swanEvent *swanevent.Event) {
 	logrus.Debugf("write event %s for app %s", swanEvent, app.AppId)
-	app.scontext.EventBus.EventChan <- swanEvent
+	app.Scontext.EventBus.EventChan <- swanEvent
 }

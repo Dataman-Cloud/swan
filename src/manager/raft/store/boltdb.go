@@ -112,8 +112,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
 		//	case *types.StoreAction_Task:
 		//		return doTaskStoreAction(tx, action.Action, action.GetTask())
-		//	case *types.StoreAction_Version:
-		//		return doVersionStoreAction(tx, action.Action, action.GetVersion())
+	case *types.StoreAction_Version:
+		return doVersionStoreAction(tx, action.Action, action.GetVersion())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -152,13 +152,13 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 //	}
 //}
 //
-//func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
-//	switch action {
-//	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-//		return putVersion(tx, version)
-//	case types.StoreActionKindRemove:
-//		return removeVersion(tx, version.AppId, version.ID)
-//	default:
-//		return ErrUndefineVersionAction
-//	}
-//}
+func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putVersion(tx, version)
+	case types.StoreActionKindRemove:
+		return removeVersion(tx, version.AppId, version.ID)
+	default:
+		return ErrUndefineVersionAction
+	}
+}
