@@ -1,6 +1,8 @@
 package state
 
 import (
+	"time"
+
 	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/types"
 )
@@ -333,5 +335,86 @@ func CommandToRaft(command *types.Command) *rafttypes.Command {
 func CommandFromRaft(raftCommand *rafttypes.Command) *types.Command {
 	return &types.Command{
 		Value: raftCommand.Value,
+	}
+}
+
+func SlotToRaft(slot *Slot) *rafttypes.Slot {
+	raftSlot := &rafttypes.Slot{
+		Index:                int32(slot.Index),
+		Id:                   slot.Id,
+		AppId:                slot.App.AppId,
+		VersionId:            slot.Version.ID,
+		State:                slot.State,
+		MarkForDeletion:      slot.MarkForDeletion,
+		MarkForRollingUpdate: slot.MarkForRollingUpdate,
+	}
+
+	if slot.CurrentTask != nil {
+		raftSlot.CurrentTask = TaskToRaft(slot.CurrentTask)
+	}
+
+	if slot.TaskHistory != nil {
+		var historyIds []string
+		for _, task := range slot.TaskHistory {
+			historyIds = append(historyIds, task.Id)
+		}
+
+		raftSlot.TaskHistory = historyIds
+	}
+
+	// TODO store slot.restartPolicy
+
+	return raftSlot
+}
+
+func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
+	return &Slot{
+		Index:                int(raftSlot.Index),
+		Id:                   raftSlot.Id,
+		State:                raftSlot.State,
+		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
+		OfferId:              raftSlot.CurrentTask.OfferId,
+		AgentId:              raftSlot.CurrentTask.AgentId,
+		Ip:                   raftSlot.CurrentTask.Ip,
+		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
+		MarkForDeletion:      raftSlot.MarkForDeletion,
+		MarkForRollingUpdate: raftSlot.MarkForRollingUpdate,
+	}
+}
+
+func TaskToRaft(task *Task) *rafttypes.Task {
+	return &rafttypes.Task{
+		Id:            task.Id,
+		TaskInfoId:    task.TaskInfoId,
+		AppId:         task.App.AppId,
+		VersionId:     task.Version.ID,
+		SlotId:        task.Slot.Id,
+		State:         task.State,
+		Stdout:        task.Stdout,
+		Stderr:        task.Stderr,
+		HostPorts:     task.HostPorts,
+		OfferId:       task.OfferId,
+		AgentId:       task.AgentId,
+		Ip:            task.Ip,
+		AgentHostName: task.AgentHostName,
+		Reason:        task.Reason,
+		CreatedAt:     task.Created.UnixNano(),
+	}
+}
+
+func TaskFromRaft(raftTask *rafttypes.Task) *Task {
+	return &Task{
+		Id:            raftTask.Id,
+		TaskInfoId:    raftTask.TaskInfoId,
+		State:         raftTask.State,
+		Stdout:        raftTask.Stdout,
+		Stderr:        raftTask.Stderr,
+		HostPorts:     raftTask.HostPorts,
+		OfferId:       raftTask.OfferId,
+		AgentId:       raftTask.AgentId,
+		Ip:            raftTask.Ip,
+		AgentHostName: raftTask.AgentHostName,
+		Reason:        raftTask.Reason,
+		Created:       time.Unix(0, raftTask.CreatedAt),
 	}
 }

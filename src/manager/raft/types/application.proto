@@ -112,12 +112,13 @@ message Slot {
     int32 index = 1;
     string id = 2;
     string appId = 3;
-    string state = 4;
-    bool markForDeletion = 5;
-    bool markForRollingUpdate = 6;
-    Task CurrentTask = 7;
-    repeated string TaskHistory = 8;
-    RestartPolicy restartPolicy = 9;
+    string versionId = 4;
+    string state = 5;
+    bool markForDeletion = 6;
+    bool markForRollingUpdate = 7;
+    Task CurrentTask = 8;
+    repeated string TaskHistory = 9;
+    RestartPolicy restartPolicy = 10;
 }
 
 message RestartPolicy {
@@ -127,14 +128,16 @@ message Task {
     string id = 1;
     string taskInfoId = 2;
     string appId = 3;
-    int32 slotIndex = 4;
-    string state = 5;
-    string stdout = 6;
-    string stderr =  7;
-    repeated uint64 hostPorts = 8;
-    string offerId = 9;
-    string agentId = 10;
-    string ip = 11;
-    string agentHostName = 12;
-    string reason = 13;
+    string versionId = 4;
+    string slotId = 5;
+    string state = 6;
+    string stdout = 7;
+    string stderr = 8;
+    repeated uint64 hostPorts = 9;
+    string offerId = 10;
+    string agentId = 11;
+    string ip = 12;
+    string agentHostName = 13;
+    string reason = 14;
+    int64 createdAt = 15;
 }

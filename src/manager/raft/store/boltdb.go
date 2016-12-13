@@ -18,6 +18,7 @@ var (
 	bucketKeyFramework      = []byte("framework")
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyVersions       = []byte("versions")
+	bucketKeySlots          = []byte("slots")
 
 	BucketKeyData = []byte("data")
 )
@@ -26,12 +27,14 @@ var (
 	ErrAppUnknown              = errors.New("boltdb: app unknown")
 	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrVersionUnknown          = errors.New("boltdb: version unknown")
+	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefined app store action")
 	ErrUndefineFrameworkAction = errors.New("boltdb: undefined framework store action")
 	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
+	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -110,10 +113,12 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doAppStoreAction(tx, action.Action, action.GetApplication())
 	case *types.StoreAction_Framework:
 		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
-		//	case *types.StoreAction_Task:
-		//		return doTaskStoreAction(tx, action.Action, action.GetTask())
+	case *types.StoreAction_Task:
+		return doTaskStoreAction(tx, action.Action, action.GetTask())
 	case *types.StoreAction_Version:
 		return doVersionStoreAction(tx, action.Action, action.GetVersion())
+	case *types.StoreAction_Slot:
+		return doSlotStoreAction(tx, action.Action, action.GetSlot())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -141,17 +146,28 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 	}
 }
 
-//func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
-//	switch action {
-//	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-//		return putTask(tx, task)
-//	case types.StoreActionKindRemove:
-//		return removeTask(tx, task.AppId, task.Name)
-//	default:
-//		return ErrUndefineTaskAction
-//	}
-//}
-//
+func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Slot) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putSlot(tx, slot)
+	case types.StoreActionKindRemove:
+		return removeSlot(tx, slot.AppId, slot.Id)
+	default:
+		return ErrUndefineSlotAction
+	}
+}
+
+func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putTask(tx, task)
+	case types.StoreActionKindRemove:
+		return removeTask(tx, task.AppId, task.SlotId, task.Id)
+	default:
+		return ErrUndefineTaskAction
+	}
+}
+
 func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
 	switch action {
 	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
