@@ -119,7 +119,7 @@ func (scheduler *Scheduler) LoadAppData() error {
 
 		app.Versions = versions
 
-		slots, err := scheduler.LoadAppSlots(app.AppId)
+		slots, err := scheduler.LoadAppSlots(app)
 		if err != nil {
 			return err
 		}
@@ -136,8 +136,8 @@ func (scheduler *Scheduler) LoadAppData() error {
 	return nil
 }
 
-func (scheduler *Scheduler) LoadAppSlots(appId string) ([]*state.Slot, error) {
-	raftSlots, err := scheduler.store.ListSlots(appId)
+func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) {
+	raftSlots, err := scheduler.store.ListSlots(app.AppId)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +146,7 @@ func (scheduler *Scheduler) LoadAppSlots(appId string) ([]*state.Slot, error) {
 	for _, raftSlot := range raftSlots {
 		slot := state.SlotFromRaft(raftSlot)
 
-		raftTasks, err := scheduler.store.ListTasks(appId, slot.Id)
+		raftTasks, err := scheduler.store.ListTasks(app.AppId, slot.Id)
 		if err != nil {
 			return nil, err
 		}
@@ -156,6 +156,11 @@ func (scheduler *Scheduler) LoadAppSlots(appId string) ([]*state.Slot, error) {
 			tasks = append(tasks, state.TaskFromRaft(raftTask))
 		}
 		slot.TaskHistory = tasks
+
+		slot.App = app
+
+		//TODO: slot maybe not app currentVersion
+		slot.Version = app.CurrentVersion
 
 		slots = append(slots, slot)
 	}
