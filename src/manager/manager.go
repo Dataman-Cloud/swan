@@ -94,7 +94,9 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	if manager.config.Janitor.EnableProxy {
 		jConfig := jconfig.DefaultConfig()
 		jConfig.Listener.Mode = manager.config.Janitor.ListenerMode
+		jConfig.Listener.IP = manager.config.Janitor.IP
 		jConfig.Listener.DefaultPort = manager.config.Janitor.Port
+		jConfig.HttpHandler.Domain = manager.config.Janitor.Domain
 		manager.janitorServer = janitor.NewJanitorServer(jConfig)
 		manager.janitorSubscriber = event.NewJanitorSubscriber(manager.janitorServer)
 	}

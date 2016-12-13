@@ -39,25 +39,29 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case config.MULTIPORT_LISTENER_MODE:
 		targetEntry = p.upstream.NextTargetEntry()
 	case config.SINGLE_LISTENER_MODE:
-		hostname := r.Header.Get("Host")
+		hostname := r.Host
+		log.Debugf("hostname:%s", hostname)
 		if hostname == "" {
 			log.Debug("hostname is null")
 			w.WriteHeader(http.StatusBadGateway)
 			return
 		}
-		u, err := url.Parse(hostname)
-		if err != nil {
-			log.Debugf("fail to parse hostname[%s]", hostname)
-			w.WriteHeader(http.StatusBadGateway)
-			return
-		}
-		host, _, _ := net.SplitHostPort(u.Host)
-		log.Debugf("Request from host:%s", host)
+		host := strings.Split(hostname, ":")[0]
+		log.Debugf("host [%s] is requested", host)
 
 		// get targetEntry based on hostname
-		domainIndex := strings.Index(host, p.cfg.Domain)
-		namespace := host[0 : domainIndex-1]
-		hostNamespaces := strings.Split(namespace, ".")
+		var namespace string
+		var hostNamespaces []string
+		if p.cfg.Domain == "" {
+			namespace = host
+			hostNamespaces = strings.Split(namespace, ".")
+		} else {
+			domainIndex := strings.Index(host, p.cfg.Domain)
+			if domainIndex > 1 {
+				namespace = host[0 : domainIndex-1]
+				hostNamespaces = strings.Split(namespace, ".")
+			}
+		}
 		if len(hostNamespaces) == 4 {
 			// host is targeted at task level
 			serviceID := hostNamespaces[0]
@@ -168,8 +172,8 @@ func (proxy *httpProxy) AddHeaders(r *http.Request) error {
 			fwd += "; proto=http"
 		}
 	}
-	if proxy.listenerConfig.IP.String() != "" {
-		fwd += "; by=" + proxy.listenerConfig.IP.String()
+	if proxy.listenerConfig.IP != "" {
+		fwd += "; by=" + proxy.listenerConfig.IP
 	}
 	r.Header.Set("Forwarded", fwd)
 

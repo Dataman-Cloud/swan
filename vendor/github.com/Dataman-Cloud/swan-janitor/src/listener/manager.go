@@ -48,7 +48,7 @@ func (manager *Manager) Shutdown() {
 }
 
 func (manager *Manager) DefaultUpstreamKey() upstream.UpstreamKey {
-	return upstream.UpstreamKey{Ip: manager.Config.IP.String(), Port: manager.Config.DefaultPort}
+	return upstream.UpstreamKey{Ip: manager.Config.IP, Port: manager.Config.DefaultPort}
 }
 
 func (manager *Manager) DefaultListener() *proxyproto.Listener {
@@ -56,7 +56,7 @@ func (manager *Manager) DefaultListener() *proxyproto.Listener {
 }
 
 func setupSingleListener(manager *Manager) error {
-	ln, err := net.Listen("tcp", net.JoinHostPort(manager.Config.IP.String(), manager.Config.DefaultPort))
+	ln, err := net.Listen("tcp", net.JoinHostPort(manager.Config.IP, manager.Config.DefaultPort))
 	if err != nil {
 		log.Errorf("%s", err)
 		return err

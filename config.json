@@ -40,7 +40,9 @@
     "janitor": {
 	    "enableProxy": true,
 	    "listenerMode": "single_port",
-	    "port": "9998"
+	    "ip": "0.0.0.0",
+	    "port": "80",
+	    "domain": "lvh.me"
     },
     "apiServerAddr": ":5015"
 }
