@@ -91,6 +91,14 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Update App").
 		Operation("updateApp"))
+	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(api.ProceedUpdate).
+		// docs
+		Doc("Proceed Update App").
+		Operation("proceedUpdateApp"))
+	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(api.CancelUpdate).
+		// docs
+		Doc("Cancel Update App").
+		Operation("cancelUpdateApp"))
 
 	container.Add(ws)
 }
