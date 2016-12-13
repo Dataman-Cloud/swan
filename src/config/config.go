@@ -18,6 +18,7 @@ type SwanConfig struct {
 	Mode       string `json:"manager"` // manager, agent, mixed
 	Standalone bool   `json:"standalone"`
 	DataDir    string `json:"data-dir"`
+	NoRecover  bool   `json:"no-recover"`
 
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
@@ -116,6 +117,11 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.Bool("standalone") != false {
 		swanConfig.Standalone = c.Bool("standalone")
 	}
+
+	if c.Bool("no-recover") {
+		swanConfig.NoRecover = c.Bool("no-recover")
+	}
+
 	if c.String("cluster") != "" {
 		swanConfig.SwanCluster = strings.Split(c.String("cluster"), ",")
 	}

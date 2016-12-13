@@ -33,6 +33,7 @@ type Scheduler struct {
 	Allocator      *state.OfferAllocator
 	MesosConnector *mesos_connector.MesosConnector
 	store          store.Store
+	config         config.SwanConfig
 }
 
 func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
@@ -44,6 +45,7 @@ func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, s
 		appLock: sync.Mutex{},
 		Apps:    make(map[string]*state.App),
 		store:   store,
+		config:  config,
 	}
 
 	RegiserFun := func(m *HandlerManager) {
@@ -71,8 +73,11 @@ func (scheduler *Scheduler) Stop() error {
 
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
-	if err := scheduler.LoadAppData(); err != nil {
-		return err
+
+	if !scheduler.config.NoRecover {
+		if err := scheduler.LoadAppData(); err != nil {
+			return err
+		}
 	}
 
 	// temp solution

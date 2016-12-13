@@ -118,6 +118,10 @@ func main() {
 			Name:  "enable-proxy",
 			Usage: "enable proxy or not",
 		},
+		cli.BoolFlag{
+			Name:  "no-recover",
+			Usage: "do not retry recover from previous crush",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		config, err := config.NewConfig(c)

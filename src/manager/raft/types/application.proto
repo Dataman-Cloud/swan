@@ -86,7 +86,7 @@ message UpdatePolicy {
     int32 updateDelay = 1;
     int32 maxRetries = 2;
     int32 maxFailovers = 3;
-    string action = 4; 
+    string action = 4;
 }
 
 message HealthCheck {
@@ -94,7 +94,7 @@ message HealthCheck {
     string address = 2;
     string protocol = 3;
     int32 port = 4;
-    int32 portIndex = 5; 
+    int32 portIndex = 5;
     string portName = 6;
     Command command = 7;
     string path = 8;
