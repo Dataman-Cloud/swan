@@ -104,10 +104,10 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	}
 
 	// check if app run in fixed mode and has reserved enough IP
-	if task.Slot.App.IsFixed() && (len(task.Version.Ip) >= int(task.Slot.Index)) {
+	if task.Slot.App.IsFixed() {
 		taskInfo.Container.Docker.Parameters = append(taskInfo.Container.Docker.Parameters, &mesos.Parameter{
 			Key:   proto.String("ip"),
-			Value: proto.String(task.Version.Ip[task.Slot.Index]),
+			Value: proto.String(task.Slot.Ip),
 		})
 	}
 
@@ -302,7 +302,7 @@ func (task *Task) Kill() {
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
-				Value: proto.String(task.Slot.Id),
+				Value: proto.String(task.TaskInfoId),
 			},
 			AgentId: &mesos.AgentID{
 				Value: &task.AgentId,
