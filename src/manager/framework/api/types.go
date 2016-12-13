@@ -21,6 +21,7 @@ type App struct {
 	// use task for compatability now, should be slot here
 	Tasks    []*Task  `json:"tasks,omitempty"`
 	Versions []string `json:"versions,omitempty"`
+	IP       []string `json:"ip,omitempty"`
 }
 
 // use task for compatability now, should be slot here
@@ -41,6 +42,8 @@ type Task struct {
 	Disk float64 `json:"disk,omitempty"`
 
 	History []*TaskHistory `json:"history,omitempty"`
+
+	IP string `json:"ip,omitempty"`
 }
 
 type TaskHistory struct {

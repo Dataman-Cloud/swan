@@ -60,7 +60,7 @@ func (api *Api) CreateApp(c *gin.Context) {
 	if c.BindJSON(&version) == nil && CheckVersion(&version) == nil {
 		err := api.Scheduler.CreateApp(&version)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err})
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		} else {
 			c.JSON(http.StatusOK, gin.H{"status": "version accepted"})
 		}
@@ -107,6 +107,7 @@ func (api *Api) GetApp(c *gin.Context) {
 			Updated:          app.Updated,
 			Mode:             string(app.Mode),
 			State:            app.State,
+			IP:               version.Ip,
 		}
 
 		appRet.Versions = make([]string, 0)
@@ -229,6 +230,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			Cpu:           slot.Version.Cpus,
 			Mem:           slot.Version.Mem,
 			Disk:          slot.Version.Disk,
+			IP:            slot.Ip,
 		}
 
 		if len(slot.TaskHistory) > 0 {

@@ -89,6 +89,10 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		StatesCallbacks:      make(map[string][]SlotStateCallbackFuncs),
 	}
 
+	if slot.App.IsFixed() {
+		slot.Ip = app.CurrentVersion.Ip[index]
+	}
+
 	slot.DispatchNewTask(slot.Version)
 
 	// initialize restart policy
@@ -329,15 +333,25 @@ func (slot *Slot) Normal() bool {
 }
 
 func (slot *Slot) EmitTaskEvent(t string) {
-	for _, port := range slot.CurrentTask.HostPorts {
+	if slot.App.IsFixed() {
 		e := &swanevent.Event{Type: t}
 		e.Payload = &swanevent.TaskInfo{
-			Ip:     slot.AgentHostName,
-			Port:   fmt.Sprintf("%d", port),
-			TaskId: "task" + strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
-			Type:   "srv",
+			Ip:     slot.Ip,
+			TaskId: strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
+			Type:   "a",
 		}
-
 		slot.App.EmitEvent(e)
+
+	} else {
+		for _, port := range slot.CurrentTask.HostPorts {
+			e := &swanevent.Event{Type: t}
+			e.Payload = &swanevent.TaskInfo{
+				Ip:     slot.AgentHostName,
+				Port:   fmt.Sprintf("%d", port),
+				TaskId: strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
+				Type:   "srv",
+			}
+			slot.App.EmitEvent(e)
+		}
 	}
 }
