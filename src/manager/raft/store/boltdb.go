@@ -18,6 +18,7 @@ var (
 	bucketKeyFramework      = []byte("framework")
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyVersions       = []byte("versions")
+	bucketKeySlots          = []byte("slots")
 
 	BucketKeyData = []byte("data")
 )
@@ -26,12 +27,14 @@ var (
 	ErrAppUnknown              = errors.New("boltdb: app unknown")
 	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrVersionUnknown          = errors.New("boltdb: version unknown")
+	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefined app store action")
 	ErrUndefineFrameworkAction = errors.New("boltdb: undefined framework store action")
 	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
+	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -114,6 +117,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		//		return doTaskStoreAction(tx, action.Action, action.GetTask())
 	case *types.StoreAction_Version:
 		return doVersionStoreAction(tx, action.Action, action.GetVersion())
+	case *types.StoreAction_Slot:
+		return doSlotStoreAction(tx, action.Action, action.GetSlot())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -138,6 +143,17 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 		return removeFramework(tx)
 	default:
 		return ErrUndefineFrameworkAction
+	}
+}
+
+func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Slot) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putSlot(tx, slot)
+	case types.StoreActionKindRemove:
+		return removeSlot(tx, slot.AppId, slot.Id)
+	default:
+		return ErrUndefineSlotAction
 	}
 }
 

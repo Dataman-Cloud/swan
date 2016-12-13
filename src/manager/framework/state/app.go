@@ -95,6 +95,11 @@ func NewApp(version *types.Version,
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
+		raftSlot := SlotToRaft(slot)
+		if err := store.CreateSlot(context.TODO(), raftSlot, nil); err != nil {
+			return nil, err
+		}
+
 		app.Slots[i] = slot
 	}
 
