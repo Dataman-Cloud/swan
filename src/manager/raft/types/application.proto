@@ -129,7 +129,7 @@ message Task {
     string taskInfoId = 2;
     string appId = 3;
     string versionId = 4;
-    int32 slotIndex = 5;
+    string slotId = 5;
     string state = 6;
     string stdout = 7;
     string stderr = 8;

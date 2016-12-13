@@ -17,4 +17,6 @@ type Store interface {
 	GetSlot(appId, slotId string) (*types.Slot, error)
 	ListSlots(appId string) ([]*types.Slot, error)
 	DeleteSlot(ctx context.Context, appId, slotId string, cb func()) error
+	UpdateTask(ctx context.Context, task *types.Task, cb func()) error
+	ListTasks(appId, slotId string) ([]*types.Task, error)
 }

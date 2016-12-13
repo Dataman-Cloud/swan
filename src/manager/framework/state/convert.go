@@ -367,13 +367,28 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 	return raftSlot
 }
 
+func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
+	return &Slot{
+		Index:                int(raftSlot.Index),
+		Id:                   raftSlot.Id,
+		State:                raftSlot.State,
+		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
+		OfferId:              raftSlot.CurrentTask.OfferId,
+		AgentId:              raftSlot.CurrentTask.AgentId,
+		Ip:                   raftSlot.CurrentTask.Ip,
+		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
+		MarkForDeletion:      raftSlot.MarkForDeletion,
+		MarkForRollingUpdate: raftSlot.MarkForRollingUpdate,
+	}
+}
+
 func TaskToRaft(task *Task) *rafttypes.Task {
 	return &rafttypes.Task{
 		Id:            task.Id,
 		TaskInfoId:    task.TaskInfoId,
 		AppId:         task.App.AppId,
 		VersionId:     task.Version.ID,
-		SlotIndex:     int32(task.Slot.Index),
+		SlotId:        task.Slot.Id,
 		State:         task.State,
 		Stdout:        task.Stdout,
 		Stderr:        task.Stderr,

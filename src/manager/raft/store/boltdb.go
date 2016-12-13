@@ -113,8 +113,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doAppStoreAction(tx, action.Action, action.GetApplication())
 	case *types.StoreAction_Framework:
 		return doFrameworkStoreAction(tx, action.Action, action.GetFramework())
-		//	case *types.StoreAction_Task:
-		//		return doTaskStoreAction(tx, action.Action, action.GetTask())
+	case *types.StoreAction_Task:
+		return doTaskStoreAction(tx, action.Action, action.GetTask())
 	case *types.StoreAction_Version:
 		return doVersionStoreAction(tx, action.Action, action.GetVersion())
 	case *types.StoreAction_Slot:
@@ -157,17 +157,17 @@ func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Sl
 	}
 }
 
-//func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
-//	switch action {
-//	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-//		return putTask(tx, task)
-//	case types.StoreActionKindRemove:
-//		return removeTask(tx, task.AppId, task.Name)
-//	default:
-//		return ErrUndefineTaskAction
-//	}
-//}
-//
+func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
+	switch action {
+	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
+		return putTask(tx, task)
+	case types.StoreActionKindRemove:
+		return removeTask(tx, task.AppId, task.SlotId, task.Id)
+	default:
+		return ErrUndefineTaskAction
+	}
+}
+
 func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
 	switch action {
 	case types.StoreActionKindCreate, types.StoreActionKindUpdate:

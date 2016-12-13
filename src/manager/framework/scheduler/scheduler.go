@@ -119,12 +119,48 @@ func (scheduler *Scheduler) LoadAppData() error {
 
 		app.Versions = versions
 
+		slots, err := scheduler.LoadAppSlots(app.AppId)
+		if err != nil {
+			return err
+		}
+
+		for _, slot := range slots {
+			app.Slots[int(slot.Index)] = slot
+		}
+
 		apps[app.AppId] = app
 	}
 
 	scheduler.Apps = apps
 
 	return nil
+}
+
+func (scheduler *Scheduler) LoadAppSlots(appId string) ([]*state.Slot, error) {
+	raftSlots, err := scheduler.store.ListSlots(appId)
+	if err != nil {
+		return nil, err
+	}
+
+	var slots []*state.Slot
+	for _, raftSlot := range raftSlots {
+		slot := state.SlotFromRaft(raftSlot)
+
+		raftTasks, err := scheduler.store.ListTasks(appId, slot.Id)
+		if err != nil {
+			return nil, err
+		}
+
+		var tasks []*state.Task
+		for _, raftTask := range raftTasks {
+			tasks = append(tasks, state.TaskFromRaft(raftTask))
+		}
+		slot.TaskHistory = tasks
+
+		slots = append(slots, slot)
+	}
+
+	return slots, nil
 }
 
 // main loop
