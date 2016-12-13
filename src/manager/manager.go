@@ -137,7 +137,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 		}
 	}()
 
-	// Add other ApiRegisters in the Start
 	manager.apiserver.Start()
 	//go func() {
 	//	if err := manager.apiserver.Start(manager.framework.RestApi); err != nil {
