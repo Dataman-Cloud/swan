@@ -95,7 +95,7 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:  "enable-local-healthcheck",
-			Usage: "Enable local healt check",
+			Usage: "Enable local health check",
 		},
 		cli.BoolFlag{
 			Name:  "standalone",
@@ -113,6 +113,10 @@ func main() {
 			Name:  "with-engine",
 			Value: "sched",
 			Usage: "select engine,framework|sched",
+		},
+		cli.BoolFlag{
+			Name:  "enable-proxy",
+			Usage: "enable proxy or not",
 		},
 	}
 	app.Action = func(c *cli.Context) error {

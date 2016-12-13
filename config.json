@@ -36,5 +36,10 @@
 	    "cluster": "http://127.0.0.1:2111",
 	    "raftid": 1,
 	    "store_path": "./data/"
+    },
+    "janitor": {
+	    "enableProxy": true,
+	    "listenerMode": "single_port",
+	    "port": "9998"
     }
 }

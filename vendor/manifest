@@ -18,6 +18,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/Dataman-Cloud/swan-janitor",
+			"repository": "https://github.com/Dataman-Cloud/swan-janitor",
+			"vcs": "git",
+			"revision": "21943f391c2d40a1796a8290f1d2a615cce0ce05",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/Dataman-Cloud/swan-resolver",
 			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
 			"vcs": "git",
