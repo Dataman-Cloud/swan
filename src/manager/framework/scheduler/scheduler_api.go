@@ -7,15 +7,15 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
-func (scheduler *Scheduler) CreateApp(version *types.Version) error {
+func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
 	_, appExists := scheduler.Apps[version.AppId]
 	if appExists {
-		return errors.New("app already exists")
+		return nil, errors.New("app already exists")
 	}
 
 	app, err := state.NewApp(version, scheduler.Allocator, scheduler.MesosConnector, scheduler.scontext, scheduler.store)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	scheduler.appLock.Lock()
@@ -23,7 +23,7 @@ func (scheduler *Scheduler) CreateApp(version *types.Version) error {
 
 	scheduler.Apps[version.AppId] = app
 
-	return nil
+	return app, nil
 }
 
 func (scheduler *Scheduler) InspectApp(appId string) (*state.App, error) {

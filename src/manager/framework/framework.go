@@ -3,12 +3,12 @@ package framework
 import (
 	"sync"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
+	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
-
-	"github.com/Dataman-Cloud/swan/src/config"
 
 	"golang.org/x/net/context"
 )
@@ -17,11 +17,12 @@ type Framework struct {
 	Scheduler   *scheduler.Scheduler
 	HttpApi     *api.Api
 	SwanContext *swancontext.SwanContext
+	RestApi     *api.AppService
 
 	StopC chan struct{}
 }
 
-func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store) (*Framework, error) {
+func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store, apiServer *swanapiserver.ApiServer) (*Framework, error) {
 	f := &Framework{
 		StopC:       make(chan struct{}),
 		SwanContext: SwanContext,
@@ -29,7 +30,7 @@ func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store s
 
 	f.Scheduler = scheduler.NewScheduler(config, SwanContext, store)
 	f.HttpApi = api.NewApi(f.Scheduler, config.Scheduler)
-
+	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
 	return f, nil
 }
 

@@ -36,5 +36,6 @@
 	    "cluster": "http://127.0.0.1:2111",
 	    "raftid": 1,
 	    "store_path": "./data/"
-    }
+    },
+	"apiServerAddr": ":5015"
 }
