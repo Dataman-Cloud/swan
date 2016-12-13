@@ -42,6 +42,8 @@ message StoreAction {
         Application application = 2;
         Framework framework = 3; 
         Version version = 4;
+        Slot slot = 5;
+        Task task = 6;
 	}
 }
 
