@@ -156,7 +156,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 		go manager.janitorServer.Init().Run()
 	}
 
-	// Add other ApiRegisters in the Start
 	manager.apiserver.Start()
 	//go func() {
 	//	if err := manager.apiserver.Start(manager.framework.RestApi); err != nil {
