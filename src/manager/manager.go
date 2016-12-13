@@ -10,13 +10,14 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
+	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
-	"github.com/boltdb/bolt"
 
 	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
 	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
 	events "github.com/docker/go-events"
 	"golang.org/x/net/context"
 )
@@ -39,12 +40,15 @@ type Manager struct {
 	swanContext *swancontext.SwanContext
 	config      config.SwanConfig
 	cluster     []string
+	apiserver   *swanapiserver.ApiServer
 }
 
 func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager := &Manager{
 		config: config,
 	}
+
+	manager.apiserver = swanapiserver.NewApiServer(config.ApiServerAddr)
 
 	raftNode, err := raft.NewNode(config.Raft, db)
 	if err != nil {
@@ -96,7 +100,7 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 
 	frameworkStore := fstore.NewStore(db, raftNode)
-	manager.framework, err = framework.New(manager.swanContext, manager.config, frameworkStore)
+	manager.framework, err = framework.New(manager.swanContext, manager.config, frameworkStore, manager.apiserver)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
@@ -151,6 +155,14 @@ func (manager *Manager) Start(ctx context.Context) error {
 		manager.janitorSubscriber.Subscribe(manager.eventBus)
 		go manager.janitorServer.Init().Run()
 	}
+
+	manager.apiserver.Start()
+	//go func() {
+	//	if err := manager.apiserver.Start(manager.framework.RestApi); err != nil {
+	//		errCh <- err
+	//		return
+	//	}
+	//}()
 
 	return <-errCh
 }

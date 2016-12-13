@@ -41,5 +41,6 @@
 	    "enableProxy": true,
 	    "listenerMode": "single_port",
 	    "port": "9998"
-    }
+    },
+    "apiServerAddr": ":5015"
 }
