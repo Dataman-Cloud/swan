@@ -66,39 +66,55 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Create App").
 		Operation("createApp").
-		Returns(201, "OK", []types.Application{}).
+		Returns(201, "OK", types.Application{}).
+		Returns(400, "BadRequest", nil).
+		Reads(types.Version{}).
 		Writes(types.Application{}))
 	ws.Route(ws.GET("/{app_id}").To(api.GetApp).
 		// docs
 		Doc("Get an App").
 		Operation("getApp").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
 		Returns(200, "OK", types.Application{}).
+		Returns(404, "NotFound", nil).
 		Writes(types.Application{}))
 	ws.Route(ws.DELETE("/{app_id}").To(api.DeleteApp).
 		// docs
 		Doc("Delete App").
+		Operation("deleteApp").
 		Returns(204, "OK", nil).
-		Operation("deleteApp"))
+		Returns(404, "NotFound", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/scale-up").To(api.ScaleUp).
 		// docs
 		Doc("Scale Up App").
-		Operation("scaleUp"))
+		Operation("scaleUp").
+		Returns(400, "BadRequest", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/scale-down").To(api.ScaleDown).
 		// docs
 		Doc("Scale Down App").
-		Operation("scaleDown"))
+		Operation("scaleDown").
+		Returns(400, "BadRequest", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PUT("/{app_id}").To(api.UpdateApp).
 		// docs
 		Doc("Update App").
-		Operation("updateApp"))
+		Operation("updateApp").
+		Returns(404, "NotFound", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(api.ProceedUpdate).
 		// docs
 		Doc("Proceed Update App").
-		Operation("proceedUpdateApp"))
+		Operation("proceedUpdateApp").
+		Returns(400, "BadRequest", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(api.CancelUpdate).
 		// docs
 		Doc("Cancel Update App").
-		Operation("cancelUpdateApp"))
+		Operation("cancelUpdateApp").
+		Returns(400, "BadRequest", nil).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 
 	container.Add(ws)
 }
