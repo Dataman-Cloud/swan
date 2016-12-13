@@ -51,7 +51,8 @@ func NewAndInstallAppService(apiServer *swanapiserver.ApiServer, eng *scheduler.
 func (api *AppService) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		Path(API_PREFIX + "/apps").
+		ApiVersion(API_PREFIX).
+		Path("/" + API_PREFIX + "/apps").
 		Doc("App management").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
@@ -90,6 +91,14 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Update App").
 		Operation("updateApp"))
+	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(api.ProceedUpdate).
+		// docs
+		Doc("Proceed Update App").
+		Operation("proceedUpdateApp"))
+	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(api.CancelUpdate).
+		// docs
+		Doc("Cancel Update App").
+		Operation("cancelUpdateApp"))
 
 	container.Add(ws)
 }
