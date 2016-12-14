@@ -353,15 +353,6 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		raftSlot.CurrentTask = TaskToRaft(slot.CurrentTask)
 	}
 
-	if slot.TaskHistory != nil {
-		var historyIds []string
-		for _, task := range slot.TaskHistory {
-			historyIds = append(historyIds, task.Id)
-		}
-
-		raftSlot.TaskHistory = historyIds
-	}
-
 	// TODO store slot.restartPolicy
 
 	return raftSlot
@@ -386,7 +377,7 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 	return &rafttypes.Task{
 		Id:            task.Id,
 		TaskInfoId:    task.TaskInfoId,
-		AppId:         task.App.AppId,
+		AppId:         task.Slot.App.AppId,
 		VersionId:     task.Version.ID,
 		SlotId:        task.Slot.Id,
 		State:         task.State,

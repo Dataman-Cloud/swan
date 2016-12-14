@@ -165,7 +165,8 @@ func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) 
 		slot.TaskHistory = tasks
 
 		slot.CurrentTask.Slot = slot
-		slot.CurrentTask.App = app
+		slot.CurrentTask.MesosConnector = app.MesosConnector
+
 		if slot.CurrentTask.Version == nil {
 			slot.CurrentTask.Version = app.CurrentVersion
 		}

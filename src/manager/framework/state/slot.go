@@ -137,7 +137,7 @@ func (slot *Slot) Archive() {
 
 func (slot *Slot) DispatchNewTask(version *types.Version) {
 	slot.Version = version
-	slot.CurrentTask = NewTask(slot.App, slot.Version, slot)
+	slot.CurrentTask = NewTask(slot.App.MesosConnector, slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
