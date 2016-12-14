@@ -14,11 +14,10 @@ import (
 )
 
 type SwanConfig struct {
-	LogLevel   string `json:"log-level"`
-	Mode       string `json:"manager"` // manager, agent, mixed
-	Standalone bool   `json:"standalone"`
-	DataDir    string `json:"data-dir"`
-	NoRecover  bool   `json:"no-recover"`
+	LogLevel  string `json:"log-level"`
+	Mode      string `json:"manager"` // manager, agent, mixed
+	DataDir   string `json:"data-dir"`
+	NoRecover bool   `json:"no-recover"`
 
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
@@ -116,11 +115,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			swanConfig.DataDir = swanConfig.DataDir + "/"
 		}
 	}
-	if c.Bool("standalone") != false {
-		swanConfig.Standalone = c.Bool("standalone")
-	}
 
-	if c.Bool("no-recover") {
+	if c.String("no-recover") != "" {
 		swanConfig.NoRecover = c.Bool("no-recover")
 	}
 
@@ -136,11 +132,12 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("user") != "" {
 		swanConfig.Scheduler.MesosFrameworkUser = c.String("user")
 	}
-	if c.Bool("local-healthcheck") != false {
+
+	if c.String("local-healthcheck") != "" {
 		swanConfig.Scheduler.EnableLocalHealthcheck = c.Bool("local-healthcheck")
 	}
 
-	if c.Bool("enable-dns-proxy") != false {
+	if c.String("enable-dns-proxy") != "" {
 		swanConfig.DNS.EnableDnsProxy = c.Bool("enable-dns-proxy")
 		swanConfig.DNS.ExchangeTimeout = time.Second * 3
 	}
@@ -151,7 +148,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.Int("raftid") != 0 {
 		swanConfig.Raft.RaftId = c.Int("raftid")
 	}
-	if c.Bool("enable-proxy") != false {
+
+	if c.String("enable-proxy") != "" {
 		swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
 	}
 

@@ -17,3 +17,9 @@ func WithConvertSlot(ctx context.Context, slot *Slot, cb func(), action func(ctx
 
 	return action(ctx, raftSlot, cb)
 }
+
+func WithConvertTask(ctx context.Context, task *Task, cb func(), action func(ctx context.Context, task *rafttypes.Task, cb func()) error) error {
+	raftTask := TaskToRaft(task)
+
+	return action(ctx, raftTask, cb)
+}
