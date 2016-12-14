@@ -62,6 +62,8 @@ func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, s
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)
 	scheduler.Allocator = state.NewOfferAllocator()
 
+	state.SetStore(store)
+
 	return scheduler
 }
 
@@ -162,10 +164,18 @@ func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) 
 		}
 		slot.TaskHistory = tasks
 
+		slot.CurrentTask.Slot = slot
+		slot.CurrentTask.MesosConnector = app.MesosConnector
+
+		if slot.CurrentTask.Version == nil {
+			slot.CurrentTask.Version = app.CurrentVersion
+		}
 		slot.App = app
 
 		//TODO: slot maybe not app currentVersion
 		slot.Version = app.CurrentVersion
+
+		slot.StatesCallbacks = make(map[string][]state.SlotStateCallbackFuncs)
 
 		slots = append(slots, slot)
 	}

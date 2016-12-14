@@ -1,8 +1,6 @@
 package store
 
 import (
-	"errors"
-
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 
@@ -23,7 +21,7 @@ func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, versio
 	}
 
 	if app == nil {
-		return errors.New("Update app failed: target app was not found")
+		return ErrAppNotFound
 	}
 
 	var storeActions []*types.StoreAction
@@ -42,6 +40,22 @@ func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, versio
 	storeActions = append(storeActions, updateAppAction)
 
 	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
+}
+
+func (s *FrameworkStore) GetVersion(appId, versionId string) (*types.Version, error) {
+	var version *types.Version
+
+	if err := s.BoltbDb.View(func(tx *bolt.Tx) error {
+		return raftstore.WithVersionBucket(tx, appId, versionId, func(bkt *bolt.Bucket) error {
+			p := bkt.Get(raftstore.BucketKeyData)
+			return version.Unmarshal(p)
+
+		})
+	}); err != nil {
+		return nil, err
+	}
+
+	return version, nil
 }
 
 // retuns app history versions

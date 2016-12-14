@@ -117,8 +117,7 @@ message Slot {
     bool markForDeletion = 6;
     bool markForRollingUpdate = 7;
     Task CurrentTask = 8;
-    repeated string TaskHistory = 9;
-    RestartPolicy restartPolicy = 10;
+    RestartPolicy restartPolicy = 9;
 }
 
 message RestartPolicy {

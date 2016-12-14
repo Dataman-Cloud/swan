@@ -17,6 +17,30 @@ func (s *FrameworkStore) CreateApp(ctx context.Context, app *types.Application, 
 	return s.RaftNode.ProposeValue(ctx, storeAction, cb)
 }
 
+func (s *FrameworkStore) UpdateApp(ctx context.Context, app *types.Application, cb func()) error {
+	storeAction := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Application{app},
+	}}
+
+	return s.RaftNode.ProposeValue(ctx, storeAction, cb)
+}
+
+func (s *FrameworkStore) UpdateAppState(ctx context.Context, appId, state string, cb func()) error {
+	app, err := s.GetApp(appId)
+	if err != nil {
+		return err
+	}
+
+	if app == nil {
+		return ErrAppNotFound
+	}
+
+	app.State = state
+
+	return s.UpdateApp(ctx, app, cb)
+}
+
 func (s *FrameworkStore) GetApp(appId string) (*types.Application, error) {
 	app := &types.Application{}
 
