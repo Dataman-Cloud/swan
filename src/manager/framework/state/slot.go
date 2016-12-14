@@ -11,6 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 //  TASK_STAGING = 6;  // Initial state. Framework status updates should not use.
@@ -132,7 +133,10 @@ func (slot *Slot) Kill() {
 }
 
 func (slot *Slot) Archive() {
-	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
+	if err := WithConvertTask(context.TODO(), slot.CurrentTask,
+		func() { slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask) }, persistentStore.UpdateTask); err != nil {
+		logrus.Errorf("Put task: %s to histort failed, Error: %s", slot.CurrentTask.Id, err.Error())
+	}
 }
 
 func (slot *Slot) DispatchNewTask(version *types.Version) {
