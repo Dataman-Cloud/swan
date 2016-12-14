@@ -17,6 +17,15 @@ func (s *FrameworkStore) CreateApp(ctx context.Context, app *types.Application, 
 	return s.RaftNode.ProposeValue(ctx, storeAction, cb)
 }
 
+func (s *FrameworkStore) UpdateApp(ctx context.Context, app *types.Application, cb func()) error {
+	storeAction := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Application{app},
+	}}
+
+	return s.RaftNode.ProposeValue(ctx, storeAction, cb)
+}
+
 func (s *FrameworkStore) GetApp(appId string) (*types.Application, error) {
 	app := &types.Application{}
 

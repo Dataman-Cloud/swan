@@ -33,6 +33,12 @@ const (
 	APP_STATE_MARK_FOR_SCALE_DOWN = "scale_down"
 )
 
+var persistentStore store.Store
+
+func SetStore(newStore store.Store) {
+	persistentStore = newStore
+}
+
 type App struct {
 	// app name
 	AppId    string           `json:"appId"`
@@ -61,7 +67,7 @@ type App struct {
 func NewApp(version *types.Version,
 	allocator *OfferAllocator,
 	MesosConnector *mesos_connector.MesosConnector,
-	scontext *swancontext.SwanContext, store store.Store) (*App, error) {
+	scontext *swancontext.SwanContext) (*App, error) {
 	err := validateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
@@ -88,19 +94,16 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	raftApp := AppToRaft(app)
-	if err := store.CreateApp(context.TODO(), raftApp, nil); err != nil {
+	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp); err != nil {
 		return nil, err
 	}
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
-		raftSlot := SlotToRaft(slot)
-		if err := store.CreateSlot(context.TODO(), raftSlot, nil); err != nil {
+		if err := WithConvertSlot(context.TODO(), slot, func() { app.Slots[i] = slot }, persistentStore.CreateSlot); err != nil {
 			return nil, err
 		}
 
-		app.Slots[i] = slot
 	}
 
 	afterAllTasksRunning := func(app *App) {
@@ -139,15 +142,22 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
 	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_UP, afterScaleUp)
 
-	for i := 0; i < newInstances; i++ {
-		slotIndex := int(app.CurrentVersion.Instances) + i
-		defer func(slotIndex int) {
-			app.Slots[slotIndex] = NewSlot(app, app.CurrentVersion, slotIndex)
-		}(slotIndex)
-	}
 	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
+	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
+		return err
+	}
+
+	for i := 0; i < newInstances; i++ {
+		slotIndex := int(app.CurrentVersion.Instances) + i
+		slot := NewSlot(app, app.CurrentVersion, slotIndex)
+
+		//TODO: maybe all slots should be store in one transaction
+		if err := WithConvertSlot(context.TODO(), slot, func() { app.Slots[slotIndex] = slot }, persistentStore.CreateSlot); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -169,12 +179,23 @@ func (app *App) ScaleDown(removeInstances int) error {
 		}
 	}
 
+	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
+	app.Updated = time.Now()
+
+	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
+		return err
+	}
+
 	removeSlot := func(app *App) {
 		for k, slot := range app.Slots {
 			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
 				logrus.Infof("removeSlot func")
+
+				if err := persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, func() { delete(app.Slots, k) }); err != nil {
+					logrus.Errorf("removeSlot of %s from store failed, Error: %s", slot.Id, err.Error())
+				}
+
 				// TODO remove slot from OfferAllocator
-				delete(app.Slots, k)
 				break
 			}
 		}
@@ -190,9 +211,6 @@ func (app *App) ScaleDown(removeInstances int) error {
 			slot.Kill()
 		}(slotIndex)
 	}
-
-	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
-	app.Updated = time.Now()
 
 	return nil
 }
@@ -215,6 +233,10 @@ func (app *App) Delete() error {
 
 	for _, slot := range app.Slots {
 		slot.Kill()
+	}
+
+	if err := persistentStore.DeleteApp(context.TODO(), app.AppId, nil); err != nil {
+		return err
 	}
 
 	return nil

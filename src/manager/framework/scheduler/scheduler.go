@@ -62,6 +62,8 @@ func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, s
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)
 	scheduler.Allocator = state.NewOfferAllocator()
 
+	state.SetStore(store)
+
 	return scheduler
 }
 
