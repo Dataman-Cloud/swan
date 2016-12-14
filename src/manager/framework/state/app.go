@@ -109,7 +109,7 @@ func NewApp(version *types.Version,
 	afterAllTasksRunning := func(app *App) {
 		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
 			logrus.Infof("afterAllTasksRunning func")
-			app.SetState(APP_STATE_NORMAL)
+			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
 		}
 	}
 	app.SetState(APP_STATE_MARK_FOR_CREATING)
@@ -136,7 +136,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 
 	afterScaleUp := func(app *App) {
 		if app.StateIs(APP_STATE_MARK_FOR_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
-			app.SetState(APP_STATE_NORMAL)
+			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
 		}
 	}
 	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
@@ -175,7 +175,8 @@ func (app *App) ScaleDown(removeInstances int) error {
 			len(app.Slots) == int(app.CurrentVersion.Instances) &&
 			app.MarkForDeletionInstances() == 0 {
 			logrus.Infof("afterScaleDown func")
-			app.SetState(APP_STATE_NORMAL)
+
+			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
 		}
 	}
 
@@ -267,7 +268,9 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	afterUpdateDone := func(app *App) {
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
 			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
-			app.SetState(APP_STATE_NORMAL)
+
+			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
+
 			app.CurrentVersion = app.ProposedVersion
 			app.Versions = append(app.Versions, app.CurrentVersion)
 			app.ProposedVersion = nil
@@ -421,11 +424,6 @@ func (app *App) MarkForDeletionInstances() int {
 
 func (app *App) CanBeCleanAfterDeletion() bool {
 	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && len(app.Slots) == 0
-}
-
-// TODO
-func (app *App) PersistToStorage() error {
-	return nil
 }
 
 func validateAndFormatVersion(version *types.Version) error {

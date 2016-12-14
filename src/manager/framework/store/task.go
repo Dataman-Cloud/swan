@@ -1,8 +1,6 @@
 package store
 
 import (
-	"errors"
-
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 
@@ -23,7 +21,7 @@ func (s *FrameworkStore) UpdateTask(ctx context.Context, task *types.Task, cb fu
 	}
 
 	if slot == nil {
-		return errors.New("Update task failed: target app was not found")
+		return ErrTaskNotFound
 	}
 
 	var storeActions []*types.StoreAction

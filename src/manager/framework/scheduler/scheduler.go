@@ -164,10 +164,17 @@ func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) 
 		}
 		slot.TaskHistory = tasks
 
+		slot.CurrentTask.Slot = slot
+		slot.CurrentTask.App = app
+		if slot.CurrentTask.Version == nil {
+			slot.CurrentTask.Version = app.CurrentVersion
+		}
 		slot.App = app
 
 		//TODO: slot maybe not app currentVersion
 		slot.Version = app.CurrentVersion
+
+		slot.StatesCallbacks = make(map[string][]state.SlotStateCallbackFuncs)
 
 		slots = append(slots, slot)
 	}

@@ -403,7 +403,7 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 }
 
 func TaskFromRaft(raftTask *rafttypes.Task) *Task {
-	return &Task{
+	task := &Task{
 		Id:            raftTask.Id,
 		TaskInfoId:    raftTask.TaskInfoId,
 		State:         raftTask.State,
@@ -417,4 +417,11 @@ func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 		Reason:        raftTask.Reason,
 		Created:       time.Unix(0, raftTask.CreatedAt),
 	}
+
+	raftVersion, err := persistentStore.GetVersion(raftTask.AppId, raftTask.VersionId)
+	if err == nil {
+		task.Version = VersionFromRaft(raftVersion)
+	}
+
+	return task
 }
