@@ -79,7 +79,9 @@ type Raft struct {
 type Janitor struct {
 	EnableProxy  bool   `json:"enableProxy"`
 	ListenerMode string `json:"listenerMode"`
+	IP           string `json:"ip"`
 	Port         string `json:"port"`
+	Domain       string `json:"domain"`
 }
 
 func LoadConfig(configFile string) SwanConfig {

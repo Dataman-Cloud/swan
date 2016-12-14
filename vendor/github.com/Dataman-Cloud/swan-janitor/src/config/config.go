@@ -12,7 +12,7 @@ const (
 )
 
 func DefaultConfig() Config {
-	ip := net.ParseIP("127.0.0.1")
+	ip := net.ParseIP("0.0.0.0").String()
 
 	config := Config{
 		Listener: Listener{
@@ -83,7 +83,7 @@ type Upstream struct {
 
 type Listener struct {
 	Mode         string
-	IP           net.IP
+	IP           string
 	DefaultPort  string
 	DefaultProto string
 }

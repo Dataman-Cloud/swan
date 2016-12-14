@@ -2,7 +2,6 @@ package upstream
 
 import (
 	"fmt"
-	"net"
 	"strings"
 	"sync"
 
@@ -29,12 +28,12 @@ type SwanUpstreamLoader struct {
 	changeNotify chan bool
 	sync.Mutex
 	swanEventChan     chan *TargetChangeEvent
-	DefaultUpstreamIp net.IP
+	DefaultUpstreamIp string
 	Port              string
 	Proto             string
 }
 
-func InitSwanUpstreamLoader(defaultUpstreamIp net.IP, defaultPort string, defaultProto string) (*SwanUpstreamLoader, error) {
+func InitSwanUpstreamLoader(defaultUpstreamIp string, defaultPort string, defaultProto string) (*SwanUpstreamLoader, error) {
 	swanUpstreamLoader := &SwanUpstreamLoader{}
 	swanUpstreamLoader.changeNotify = make(chan bool, 64)
 	swanUpstreamLoader.Upstreams = make([]*Upstream, 0)
@@ -182,14 +181,14 @@ func buildSwanTarget(targetChangeEvent *TargetChangeEvent) *Target {
 	return &target
 }
 
-func buildSwanUpstream(targetChangeEvent *TargetChangeEvent, defaultUpstreamIp net.IP, defaultPort string, defaultProto string) *Upstream {
+func buildSwanUpstream(targetChangeEvent *TargetChangeEvent, defaultUpstreamIp string, defaultPort string, defaultProto string) *Upstream {
 	// create a new upstream
 	var upstream Upstream
 	taskNamespaces := strings.Split(targetChangeEvent.TargetName, ".")
 	appName := strings.Join(taskNamespaces[1:], ".")
 	upstream.ServiceName = appName
 	upstream.FrontendProto = defaultProto
-	upstream.FrontendIp = defaultUpstreamIp.String()
+	upstream.FrontendIp = defaultUpstreamIp
 	upstream.FrontendPort = defaultPort
 	if targetChangeEvent.FrontendPort != "" {
 		upstream.FrontendPort = targetChangeEvent.FrontendPort
