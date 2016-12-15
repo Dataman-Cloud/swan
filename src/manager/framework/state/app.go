@@ -298,7 +298,11 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 
 		for i := 0; i < 1; i++ { // current we make first slot update
 			slot := app.Slots[i]
+
 			slot.Update(app.ProposedVersion)
+			if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+				logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+			}
 		}
 
 	}
@@ -322,6 +326,10 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	for i := 0; i < instances; i++ {
 		slot := app.Slots[i+app.RollingUpdateInstances()]
 		slot.Update(app.ProposedVersion)
+
+		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+		}
 	}
 
 	return nil
@@ -363,6 +371,10 @@ func (app *App) CancelUpdate() error {
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
 		slot := app.Slots[i]
 		slot.Update(app.CurrentVersion)
+
+		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+		}
 	}
 	return nil
 }
