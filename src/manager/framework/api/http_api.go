@@ -136,7 +136,26 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 	if err != nil {
 		response.WriteErrorString(http.StatusInternalServerError, err.Error())
 	} else {
-		response.WriteHeaderAndEntity(http.StatusCreated, app)
+		appRet := &App{
+			ID:               version.AppId,
+			Name:             version.AppId,
+			Instances:        int(version.Instances),
+			RunningInstances: app.RunningInstances(),
+			RunAs:            version.RunAs,
+			ClusterId:        app.MesosConnector.ClusterId,
+			Created:          app.Created,
+			Updated:          app.Updated,
+			Mode:             string(app.Mode),
+			State:            app.State,
+		}
+
+		appRet.Versions = make([]string, 0)
+		for _, v := range app.Versions {
+			appRet.Versions = append(appRet.Versions, v.ID)
+		}
+
+		appRet.Tasks = FilterTasksFromApp(app)
+		response.WriteHeaderAndEntity(http.StatusCreated, appRet)
 	}
 }
 
