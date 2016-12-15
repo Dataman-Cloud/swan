@@ -10,6 +10,7 @@ type Store interface {
 	CreateApp(ctx context.Context, app *types.Application, cb func()) error
 	UpdateApp(ctx context.Context, app *types.Application, cb func()) error
 	UpdateAppState(ctx context.Context, appId, state string, cb func()) error
+	CommitAppProposeVersion(ctx context.Context, app *types.Application, cb func()) error
 	GetApp(appId string) (*types.Application, error)
 	ListApps() ([]*types.Application, error)
 	DeleteApp(ctx context.Context, appId string, cb func()) error

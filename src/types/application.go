@@ -3,24 +3,25 @@ package types
 // UNMAINTAINED: DO NOT IMPORT THIS PKG IN NEW FILE
 
 type Version struct {
-	ID           string
-	AppId        string
-	Command      string
-	Cpus         float64
-	Mem          float64
-	Disk         float64
-	Instances    int32
-	RunAs        string
-	Container    *Container
-	Labels       map[string]string
-	HealthChecks []*HealthCheck
-	Env          map[string]string
-	KillPolicy   *KillPolicy
-	UpdatePolicy *UpdatePolicy
-	Constraints  []string
-	Uris         []string
-	Ip           []string
-	Mode         string
+	ID                string
+	AppId             string
+	PerviousVersionID string
+	Command           string
+	Cpus              float64
+	Mem               float64
+	Disk              float64
+	Instances         int32
+	RunAs             string
+	Container         *Container
+	Labels            map[string]string
+	HealthChecks      []*HealthCheck
+	Env               map[string]string
+	KillPolicy        *KillPolicy
+	UpdatePolicy      *UpdatePolicy
+	Constraints       []string
+	Uris              []string
+	Ip                []string
+	Mode              string
 }
 
 type Container struct {

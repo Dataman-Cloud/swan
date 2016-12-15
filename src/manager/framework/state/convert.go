@@ -19,6 +19,10 @@ func AppToRaft(app *App) *rafttypes.Application {
 		raftApp.Version = VersionToRaft(app.CurrentVersion)
 	}
 
+	if app.ProposedVersion != nil {
+		raftApp.ProposedVersion = VersionToRaft(app.ProposedVersion)
+	}
+
 	return raftApp
 }
 
