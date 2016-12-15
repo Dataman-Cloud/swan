@@ -101,8 +101,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		if slot.Abnormal() {
 			s.Archive()
 			s.DispatchNewTask(slot.Version)
-		} else {
-			return true
 		}
 
 		return false
@@ -110,7 +108,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 	//slot.restartPolicy = NewRestartPolicy(slot, slot.Version.BackoffSeconds,
 	//slot.Version.BackoffFactor, slot.Version.MaxLaunchDelaySeconds, testAndRestartFunc)
-	slot.restartPolicy = NewRestartPolicy(slot, time.Second*30, 1.2, time.Second*300, testAndRestartFunc)
+	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 1, time.Second*300, testAndRestartFunc)
 
 	return slot
 }

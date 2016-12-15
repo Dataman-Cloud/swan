@@ -230,7 +230,7 @@ func (api *AppService) ScaleUp(request *restful.Request, response *restful.Respo
 
 	err = api.Scheduler.ScaleUp(request.PathParameter("app_id"), param.NewInstances, param.Ip)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	} else {
 		response.WriteHeader(http.StatusOK)
 	}
