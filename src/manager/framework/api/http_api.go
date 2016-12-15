@@ -124,17 +124,17 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 
 	err := request.ReadEntity(&version)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	err = CheckVersion(&version)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	app, err := api.Scheduler.CreateApp(&version)
 	if err != nil {
-		response.WriteError(http.StatusInternalServerError, err)
+		response.WriteErrorString(http.StatusInternalServerError, err.Error())
 	} else {
 		response.WriteHeaderAndEntity(http.StatusCreated, app)
 	}
@@ -164,7 +164,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 func (api *AppService) GetApp(request *restful.Request, response *restful.Response) {
 	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
 	if err != nil {
-		response.WriteError(http.StatusNotFound, err)
+		response.WriteErrorString(http.StatusNotFound, err.Error())
 	} else {
 		version := app.CurrentVersion
 		appRet := &App{
@@ -194,7 +194,7 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 func (api *AppService) DeleteApp(request *restful.Request, response *restful.Response) {
 	err := api.Scheduler.DeleteApp(request.PathParameter("app_id"))
 	if err != nil {
-		response.WriteError(http.StatusNotFound, err)
+		response.WriteErrorString(http.StatusNotFound, err.Error())
 	} else {
 		response.WriteHeader(http.StatusNoContent)
 	}
@@ -207,12 +207,12 @@ func (api *AppService) ScaleDown(request *restful.Request, response *restful.Res
 
 	err := request.ReadEntity(&param)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	err = api.Scheduler.ScaleDown(request.PathParameter("app_id"), param.RemoveInstances)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	} else {
 		response.WriteHeader(http.StatusOK)
 	}
@@ -225,7 +225,7 @@ func (api *AppService) ScaleUp(request *restful.Request, response *restful.Respo
 	}
 	err := request.ReadEntity(&param)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	err = api.Scheduler.ScaleUp(request.PathParameter("app_id"), param.NewInstances, param.Ip)
@@ -241,13 +241,13 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 
 	err := request.ReadEntity(&version)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	if CheckVersion(&version) == nil {
 		err := api.Scheduler.UpdateApp(request.PathParameter("app_id"), &version)
 		if err != nil {
-			response.WriteError(http.StatusBadRequest, err)
+			response.WriteErrorString(http.StatusBadRequest, err.Error())
 		} else {
 			response.WriteHeaderAndJson(http.StatusOK, []string{"version accepted"}, restful.MIME_JSON)
 		}
@@ -263,13 +263,13 @@ func (api *AppService) ProceedUpdate(request *restful.Request, response *restful
 
 	err := request.ReadEntity(&param)
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	}
 
 	err = api.Scheduler.ProceedUpdate(request.PathParameter("app_id"), param.Instances)
 	if err != nil {
 		logrus.Errorf("%s", err)
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	} else {
 		response.WriteHeaderAndJson(http.StatusOK, []string{"version accepted"}, restful.MIME_JSON)
 	}
@@ -278,7 +278,7 @@ func (api *AppService) ProceedUpdate(request *restful.Request, response *restful
 func (api *AppService) CancelUpdate(request *restful.Request, response *restful.Response) {
 	err := api.Scheduler.CancelUpdate(request.PathParameter("app_id"))
 	if err != nil {
-		response.WriteError(http.StatusBadRequest, err)
+		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	} else {
 		response.WriteHeaderAndJson(http.StatusOK, []string{"version accepted"}, restful.MIME_JSON)
 	}
