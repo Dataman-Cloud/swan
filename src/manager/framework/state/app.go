@@ -243,53 +243,71 @@ func (app *App) Delete() error {
 	return nil
 }
 
+// update application by follower steps
+// 1. check app state: if app state if not APP_STATE_NORMAL or app's propose version is not nil
+//    we can not update app, because that means target app maybe is in updateing.
+// 2. set the new version to the app's propose version.
+// 3. persist app data, and set the app's state to APP_STATE_MARK_FOR_UPDATING
+// 4. update slot version to propose version
+// 5. after all slot version update success. put the current version to version history and set the
+//    propose version as current version, set propose version to nil.
+// 6. set app's state to APP_STATE_NORMAL.
 func (app *App) Update(version *types.Version, store store.Store) error {
-	if !app.StateIs(APP_STATE_NORMAL) {
+	if !app.StateIs(APP_STATE_NORMAL) || app.ProposedVersion != nil {
 		return errors.New("app not in normal state")
 	}
 
-	if app.ProposedVersion != nil {
-		return errors.New("previous rolling update in progress")
+	if err := app.checkProposedVersionValid(version); err != nil {
+		return err
 	}
 
-	err := app.checkProposedVersionValid(version)
-	if err != nil {
-		return err
+	if app.CurrentVersion == nil {
+		return errors.New("update failed: current version was losted")
 	}
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+	version.PerviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
-
-	raftVersion := VersionToRaft(version)
-	if err := store.UpdateVersion(context.TODO(), app.AppId, raftVersion, nil); err != nil {
-		return err
-	}
 
 	afterUpdateDone := func(app *App) {
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
 			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
 
-			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
+			afterPersisted := func() {
+				app.SetState(APP_STATE_NORMAL)
 
-			app.CurrentVersion = app.ProposedVersion
-			app.Versions = append(app.Versions, app.CurrentVersion)
-			app.ProposedVersion = nil
+				app.Versions = append(app.Versions, app.CurrentVersion)
+				app.CurrentVersion = app.ProposedVersion
+				app.ProposedVersion = nil
 
-			for _, slot := range app.Slots {
-				slot.MarkForRollingUpdate = false
+				for _, slot := range app.Slots {
+					slot.MarkForRollingUpdate = false
+				}
+			}
+
+			app.State = APP_STATE_NORMAL
+			if err := WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.CommitAppProposeVersion); err != nil {
+				logrus.Errorf("commit app: %s propose version: %s failed. Error: %s", app.AppId, app.ProposedVersion.ID, err.Error())
 			}
 		}
 	}
 
-	app.SetState(APP_STATE_MARK_FOR_UPDATING)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterUpdateDone)
+	afterPersisted := func() {
+		app.SetState(APP_STATE_MARK_FOR_UPDATING)
+		app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterUpdateDone)
 
-	for i := 0; i < 1; i++ { // current we make first slot update
-		slot := app.Slots[i]
-		slot.Update(app.ProposedVersion)
+		for i := 0; i < 1; i++ { // current we make first slot update
+			slot := app.Slots[i]
+
+			slot.Update(app.ProposedVersion)
+			if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+				logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+			}
+		}
+
 	}
 
-	return nil
+	return WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.UpdateApp)
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
@@ -308,25 +326,41 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	for i := 0; i < instances; i++ {
 		slot := app.Slots[i+app.RollingUpdateInstances()]
 		slot.Update(app.ProposedVersion)
+
+		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+		}
 	}
 
 	return nil
 }
 
 func (app *App) CancelUpdate() error {
-	if app.ProposedVersion == nil {
-		return errors.New("app not in rolling update state")
+	if app.State != APP_STATE_MARK_FOR_UPDATING || app.ProposedVersion == nil {
+		return errors.New("app not in updating state")
+	}
+
+	if app.CurrentVersion == nil {
+		return errors.New("cancel update failed: current version was nil")
 	}
 
 	afterRollbackDone := func(app *App) {
 		if app.Slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
-			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to acheive
+			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
 
-			app.SetState(APP_STATE_NORMAL)
 			app.ProposedVersion = nil
+			app.State = APP_STATE_NORMAL
 
-			for _, slot := range app.Slots {
-				slot.MarkForRollingUpdate = false
+			afterPersisted := func() {
+				app.SetState(APP_STATE_NORMAL)
+
+				for _, slot := range app.Slots {
+					slot.MarkForRollingUpdate = false
+				}
+			}
+
+			if err := WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.UpdateApp); err != nil {
+				logrus.Errorf("update app: %s failed. Error: %s", app.AppId, err.Error())
 			}
 		}
 	}
@@ -337,6 +371,10 @@ func (app *App) CancelUpdate() error {
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
 		slot := app.Slots[i]
 		slot.Update(app.CurrentVersion)
+
+		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+		}
 	}
 	return nil
 }

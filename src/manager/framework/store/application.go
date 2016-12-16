@@ -1,6 +1,8 @@
 package store
 
 import (
+	"errors"
+
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/boltdb/bolt"
@@ -97,6 +99,30 @@ func (s *FrameworkStore) DeleteApp(ctx context.Context, appId string, cb func())
 		Action: types.StoreActionKindRemove,
 		Target: &types.StoreAction_Application{removeApp},
 	}}
+
+	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
+}
+
+func (s *FrameworkStore) CommitAppProposeVersion(ctx context.Context, app *types.Application, cb func()) error {
+	if app.ProposedVersion == nil {
+		return errors.New("commit propose version failed: propose version was nil")
+	}
+
+	var storeActions []*types.StoreAction
+	updateVersionAction := &types.StoreAction{
+		Action: types.StoreActionKindCreate,
+		Target: &types.StoreAction_Version{app.Version},
+	}
+	storeActions = append(storeActions, updateVersionAction)
+
+	app.Version = app.ProposedVersion
+	app.ProposedVersion = nil
+
+	updateAppAction := &types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Application{app},
+	}
+	storeActions = append(storeActions, updateAppAction)
 
 	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
 }

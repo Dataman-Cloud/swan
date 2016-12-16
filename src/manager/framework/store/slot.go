@@ -75,3 +75,12 @@ func (s *FrameworkStore) DeleteSlot(ctx context.Context, appId, slotId string, c
 
 	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
 }
+
+func (s *FrameworkStore) UpdateSlot(ctx context.Context, slot *types.Slot, cb func()) error {
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUpdate,
+		Target: &types.StoreAction_Slot{slot},
+	}}
+
+	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
+}

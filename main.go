@@ -97,10 +97,6 @@ func main() {
 			Name:  "enable-local-healthcheck",
 			Usage: "Enable local health check",
 		},
-		cli.BoolFlag{
-			Name:  "standalone",
-			Usage: "Run as standalone mode",
-		},
 		cli.StringFlag{
 			Name:  "mode",
 			Usage: "Server mode, manager|agent|mixed ",

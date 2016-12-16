@@ -18,10 +18,11 @@ message Application {
     string id = 1 [(gogoproto.customname) = "ID"];
     string name = 2;
     Version version = 3;
-    string clusterId = 4;
-    string state = 5;
-    int64 createdAt = 6;
-    int64 updatedAt = 7;
+    Version proposedVersion = 4;
+    string clusterId = 5;
+    string state = 6;
+    int64 createdAt = 7;
+    int64 updatedAt = 8;
 }
 
 message Version {
