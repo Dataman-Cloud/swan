@@ -45,6 +45,15 @@ func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, versio
 func (s *FrameworkStore) GetVersion(appId, versionId string) (*types.Version, error) {
 	var version *types.Version
 
+	app, err := s.GetApp(appId)
+	if err != nil {
+		return nil, err
+	}
+
+	if app.Version.ID == versionId {
+		return app.Version, err
+	}
+
 	if err := s.BoltbDb.View(func(tx *bolt.Tx) error {
 		return raftstore.WithVersionBucket(tx, appId, versionId, func(bkt *bolt.Bucket) error {
 			p := bkt.Get(raftstore.BucketKeyData)
