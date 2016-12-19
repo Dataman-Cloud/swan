@@ -237,11 +237,28 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 
 	taskInfo := slot.CurrentTask.PrepareTaskInfo(ow)
 
+	if err := slot.UpdateOfferInfo(ow.Offer); err != nil {
+		logrus.Errorf("update offer info of slot: %d failed, Error: %s", slot.Index, err.Error())
+	}
+
 	if slot.App.IsReplicates() { // reserve port only for replicates application
 		ow.PortUsedSize += len(slot.Version.Container.Docker.PortMappings)
 	}
 
 	return ow, taskInfo
+}
+
+func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
+	slot.OfferId = *offer.GetId().Value
+	slot.CurrentTask.OfferId = *offer.GetId().Value
+
+	slot.AgentId = *offer.GetAgentId().Value
+	slot.CurrentTask.AgentId = *offer.GetAgentId().Value
+
+	slot.AgentHostName = offer.GetHostname()
+	slot.CurrentTask.AgentHostName = offer.GetHostname()
+
+	return WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 }
 
 func (slot *Slot) Resources() []*mesos.Resource {
