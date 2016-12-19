@@ -363,7 +363,7 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 }
 
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
-	return &Slot{
+	slot := &Slot{
 		Index:                int(raftSlot.Index),
 		Id:                   raftSlot.Id,
 		State:                raftSlot.State,
@@ -375,6 +375,13 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 		MarkForDeletion:      raftSlot.MarkForDeletion,
 		MarkForRollingUpdate: raftSlot.MarkForRollingUpdate,
 	}
+
+	raftVersion, err := persistentStore.GetVersion(raftSlot.AppId, raftSlot.VersionId)
+	if err == nil {
+		slot.Version = VersionFromRaft(raftVersion)
+	}
+
+	return slot
 }
 
 func TaskToRaft(task *Task) *rafttypes.Task {
