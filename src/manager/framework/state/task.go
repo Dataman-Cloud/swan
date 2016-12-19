@@ -66,6 +66,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 
 	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.Id, *offer.GetId().Value)
 
+	//TODO: update task and slot info to database
 	task.OfferId = *offer.GetId().Value
 	task.Slot.OfferId = *offer.GetId().Value
 

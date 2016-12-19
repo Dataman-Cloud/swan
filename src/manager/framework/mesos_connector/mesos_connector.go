@@ -46,7 +46,6 @@ func NewMesosConnector(config config.Scheduler) *MesosConnector {
 // start starts the mesos_connector and subscribes to event stream
 func (s *MesosConnector) ConnectToMesosAndAcceptEvent() error {
 	var err error
-	s.Framework, err = createOrLoadFrameworkInfo(s.config)
 	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
 	if err != nil {
 		logrus.Errorf("%s Check your mesos master configuration", err)
@@ -138,7 +137,7 @@ func (s *MesosConnector) handleEvents(resp *http.Response) {
 
 // create frameworkInfo on initial start
 // OR load preexisting frameworkId make mesos believe it's a RESTART of framework
-func createOrLoadFrameworkInfo(config config.Scheduler) (*mesos.FrameworkInfo, error) {
+func CreateOrLoadFrameworkInfo(config config.Scheduler) (*mesos.FrameworkInfo, error) {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
 		Name:            proto.String("swan"),
