@@ -2,10 +2,6 @@ swan
 coverage-all.out
 coverage.out
 coverage.html
-.bolt.db
-.bolt-foobar.db
 data/
 bin/*
-.bolt.db.1
-.ipam-store.db
-node-1/
+Procfile

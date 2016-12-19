@@ -126,11 +126,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("sock") != "" {
 		swanConfig.HttpListener.UnixAddr = c.String("sock")
 	}
-	if c.String("master") != "" {
-		swanConfig.Scheduler.MesosMasters = c.String("master")
-	}
-	if c.String("user") != "" {
-		swanConfig.Scheduler.MesosFrameworkUser = c.String("user")
+	if c.String("mesos-master") != "" {
+		swanConfig.Scheduler.MesosMasters = c.String("mesos-master")
 	}
 
 	if c.String("local-healthcheck") != "" {
@@ -158,6 +155,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
+	swanConfig.Scheduler.MesosFrameworkUser = "swan"
 
 	return validateAndFormatConfig(swanConfig)
 }

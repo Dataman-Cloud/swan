@@ -69,13 +69,9 @@ func main() {
 			Usage: "Unix socket for listening",
 		},
 		cli.StringFlag{
-			Name:  "master",
+			Name:  "mesos-master",
 			Value: "127.0.0.1:5050",
-			Usage: "master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
-		},
-		cli.StringFlag{
-			Name:  "user",
-			Usage: "mesos framework user",
+			Usage: "mesos master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
 		},
 		cli.StringFlag{
 			Name:  "log-level",
@@ -104,11 +100,6 @@ func main() {
 		cli.StringFlag{
 			Name:  "data-dir",
 			Usage: "swan data store dir",
-		},
-		cli.StringFlag{
-			Name:  "with-engine",
-			Value: "sched",
-			Usage: "select engine,framework|sched",
 		},
 		cli.BoolFlag{
 			Name:  "enable-proxy",
