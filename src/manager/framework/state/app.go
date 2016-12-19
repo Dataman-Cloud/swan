@@ -149,8 +149,8 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 		return err
 	}
 
-	for i := 0; i < newInstances; i++ {
-		slotIndex := int(app.CurrentVersion.Instances) + i - 1
+	for i := newInstances; i > 0; i-- {
+		slotIndex := int(app.CurrentVersion.Instances) - i
 		slot := NewSlot(app, app.CurrentVersion, slotIndex)
 
 		//TODO: maybe all slots should be store in one transaction
