@@ -190,7 +190,7 @@ func (app *App) ScaleDown(removeInstances int) error {
 	removeSlot := func(app *App) {
 		for k, slot := range app.Slots {
 			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
-				logrus.Infof("removeSlot func")
+				logrus.Infof("removeSlot func: remove slot of index %d", k)
 
 				if err := persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, func() { delete(app.Slots, k) }); err != nil {
 					logrus.Errorf("removeSlot of %s from store failed, Error: %s", slot.Id, err.Error())
@@ -203,10 +203,10 @@ func (app *App) ScaleDown(removeInstances int) error {
 	}
 
 	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_DOWN, afterScaleDown, removeSlot)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_DOWN, removeSlot, afterScaleDown)
 
 	for i := removeInstances; i > 0; i-- {
-		slotIndex := int(app.CurrentVersion.Instances) - 1 - i
+		slotIndex := int(app.CurrentVersion.Instances) + i - 1
 		defer func(slotIndex int) {
 			slot := app.Slots[slotIndex]
 			slot.Kill()

@@ -40,7 +40,7 @@ func NewRestartPolicy(slot *Slot, BackoffSeconds time.Duration, BackoffFactor fl
 }
 
 func (rs *RestartPolicy) restartAndSetNextTimer() {
-	logrus.Infof("call restartFunc now")
+	logrus.Debug("call restartFunc now")
 
 	stopCheck := rs.restartFunc(rs.slot)
 	rs.currentInterval = time.Duration(rs.currentInterval.Seconds()*rs.BackoffFactor) * time.Second
