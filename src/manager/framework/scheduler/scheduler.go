@@ -11,6 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -185,6 +186,22 @@ func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) 
 
 // main loop
 func (scheduler *Scheduler) Run(ctx context.Context) error {
+	frameworkId, err := scheduler.store.GetFrameworkId()
+	if err != nil {
+		return err
+	}
+
+	framework, err := mesos_connector.CreateOrLoadFrameworkInfo(scheduler.config.Scheduler)
+	if err != nil {
+		return err
+	}
+
+	if frameworkId != "" {
+		framework.Id = &mesos.FrameworkID{Value: &frameworkId}
+	}
+
+	scheduler.MesosConnector.Framework = framework
+
 	if err := scheduler.MesosConnector.ConnectToMesosAndAcceptEvent(); err != nil {
 		logrus.Errorf("ConnectToMesosAndAcceptEvent got error %s", err)
 		return err

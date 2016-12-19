@@ -24,4 +24,6 @@ type Store interface {
 	DeleteSlot(ctx context.Context, appId, slotId string, cb func()) error
 	UpdateTask(ctx context.Context, task *types.Task, cb func()) error
 	ListTasks(appId, slotId string) ([]*types.Task, error)
+	UpdateFrameworkId(ctx context.Context, frameworkId string, cb func()) error
+	GetFrameworkId() (string, error)
 }
