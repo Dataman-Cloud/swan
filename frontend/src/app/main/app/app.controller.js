@@ -6,13 +6,24 @@
     .controller('AppController', AppController);
 
   /** @ngInject */
-  function AppController() {
+  function AppController(appBackend, $stateParams) {
+    var params = {appId: $stateParams.appId};
+
     var vm = this;
+    vm.app = {};
 
     activate();
 
     function activate() {
-      //TODO
+      getAppInfo()
+    }
+
+    function getAppInfo() {
+      if (params.appId) {
+        appBackend.app(params).get(function (data) {
+          vm.app = data;
+        });
+      }
     }
   }
 })();

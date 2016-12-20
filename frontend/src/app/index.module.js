@@ -3,6 +3,6 @@
 
   angular
     .module('swan', ['ngAnimate', 'ngCookies', 'ngSanitize', 'ngMessages', 'ngAria', 'ngResource', 'ui.router', 'ngMaterial', 'ui-notification',
-      'md.data.table']);
+      'md.data.table', 'angular-loading-bar']);
 
 })();
