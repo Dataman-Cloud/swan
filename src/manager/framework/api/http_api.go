@@ -61,23 +61,23 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("List Apps").
 		Operation("listApps").
-		Returns(200, "OK", []types.Application{}))
+		Returns(200, "OK", []App{}))
 	ws.Route(ws.POST("/").To(api.CreateApp).
 		// docs
 		Doc("Create App").
 		Operation("createApp").
-		Returns(201, "OK", types.Application{}).
+		Returns(201, "OK", App{}).
 		Returns(400, "BadRequest", nil).
 		Reads(types.Version{}).
-		Writes(types.Application{}))
+		Writes(App{}))
 	ws.Route(ws.GET("/{app_id}").To(api.GetApp).
 		// docs
 		Doc("Get an App").
 		Operation("getApp").
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
-		Returns(200, "OK", types.Application{}).
+		Returns(200, "OK", App{}).
 		Returns(404, "NotFound", nil).
-		Writes(types.Application{}))
+		Writes(App{}))
 	ws.Route(ws.DELETE("/{app_id}").To(api.DeleteApp).
 		// docs
 		Doc("Delete App").
