@@ -539,6 +539,8 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			Mem:           slot.Version.Mem,
 			Disk:          slot.Version.Disk,
 			IP:            slot.Ip,
+			Created:       slot.CurrentTask.Created,
+			Image:         slot.Version.Container.Docker.Image,
 		}
 
 		if len(slot.TaskHistory) > 0 {
@@ -590,6 +592,8 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 		Mem:           slot.Version.Mem,
 		Disk:          slot.Version.Disk,
 		IP:            slot.Ip,
+		Created:       slot.CurrentTask.Created,
+		Image:         slot.Version.Container.Docker.Image,
 	}
 
 	if len(slot.TaskHistory) > 0 {

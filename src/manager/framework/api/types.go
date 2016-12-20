@@ -44,6 +44,10 @@ type Task struct {
 	History []*TaskHistory `json:"history,omitempty"`
 
 	IP string `json:"ip,omitempty"`
+
+	Created time.Time `json:"created,omitempty"`
+
+	Image string `json:"image,omitempty"`
 }
 
 type TaskHistory struct {
