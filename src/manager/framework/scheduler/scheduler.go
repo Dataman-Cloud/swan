@@ -13,7 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -78,9 +77,12 @@ func (scheduler *Scheduler) Stop() error {
 func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 	if !scheduler.config.NoRecover {
-		if err := scheduler.LoadAppData(); err != nil {
+		apps, err := state.LoadAppData(scheduler.Allocator, scheduler.MesosConnector, scheduler.scontext)
+		if err != nil {
 			return err
 		}
+
+		scheduler.Apps = apps
 	}
 
 	// temp solution
@@ -89,99 +91,6 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}()
 
 	return scheduler.Run(context.Background()) // context as a placeholder
-}
-
-// load app data frm persistent data
-func (scheduler *Scheduler) LoadAppData() error {
-	raftApps, err := scheduler.store.ListApps()
-	if err != nil {
-		return err
-	}
-
-	apps := make(map[string]*state.App)
-
-	for _, raftApp := range raftApps {
-		app := &state.App{
-			AppId:               raftApp.ID,
-			CurrentVersion:      state.VersionFromRaft(raftApp.Version),
-			State:               raftApp.State,
-			Mode:                state.AppMode(raftApp.Version.Mode),
-			Created:             time.Unix(0, raftApp.CreatedAt),
-			Updated:             time.Unix(0, raftApp.UpdatedAt),
-			Scontext:            scheduler.scontext,
-			Slots:               make(map[int]*state.Slot),
-			InvalidateCallbacks: make(map[string][]state.AppInvalidateCallbackFuncs),
-			MesosConnector:      scheduler.MesosConnector,
-			OfferAllocatorRef:   scheduler.Allocator,
-		}
-
-		raftVersions, err := scheduler.store.ListVersions(raftApp.ID)
-		if err != nil {
-			return err
-		}
-
-		var versions []*types.Version
-		for _, raftVersion := range raftVersions {
-			versions = append(versions, state.VersionFromRaft(raftVersion))
-		}
-
-		app.Versions = versions
-
-		slots, err := scheduler.LoadAppSlots(app)
-		if err != nil {
-			return err
-		}
-
-		for _, slot := range slots {
-			app.Slots[int(slot.Index)] = slot
-		}
-
-		apps[app.AppId] = app
-	}
-
-	scheduler.Apps = apps
-
-	return nil
-}
-
-func (scheduler *Scheduler) LoadAppSlots(app *state.App) ([]*state.Slot, error) {
-	raftSlots, err := scheduler.store.ListSlots(app.AppId)
-	if err != nil {
-		return nil, err
-	}
-
-	var slots []*state.Slot
-	for _, raftSlot := range raftSlots {
-		slot := state.SlotFromRaft(raftSlot)
-
-		raftTasks, err := scheduler.store.ListTasks(app.AppId, slot.Id)
-		if err != nil {
-			return nil, err
-		}
-
-		var tasks []*state.Task
-		for _, raftTask := range raftTasks {
-			tasks = append(tasks, state.TaskFromRaft(raftTask))
-		}
-		slot.TaskHistory = tasks
-
-		slot.CurrentTask.Slot = slot
-		slot.CurrentTask.MesosConnector = app.MesosConnector
-
-		if slot.CurrentTask.Version == nil {
-			slot.CurrentTask.Version = app.CurrentVersion
-		}
-		slot.App = app
-
-		//TODO: slot maybe not app currentVersion
-		slot.Version = app.CurrentVersion
-
-		slot.StatesCallbacks = make(map[string][]state.SlotStateCallbackFuncs)
-
-		slots = append(slots, slot)
-	}
-
-	return slots, nil
 }
 
 // main loop
