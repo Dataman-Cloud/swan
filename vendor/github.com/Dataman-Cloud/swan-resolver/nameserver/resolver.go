@@ -25,8 +25,9 @@ func NewResolver(config *Config) *Resolver {
 	}
 
 	rr.Domain = res.config.Domain
-	rr.As = make(map[string]map[string]struct{})
-	rr.SRVs = make(map[string]map[string]struct{})
+	rr.As = make(map[string][]string)
+	rr.SRVs = make(map[string][]string)
+	rr.SRVAs = make(map[string][]string)
 
 	res.rs = &rr
 	res.defaultFwd = NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
@@ -124,46 +125,67 @@ func (res *Resolver) records() *RecordGenerator {
 func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) error {
 	var errs multiError
 	added := map[string]struct{}{} // track the A RR's we've already added, avoid dups
-
-	for srv := range rs.SRVs[name] {
-		srvRR, err := res.formatSRV(r.Question[0].Name, srv)
-		if err != nil {
-			errs.Add(err)
-			continue
-		}
-
-		m.Answer = append(m.Answer, srvRR)
-		host := strings.Split(srv, ":")[0]
-		if _, found := added[host]; found {
-			continue
-		}
-
-		if len(rs.As[host]) == 0 {
-			continue
-		}
-
-		if a, ok := rs.As.First(host); ok {
-			aRR, err := res.formatA(host, a)
+	srvs, ok := rs.SRVs[name]
+	if !ok {
+		errs.Add(errors.New("srvs not found"))
+	} else {
+		for _, srv := range srvs {
+			//get srv resource record
+			srvRR, err := res.formatSRV(r.Question[0].Name, srv)
 			if err != nil {
 				errs.Add(err)
 				continue
 			}
-			m.Extra = append(m.Extra, aRR)
-			added[host] = struct{}{}
+
+			m.Answer = append(m.Answer, srvRR)
+
+			//get ip
+			name := strings.Split(srv, ":")[0]
+			if _, found := added[name]; found {
+				continue
+			}
+
+			hosts, ok := rs.SRVAs[name]
+			if !ok {
+				errs.Add(errors.New(fmt.Sprintf("%s is not found in rrs", name)))
+				continue
+			}
+
+			if len(hosts) == 0 {
+				continue
+			}
+			for _, host := range hosts {
+				aRR, err := res.formatA(name, host)
+				if err != nil {
+					errs.Add(err)
+					continue
+				}
+				m.Extra = append(m.Extra, aRR)
+				added[name] = struct{}{}
+			}
 		}
 	}
+
 	return errs
 }
 
 func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error {
 	var errs multiError
-	for a := range rs.As[name] {
-		rr, err := res.formatA(name, a)
-		if err != nil {
-			errs.Add(err)
+	// dig name to proxy ip
+	for k, hosts := range rs.As {
+		ok := strings.HasSuffix(name, k)
+		if ok {
+			for _, host := range hosts {
+				rr, err := res.formatA(name, host)
+				if err != nil {
+					errs.Add(err)
+					continue
+				}
+				m.Answer = append(m.Answer, rr)
+			}
+		} else {
 			continue
 		}
-		m.Answer = append(m.Answer, rr)
 	}
 	return errs
 }
