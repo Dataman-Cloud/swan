@@ -1,7 +1,6 @@
 package scheduler
 
 import (
-	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -27,8 +26,7 @@ type Scheduler struct {
 
 	stopC chan struct{}
 
-	appLock sync.Mutex
-	Apps    map[string]*state.App
+	AppStorage *memoryStore
 
 	Allocator      *state.OfferAllocator
 	MesosConnector *mesos_connector.MesosConnector
@@ -42,10 +40,9 @@ func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, s
 		heartbeater:    time.NewTicker(10 * time.Second),
 		scontext:       scontext,
 
-		appLock: sync.Mutex{},
-		Apps:    make(map[string]*state.App),
-		store:   store,
-		config:  config,
+		AppStorage: NewMemoryStore(),
+		store:      store,
+		config:     config,
 	}
 
 	RegiserFun := func(m *HandlerManager) {
@@ -82,7 +79,9 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 			return err
 		}
 
-		scheduler.Apps = apps
+		for _, app := range apps {
+			scheduler.AppStorage.Add(app.AppId, app)
+		}
 	}
 
 	// temp solution
@@ -141,16 +140,14 @@ func (scheduler *Scheduler) handlerMesosEvent(event *event.MesosEvent) {
 // reevaluation of apps state, clean up stale apps
 func (scheduler *Scheduler) InvalidateApps() {
 	appsPendingRemove := make([]string, 0)
-	for _, app := range scheduler.Apps {
+	for _, app := range scheduler.AppStorage.Data() {
 		if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
 			appsPendingRemove = append(appsPendingRemove, app.AppId)
 		}
 	}
 
-	scheduler.appLock.Lock()
-	defer scheduler.appLock.Unlock()
 	for _, appId := range appsPendingRemove {
-		delete(scheduler.Apps, appId)
+		scheduler.AppStorage.Delete(appId)
 	}
 }
 

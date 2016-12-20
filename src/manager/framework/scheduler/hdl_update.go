@@ -22,20 +22,20 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	reason := taskStatus.GetReason()
 	healthy := taskStatus.GetHealthy()
 
-	slotIndex_, AppId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
+	slotIndex_, appId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
-	logrus.Infof("preparing set app %s slot %d to state %s", AppId, slotIndex, taskState)
+	logrus.Infof("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)
 	logrus.Infof("got healthy report for slot %s => %s", slotName, healthy)
 
-	app, found := h.Manager.SchedulerRef.Apps[AppId]
-	if !found {
-		logrus.Errorf("app not found: %s", AppId)
+	app := h.Manager.SchedulerRef.AppStorage.Get(appId)
+	if app == nil {
+		logrus.Errorf("app not found: %s", appId)
 		return h, nil
 	}
 	logrus.Debugf("found app %s", app.AppId)
 
-	slot, found := h.Manager.SchedulerRef.Apps[AppId].Slots[int(slotIndex)]
+	slot, found := app.Slots[int(slotIndex)]
 	if !found {
 		logrus.Errorf("slot not found: %s", slotIndex)
 		return h, nil
