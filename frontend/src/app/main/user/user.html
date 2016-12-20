@@ -1,0 +1,35 @@
+<header class="page-header md-display-2">用户集群</header>
+<section>
+  <header class="md-headline">用户名</header>
+</section>
+<section>
+  <header class="md-headline">应用列表</header>
+  <md-table-container>
+    <table md-table>
+      <thead md-head>
+      <tr md-row>
+        <th md-column>应用名称</th>
+        <th md-column>状态</th>
+        <th md-column>实例个数</th>
+        <th md-column>健康状态<small>健康/异常/未知</small></th>
+        <th md-column>更新时间</th>
+        <th md-column>CPU<small>申请/占用</small></th>
+        <th md-column>内存<small>申请/占用</small></th>
+        <th md-column>磁盘<small>申请/占用</small></th>
+      </tr>
+      </thead>
+      <tbody md-body>
+      <tr md-row ng-repeat="dessert in [1,2,3,4,5,6,7,8,9,10]">
+        <td md-cell><a href="#">应用名称</a></td>
+        <td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>
+        <td md-cell>3</td>
+        <td md-cell>3/0/0</td>
+        <td md-cell>2016-11-11 10:10:10</td>
+        <td md-cell>0.3/0.05</td>
+        <td md-cell>100M/59M</td>
+        <td md-cell>10G/1.1G</td>
+      </tr>
+      </tbody>
+    </table>
+  </md-table-container>
+</section>
