@@ -443,7 +443,7 @@ func (api *Api) GetApp(c *gin.Context) {
 
 func (api *Api) ScaleDown(c *gin.Context) {
 	var param struct {
-		RemoveInstances int `json:"removeInstances"`
+		RemoveInstances int `json:"instances"`
 	}
 
 	if c.BindJSON(&param) != nil {

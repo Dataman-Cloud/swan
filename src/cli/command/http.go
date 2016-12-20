@@ -74,3 +74,21 @@ func (c *Client) Get() (*http.Response, error) {
 
 	return httpResp, nil
 }
+
+func (c *Client) Put(payload []byte) (*http.Response, error) {
+	httpReq, err := http.NewRequest("PUT", c.url, bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+
+	httpReq.Header.Set("Content-Type", "application/json")
+	httpReq.Header.Set("Accept", "application/json")
+	httpReq.Header.Set("User-Agent", "swan/0.1")
+
+	httpResp, err := c.client.Do(httpReq)
+	if err != nil {
+		return nil, fmt.Errorf("Unable to do request: %s", err)
+	}
+
+	return httpResp, nil
+}
