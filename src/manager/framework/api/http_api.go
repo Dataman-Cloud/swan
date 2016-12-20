@@ -355,8 +355,11 @@ func (api *Api) Start(ctx context.Context) error {
 	group.GET("/apps/:app_id/versions", api.GetApp)
 	group.GET("/apps/:app_id/versions/:version_id", api.GetApp)
 
-	router.Run(api.config.HttpAddr)
-	return nil
+	go func() {
+		router.RunUnix(api.config.UnixAddr)
+	}()
+
+	return router.Run(api.config.HttpAddr)
 }
 
 func (api *Api) CreateApp(c *gin.Context) {
