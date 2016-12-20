@@ -221,7 +221,7 @@ func (api *AppService) DeleteApp(request *restful.Request, response *restful.Res
 
 func (api *AppService) ScaleDown(request *restful.Request, response *restful.Response) {
 	var param struct {
-		RemoveInstances int `json:"removeInstances"`
+		RemoveInstances int `json:"instances"`
 	}
 
 	err := request.ReadEntity(&param)

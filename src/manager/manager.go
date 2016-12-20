@@ -72,24 +72,28 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 
 	manager.cluster = manager.config.SwanCluster
-	dnsConfig := &nameserver.Config{
-		Domain:   manager.config.DNS.Domain,
-		Listener: manager.config.DNS.Listener,
-		Port:     manager.config.DNS.Port,
 
-		Resolvers:       manager.config.DNS.Resolvers,
-		ExchangeTimeout: manager.config.DNS.ExchangeTimeout,
-		SOARname:        manager.config.DNS.SOARname,
-		SOAMname:        manager.config.DNS.SOAMname,
-		SOASerial:       manager.config.DNS.SOASerial,
-		SOARefresh:      manager.config.DNS.SOARefresh,
-		SOARetry:        manager.config.DNS.SOARetry,
-		SOAExpire:       manager.config.DNS.SOAExpire,
-		RecurseOn:       manager.config.DNS.RecurseOn,
-		TTL:             manager.config.DNS.TTL,
+	if manager.config.DNS.EnableDns {
+		dnsConfig := &nameserver.Config{
+			Domain:   manager.config.DNS.Domain,
+			Listener: manager.config.DNS.Listener,
+			Port:     manager.config.DNS.Port,
+
+			Resolvers:       manager.config.DNS.Resolvers,
+			ExchangeTimeout: manager.config.DNS.ExchangeTimeout,
+			SOARname:        manager.config.DNS.SOARname,
+			SOAMname:        manager.config.DNS.SOAMname,
+			SOASerial:       manager.config.DNS.SOASerial,
+			SOARefresh:      manager.config.DNS.SOARefresh,
+			SOARetry:        manager.config.DNS.SOARetry,
+			SOAExpire:       manager.config.DNS.SOAExpire,
+			RecurseOn:       manager.config.DNS.RecurseOn,
+			TTL:             manager.config.DNS.TTL,
+		}
+
+		manager.resolver = nameserver.NewResolver(dnsConfig)
+		manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
 	}
-	manager.resolver = nameserver.NewResolver(dnsConfig)
-	manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
 
 	if manager.config.Janitor.EnableProxy {
 		jConfig := jconfig.DefaultConfig()
@@ -139,11 +143,13 @@ func (manager *Manager) Start(ctx context.Context) error {
 		return err
 	}
 
-	go func() {
-		resolverCtx, _ := context.WithCancel(ctx)
-		manager.resolverSubscriber.Subscribe(manager.eventBus)
-		errCh <- manager.resolver.Start(resolverCtx)
-	}()
+	if manager.config.DNS.EnableDns {
+		go func() {
+			resolverCtx, _ := context.WithCancel(ctx)
+			manager.resolverSubscriber.Subscribe(manager.eventBus)
+			errCh <- manager.resolver.Start(resolverCtx)
+		}()
+	}
 
 	go func() {
 		if err := manager.ipamAdapter.Start(); err != nil {
@@ -152,7 +158,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 		}
 	}()
 
-	// setup proxy service
 	if manager.config.Janitor.EnableProxy {
 		manager.janitorSubscriber.Subscribe(manager.eventBus)
 		go manager.janitorServer.Init().Run()

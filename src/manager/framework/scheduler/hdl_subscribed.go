@@ -6,9 +6,9 @@ import (
 
 func SubscribedHandler(h *Handler) (*Handler, error) {
 	sub := h.MesosEvent.Event.GetSubscribed()
-	h.SchedulerRef.MesosConnector.Framework.Id = sub.FrameworkId
+	h.Manager.SchedulerRef.MesosConnector.Framework.Id = sub.FrameworkId
 
-	if err := h.SchedulerRef.store.UpdateFrameworkId(context.TODO(), *sub.FrameworkId.Value, nil); err != nil {
+	if err := h.Manager.SchedulerRef.store.UpdateFrameworkId(context.TODO(), *sub.FrameworkId.Value, nil); err != nil {
 		return nil, err
 	}
 

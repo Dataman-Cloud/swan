@@ -28,14 +28,14 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	logrus.Infof("preparing set app %s slot %d to state %s", AppId, slotIndex, taskState)
 	logrus.Infof("got healthy report for slot %s => %s", slotName, healthy)
 
-	app, found := h.SchedulerRef.Apps[AppId]
+	app, found := h.Manager.SchedulerRef.Apps[AppId]
 	if !found {
 		logrus.Errorf("app not found: %s", AppId)
 		return h, nil
 	}
 	logrus.Debugf("found app %s", app.AppId)
 
-	slot, found := h.SchedulerRef.Apps[AppId].Slots[int(slotIndex)]
+	slot, found := h.Manager.SchedulerRef.Apps[AppId].Slots[int(slotIndex)]
 	if !found {
 		logrus.Errorf("slot not found: %s", slotIndex)
 		return h, nil
@@ -62,7 +62,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		slot.SetState(state.SLOT_STATE_TASK_LOST)
 	}
 
-	h.SchedulerRef.InvalidateApps()
+	h.Manager.SchedulerRef.InvalidateApps()
 
 	return h, nil
 }
@@ -70,7 +70,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
 	if taskStatus.GetUuid() != nil {
 		call := &sched.Call{
-			FrameworkId: h.SchedulerRef.MesosConnector.Framework.GetId(),
+			FrameworkId: h.Manager.SchedulerRef.MesosConnector.Framework.GetId(),
 			Type:        sched.Call_ACKNOWLEDGE.Enum(),
 			Acknowledge: &sched.Call_Acknowledge{
 				AgentId: taskStatus.GetAgentId(),

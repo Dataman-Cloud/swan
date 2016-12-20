@@ -86,10 +86,6 @@ func main() {
 			Usage: "raft cluster peers addr",
 		},
 		cli.BoolFlag{
-			Name:  "enable-dns-proxy",
-			Usage: "enable dns proxy or not",
-		},
-		cli.BoolFlag{
 			Name:  "enable-local-healthcheck",
 			Usage: "Enable local health check",
 		},
@@ -104,6 +100,10 @@ func main() {
 		cli.BoolFlag{
 			Name:  "enable-proxy",
 			Usage: "enable proxy or not",
+		},
+		cli.BoolFlag{
+			Name:  "enable-dns",
+			Usage: "enable dns resolver or not",
 		},
 		cli.BoolFlag{
 			Name:  "no-recover",

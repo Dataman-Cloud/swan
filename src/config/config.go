@@ -3,7 +3,6 @@ package config
 import (
 	"encoding/json"
 
-	//"errors"
 	"io/ioutil"
 	"os"
 	"strings"
@@ -40,7 +39,7 @@ type Scheduler struct {
 }
 
 type DNS struct {
-	EnableDnsProxy bool `json:"enable-dns-proxy"`
+	EnableDns bool `json:"enable-dns"`
 
 	Domain    string `json:"domain"`
 	RecurseOn bool   `json:"recurse_on"`
@@ -114,6 +113,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		if !strings.HasSuffix(swanConfig.DataDir, "/") {
 			swanConfig.DataDir = swanConfig.DataDir + "/"
 		}
+		os.MkdirAll(swanConfig.DataDir, 0644)
 	}
 
 	if c.String("no-recover") != "" {
@@ -134,11 +134,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Scheduler.EnableLocalHealthcheck = c.Bool("local-healthcheck")
 	}
 
-	if c.String("enable-dns-proxy") != "" {
-		swanConfig.DNS.EnableDnsProxy = c.Bool("enable-dns-proxy")
-		swanConfig.DNS.ExchangeTimeout = time.Second * 3
-	}
-
 	if c.String("raft-cluster") != "" {
 		swanConfig.Raft.Cluster = c.String("raft-cluster")
 	}
@@ -146,16 +141,17 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Raft.RaftId = c.Int("raftid")
 	}
 
-	if c.String("enable-proxy") != "" {
-		swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
-	}
+	swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
+	swanConfig.DNS.EnableDns = c.Bool("enable-dns")
 
 	swanConfig.IPAM.StorePath = swanConfig.DataDir
 	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
-	swanConfig.Scheduler.MesosFrameworkUser = "swan"
+	swanConfig.Scheduler.MesosFrameworkUser = "root"
+
+	swanConfig.DNS.ExchangeTimeout = time.Second * 3
 
 	return validateAndFormatConfig(swanConfig)
 }
@@ -170,10 +166,5 @@ func hostname() string {
 }
 
 func validateAndFormatConfig(config SwanConfig) (c SwanConfig, e error) {
-	if config.DNS.EnableDnsProxy {
-		//if os.Getuid() == 0 || (len(os.Getenv("SUDO_UID")) > 0) {
-		//return config, errors.New("no permission to run DNS server, run as root or sudoer")
-		//}
-	}
 	return config, nil
 }
