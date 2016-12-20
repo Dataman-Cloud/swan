@@ -146,10 +146,10 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 
 }
 
-func (slot *Slot) Update(version *types.Version) {
+func (slot *Slot) Update(version *types.Version, isRollingUpdate bool) {
 	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
 
-	slot.MarkForRollingUpdate = true // mark as in progress of rolling update
+	slot.MarkForRollingUpdate = isRollingUpdate
 
 	onSlotFinished := func(slot *Slot) {
 		logrus.Infof("onSlotFinished func")
@@ -314,10 +314,16 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
+	if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+		// TODO remove slot from OfferAllocator
+		logrus.Infof("removeSlot func")
+		slot.App.RemoveSlot(slot.Index)
+	}
+
 	// skip app invalidation if slot state is not mesos driven
 	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
 		(slot.State != SLOT_STATE_PENDING_KILL) {
-		slot.App.InvalidateSlots()
+		slot.App.Reevaluate()
 	}
 	return nil
 }

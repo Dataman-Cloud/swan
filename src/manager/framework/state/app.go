@@ -3,6 +3,8 @@ package state
 import (
 	"errors"
 	"fmt"
+	"sort"
+	"sync"
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
@@ -21,8 +23,6 @@ var (
 	APP_MODE_FIXED      AppMode = "fixed"
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
-
-type AppInvalidateCallbackFuncs func(app *App)
 
 const (
 	APP_STATE_NORMAL              = "normal"
@@ -43,7 +43,9 @@ type App struct {
 	// app name
 	AppId    string           `json:"appId"`
 	Versions []*types.Version `json:"versions"`
-	Slots    map[int]*Slot    `json:"slots"`
+
+	slotsLock sync.Mutex
+	slots     map[int]*Slot `json:"slots"`
 
 	Scontext *swancontext.SwanContext
 
@@ -58,8 +60,7 @@ type App struct {
 	Created           time.Time
 	Updated           time.Time
 
-	State               string
-	InvalidateCallbacks map[string][]AppInvalidateCallbackFuncs
+	State string
 
 	MesosConnector *mesos_connector.MesosConnector
 }
@@ -75,7 +76,7 @@ func NewApp(version *types.Version,
 
 	app := &App{
 		Versions:          []*types.Version{version},
-		Slots:             make(map[int]*Slot),
+		slots:             make(map[int]*Slot),
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
@@ -83,8 +84,6 @@ func NewApp(version *types.Version,
 		Scontext:          scontext,
 		Created:           time.Now(),
 		Updated:           time.Now(),
-
-		InvalidateCallbacks: make(map[string][]AppInvalidateCallbackFuncs),
 	}
 
 	if version.Mode == "fixed" {
@@ -100,20 +99,15 @@ func NewApp(version *types.Version,
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
-		if err := WithConvertSlot(context.TODO(), slot, func() { app.Slots[i] = slot }, persistentStore.CreateSlot); err != nil {
-			return nil, err
-		}
+		//if err := WithConvertSlot(context.TODO(), slot, func() { app.SetSlot(slot.Index, slot) }, persistentStore.CreateSlot); err != nil {
+		//return nil, err
+		//}
+
+		app.SetSlot(i, slot)
 
 	}
 
-	afterAllTasksRunning := func(app *App) {
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			logrus.Infof("afterAllTasksRunning func")
-			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
-		}
-	}
 	app.SetState(APP_STATE_MARK_FOR_CREATING)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_CREATING, afterAllTasksRunning)
 
 	return app, nil
 }
@@ -133,30 +127,15 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	}
 
 	app.CurrentVersion.Ip = append(app.CurrentVersion.Ip, newIps...)
-
-	afterScaleUp := func(app *App) {
-		if app.StateIs(APP_STATE_MARK_FOR_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
-			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
-		}
-	}
-	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_UP, afterScaleUp)
-
 	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
-	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
-		return err
-	}
+	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
 
 	for i := newInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) - i
 		slot := NewSlot(app, app.CurrentVersion, slotIndex)
-
-		//TODO: maybe all slots should be store in one transaction
-		if err := WithConvertSlot(context.TODO(), slot, func() { app.Slots[slotIndex] = slot }, persistentStore.CreateSlot); err != nil {
-			return err
-		}
+		app.SetSlot(slotIndex, slot)
 	}
 	return nil
 }
@@ -170,45 +149,15 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return errors.New(fmt.Sprintf("no more than %d instances can be shutdown", app.CurrentVersion.Instances))
 	}
 
-	afterScaleDown := func(app *App) {
-		if app.StateIs(APP_STATE_MARK_FOR_SCALE_DOWN) &&
-			len(app.Slots) == int(app.CurrentVersion.Instances) &&
-			app.MarkForDeletionInstances() == 0 {
-			logrus.Infof("afterScaleDown func")
-
-			persistentStore.UpdateAppState(context.TODO(), app.AppId, APP_STATE_NORMAL, func() { app.SetState(APP_STATE_NORMAL) })
-		}
-	}
-
 	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
 	app.Updated = time.Now()
 
-	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
-		return err
-	}
-
-	removeSlot := func(app *App) {
-		for k, slot := range app.Slots {
-			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED)) {
-				logrus.Infof("removeSlot func: remove slot of index %d", k)
-
-				if err := persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, func() { delete(app.Slots, k) }); err != nil {
-					logrus.Errorf("removeSlot of %s from store failed, Error: %s", slot.Id, err.Error())
-				}
-
-				// TODO remove slot from OfferAllocator
-				break
-			}
-		}
-	}
-
 	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_SCALE_DOWN, removeSlot, afterScaleDown)
 
 	for i := removeInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) + i - 1
 		defer func(slotIndex int) {
-			slot := app.Slots[slotIndex]
+			slot := app.slots[slotIndex]
 			slot.Kill()
 		}(slotIndex)
 	}
@@ -218,26 +167,10 @@ func (app *App) ScaleDown(removeInstances int) error {
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
-	removeSlot := func(app *App) {
-		for k, slot := range app.Slots {
-			if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
-				// TODO remove slot from OfferAllocator
-				logrus.Infof("removeSlot func")
-				delete(app.Slots, k)
-				break
-			}
-		}
-	}
-
 	app.SetState(APP_STATE_MARK_FOR_DELETION)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_DELETION, removeSlot)
 
-	for _, slot := range app.Slots {
+	for _, slot := range app.slots {
 		slot.Kill()
-	}
-
-	if err := persistentStore.DeleteApp(context.TODO(), app.AppId, nil); err != nil {
-		return err
 	}
 
 	return nil
@@ -265,51 +198,18 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return errors.New("update failed: current version was losted")
 	}
 
+	app.SetState(APP_STATE_MARK_FOR_UPDATING)
+
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	version.PerviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
-	afterUpdateDone := func(app *App) {
-		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
-			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
-
-			afterPersisted := func() {
-				app.SetState(APP_STATE_NORMAL)
-
-				app.Versions = append(app.Versions, app.CurrentVersion)
-				app.CurrentVersion = app.ProposedVersion
-				app.ProposedVersion = nil
-
-				for _, slot := range app.Slots {
-					slot.MarkForRollingUpdate = false
-				}
-			}
-
-			app.State = APP_STATE_NORMAL
-			if err := WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.CommitAppProposeVersion); err != nil {
-				logrus.Errorf("commit app: %s propose version: %s failed. Error: %s", app.AppId, app.ProposedVersion.ID, err.Error())
-			}
-		}
-	}
-
-	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
-		return err
-	}
-
-	app.SetState(APP_STATE_MARK_FOR_UPDATING)
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterUpdateDone)
-
 	for i := 0; i < 1; i++ { // current we make first slot update
-		slot := app.Slots[i]
-
-		slot.Update(app.ProposedVersion)
-		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
-			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
-		}
+		slot := app.slots[i]
+		slot.Update(app.ProposedVersion, true)
 	}
 
 	return nil
-
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
@@ -326,12 +226,11 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	}
 
 	for i := 0; i < instances; i++ {
-		slot := app.Slots[i+app.RollingUpdateInstances()]
-		slot.Update(app.ProposedVersion)
-
-		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
-			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
-		}
+		slotIndex := i + app.RollingUpdateInstances()
+		defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
+			slot := app.slots[slotIndex]
+			slot.Update(app.ProposedVersion, true)
+		}(slotIndex)
 	}
 
 	return nil
@@ -346,45 +245,23 @@ func (app *App) CancelUpdate() error {
 		return errors.New("cancel update failed: current version was nil")
 	}
 
-	afterRollbackDone := func(app *App) {
-		if app.Slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
-			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
-
-			app.ProposedVersion = nil
-			app.State = APP_STATE_NORMAL
-
-			afterPersisted := func() {
-				app.SetState(APP_STATE_NORMAL)
-
-				for _, slot := range app.Slots {
-					slot.MarkForRollingUpdate = false
-				}
-			}
-
-			if err := WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.UpdateApp); err != nil {
-				logrus.Errorf("update app: %s failed. Error: %s", app.AppId, err.Error())
-			}
-		}
-	}
-
-	app.RemoveInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING) // deregister callbacks for updateDone in app.Update
-	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterRollbackDone)
-
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
-		slot := app.Slots[i]
-		slot.Update(app.CurrentVersion)
-
-		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
-			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
-		}
+		slot := app.slots[i]
+		slot.Update(app.CurrentVersion, false)
 	}
+
 	return nil
 }
 
-func (app *App) SetState(state string) {
-	app.InvalidateCallbacks = make(map[string][]AppInvalidateCallbackFuncs)
-	logrus.Infof("now clearing all InvalidateCallbacks")
+func (app *App) IsReplicates() bool {
+	return app.Mode == APP_MODE_REPLICATES
+}
 
+func (app *App) IsFixed() bool {
+	return app.Mode == APP_MODE_FIXED
+}
+
+func (app *App) SetState(state string) {
 	app.State = state
 	logrus.Infof("app %s now has state %s", app.AppId, app.State)
 }
@@ -393,45 +270,9 @@ func (app *App) StateIs(state string) bool {
 	return app.State == state
 }
 
-// called when slot has any update
-func (app *App) InvalidateSlots() {
-	// handle callback
-	if len(app.InvalidateCallbacks[app.State]) > 0 {
-		for _, cb := range app.InvalidateCallbacks[app.State] {
-			logrus.Infof("calling invalidation callback for state %s", app.State)
-			cb(app)
-		}
-	}
-
-	switch app.State {
-	case APP_STATE_MARK_FOR_DELETION:
-	case APP_STATE_MARK_FOR_UPDATING:
-	case APP_STATE_MARK_FOR_CREATING:
-	case APP_STATE_MARK_FOR_SCALE_UP:
-	case APP_STATE_MARK_FOR_SCALE_DOWN:
-	default:
-	}
-}
-
-func (app *App) RegisterInvalidateCallbacks(state string, callback ...AppInvalidateCallbackFuncs) {
-	app.InvalidateCallbacks[state] = append(app.InvalidateCallbacks[state], callback...)
-}
-
-func (app *App) RemoveInvalidateCallbacks(state string) {
-	app.InvalidateCallbacks[state] = make([]AppInvalidateCallbackFuncs, 0)
-}
-
-// make sure proposed version is valid then applied it to field ProposedVersion
-func (app *App) checkProposedVersionValid(version *types.Version) error {
-	// mode can not changed
-	// runAs can not changed
-	// app instances should same as current instances
-	return nil
-}
-
 func (app *App) RunningInstances() int {
 	runningInstances := 0
-	for _, slot := range app.Slots {
+	for _, slot := range app.slots {
 		if slot.StateIs(SLOT_STATE_TASK_RUNNING) {
 			runningInstances += 1
 		}
@@ -442,7 +283,7 @@ func (app *App) RunningInstances() int {
 
 func (app *App) RollingUpdateInstances() int {
 	rollingUpdateInstances := 0
-	for _, slot := range app.Slots {
+	for _, slot := range app.slots {
 		if slot.MarkForRollingUpdate {
 			rollingUpdateInstances += 1
 		}
@@ -453,7 +294,7 @@ func (app *App) RollingUpdateInstances() int {
 
 func (app *App) MarkForDeletionInstances() int {
 	markForDeletionInstances := 0
-	for _, slot := range app.Slots {
+	for _, slot := range app.slots {
 		if slot.MarkForDeletion {
 			markForDeletionInstances += 1
 		}
@@ -463,7 +304,96 @@ func (app *App) MarkForDeletionInstances() int {
 }
 
 func (app *App) CanBeCleanAfterDeletion() bool {
-	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && len(app.Slots) == 0
+	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && len(app.slots) == 0
+}
+
+func (app *App) RemoveSlot(index int) {
+	app.slotsLock.Lock()
+	defer app.slotsLock.Unlock()
+
+	delete(app.slots, index)
+}
+
+func (app *App) GetSlot(index int) (*Slot, bool) {
+	slot, ok := app.slots[index]
+	return slot, ok
+}
+
+func (app *App) GetSlots() []*Slot {
+	slots := make([]*Slot, 0)
+	for _, v := range app.slots {
+		slots = append(slots, v)
+	}
+
+	slotsById := SlotsById(slots)
+	sort.Sort(slotsById)
+
+	return slotsById
+}
+
+func (app *App) SetSlot(index int, slot *Slot) {
+	app.slotsLock.Lock()
+	defer app.slotsLock.Unlock()
+
+	app.slots[index] = slot
+}
+
+func (app *App) Reevaluate() {
+	switch app.State {
+	case APP_STATE_NORMAL:
+	case APP_STATE_MARK_FOR_DELETION:
+	case APP_STATE_MARK_FOR_UPDATING:
+		// when updating done
+		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
+			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
+			app.SetState(APP_STATE_NORMAL)
+
+			app.CurrentVersion = app.ProposedVersion
+			app.Versions = append(app.Versions, app.CurrentVersion)
+			app.ProposedVersion = nil
+
+			for _, slot := range app.slots {
+				slot.MarkForRollingUpdate = false
+			}
+		}
+
+		// when update cancelled
+		if app.slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
+			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
+			app.SetState(APP_STATE_NORMAL)
+			app.ProposedVersion = nil
+		}
+
+	case APP_STATE_MARK_FOR_CREATING:
+		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	case APP_STATE_MARK_FOR_SCALE_UP:
+		if app.StateIs(APP_STATE_MARK_FOR_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	case APP_STATE_MARK_FOR_SCALE_DOWN:
+		if len(app.slots) == int(app.CurrentVersion.Instances) &&
+			app.MarkForDeletionInstances() == 0 {
+			app.SetState(APP_STATE_NORMAL)
+		}
+
+	default:
+	}
+}
+
+func (app *App) EmitEvent(swanEvent *swanevent.Event) {
+	app.Scontext.EventBus.EventChan <- swanEvent
+}
+
+// make sure proposed version is valid then applied it to field ProposedVersion
+func (app *App) checkProposedVersionValid(version *types.Version) error {
+	// mode can not changed
+	// runAs can not changed
+	// app instances should same as current instances
+	return nil
 }
 
 func validateAndFormatVersion(version *types.Version) error {
@@ -482,20 +412,4 @@ func validateAndFormatVersion(version *types.Version) error {
 	}
 
 	return nil
-}
-
-func (app *App) validateUpdateVersion(version *types.Version) error {
-	return nil
-}
-
-func (app *App) IsReplicates() bool {
-	return app.Mode == APP_MODE_REPLICATES
-}
-
-func (app *App) IsFixed() bool {
-	return app.Mode == APP_MODE_FIXED
-}
-
-func (app *App) EmitEvent(swanEvent *swanevent.Event) {
-	app.Scontext.EventBus.EventChan <- swanEvent
 }

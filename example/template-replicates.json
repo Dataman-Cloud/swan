@@ -6,8 +6,8 @@
   "disk": 0,
   "runAs": "xcm",
   "instances": 3,
-  "constraints": [ 
-  ], 
+  "constraints": [
+  ],
   "container": {
     "docker": {
       "image": "nginx:1.10",
@@ -49,15 +49,6 @@
     "duration": 5
   },
   "healthChecks": [
-    {
-      "protocol": "TCP",
-      "path": "/",
-      "portName": "web",
-      "gracePeriodSeconds": 5,
-      "intervalSeconds": 3,
-      "timeoutSeconds": 3,
-      "maxConsecutiveFailures": 5
-    }
  ],
   "updatePolicy": {
 	  "updateDelay": 5,

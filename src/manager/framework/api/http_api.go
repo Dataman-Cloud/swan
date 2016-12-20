@@ -338,7 +338,7 @@ func CheckVersion(version *types.Version) error {
 
 func FilterTasksFromApp(app *state.App) []*Task {
 	tasks := make([]*Task, 0)
-	for _, slot := range app.Slots {
+	for _, slot := range app.GetSlots() {
 		task := &Task{ // aka Slot
 			ID:            slot.Id,
 			AppId:         slot.App.AppId, // either Name or Id, rename AppId later
