@@ -45,7 +45,7 @@
   "env": {
     "DB": "mysql"
   },
-  "label": {
+  "labels": {
     "USER_ID": "1"
   },
   "killPolicy": {

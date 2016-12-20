@@ -22,6 +22,15 @@ type App struct {
 	Tasks    []*Task  `json:"tasks,omitempty"`
 	Versions []string `json:"versions,omitempty"`
 	IP       []string `json:"ip,omitempty"`
+
+	// current version related info
+	Labels      map[string]string `json:"labels,omitempty"`
+	Env         map[string]string `json:"env,omitempty"`
+	Constraints []string          `json:"constraints,omitempty"`
+	Uris        []string          `json:"uris,omitempty"`
+	//HealthChecks      []*types.HealthCheck
+	//KillPolicy        *types.KillPolicy
+	//UpdatePolicy      *types.UpdatePolicy
 }
 
 // use task for compatability now, should be slot here
