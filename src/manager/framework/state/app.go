@@ -292,22 +292,24 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		}
 	}
 
-	afterPersisted := func() {
-		app.SetState(APP_STATE_MARK_FOR_UPDATING)
-		app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterUpdateDone)
-
-		for i := 0; i < 1; i++ { // current we make first slot update
-			slot := app.Slots[i]
-
-			slot.Update(app.ProposedVersion)
-			if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
-				logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
-			}
-		}
-
+	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp); err != nil {
+		return err
 	}
 
-	return WithConvertApp(context.TODO(), app, afterPersisted, persistentStore.UpdateApp)
+	app.SetState(APP_STATE_MARK_FOR_UPDATING)
+	app.RegisterInvalidateCallbacks(APP_STATE_MARK_FOR_UPDATING, afterUpdateDone)
+
+	for i := 0; i < 1; i++ { // current we make first slot update
+		slot := app.Slots[i]
+
+		slot.Update(app.ProposedVersion)
+		if err := WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot); err != nil {
+			logrus.Errorf("Update slot: %s to histort failed, Error: %s", slot.Id, err.Error())
+		}
+	}
+
+	return nil
+
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
