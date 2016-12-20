@@ -12,13 +12,15 @@ type Client struct {
 	client *http.Client
 }
 
+const APIVERSION = "/v_beta"
+
 func UnixDialer(proto, sock string) (net.Conn, error) {
 	return net.Dial("unix", "/var/run/swan.sock")
 }
 
 func NewHTTPClient(path string) *Client {
 	return &Client{
-		url: "http://unix.sock" + path,
+		url: "http://unix.sock" + APIVERSION + path,
 		client: &http.Client{
 			Transport: &http.Transport{
 				Dial: UnixDialer,

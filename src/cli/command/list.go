@@ -4,12 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"time"
 
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 
-	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 )
 
 // NewListCommand returns the CLI command for "list"
@@ -38,27 +37,27 @@ func NewListCommand() cli.Command {
 
 // listApplications executes the "list" command.
 func listApplications(c *cli.Context) error {
-	httpClient := NewHTTPClient("/v1/apps")
+	httpClient := NewHTTPClient("/apps")
 	resp, err := httpClient.Get()
 	if err != nil {
 		return fmt.Errorf("Unable to do request: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
-	var apps []*types.Application
+	var apps map[string][]*api.App
 	if err := json.NewDecoder(resp.Body).Decode(&apps); err != nil {
 		return err
 	}
 
-	listApps := make([]*types.Application, 0)
+	listApps := make([]*api.App, 0)
 	if !c.Bool("all") {
-		for _, app := range apps {
-			if app.Status == "RUNNING" {
+		for _, app := range apps["apps"] {
+			if app.State == "normal" {
 				listApps = append(listApps, app)
 			}
 		}
 	} else {
-		listApps = apps
+		listApps = apps["apps"]
 	}
 
 	if c.IsSet("json") {
@@ -71,7 +70,7 @@ func listApplications(c *cli.Context) error {
 }
 
 // printTable output apps list as table format.
-func printTable(apps []*types.Application) {
+func printTable(apps []*api.App) {
 	tb := tablewriter.NewWriter(os.Stdout)
 	tb.SetHeader([]string{
 		"ID",
@@ -79,8 +78,9 @@ func printTable(apps []*types.Application) {
 		"Instances",
 		"RunAS",
 		"ClusterID",
-		"Status",
+		"State",
 		"Created",
+		"Updated",
 	})
 	for _, app := range apps {
 		tb.Append([]string{
@@ -89,15 +89,16 @@ func printTable(apps []*types.Application) {
 			fmt.Sprintf("%d", app.Instances),
 			app.RunAs,
 			app.ClusterId,
-			app.Status,
-			time.Unix(app.Created, 0).Format("2006-01-02 15:04:05"),
+			app.State,
+			app.Created.Format("2006-01-02 15:04:05"),
+			app.Updated.Format("2006-01-02 15:04:05"),
 		})
 	}
 	tb.Render()
 }
 
 // printJson output apps list as json format.
-func printJson(apps []*types.Application) error {
+func printJson(apps []*api.App) error {
 	data, err := json.Marshal(&apps)
 	if err != nil {
 		return err

@@ -36,6 +36,7 @@ type Scheduler struct {
 	Hostname               string `json:"hostname"`
 	EnableLocalHealthcheck bool   `json:"local-healthcheck"`
 	HttpAddr               string
+	UnixAddr               string
 }
 
 type DNS struct {
@@ -149,8 +150,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
+	swanConfig.Scheduler.UnixAddr = swanConfig.HttpListener.UnixAddr
 	swanConfig.Scheduler.MesosFrameworkUser = "root"
-
 	swanConfig.DNS.ExchangeTimeout = time.Second * 3
 
 	return validateAndFormatConfig(swanConfig)
