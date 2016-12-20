@@ -32,7 +32,7 @@
         controllerAs: 'vm'
       })
       .state('home.task', {
-        url: '/task?appId&index',
+        url: '/task?appId&taskIndex',
         templateUrl: 'app/main/task/task.html',
         controller: 'TaskController',
         controllerAs: 'vm'

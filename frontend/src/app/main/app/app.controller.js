@@ -7,7 +7,7 @@
 
   /** @ngInject */
   function AppController(appBackend, $stateParams) {
-    var appId = $stateParams.appId;
+    var params = {appId: $stateParams.appId};
 
     var vm = this;
     vm.app = {};
@@ -19,8 +19,8 @@
     }
 
     function getAppInfo() {
-      if (appId) {
-        appBackend.app({appId: appId}).get(function (data) {
+      if (params.appId) {
+        appBackend.app(params).get(function (data) {
           vm.app = data;
         });
       }

@@ -132,10 +132,9 @@
       </thead>
       <tbody md-body>
       <tr md-row ng-repeat="task in vm.app.tasks track by $index">
-        <td md-cell><a href="#">
-
-          {/task.id/}
-        </a></td>
+        <td md-cell>
+          <a ui-sref="home.task({appId: $stateParams.appId, taskIndex: $index})">{/task.id/}</a>
+        </td>
         <td md-cell>
           {/task.agentHostname/}:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
         <td md-cell>健康</td>

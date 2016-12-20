@@ -1,34 +1,35 @@
 <header class="page-header md-display-2">实例详情</header>
 <section>
-  <header class="md-headline">0.app.user.cluster.dataman.io</header>
+  <header class="md-headline">{/vm.task.id/}</header>
   <md-list class="md-dense" layout="row" layout-wrap>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>2016-10-31 16:38:42</h3>
+        <h3>{/vm.task.created | date: 'yyyy-MM-dd HH:mm'/}</h3>
         <p>创建时间</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>blackicebird/2048</h3>
+        <h3>{/vm.task.image/}</h3>
         <p>镜像名称</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></h3>
+        <!--<h3><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></h3>-->
+        <h3>{/vm.task.status/}</h3>
         <p>状态</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>1.3/0.5</h3>
+        <h3>{/vm.task.cpu/}/0.5</h3>
         <p>CPU<small>申请/占用</small></p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>824M/100M</h3>
+        <h3>{/vm.task.mem/}/100M</h3>
         <p>内存<small>申请/占用</small></p>
       </div>
     </md-list-item>
@@ -36,12 +37,6 @@
       <div class="md-list-item-text" layout="column">
         <h3>50G/30G</h3>
         <p>磁盘<small>申请/占用</small></p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>31</h3>
-        <p>实例个数</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
