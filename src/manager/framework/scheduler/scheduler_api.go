@@ -8,8 +8,8 @@ import (
 )
 
 func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
-	_, appExists := scheduler.Apps[version.AppId]
-	if appExists {
+	existedApp := scheduler.AppStorage.Get(version.AppId)
+	if existedApp != nil {
 		return nil, errors.New("app already exists")
 	}
 
@@ -18,33 +18,31 @@ func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error
 		return nil, err
 	}
 
-	scheduler.appLock.Lock()
-	defer scheduler.appLock.Unlock()
-
-	scheduler.Apps[version.AppId] = app
+	scheduler.AppStorage.Add(version.AppId, app)
 
 	return app, nil
 }
 
 func (scheduler *Scheduler) InspectApp(appId string) (*state.App, error) {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
 		return nil, errors.New("app not exists")
 	}
 	return app, nil
 }
 
 func (scheduler *Scheduler) DeleteApp(appId string) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
 		return errors.New("app not exists")
 	}
+
 	return app.Delete()
 }
 
 func (scheduler *Scheduler) ListApps() []*state.App {
 	apps := make([]*state.App, 0)
-	for _, v := range scheduler.Apps {
+	for _, v := range scheduler.AppStorage.Data() {
 		apps = append(apps, v)
 	}
 
@@ -52,43 +50,45 @@ func (scheduler *Scheduler) ListApps() []*state.App {
 }
 
 func (scheduler *Scheduler) ScaleUp(appId string, newInstances int, newIps []string) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
 		return errors.New("app not exists")
 	}
+
 	return app.ScaleUp(newInstances, newIps)
 }
 
 func (scheduler *Scheduler) ScaleDown(appId string, removeInstances int) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
 		return errors.New("app not exists")
 	}
+
 	return app.ScaleDown(removeInstances)
 }
 
 func (scheduler *Scheduler) UpdateApp(appId string, version *types.Version) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
-		return errors.New("app doesn't exists, update failed")
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
+		return errors.New("app not exists")
 	}
 
 	return app.Update(version, scheduler.store)
 }
 
 func (scheduler *Scheduler) CancelUpdate(appId string) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
-		return errors.New("app doesn't exists, update failed")
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
+		return errors.New("app not exists")
 	}
 
 	return app.CancelUpdate()
 }
 
 func (scheduler *Scheduler) ProceedUpdate(appId string, instances int) error {
-	app, appExists := scheduler.Apps[appId]
-	if !appExists {
-		return errors.New("app doesn't exists, update failed")
+	app := scheduler.AppStorage.Get(appId)
+	if app == nil {
+		return errors.New("app not exists")
 	}
 
 	return app.ProceedingRollingUpdate(instances)
