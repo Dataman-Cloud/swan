@@ -158,6 +158,10 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 			Updated:          app.Updated,
 			Mode:             string(app.Mode),
 			State:            app.State,
+			Labels:           version.Labels,
+			Env:              version.Env,
+			Constraints:      version.Constraints,
+			Uris:             version.Uris,
 		}
 
 		appRet.Versions = make([]string, 0)
@@ -185,6 +189,10 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 			Updated:          app.Updated,
 			Mode:             string(app.Mode),
 			State:            app.State,
+			Labels:           version.Labels,
+			Env:              version.Env,
+			Constraints:      version.Constraints,
+			Uris:             version.Uris,
 		})
 	}
 
@@ -208,6 +216,10 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 			Updated:          app.Updated,
 			Mode:             string(app.Mode),
 			State:            app.State,
+			Labels:           version.Labels,
+			Env:              version.Env,
+			Constraints:      version.Constraints,
+			Uris:             version.Uris,
 		}
 
 		appRet.Versions = make([]string, 0)
