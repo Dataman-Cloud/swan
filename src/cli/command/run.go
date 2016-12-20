@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -99,6 +100,14 @@ func NewRunCommand() cli.Command {
 			cli.StringFlag{
 				Name:  "volume",
 				Usage: "Mount volume",
+			},
+			cli.StringFlag{
+				Name:  "constraints",
+				Usage: "Set constraints, eg. --constraints='cluster:LIKE:dataman'",
+			},
+			cli.StringFlag{
+				Name:  "uris",
+				Usage: "Set Uris, eg. --uris='http://test.com/test.tar.gz'",
 			},
 		},
 		Action: func(c *cli.Context) error {
@@ -195,6 +204,21 @@ func runApplication(c *cli.Context) error {
 			f := true
 			version.Container.Docker.ForcePullImage = f
 		}
+
+		if c.IsSet("constraints") {
+			if c.String("constraints") == "" {
+				version.Constraints = nil
+			} else {
+				version.Constraints = strings.Split(c.String("constraints"), ",")
+			}
+		}
+		if c.IsSet("uris") {
+			if c.String("uris") == "" {
+				version.Uris = nil
+			} else {
+				version.Uris = strings.Split(c.String("uris"), ",")
+			}
+		}
 	} else {
 
 		if !c.IsSet("name") {
@@ -259,7 +283,7 @@ func runApplication(c *cli.Context) error {
 		return fmt.Errorf("Marsh failed: %s", err.Error())
 	}
 
-	httpClient := NewHTTPClient("/v1/apps")
+	httpClient := NewHTTPClient("/apps")
 	_, err = httpClient.Post(b)
 	if err != nil {
 		return fmt.Errorf("Unable to do request: %s", err.Error())
