@@ -11,31 +11,31 @@
       .state('home', {
         templateUrl: 'app/main/main.html',
         controller: 'MainController',
-        controllerAs: 'main'
+        controllerAs: 'vm'
       })
       .state('home.cluster', {
         url: '/cluster',
         templateUrl: 'app/main/cluster/cluster.html',
         controller: 'ClusterController',
-        controllerAs: 'cluster'
+        controllerAs: 'vm'
       })
       .state('home.user', {
         url: '/user',
         templateUrl: 'app/main/user/user.html',
         controller: 'UserController',
-        controllerAs: 'user'
+        controllerAs: 'vm'
       })
       .state('home.app', {
-        url: '/app',
+        url: '/app?appId',
         templateUrl: 'app/main/app/app.html',
         controller: 'AppController',
-        controllerAs: 'app'
+        controllerAs: 'vm'
       })
       .state('home.task', {
-        url: '/task',
+        url: '/task?appId&index',
         templateUrl: 'app/main/task/task.html',
         controller: 'TaskController',
-        controllerAs: 'task'
+        controllerAs: 'vm'
       });
 
     $urlRouterProvider.otherwise(function ($injector) {

@@ -6,11 +6,11 @@
 </ul>
 <header class="page-header md-display-2">应用详情</header>
 <section id="app">
-  <header class="md-headline">应用名</header>
+  <header class="md-headline">{/vm.app.name/}</header>
   <md-list class="md-dense" layout="row" layout-wrap>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>2016-10-31 16:38:42</h3>
+        <h3>{/vm.app.updated | date: 'yyyy-MM-dd HH:mm'/}</h3>
         <p>最近更新时间</p>
       </div>
     </md-list-item>
@@ -52,13 +52,13 @@
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>31</h3>
+        <h3>{/vm.app.tasks.length/}</h3>
         <p>实例个数</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>李楠</h3>
+        <h3>{/vm.app.runAs/}</h3>
         <p>发布者</p>
       </div>
     </md-list-item>
@@ -131,17 +131,17 @@
       </tr>
       </thead>
       <tbody md-body>
-      <tr md-row ng-repeat="dessert in [1,2,3,4,5,6,7,8,9,10]">
+      <tr md-row ng-repeat="task in vm.app.tasks track by $index">
         <td md-cell><a href="#">
 
-          0.app.user.custer.dataman.io
+          {/task.id/}
         </a></td>
         <td md-cell>
-          192.168.1.160:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
+          {/task.agentHostname/}:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
         <td md-cell>健康</td>
         <td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>
         <td md-cell>
-          2016-11-11 10:10:10
+          {/task.versionId/}
         </td>
         <td md-cell>
           2016-11-11 10:10:10
@@ -151,7 +151,7 @@
     </table>
   </md-table-container>
 </section>
-<section id="enent">
+<section id="event">
   <header class="md-headline">
     事件
   </header>
