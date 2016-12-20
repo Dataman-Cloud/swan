@@ -27,7 +27,7 @@ func deleteApplication(c *cli.Context) error {
 		return fmt.Errorf("name required")
 	}
 
-	httpClient := NewHTTPClient(fmt.Sprintf("%s/%s", "/v1/apps", c.Args()[0]))
+	httpClient := NewHTTPClient(fmt.Sprintf("%s/%s", "/apps", c.Args()[0]))
 	_, err := httpClient.Delete()
 	if err != nil {
 		return fmt.Errorf("Unable to do request: %s", err.Error())
