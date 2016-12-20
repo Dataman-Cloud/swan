@@ -2,6 +2,8 @@
 
 SERVER_PATH=localhost:9999
 PATH_PREFIX=v_beta
+APP_NAME=nginx0051
+WAIT_SECOND=10
 
 if ! command -v http &>/dev/null ; then
   echo "httpie not installed, 'apt-get install httpie', 'yum install -y httpie' or  'brew install httpie'"

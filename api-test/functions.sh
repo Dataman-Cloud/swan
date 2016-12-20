@@ -17,6 +17,12 @@ function msg () {
   echo "[INFO] $1"
 }
 
+function wait_a_moment () {
+  echo "[WAIT]  $WAIT_SECOND secs "
+  sleep $WAIT_SECOND
+}
+
+
 function assert_status_code () {
   msg "http $1 $2"
   status_code="$(http -h --timeout=4.5 $1 $SERVER_PATH/$2 Authorization:$token | grep HTTP/  | cut -d ' ' -f 2)"
