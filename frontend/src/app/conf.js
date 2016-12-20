@@ -1,3 +1,3 @@
 BACKEND_URL_BASE = {
-    defaultBase: ""
+    defaultBase: "http://localhost:5015"
 };
