@@ -1,7 +1,9 @@
 package api
 
 import (
+	"errors"
 	"net/http"
+	"strconv"
 
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
@@ -115,6 +117,15 @@ func (api *AppService) Register(container *restful.Container) {
 		Operation("cancelUpdateApp").
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
+
+	ws.Route(ws.GET("/{app_id}/tasks/{task_id}").To(api.GetAppTask).
+		// docs
+		Doc("Get a task in the given App").
+		Operation("getAppTask").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Param(ws.PathParameter("task_id", "identifier of the task").DataType("int")).
+		Returns(200, "OK", Task{}).
+		Returns(404, "NotFound", nil))
 
 	container.Add(ws)
 }
@@ -300,6 +311,26 @@ func (api *AppService) CancelUpdate(request *restful.Request, response *restful.
 		response.WriteErrorString(http.StatusBadRequest, err.Error())
 	} else {
 		response.WriteHeaderAndJson(http.StatusOK, []string{"version accepted"}, restful.MIME_JSON)
+	}
+}
+
+func (api *AppService) GetAppTask(request *restful.Request, response *restful.Response) {
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		response.WriteErrorString(http.StatusNotFound, err.Error())
+	} else {
+		task_id := request.PathParameter("task_id")
+		task_index, err := strconv.Atoi(task_id)
+		if err != nil {
+			response.WriteErrorString(http.StatusBadRequest, "Get task index err: "+err.Error())
+		} else {
+			appTaskRet, err := GetTaskFromApp(app, task_index)
+			if err != nil {
+				response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
+			} else {
+				response.WriteEntity(appTaskRet)
+			}
+		}
 	}
 }
 
@@ -534,4 +565,52 @@ func FilterTasksFromApp(app *state.App) []*Task {
 	}
 
 	return tasks
+}
+
+func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
+	slot, found := app.Slots[task_index]
+	if !found {
+		logrus.Errorf("slot not found: %s", task_index)
+		return nil, errors.New("slot not found")
+	}
+
+	task := &Task{ // aka Slot
+		ID:            slot.Id,
+		AppId:         slot.App.AppId, // either Name or Id, rename AppId later
+		VersionId:     slot.Version.ID,
+		Status:        string(slot.State),
+		OfferId:       slot.OfferId,
+		AgentId:       slot.AgentId,
+		AgentHostname: slot.AgentHostName,
+		History:       make([]*TaskHistory, 0), // aka Task
+		Cpu:           slot.Version.Cpus,
+		Mem:           slot.Version.Mem,
+		Disk:          slot.Version.Disk,
+		IP:            slot.Ip,
+	}
+
+	if len(slot.TaskHistory) > 0 {
+		for _, v := range slot.TaskHistory {
+			staleTask := &TaskHistory{
+				ID:            v.Id,
+				State:         v.State,
+				Reason:        v.Reason,
+				OfferId:       v.OfferId,
+				AgentId:       v.AgentId,
+				AgentHostname: v.AgentHostName,
+				VersionId:     v.Version.ID,
+
+				Cpu:  v.Version.Cpus,
+				Mem:  v.Version.Mem,
+				Disk: v.Version.Disk,
+
+				Stderr: v.Stderr,
+				Stdout: v.Stdout,
+			}
+
+			task.History = append(task.History, staleTask)
+		}
+	}
+
+	return task, nil
 }
