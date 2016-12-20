@@ -1,7 +1,7 @@
 package event
 
 import (
-	"github.com/Sirupsen/logrus"
+//"github.com/Sirupsen/logrus"
 )
 
 type EventBus struct {
@@ -26,7 +26,7 @@ func (bus *EventBus) Start() error {
 			for _, subscriber := range bus.Subscribers {
 				if subscriber.InterestIn(e) {
 					subscriber.Write(e)
-					logrus.Infof("write event e %s to %s", e, subscriber)
+					//logrus.Debugf("write event e %s to %s", e, subscriber)
 				}
 			}
 		}

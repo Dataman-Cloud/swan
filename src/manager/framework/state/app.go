@@ -495,6 +495,5 @@ func (app *App) IsFixed() bool {
 }
 
 func (app *App) EmitEvent(swanEvent *swanevent.Event) {
-	logrus.Debugf("write event %s for app %s", swanEvent, app.AppId)
 	app.Scontext.EventBus.EventChan <- swanEvent
 }

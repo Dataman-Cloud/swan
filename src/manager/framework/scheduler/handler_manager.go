@@ -50,16 +50,20 @@ func (m *HandlerManager) HandlerFuncs(etype sched.Event_Type) HandlerFuncs {
 func (m *HandlerManager) Handle(e *event.MesosEvent) *Handler {
 	handlerId := uuid.NewV4().String()
 	h := NewHandler(handlerId, m, e)
+
 	m.lock.Lock()
+	defer m.lock.Unlock()
 	m.handlers[handlerId] = h
-	m.lock.Unlock()
 
 	timeoutCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	go h.Process(timeoutCtx)
+	go h.Process(timeoutCtx) // process a mesos event in seperated goroutine
 
 	return h
 }
 
 func (m *HandlerManager) RemoveHandler(handlerId string) {
+	m.lock.Lock()
+	defer m.lock.Unlock() // protect mutual access to m.handlers
+
 	delete(m.handlers, handlerId)
 }

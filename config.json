@@ -10,6 +10,7 @@
 	    "local-healthcheck": false
     },
     "dns": {
+	    "enable-dns": false,
 	    "enable-dns-proxy": false,
 	    "domain": "swan",
 	    "recurse_on": true,

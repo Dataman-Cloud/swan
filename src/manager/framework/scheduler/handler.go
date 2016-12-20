@@ -12,16 +12,14 @@ type Handler struct {
 	Manager    *HandlerManager
 	Response   *Response
 	MesosEvent *event.MesosEvent
-
-	SchedulerRef *Scheduler
 }
 
 func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handler {
 	s := &Handler{
-		Id:           id,
-		Manager:      manager,
-		MesosEvent:   e,
-		SchedulerRef: manager.SchedulerRef,
+		Id:         id,
+		MesosEvent: e,
+
+		Manager: manager,
 	}
 
 	s.Response = NewResponse()
@@ -34,27 +32,25 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 		h.Manager.RemoveHandler(h.Id)
 	}()
 
-	for {
-		select {
-		case <-timeoutCtx.Done(): // abort early
-			// check timeoutCtx.Err()
-			// if timeout
-			// else cancelled
-		default:
-			funcs := h.Manager.HandlerFuncs(h.MesosEvent.EventType)
-			for _, fun := range funcs {
-				h, err := fun(h)
-				if err != nil {
-					logrus.Errorf("%s, %s", h, err)
-				}
-			}
+	select {
+	case <-timeoutCtx.Done(): // abort early
+		logrus.Errorf("%s", timeoutCtx.Err())
+		return
 
-			for _, c := range h.Response.Calls {
-				h.SchedulerRef.MesosConnector.MesosCallChan <- c
+	default:
+		funcs := h.Manager.HandlerFuncs(h.MesosEvent.EventType)
+		for _, fun := range funcs {
+			h, err := fun(h)
+			if err != nil {
+				logrus.Errorf("%s, %s", h, err)
 			}
-
-			return
 		}
+
+		for _, c := range h.Response.Calls {
+			h.Manager.SchedulerRef.MesosConnector.MesosCallChan <- c
+		}
+
+		return
 	}
 
 }
