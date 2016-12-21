@@ -75,8 +75,8 @@ func (c *Client) Get() (*http.Response, error) {
 	return httpResp, nil
 }
 
-func (c *Client) Put(payload []byte) (*http.Response, error) {
-	httpReq, err := http.NewRequest("PUT", c.url, bytes.NewReader(payload))
+func (c *Client) Patch(payload []byte) (*http.Response, error) {
+	httpReq, err := http.NewRequest("PATCH", c.url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err
 	}

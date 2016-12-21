@@ -60,10 +60,10 @@ func scaleApp(c *cli.Context, op string) error {
 		return nil
 	}
 
-	httpClient := NewHTTPClient(fmt.Sprintf("%s/%s/scale_up", "/apps", c.Args()[0]))
+	httpClient := NewHTTPClient(fmt.Sprintf("%s/%s/scale-up", "/apps", c.Args()[0]))
 
 	if op == "down" {
-		httpClient = NewHTTPClient(fmt.Sprintf("%s/%s/scale_down", "/apps", c.Args()[0]))
+		httpClient = NewHTTPClient(fmt.Sprintf("%s/%s/scale-down", "/apps", c.Args()[0]))
 	}
 
 	var data struct {
@@ -72,7 +72,7 @@ func scaleApp(c *cli.Context, op string) error {
 
 	data.Instances = instances
 	payload, _ := json.Marshal(data)
-	_, err := httpClient.Put(payload)
+	_, err := httpClient.Patch(payload)
 	if err != nil {
 		return fmt.Errorf("Unable to do request: %s", err.Error())
 	}
