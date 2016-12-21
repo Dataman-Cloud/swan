@@ -161,6 +161,15 @@ func (manager *Manager) Start(ctx context.Context) error {
 	if manager.config.Janitor.EnableProxy {
 		manager.janitorSubscriber.Subscribe(manager.eventBus)
 		go manager.janitorServer.Init().Run()
+		// send proxy info to dns proxy listener
+		if manager.config.DNS.EnableDns {
+			rgEvent := &nameserver.RecordGeneratorChangeEvent{}
+			rgEvent.Change = "add"
+			rgEvent.Type = "a"
+			rgEvent.Ip = manager.config.Janitor.IP
+			rgEvent.DomainPrefix = ""
+			manager.resolver.RecordGeneratorChangeChan() <- rgEvent
+		}
 	}
 
 	manager.apiserver.Start()
