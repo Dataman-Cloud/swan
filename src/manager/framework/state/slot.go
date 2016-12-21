@@ -94,8 +94,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		slot.Ip = app.CurrentVersion.Ip[index]
 	}
 
-	slot.DispatchNewTask(slot.Version)
-
 	// initialize restart policy
 	testAndRestartFunc := func(s *Slot) bool {
 		if slot.Abnormal() {
@@ -146,7 +144,7 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 
 }
 
-func (slot *Slot) Update(version *types.Version, isRollingUpdate bool) {
+func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
 	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
 
 	slot.MarkForRollingUpdate = isRollingUpdate

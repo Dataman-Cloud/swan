@@ -104,6 +104,7 @@ func NewApp(version *types.Version,
 		//}
 
 		app.SetSlot(i, slot)
+		slot.DispatchNewTask(slot.Version)
 
 	}
 
@@ -136,6 +137,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 		slotIndex := int(app.CurrentVersion.Instances) - i
 		slot := NewSlot(app, app.CurrentVersion, slotIndex)
 		app.SetSlot(slotIndex, slot)
+		slot.DispatchNewTask(slot.Version)
 	}
 	return nil
 }
@@ -206,7 +208,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 
 	for i := 0; i < 1; i++ { // current we make first slot update
 		slot := app.slots[i]
-		slot.Update(app.ProposedVersion, true)
+		slot.UpdateTask(app.ProposedVersion, true)
 	}
 
 	return nil
@@ -229,7 +231,7 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 		slotIndex := i + app.RollingUpdateInstances()
 		defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
 			slot := app.slots[slotIndex]
-			slot.Update(app.ProposedVersion, true)
+			slot.UpdateTask(app.ProposedVersion, true)
 		}(slotIndex)
 	}
 
@@ -247,7 +249,7 @@ func (app *App) CancelUpdate() error {
 
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
 		slot := app.slots[i]
-		slot.Update(app.CurrentVersion, false)
+		slot.UpdateTask(app.CurrentVersion, false)
 	}
 
 	return nil
