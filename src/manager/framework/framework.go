@@ -4,10 +4,10 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 	"golang.org/x/net/context"
@@ -21,7 +21,7 @@ type Framework struct {
 	StopC chan struct{}
 }
 
-func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store, apiServer *swanapiserver.ApiServer) (*Framework, error) {
+func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) {
 	f := &Framework{
 		StopC:       make(chan struct{}),
 		SwanContext: SwanContext,
