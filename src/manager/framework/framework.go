@@ -15,7 +15,6 @@ import (
 
 type Framework struct {
 	Scheduler   *scheduler.Scheduler
-	HttpApi     *api.Api
 	SwanContext *swancontext.SwanContext
 	RestApi     *api.AppService
 
@@ -29,7 +28,6 @@ func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store s
 	}
 
 	f.Scheduler = scheduler.NewScheduler(config, SwanContext, store)
-	f.HttpApi = api.NewApi(f.Scheduler, config.Scheduler)
 	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
 	return f, nil
 }
@@ -47,11 +45,7 @@ func (f *Framework) Start(ctx context.Context) error {
 
 	var err error
 	var wg sync.WaitGroup
-	wg.Add(2)
-	go func() {
-		wg.Done()
-		err = f.HttpApi.Start(ctx)
-	}()
+	wg.Add(1)
 
 	go func() {
 		wg.Done()
