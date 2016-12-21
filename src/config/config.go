@@ -35,7 +35,6 @@ type Scheduler struct {
 	MesosFrameworkUser     string `json:"mesos-framwork-user"`
 	Hostname               string `json:"hostname"`
 	EnableLocalHealthcheck bool   `json:"local-healthcheck"`
-	HttpAddr               string
 	UnixAddr               string
 }
 
@@ -149,7 +148,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
-	swanConfig.Scheduler.HttpAddr = swanConfig.HttpListener.TCPAddr
 	swanConfig.Scheduler.UnixAddr = swanConfig.HttpListener.UnixAddr
 	swanConfig.Scheduler.MesosFrameworkUser = "root"
 	swanConfig.DNS.ExchangeTimeout = time.Second * 3
