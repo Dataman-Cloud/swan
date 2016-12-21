@@ -1,16 +1,15 @@
 @import url(//fonts.googleapis.com/css?family=Roboto+Slab:400,700|Roboto:400,700,700italic,400italic);
-@import "../../bower_components/font-awesome/css/font-awesome.css";
 
 @font-face {
   font-family: 'Material Icons';
   font-style: normal;
   font-weight: 400;
-  src: url(../../bower_components/material-design-iconfont/iconfont/MaterialIcons-Regular.eot); /* For IE6-8 */
+  src: url(../../bower_components/font-awesome/fonts/fontawesome-webfont.eot); /* For IE6-8 */
   src: local('Material Icons'),
   local('MaterialIcons-Regular'),
-  url(../../bower_components/material-design-iconfont/iconfont/MaterialIcons-Regular.woff2) format('woff2'),
-  url(../../bower_components/material-design-iconfont/iconfont/MaterialIcons-Regular.woff) format('woff'),
-  url(../../bower_components/material-design-iconfont/iconfont/MaterialIcons-Regular.ttf) format('truetype');
+  url(../../bower_components/font-awesome/fonts/fontawesome-webfont.woff2) format('woff2'),
+  url(../../bower_components/font-awesome/fonts/fontawesome-webfont.woff) format('woff'),
+  url(../../bower_components/font-awesome/fonts/fontawesome-webfont.ttf) format('truetype');
 }
 
 .material-icons {
