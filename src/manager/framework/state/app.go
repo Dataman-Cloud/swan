@@ -63,12 +63,15 @@ type App struct {
 	State string
 
 	MesosConnector *mesos_connector.MesosConnector
+	inTransaction  bool
+	touched        bool
 }
 
 func NewApp(version *types.Version,
 	allocator *OfferAllocator,
 	MesosConnector *mesos_connector.MesosConnector,
 	scontext *swancontext.SwanContext) (*App, error) {
+
 	err := validateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
@@ -84,6 +87,8 @@ func NewApp(version *types.Version,
 		Scontext:          scontext,
 		Created:           time.Now(),
 		Updated:           time.Now(),
+		inTransaction:     false,
+		touched:           true,
 	}
 
 	if version.Mode == "fixed" {
@@ -99,16 +104,13 @@ func NewApp(version *types.Version,
 
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
-		//if err := WithConvertSlot(context.TODO(), slot, func() { app.SetSlot(slot.Index, slot) }, persistentStore.CreateSlot); err != nil {
-		//return nil, err
-		//}
-
 		app.SetSlot(i, slot)
 		slot.DispatchNewTask(slot.Version)
-
 	}
 
 	app.SetState(APP_STATE_MARK_FOR_CREATING)
+
+	app.create()
 
 	return app, nil
 }
@@ -126,6 +128,9 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	if app.IsFixed() && len(newIps) != newInstances {
 		return errors.New(fmt.Sprintf("please provide %d unique ip", newInstances))
 	}
+
+	app.BeginTx()
+	defer app.Commit()
 
 	app.CurrentVersion.Ip = append(app.CurrentVersion.Ip, newIps...)
 	app.CurrentVersion.Instances += int32(newInstances)
@@ -151,6 +156,9 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return errors.New(fmt.Sprintf("no more than %d instances can be shutdown", app.CurrentVersion.Instances))
 	}
 
+	app.BeginTx()
+	defer app.Commit()
+
 	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
 	app.Updated = time.Now()
 
@@ -159,8 +167,9 @@ func (app *App) ScaleDown(removeInstances int) error {
 	for i := removeInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) + i - 1
 		defer func(slotIndex int) {
-			slot := app.slots[slotIndex]
-			slot.Kill()
+			if slot, found := app.GetSlot(slotIndex); found {
+				slot.Kill()
+			}
 		}(slotIndex)
 	}
 
@@ -169,6 +178,9 @@ func (app *App) ScaleDown(removeInstances int) error {
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
+	app.BeginTx()
+	defer app.Commit()
+
 	app.SetState(APP_STATE_MARK_FOR_DELETION)
 
 	for _, slot := range app.slots {
@@ -196,6 +208,9 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return err
 	}
 
+	app.BeginTx()
+	defer app.Commit()
+
 	if app.CurrentVersion == nil {
 		return errors.New("update failed: current version was losted")
 	}
@@ -207,8 +222,9 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	app.ProposedVersion = version
 
 	for i := 0; i < 1; i++ { // current we make first slot update
-		slot := app.slots[i]
-		slot.UpdateTask(app.ProposedVersion, true)
+		if slot, found := app.GetSlot(i); found {
+			slot.UpdateTask(app.ProposedVersion, true)
+		}
 	}
 
 	return nil
@@ -226,6 +242,9 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	if (instances + app.RollingUpdateInstances()) > int(app.CurrentVersion.Instances) {
 		return errors.New("update instances count exceed the maximum instances number")
 	}
+
+	app.BeginTx()
+	defer app.Commit()
 
 	for i := 0; i < instances; i++ {
 		slotIndex := i + app.RollingUpdateInstances()
@@ -247,6 +266,9 @@ func (app *App) CancelUpdate() error {
 		return errors.New("cancel update failed: current version was nil")
 	}
 
+	app.BeginTx()
+	defer app.Commit()
+
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
 		slot := app.slots[i]
 		slot.UpdateTask(app.CurrentVersion, false)
@@ -265,6 +287,7 @@ func (app *App) IsFixed() bool {
 
 func (app *App) SetState(state string) {
 	app.State = state
+	app.Touch(false)
 	logrus.Infof("app %s now has state %s", app.AppId, app.State)
 }
 
@@ -286,7 +309,7 @@ func (app *App) RunningInstances() int {
 func (app *App) RollingUpdateInstances() int {
 	rollingUpdateInstances := 0
 	for _, slot := range app.slots {
-		if slot.MarkForRollingUpdate {
+		if slot.MarkForRollingUpdate() {
 			rollingUpdateInstances += 1
 		}
 	}
@@ -297,7 +320,7 @@ func (app *App) RollingUpdateInstances() int {
 func (app *App) MarkForDeletionInstances() int {
 	markForDeletionInstances := 0
 	for _, slot := range app.slots {
-		if slot.MarkForDeletion {
+		if slot.MarkForDeletion() {
 			markForDeletionInstances += 1
 		}
 	}
@@ -314,6 +337,7 @@ func (app *App) RemoveSlot(index int) {
 	defer app.slotsLock.Unlock()
 
 	delete(app.slots, index)
+	app.Touch(false)
 }
 
 func (app *App) GetSlot(index int) (*Slot, bool) {
@@ -338,6 +362,7 @@ func (app *App) SetSlot(index int, slot *Slot) {
 	defer app.slotsLock.Unlock()
 
 	app.slots[index] = slot
+	app.Touch(false)
 }
 
 func (app *App) Reevaluate() {
@@ -355,7 +380,7 @@ func (app *App) Reevaluate() {
 			app.ProposedVersion = nil
 
 			for _, slot := range app.slots {
-				slot.MarkForRollingUpdate = false
+				slot.SetMarkForRollingUpdate(false)
 			}
 		}
 
@@ -384,6 +409,8 @@ func (app *App) Reevaluate() {
 
 	default:
 	}
+
+	app.Touch(false)
 }
 
 func (app *App) EmitEvent(swanEvent *swanevent.Event) {
@@ -392,8 +419,8 @@ func (app *App) EmitEvent(swanEvent *swanevent.Event) {
 
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
-	// mode can not changed
-	// runAs can not changed
+	// mode can not change
+	// runAs can not change
 	// app instances should same as current instances
 	return nil
 }
@@ -414,4 +441,54 @@ func validateAndFormatVersion(version *types.Version) error {
 	}
 
 	return nil
+}
+
+// 1, remove app from persisted storage
+// 2, other cleanup process
+func (app *App) Remove() {
+	app.remove()
+}
+
+// storage related
+func (app *App) Touch(force bool) {
+	if force { // force update the app
+		app.update()
+		return
+	}
+
+	if app.inTransaction {
+		app.touched = true
+		logrus.Infof("delay update action as current app in between tranaction")
+	} else {
+		app.update()
+	}
+}
+
+func (app *App) BeginTx() {
+	app.inTransaction = true
+}
+
+// here we persist the app anyway, no matter it touched or not
+func (app *App) Commit() {
+	app.inTransaction = false
+	app.touched = false
+	app.update()
+}
+
+func (app *App) update() {
+	logrus.Debugf("update app %s", app.AppId)
+	WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp)
+	app.touched = false
+}
+
+func (app *App) create() {
+	logrus.Debugf("create app %s", app.AppId)
+	WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp)
+	app.touched = false
+}
+
+func (app *App) remove() {
+	logrus.Debugf("remove app %s", app.AppId)
+	WithConvertApp(context.TODO(), nil, nil, persistentStore.UpdateApp)
+	app.touched = false
 }

@@ -69,8 +69,8 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	MarkForDeletion      bool
-	MarkForRollingUpdate bool
+	markForDeletion      bool
+	markForRollingUpdate bool
 
 	restartPolicy *RestartPolicy
 }
@@ -85,8 +85,8 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 		resourceReservationLock: sync.Mutex{},
 
-		MarkForRollingUpdate: false,
-		MarkForDeletion:      false,
+		markForRollingUpdate: false,
+		markForDeletion:      false,
 		StatesCallbacks:      make(map[string][]SlotStateCallbackFuncs),
 	}
 
@@ -122,7 +122,7 @@ func (slot *Slot) KillTask() {
 func (slot *Slot) Kill() {
 	slot.StopRestartPolicy()
 
-	slot.MarkForDeletion = true
+	slot.markForDeletion = true
 	slot.SetState(SLOT_STATE_PENDING_KILL)
 
 	slot.CurrentTask.Kill()
@@ -147,7 +147,7 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
 	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
 
-	slot.MarkForRollingUpdate = isRollingUpdate
+	slot.markForRollingUpdate = isRollingUpdate
 
 	onSlotFinished := func(slot *Slot) {
 		logrus.Infof("onSlotFinished func")
@@ -312,7 +312,7 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	if slot.MarkForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
 		// TODO remove slot from OfferAllocator
 		logrus.Infof("removeSlot func")
 		slot.App.RemoveSlot(slot.Index)
@@ -377,4 +377,20 @@ func (slot *Slot) EmitTaskEvent(t string) {
 			slot.App.EmitEvent(e)
 		}
 	}
+}
+
+func (slot *Slot) MarkForRollingUpdate() bool {
+	return slot.markForRollingUpdate
+}
+
+func (slot *Slot) MarkForDeletion() bool {
+	return slot.markForDeletion
+}
+
+func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
+	slot.markForRollingUpdate = rollingUpdate
+}
+
+func (slot *Slot) SetMarkForDeletion(deletion bool) {
+	slot.markForDeletion = deletion
 }

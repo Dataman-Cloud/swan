@@ -349,8 +349,8 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		AppId:                slot.App.AppId,
 		VersionId:            slot.Version.ID,
 		State:                slot.State,
-		MarkForDeletion:      slot.MarkForDeletion,
-		MarkForRollingUpdate: slot.MarkForRollingUpdate,
+		MarkForDeletion:      slot.MarkForDeletion(),
+		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
 	}
 
 	if slot.CurrentTask != nil {
@@ -364,18 +364,18 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 	slot := &Slot{
-		Index:                int(raftSlot.Index),
-		Id:                   raftSlot.Id,
-		State:                raftSlot.State,
-		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
-		OfferId:              raftSlot.CurrentTask.OfferId,
-		AgentId:              raftSlot.CurrentTask.AgentId,
-		Ip:                   raftSlot.CurrentTask.Ip,
-		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
-		MarkForDeletion:      raftSlot.MarkForDeletion,
-		MarkForRollingUpdate: raftSlot.MarkForRollingUpdate,
+		Index:         int(raftSlot.Index),
+		Id:            raftSlot.Id,
+		State:         raftSlot.State,
+		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask),
+		OfferId:       raftSlot.CurrentTask.OfferId,
+		AgentId:       raftSlot.CurrentTask.AgentId,
+		Ip:            raftSlot.CurrentTask.Ip,
+		AgentHostName: raftSlot.CurrentTask.AgentHostName,
 	}
 
+	slot.SetMarkForDeletion(raftSlot.MarkForDeletion)
+	slot.SetMarkForRollingUpdate(raftSlot.MarkForRollingUpdate)
 	raftVersion, err := persistentStore.GetVersion(raftSlot.AppId, raftSlot.VersionId)
 	if err == nil {
 		slot.Version = VersionFromRaft(raftVersion)
