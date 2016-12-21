@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER_PATH=localhost:9999
+SERVER_PATH=localhost:5015
 PATH_PREFIX=v_beta
 
 if ! command -v http &>/dev/null ; then
