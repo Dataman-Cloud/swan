@@ -24,5 +24,10 @@
   },
   "resolutions": {
     "angular": "~1.5.8"
+  },
+  "overrides": {
+    "font-awesome": {
+      "main": "css/font-awesome.css"
+    }
   }
 }
