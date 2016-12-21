@@ -1,4 +1,4 @@
-package new_apiserver
+package apiserver
 
 import (
 	"net/http"

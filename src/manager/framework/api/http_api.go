@@ -5,9 +5,9 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
-	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -20,14 +20,14 @@ const (
 
 type AppService struct {
 	Scheduler *scheduler.Scheduler
-	swanapiserver.ApiRegister
+	apiserver.ApiRegister
 }
 
-func NewAndInstallAppService(apiServer *swanapiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
+func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
 	appService := &AppService{
 		Scheduler: eng,
 	}
-	swanapiserver.Install(apiServer, appService)
+	apiserver.Install(apiServer, appService)
 	return appService
 }
 

@@ -6,11 +6,11 @@ import (
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/ipam"
-	swanapiserver "github.com/Dataman-Cloud/swan/src/manager/new_apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
@@ -40,7 +40,7 @@ type Manager struct {
 	swanContext *swancontext.SwanContext
 	config      config.SwanConfig
 	cluster     []string
-	apiserver   *swanapiserver.ApiServer
+	apiserver   *apiserver.ApiServer
 }
 
 func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
@@ -48,7 +48,7 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 		config: config,
 	}
 
-	manager.apiserver = swanapiserver.NewApiServer(config.ApiServerAddr)
+	manager.apiserver = apiserver.NewApiServer(config.ApiServerAddr)
 
 	raftNode, err := raft.NewNode(config.Raft, db)
 	if err != nil {
