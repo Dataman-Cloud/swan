@@ -87,8 +87,8 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 			slot.CurrentTask.Version = app.CurrentVersion
 		}
 		slot.App = app
-
-		slot.StatesCallbacks = make(map[string][]SlotStateCallbackFuncs)
+		// TODO yaoyun
+		slot.Version = app.CurrentVersion
 
 		slots = append(slots, slot)
 	}

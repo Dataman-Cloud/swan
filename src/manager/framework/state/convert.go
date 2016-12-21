@@ -364,18 +364,18 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 	slot := &Slot{
-		Index:         int(raftSlot.Index),
-		Id:            raftSlot.Id,
-		State:         raftSlot.State,
-		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask),
-		OfferId:       raftSlot.CurrentTask.OfferId,
-		AgentId:       raftSlot.CurrentTask.AgentId,
-		Ip:            raftSlot.CurrentTask.Ip,
-		AgentHostName: raftSlot.CurrentTask.AgentHostName,
+		Index:                int(raftSlot.Index),
+		Id:                   raftSlot.Id,
+		State:                raftSlot.State,
+		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
+		OfferId:              raftSlot.CurrentTask.OfferId,
+		AgentId:              raftSlot.CurrentTask.AgentId,
+		Ip:                   raftSlot.CurrentTask.Ip,
+		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
+		markForDeletion:      raftSlot.MarkForDeletion,
+		markForRollingUpdate: raftSlot.MarkForRollingUpdate,
 	}
 
-	slot.SetMarkForDeletion(raftSlot.MarkForDeletion)
-	slot.SetMarkForRollingUpdate(raftSlot.MarkForRollingUpdate)
 	raftVersion, err := persistentStore.GetVersion(raftSlot.AppId, raftSlot.VersionId)
 	if err == nil {
 		slot.Version = VersionFromRaft(raftVersion)

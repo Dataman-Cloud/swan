@@ -25,12 +25,13 @@ var (
 )
 
 const (
-	APP_STATE_NORMAL              = "normal"
-	APP_STATE_MARK_FOR_CREATING   = "creating"
-	APP_STATE_MARK_FOR_DELETION   = "deleting"
-	APP_STATE_MARK_FOR_UPDATING   = "updating"
-	APP_STATE_MARK_FOR_SCALE_UP   = "scale_up"
-	APP_STATE_MARK_FOR_SCALE_DOWN = "scale_down"
+	APP_STATE_NORMAL                 = "normal"
+	APP_STATE_MARK_FOR_CREATING      = "creating"
+	APP_STATE_MARK_FOR_DELETION      = "deleting"
+	APP_STATE_MARK_FOR_UPDATING      = "updating"
+	APP_STATE_MARK_FOR_CANCEL_UPDATE = "cancel_update"
+	APP_STATE_MARK_FOR_SCALE_UP      = "scale_up"
+	APP_STATE_MARK_FOR_SCALE_DOWN    = "scale_down"
 )
 
 var persistentStore store.Store
@@ -249,8 +250,9 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	for i := 0; i < instances; i++ {
 		slotIndex := i + app.RollingUpdateInstances()
 		defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
-			slot := app.slots[slotIndex]
-			slot.UpdateTask(app.ProposedVersion, true)
+			if slot, found := app.GetSlot(slotIndex); found {
+				slot.UpdateTask(app.ProposedVersion, true)
+			}
 		}(slotIndex)
 	}
 
@@ -269,9 +271,12 @@ func (app *App) CancelUpdate() error {
 	app.BeginTx()
 	defer app.Commit()
 
+	app.SetState(APP_STATE_MARK_FOR_CANCEL_UPDATE)
+
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
-		slot := app.slots[i]
-		slot.UpdateTask(app.CurrentVersion, false)
+		if slot, found := app.GetSlot(i); found {
+			slot.UpdateTask(app.CurrentVersion, true)
+		}
 	}
 
 	return nil
@@ -336,6 +341,9 @@ func (app *App) RemoveSlot(index int) {
 	app.slotsLock.Lock()
 	defer app.slotsLock.Unlock()
 
+	if slot, found := app.GetSlot(index); found {
+		slot.Remove()
+	}
 	delete(app.slots, index)
 	app.Touch(false)
 }
@@ -379,16 +387,24 @@ func (app *App) Reevaluate() {
 			app.Versions = append(app.Versions, app.CurrentVersion)
 			app.ProposedVersion = nil
 
+			// special case, invoke low level storage directly to make version persisted
+			WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
+
 			for _, slot := range app.slots {
 				slot.SetMarkForRollingUpdate(false)
 			}
 		}
 
+	case APP_STATE_MARK_FOR_CANCEL_UPDATE:
 		// when update cancelled
 		if app.slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
 			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
 			app.SetState(APP_STATE_NORMAL)
 			app.ProposedVersion = nil
+
+			for _, slot := range app.slots {
+				slot.SetMarkForRollingUpdate(false)
+			}
 		}
 
 	case APP_STATE_MARK_FOR_CREATING:
