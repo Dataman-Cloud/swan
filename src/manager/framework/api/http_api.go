@@ -386,11 +386,13 @@ func FilterTasksFromApp(app *state.App) []*Task {
 }
 
 func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
-	slot, found := app.Slots[task_index]
-	if !found {
+	slots := app.GetSlots()
+	if task_index >= len(slots)-1 || task_index < 0 {
 		logrus.Errorf("slot not found: %s", task_index)
-		return nil, errors.New("slot not found")
+		return nil, errors.New("slot task found")
 	}
+
+	slot := slots[task_index]
 
 	task := &Task{ // aka Slot
 		ID:            slot.Id,
