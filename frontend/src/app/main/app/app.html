@@ -17,13 +17,23 @@
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
         <h3>1/0</h3>
-        <p>应用状态<small>运行/停止</small></p>
+        <p>应用状态
+          <small>运行/停止</small>
+        </p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>{/vm.app.mode/}</h3>
+        <p>mode</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
         <h3>1/1/1</h3>
-        <p>健康检查<small>健康/异常/未知</small></p>
+        <p>健康检查
+          <small>健康/异常/未知</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
@@ -35,19 +45,25 @@
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
         <h3>1.3/0.5</h3>
-        <p>CPU<small>申请/占用</small></p>
+        <p>CPU
+          <small>申请/占用</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
         <h3>824M/100M</h3>
-        <p>内存<small>申请/占用</small></p>
+        <p>内存
+          <small>申请/占用</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
         <h3>50G/30G</h3>
-        <p>磁盘<small>申请/占用</small></p>
+        <p>磁盘
+          <small>申请/占用</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
@@ -100,14 +116,26 @@
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>-</h3>
+        <h3 ng-repeat="(key, value) in vm.app.env">{/key/}:{/value/}</h3>
         <p>环境变量</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>-</h3>
+        <h3 ng-repeat="constraint in vm.app.constraints">{/constraint/}</h3>
         <p>限制条件</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3 ng-repeat="(key, value) in vm.app.labels">{/key/}:{/value/}</h3>
+        <p>标签</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3 ng-repeat="uri in vm.app.uris">{/uri/}</h3>
+        <p>uris</p>
       </div>
     </md-list-item>
     <md-list>
@@ -138,7 +166,9 @@
         <td md-cell>
           {/task.agentHostname/}:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
         <td md-cell>健康</td>
-        <td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>
+        <td md-cell><i class="fa fa-play" aria-hidden="true">
+          <md-tooltip>运行中</md-tooltip>
+        </i></td>
         <td md-cell>
           {/task.versionId/}
         </td>
