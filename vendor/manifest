@@ -296,14 +296,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/gin-gonic/gin",
-			"repository": "https://github.com/gin-gonic/gin",
-			"vcs": "git",
-			"revision": "e2212d40c62a98b388a5eb48ecbdcf88534688ba",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/gogo/protobuf/jsonpb",
 			"repository": "https://github.com/gogo/protobuf",
 			"vcs": "git",
@@ -374,6 +366,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/gorilla/schema",
+			"repository": "https://github.com/gorilla/schema",
+			"vcs": "git",
+			"revision": "0164a00ab4cd01d814d8cd5bf63fd9fcea30e23b",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/manucorporat/sse",
 			"repository": "https://github.com/manucorporat/sse",
 			"vcs": "git",
@@ -386,14 +386,6 @@
 			"repository": "https://github.com/mattn/go-isatty",
 			"vcs": "git",
 			"revision": "30a891c33c7cde7b02a981314b4228ec99380cca",
-			"branch": "master",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/gorilla/schema",
-			"repository": "https://github.com/gorilla/schema",
-			"vcs": "git",
-			"revision": "0164a00ab4cd01d814d8cd5bf63fd9fcea30e23b",
 			"branch": "master",
 			"notests": true
 		},
