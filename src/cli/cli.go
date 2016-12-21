@@ -19,7 +19,8 @@ func main() {
 		command.NewShowCommand(),
 		command.NewListCommand(),
 		command.NewDeleteCommand(),
-		command.NewScaleCommand(),
+		command.NewScaleUpCommand(),
+		command.NewScaleDownCommand(),
 	}
 
 	if err := swan.Run(os.Args); err != nil {

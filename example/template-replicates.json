@@ -7,8 +7,6 @@
   "runAs": "xcm",
   "instances": 3,
   "constraints": [ 
-	  "hostname:UNIQUE",
-          "vcluster:LIKE:dataman"
   ], 
   "container": {
     "docker": {
@@ -42,7 +40,9 @@
   "env": {
     "DB": "mysql"
   },
-  "labels": {
+  "uris": [
+  ],
+  "label": {
     "USER_ID": "1"
   },
   "killPolicy": {
