@@ -124,7 +124,10 @@ func main() {
 			return err
 		}
 
-		node, _ := NewNode(config, db)
+		node, err := NewNode(config, db)
+		if err != nil {
+			logrus.Fatal("Node initialization failed")
+		}
 		go func() {
 			if err := node.Start(context.Background()); err != nil {
 				logrus.Errorf("strart node got error: %s", err.Error())

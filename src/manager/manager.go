@@ -67,7 +67,7 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.swanContext.Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
 	manager.ipamAdapter, err = ipam.New(manager.swanContext)
 	if err != nil {
-		logrus.Errorf("init ipam adapter failed. Error: ", err.Error())
+		logrus.Errorf("init ipam adapter failed. Error: %s", err.Error())
 		return nil, err
 	}
 
