@@ -21,6 +21,7 @@ func main() {
 		command.NewDeleteCommand(),
 		command.NewScaleUpCommand(),
 		command.NewScaleDownCommand(),
+		command.NewUpdateCommand(),
 	}
 
 	if err := swan.Run(os.Args); err != nil {
