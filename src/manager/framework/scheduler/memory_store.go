@@ -4,11 +4,13 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
 )
 
 type AppFilterOptions struct {
 	LabelSelectors []labels.Selector
+	FieldSelector  fields.Selector
 }
 
 // memoryStore implements a Store in memory.
@@ -60,6 +62,10 @@ func (m *memoryStore) Filter(options AppFilterOptions) []*state.App {
 			continue
 		}
 
+		if !filterByFieldsSelectors(options.FieldSelector, app) {
+			continue
+		}
+
 		apps = append(apps, app)
 	}
 
@@ -71,6 +77,17 @@ func filterByLabelsSelectors(labelsSelectors []labels.Selector, appLabels map[st
 		if !selector.Matches(labels.Set(appLabels)) {
 			return false
 		}
+	}
+
+	return true
+}
+
+func filterByFieldsSelectors(fieldSelector fields.Selector, app *state.App) bool {
+	// TODO(upccup): there maybe exist better way to got a field/value map
+	fieldMap := make(map[string]string)
+	fieldMap["runAs"] = app.CurrentVersion.RunAs
+	if !fieldSelector.Matches(fields.Set(fieldMap)) {
+		return false
 	}
 
 	return true

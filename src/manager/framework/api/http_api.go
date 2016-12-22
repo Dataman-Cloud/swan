@@ -11,6 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
 
 	"github.com/Sirupsen/logrus"
@@ -163,7 +164,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
 	appFilterOptions := scheduler.AppFilterOptions{}
-	labelFilter := request.QueryParameter("label")
+	labelFilter := request.QueryParameter("labels")
 	if labelFilter != "" {
 		conditions := strings.Split(labelFilter, ",")
 		for _, condition := range conditions {
@@ -174,6 +175,16 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 			}
 
 			appFilterOptions.LabelSelectors = append(appFilterOptions.LabelSelectors, labelsSelector)
+		}
+	}
+
+	fieldFilter := request.QueryParameter("fields")
+	if fieldFilter != "" {
+		fieldSelector, err := fields.ParseSelector(fieldFilter)
+		if err != nil {
+			logrus.Errorf("parse condition of field %s failed. Error: %+v", fieldFilter, err)
+		} else {
+			appFilterOptions.FieldSelector = fieldSelector
 		}
 	}
 
