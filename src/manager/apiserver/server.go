@@ -91,6 +91,7 @@ func (apiServer *ApiServer) Start() error {
 		ln, err := net.Listen("unix", apiServer.sock)
 		if err != nil {
 			logrus.Errorf("can't listen on socket %s:%s", apiServer.sock, err.Error())
+			return
 		}
 		logrus.Printf("start listening on %s", apiServer.sock)
 		srv.Serve(ln)
