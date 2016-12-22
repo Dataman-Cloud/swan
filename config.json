@@ -3,6 +3,7 @@
     "manager": "mixed",
     "standalone": false,
     "swanCluster": ["0.0.0.0:9999"],
+    "data-dir": "./data",
     "scheduler": {
 	    "mesos-masters": "127.0.0.1:5050",
 	    "mesos-framwork-user": "root",
