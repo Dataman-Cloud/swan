@@ -16,7 +16,7 @@ func main() {
 
 	swan.Commands = []cli.Command{
 		command.NewRunCommand(),
-		command.NewShowCommand(),
+		command.NewInspectCommand(),
 		command.NewListCommand(),
 		command.NewDeleteCommand(),
 		command.NewScaleUpCommand(),
