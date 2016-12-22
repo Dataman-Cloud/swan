@@ -70,7 +70,6 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:  "mesos-master",
-			Value: "127.0.0.1:5050",
 			Usage: "mesos master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
 		},
 		cli.StringFlag{
