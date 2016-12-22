@@ -1,4 +1,4 @@
-FROM golang:1.6.3-alpine 
+FROM demoregistry.dataman-inc.com/library/centos7-base:latest
 
 MAINTAINER Zheng Liu zliu@dataman-inc.com
 
