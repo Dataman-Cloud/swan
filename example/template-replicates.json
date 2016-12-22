@@ -50,14 +50,14 @@
   },
   "healthChecks": [
     {
-      "protocol": "TCP",
+      "protocol": "HTTP",
       "path": "/",
       "delaySeconds": 15,
       "portName": "web",
       "gracePeriodSeconds": 5,
       "intervalSeconds": 3,
       "timeoutSeconds": 3,
-      "consecutiveFailures": 5
+      "consecutiveFailures": 500
     }
  ],
   "updatePolicy": {

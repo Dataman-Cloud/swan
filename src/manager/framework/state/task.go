@@ -19,12 +19,6 @@ const (
 	SWAN_RESERVED_NETWORK = "swan"
 )
 
-const (
-	TASK_STATE_RUNNING = "task_running"
-	TASK_STATE_FAIL    = "task_failed"
-	TASK_STATE_FINISH  = "task_finish"
-)
-
 type Task struct {
 	Id             string
 	TaskInfoId     string
@@ -227,7 +221,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 							Scheme:   proto.String("http"),
 							Port:     hostPort,
 							Path:     &healthCheck.Path,
-							Statuses: []uint32{uint32(200)},
+							Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
 						},
 					}
 				}
@@ -243,7 +237,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 
 				taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
 				taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
-				taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.MaxConsecutiveFailures)
+				taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
 				taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
 			}
 		}

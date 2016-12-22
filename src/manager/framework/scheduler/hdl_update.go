@@ -27,8 +27,8 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	slotIndex_, appId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
-	logrus.Infof("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)
-	logrus.Infof("got healthy report for slot %s => %s", slotName, healthy)
+	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)
+	logrus.Debugf("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)
 
 	app := h.Manager.SchedulerRef.AppStorage.Get(appId)
 	if app == nil {
@@ -44,11 +44,15 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	}
 	logrus.Debugf("found slot %s", slot.Id)
 
+	slot.SetHealthy(healthy)
+
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:
 	case mesos.TaskState_TASK_STARTING:
 	case mesos.TaskState_TASK_RUNNING:
-		slot.SetState(state.SLOT_STATE_TASK_RUNNING)
+		if !slot.StateIs(state.SLOT_STATE_TASK_RUNNING) { // set state to running only if is not previously marked as running
+			slot.SetState(state.SLOT_STATE_TASK_RUNNING)
+		}
 
 	case mesos.TaskState_TASK_FINISHED:
 		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
