@@ -26,8 +26,6 @@ type SwanConfig struct {
 	SwanCluster  []string     `json:swanCluster`
 
 	Janitor Janitor `json:"janitor"`
-
-	ApiServerAddr string `json:apiServerAddr`
 }
 
 type Scheduler struct {

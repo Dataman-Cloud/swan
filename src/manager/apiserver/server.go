@@ -1,6 +1,7 @@
 package apiserver
 
 import (
+	"net"
 	"net/http"
 	"path/filepath"
 	"strings"
@@ -21,12 +22,14 @@ type ApiRegister interface {
 
 type ApiServer struct {
 	addr         string
+	sock         string
 	apiRegisters []ApiRegister
 }
 
-func NewApiServer(addr string) *ApiServer {
+func NewApiServer(addr, sock string) *ApiServer {
 	return &ApiServer{
 		addr: addr,
+		sock: sock,
 	}
 }
 
@@ -69,6 +72,19 @@ func (apiServer *ApiServer) Start() error {
 		SwaggerFilePath: swggerUiPath,
 	}
 	swagger.RegisterSwaggerService(config, wsContainer)
+
+	go func() {
+		srv := &http.Server{
+			Addr:    apiServer.sock,
+			Handler: wsContainer,
+		}
+		ln, err := net.Listen("unix", apiServer.sock)
+		if err != nil {
+			logrus.Errorf("can't listen on socket %s:%s", apiServer.sock, err.Error())
+		}
+		logrus.Printf("start listening on %s", apiServer.sock)
+		srv.Serve(ln)
+	}()
 
 	logrus.Printf("start listening on %s", apiServer.addr)
 	server := &http.Server{Addr: apiServer.addr, Handler: wsContainer}
