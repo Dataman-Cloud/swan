@@ -44,20 +44,20 @@ func listApplications(c *cli.Context) error {
 	}
 	defer resp.Body.Close()
 
-	var apps map[string][]*api.App
+	var apps []*api.App
 	if err := json.NewDecoder(resp.Body).Decode(&apps); err != nil {
 		return err
 	}
 
 	listApps := make([]*api.App, 0)
 	if !c.Bool("all") {
-		for _, app := range apps["apps"] {
+		for _, app := range apps {
 			if app.State == "normal" {
 				listApps = append(listApps, app)
 			}
 		}
 	} else {
-		listApps = apps["apps"]
+		listApps = apps
 	}
 
 	if c.IsSet("json") {
