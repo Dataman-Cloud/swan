@@ -1,4 +1,9 @@
-package labels
+package selection
+
+/*
+	this pkgs is from https://github.com/kubernetes/kubernetes.
+	thanks for the great project
+*/
 
 // Operator represents a key/field's relationship to value(s).
 // See labels.Requirement and fields.Requirement for more details.

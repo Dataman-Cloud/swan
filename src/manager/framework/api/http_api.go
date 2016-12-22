@@ -4,13 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
 
 	"github.com/Sirupsen/logrus"
@@ -49,7 +49,8 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("List Apps").
 		Operation("listApps").
-		Param(ws.QueryParameter("label", "app labels, e.g. USER==1").DataType("string")).
+		Param(ws.QueryParameter("labels", "app labels, e.g. labels=USER==1,cluster=beijing").DataType("string")).
+		Param(ws.QueryParameter("fields", "app fields, e.g. runAs==xxx").DataType("string")).
 		Returns(200, "OK", []App{}))
 	ws.Route(ws.POST("/").To(metrics.InstrumentRouteFunc("POST", "App", api.CreateApp)).
 		// docs
@@ -163,17 +164,23 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
 	appFilterOptions := scheduler.AppFilterOptions{}
-	labelFilter := request.QueryParameter("label")
-	if labelFilter != "" {
-		conditions := strings.Split(labelFilter, ",")
-		for _, condition := range conditions {
-			labelsSelector, err := labels.Parse(condition)
-			if err != nil {
-				logrus.Errorf("parse condition of label %s failed. Error: %+v", condition, err)
-				continue
-			}
+	labelsFilter := request.QueryParameter("labels")
+	if labelsFilter != "" {
+		labelsSelector, err := labels.Parse(labelsFilter)
+		if err != nil {
+			logrus.Errorf("parse condition of label %s failed. Error: %+v", labelsSelector, err)
+		} else {
+			appFilterOptions.LabelsSelector = labelsSelector
+		}
+	}
 
-			appFilterOptions.LabelSelectors = append(appFilterOptions.LabelSelectors, labelsSelector)
+	fieldsFilter := request.QueryParameter("fields")
+	if fieldsFilter != "" {
+		fieldSelector, err := fields.ParseSelector(fieldsFilter)
+		if err != nil {
+			logrus.Errorf("parse condition of field %s failed. Error: %+v", fieldsFilter, err)
+		} else {
+			appFilterOptions.FieldsSelector = fieldSelector
 		}
 	}
 
