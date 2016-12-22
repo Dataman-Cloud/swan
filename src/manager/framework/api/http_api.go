@@ -48,6 +48,7 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("List Apps").
 		Operation("listApps").
+		Param(ws.QueryParameter("label", "app labels, e.g. USER==1").DataType("string")).
 		Returns(200, "OK", []App{}))
 	ws.Route(ws.POST("/").To(api.CreateApp).
 		// docs
