@@ -4,7 +4,12 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/utils/labels"
 )
+
+type AppFilterOptions struct {
+	LabelSelectors []labels.Selector
+}
 
 // memoryStore implements a Store in memory.
 type memoryStore struct {
@@ -45,4 +50,28 @@ func (m *memoryStore) Delete(id string) {
 
 func (m *memoryStore) Data() map[string]*state.App {
 	return m.s
+}
+
+func (m *memoryStore) Filter(options AppFilterOptions) []*state.App {
+	var apps []*state.App
+
+	for _, app := range m.s {
+		if !filterByLabelsSelectors(options.LabelSelectors, app.CurrentVersion.Labels) {
+			continue
+		}
+
+		apps = append(apps, app)
+	}
+
+	return apps
+}
+
+func filterByLabelsSelectors(labelsSelectors []labels.Selector, appLabels map[string]string) bool {
+	for _, selector := range labelsSelectors {
+		if !selector.Matches(labels.Set(appLabels)) {
+			return false
+		}
+	}
+
+	return true
 }
