@@ -4,7 +4,6 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
-	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
@@ -164,27 +163,23 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
 	appFilterOptions := scheduler.AppFilterOptions{}
-	labelFilter := request.QueryParameter("labels")
-	if labelFilter != "" {
-		conditions := strings.Split(labelFilter, ",")
-		for _, condition := range conditions {
-			labelsSelector, err := labels.Parse(condition)
-			if err != nil {
-				logrus.Errorf("parse condition of label %s failed. Error: %+v", condition, err)
-				continue
-			}
-
-			appFilterOptions.LabelSelectors = append(appFilterOptions.LabelSelectors, labelsSelector)
+	labelsFilter := request.QueryParameter("labels")
+	if labelsFilter != "" {
+		labelsSelector, err := labels.Parse(labelsFilter)
+		if err != nil {
+			logrus.Errorf("parse condition of label %s failed. Error: %+v", labelsSelector, err)
+		} else {
+			appFilterOptions.LabelsSelector = labelsSelector
 		}
 	}
 
-	fieldFilter := request.QueryParameter("fields")
-	if fieldFilter != "" {
-		fieldSelector, err := fields.ParseSelector(fieldFilter)
+	fieldsFilter := request.QueryParameter("fields")
+	if fieldsFilter != "" {
+		fieldSelector, err := fields.ParseSelector(fieldsFilter)
 		if err != nil {
-			logrus.Errorf("parse condition of field %s failed. Error: %+v", fieldFilter, err)
+			logrus.Errorf("parse condition of field %s failed. Error: %+v", fieldsFilter, err)
 		} else {
-			appFilterOptions.FieldSelector = fieldSelector
+			appFilterOptions.FieldsSelector = fieldSelector
 		}
 	}
 

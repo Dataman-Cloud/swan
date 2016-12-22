@@ -9,8 +9,8 @@ import (
 )
 
 type AppFilterOptions struct {
-	LabelSelectors []labels.Selector
-	FieldSelector  fields.Selector
+	LabelsSelector labels.Selector
+	FieldsSelector fields.Selector
 }
 
 // memoryStore implements a Store in memory.
@@ -58,11 +58,11 @@ func (m *memoryStore) Filter(options AppFilterOptions) []*state.App {
 	var apps []*state.App
 
 	for _, app := range m.s {
-		if !filterByLabelsSelectors(options.LabelSelectors, app.CurrentVersion.Labels) {
+		if !filterByLabelsSelectors(options.LabelsSelector, app.CurrentVersion.Labels) {
 			continue
 		}
 
-		if !filterByFieldsSelectors(options.FieldSelector, app) {
+		if !filterByFieldsSelectors(options.FieldsSelector, app) {
 			continue
 		}
 
@@ -72,23 +72,21 @@ func (m *memoryStore) Filter(options AppFilterOptions) []*state.App {
 	return apps
 }
 
-func filterByLabelsSelectors(labelsSelectors []labels.Selector, appLabels map[string]string) bool {
-	for _, selector := range labelsSelectors {
-		if !selector.Matches(labels.Set(appLabels)) {
-			return false
-		}
+func filterByLabelsSelectors(labelsSelector labels.Selector, appLabels map[string]string) bool {
+	if labelsSelector == nil {
+		return true
 	}
 
-	return true
+	return labelsSelector.Matches(labels.Set(appLabels))
 }
 
 func filterByFieldsSelectors(fieldSelector fields.Selector, app *state.App) bool {
+	if fieldSelector == nil {
+		return true
+	}
+
 	// TODO(upccup): there maybe exist better way to got a field/value map
 	fieldMap := make(map[string]string)
 	fieldMap["runAs"] = app.CurrentVersion.RunAs
-	if !fieldSelector.Matches(fields.Set(fieldMap)) {
-		return false
-	}
-
-	return true
+	return fieldSelector.Matches(fields.Set(fieldMap))
 }
