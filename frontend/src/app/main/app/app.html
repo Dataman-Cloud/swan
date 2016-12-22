@@ -165,10 +165,10 @@
         </td>
         <td md-cell>
           {/task.agentHostname/}:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
-        <td md-cell>健康</td>
-        <td md-cell><i class="fa fa-play" aria-hidden="true">
-          <md-tooltip>运行中</md-tooltip>
-        </i></td>
+        <td md-cell>{/task.healthy/}</td>
+        <td md-cell>
+          <!--<i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>-->
+          {/task.status/}
         <td md-cell>
           {/task.versionId/}
         </td>

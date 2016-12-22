@@ -20,7 +20,7 @@
         controllerAs: 'vm'
       })
       .state('home.user', {
-        url: '/user',
+        url: '/user?fields',
         templateUrl: 'app/main/user/user.html',
         controller: 'UserController',
         controllerAs: 'vm'

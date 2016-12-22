@@ -7,7 +7,9 @@
 
   /** @ngInject */
   function UserController(userBackend, $stateParams) {
-    var params = {user: $stateParams.user};
+    var params = {
+      fields: $stateParams.fields
+    };
 
     var vm = this;
     vm.apps = [];
