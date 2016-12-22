@@ -290,13 +290,11 @@ func UpdatePolicyFromRaft(raftUpdatePolicy *rafttypes.UpdatePolicy) *types.Updat
 
 func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 	raftHealthCheck := &rafttypes.HealthCheck{
-		ID:        healthCheck.ID,
-		Address:   healthCheck.Address,
-		Protocol:  healthCheck.Protocol,
-		Port:      healthCheck.Port,
-		PortIndex: healthCheck.PortIndex,
-		PortName:  healthCheck.PortName,
-		Path:      healthCheck.Path,
+		ID:       healthCheck.ID,
+		Address:  healthCheck.Address,
+		Protocol: healthCheck.Protocol,
+		PortName: healthCheck.PortName,
+		Path:     healthCheck.Path,
 		MaxConsecutiveFailures: healthCheck.MaxConsecutiveFailures,
 		GracePeriodSeconds:     healthCheck.GracePeriodSeconds,
 		IntervalSeconds:        healthCheck.IntervalSeconds,
@@ -312,13 +310,11 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 
 func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCheck {
 	healthCheck := &types.HealthCheck{
-		ID:        raftHealthCheck.ID,
-		Address:   raftHealthCheck.Address,
-		Protocol:  raftHealthCheck.Protocol,
-		Port:      raftHealthCheck.Port,
-		PortIndex: raftHealthCheck.PortIndex,
-		PortName:  raftHealthCheck.PortName,
-		Path:      raftHealthCheck.Path,
+		ID:       raftHealthCheck.ID,
+		Address:  raftHealthCheck.Address,
+		Protocol: raftHealthCheck.Protocol,
+		PortName: raftHealthCheck.PortName,
+		Path:     raftHealthCheck.Path,
 		MaxConsecutiveFailures: raftHealthCheck.MaxConsecutiveFailures,
 		GracePeriodSeconds:     raftHealthCheck.GracePeriodSeconds,
 		IntervalSeconds:        raftHealthCheck.IntervalSeconds,

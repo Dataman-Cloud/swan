@@ -49,6 +49,16 @@
     "duration": 5
   },
   "healthChecks": [
+    {
+      "protocol": "TCP",
+      "path": "/",
+      "delaySeconds": 15,
+      "portName": "web",
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 3,
+      "timeoutSeconds": 3,
+      "consecutiveFailures": 5
+    }
  ],
   "updatePolicy": {
 	  "updateDelay": 5,

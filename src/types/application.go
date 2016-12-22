@@ -73,8 +73,6 @@ type HealthCheck struct {
 	TaskID                 string
 	AppID                  string
 	Protocol               string
-	Port                   int32
-	PortIndex              int32
 	PortName               string
 	Command                *Command
 	Path                   string
@@ -86,51 +84,4 @@ type HealthCheck struct {
 
 type Command struct {
 	Value string
-}
-
-type Task struct {
-	ID             string
-	Name           string
-	Command        string
-	Cpus           float64
-	Disk           float64
-	Mem            float64
-	Image          string
-	Network        string
-	PortMappings   []*PortMappings
-	Privileged     bool
-	Parameters     []*Parameter
-	ForcePullImage bool
-	Volumes        []*Volume
-	Env            map[string]string
-	Labels         map[string]string
-	HealthChecks   []*HealthCheck
-	OfferId        string
-	AgentId        string
-	AgentHostname  string
-	Status         string
-	AppId          string
-	KillPolicy     *KillPolicy
-	Uris           []string
-}
-
-type PortMappings struct {
-	Port     uint32
-	Protocol string
-	Name     string
-}
-
-type Application struct {
-	ID                string
-	Name              string
-	Instances         uint64
-	UpdatedInstances  uint64
-	RunningInstances  uint64
-	RollbackInstances uint64
-	RunAs             string
-	ClusterId         string
-	Status            string
-	Created           int64
-	Updated           int64
-	Mode              string
 }

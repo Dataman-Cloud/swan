@@ -3,7 +3,7 @@ package command
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 	"os"
@@ -44,7 +44,7 @@ func showApplication(c *cli.Context) error {
 	}
 	defer resp.Body.Close()
 
-	var tasks []*types.Task
+	var tasks []*api.Task
 	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
 		return err
 	}
@@ -64,7 +64,7 @@ func showApplication(c *cli.Context) error {
 }
 
 // printTable output tasks list as table format.
-func printTaskTable(tasks []*types.Task) {
+func printTaskTable(tasks []*api.Task) {
 	tb := tablewriter.NewWriter(os.Stdout)
 	tb.SetHeader([]string{
 		"Name",
@@ -72,18 +72,16 @@ func printTaskTable(tasks []*types.Task) {
 		"CPUS",
 		"MEM",
 		"DISK",
-		"NETWORK",
 		"ADDRESS",
 		"STATUS",
 	})
 	for _, task := range tasks {
 		tb.Append([]string{
-			task.Name,
+			task.ID,
 			task.AppId,
-			fmt.Sprintf("%.2f", task.Cpus),
+			fmt.Sprintf("%.2f", task.Cpu),
 			fmt.Sprintf("%.f", task.Mem),
 			fmt.Sprintf("%.f", task.Disk),
-			task.Network,
 			task.AgentHostname,
 			task.Status,
 		})
