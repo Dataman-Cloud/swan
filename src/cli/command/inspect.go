@@ -9,21 +9,25 @@ import (
 	"os"
 )
 
-// NewShowCommand returns the CLI command for "show"
-func NewShowCommand() cli.Command {
+// NewInspectCommand returns the CLI command for "show"
+func NewInspectCommand() cli.Command {
 	return cli.Command{
-		Name:      "show",
-		Usage:     "show application or task info",
+		Name:      "inspect",
+		Usage:     "inspect application info",
 		ArgsUsage: "[name]",
 		Flags: []cli.Flag{
 			cli.BoolFlag{
 				Name:  "json",
 				Usage: "List tasks with json format",
 			},
+			cli.BoolFlag{
+				Name:  "history",
+				Usage: "List task histories",
+			},
 		},
 
 		Action: func(c *cli.Context) error {
-			if err := showApplication(c); err != nil {
+			if err := inspectApplication(c); err != nil {
 				fmt.Fprintln(os.Stderr, "Error:", err)
 			}
 			return nil
@@ -31,25 +35,25 @@ func NewShowCommand() cli.Command {
 	}
 }
 
-// showApplication executes the "show" command.
-func showApplication(c *cli.Context) error {
+// inspectApplication executes the "inspect" command.
+func inspectApplication(c *cli.Context) error {
 	if len(c.Args()) == 0 {
 		return fmt.Errorf("App ID required")
 	}
 
-	httpClient := NewHTTPClient(fmt.Sprintf("/v1/apps/%s/tasks", c.Args()[0]))
+	httpClient := NewHTTPClient(fmt.Sprintf("/apps/%s", c.Args()[0]))
 	resp, err := httpClient.Get()
 	if err != nil {
 		return fmt.Errorf("Unable to do request: %s", err.Error())
 	}
 	defer resp.Body.Close()
 
-	var tasks []*api.Task
-	if err := json.NewDecoder(resp.Body).Decode(&tasks); err != nil {
+	var app *api.App
+	if err := json.NewDecoder(resp.Body).Decode(&app); err != nil {
 		return err
 	}
 
-	data, err := json.Marshal(&tasks)
+	data, err := json.Marshal(&app.Tasks)
 	if err != nil {
 		return err
 	}
@@ -57,7 +61,7 @@ func showApplication(c *cli.Context) error {
 	if c.IsSet("json") {
 		fmt.Fprintln(os.Stdout, string(data))
 	} else {
-		printTaskTable(tasks)
+		printTaskTable(app.Tasks)
 	}
 
 	return nil
@@ -74,6 +78,8 @@ func printTaskTable(tasks []*api.Task) {
 		"DISK",
 		"ADDRESS",
 		"STATUS",
+		"VERSIONID",
+		"HISTORIES",
 	})
 	for _, task := range tasks {
 		tb.Append([]string{
@@ -84,7 +90,34 @@ func printTaskTable(tasks []*api.Task) {
 			fmt.Sprintf("%.f", task.Disk),
 			task.AgentHostname,
 			task.Status,
+			task.VersionId,
+			fmt.Sprintf("%d", len(task.History)),
 		})
 	}
 	tb.Render()
 }
+
+//func printHistoies(histories []*api.TaskHistory) {
+//	tb := tablewriter.NewWriter(os.Stdout)
+//	tb.SetHeader([]string{
+//		"ID",
+//		"CPU",
+//		"MEM",
+//		"DISK",
+//		"ADDRESS",
+//		"REASON",
+//		"VERSIONID",
+//	})
+//	for _, history := range histories {
+//		tb.Append([]string{
+//			history.ID,
+//			fmt.Sprintf("%.2f", history.Cpu),
+//			fmt.Sprintf("%.f", history.Mem),
+//			fmt.Sprintf("%.f", history.Disk),
+//			history.AgentHostname,
+//			history.Reason,
+//			history.VersionId,
+//		})
+//	}
+//	tb.Render()
+//}
