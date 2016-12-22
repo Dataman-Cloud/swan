@@ -68,18 +68,18 @@ type UpdatePolicy struct {
 }
 
 type HealthCheck struct {
-	ID                     string
-	Address                string
-	TaskID                 string
-	AppID                  string
-	Protocol               string
-	PortName               string
-	Command                *Command
-	Path                   string
-	MaxConsecutiveFailures uint32
-	GracePeriodSeconds     float64
-	IntervalSeconds        float64
-	TimeoutSeconds         float64
+	ID                  string
+	Address             string
+	TaskID              string
+	AppID               string
+	Protocol            string
+	PortName            string
+	Command             *Command
+	Path                string
+	ConsecutiveFailures uint32
+	GracePeriodSeconds  float64
+	IntervalSeconds     float64
+	TimeoutSeconds      float64
 }
 
 type Command struct {

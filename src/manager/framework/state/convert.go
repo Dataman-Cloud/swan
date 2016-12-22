@@ -290,15 +290,15 @@ func UpdatePolicyFromRaft(raftUpdatePolicy *rafttypes.UpdatePolicy) *types.Updat
 
 func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 	raftHealthCheck := &rafttypes.HealthCheck{
-		ID:       healthCheck.ID,
-		Address:  healthCheck.Address,
-		Protocol: healthCheck.Protocol,
-		PortName: healthCheck.PortName,
-		Path:     healthCheck.Path,
-		MaxConsecutiveFailures: healthCheck.MaxConsecutiveFailures,
-		GracePeriodSeconds:     healthCheck.GracePeriodSeconds,
-		IntervalSeconds:        healthCheck.IntervalSeconds,
-		TimeoutSeconds:         healthCheck.TimeoutSeconds,
+		ID:                  healthCheck.ID,
+		Address:             healthCheck.Address,
+		Protocol:            healthCheck.Protocol,
+		PortName:            healthCheck.PortName,
+		Path:                healthCheck.Path,
+		ConsecutiveFailures: healthCheck.ConsecutiveFailures,
+		GracePeriodSeconds:  healthCheck.GracePeriodSeconds,
+		IntervalSeconds:     healthCheck.IntervalSeconds,
+		TimeoutSeconds:      healthCheck.TimeoutSeconds,
 	}
 
 	if healthCheck.Command != nil {
@@ -310,15 +310,15 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 
 func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCheck {
 	healthCheck := &types.HealthCheck{
-		ID:       raftHealthCheck.ID,
-		Address:  raftHealthCheck.Address,
-		Protocol: raftHealthCheck.Protocol,
-		PortName: raftHealthCheck.PortName,
-		Path:     raftHealthCheck.Path,
-		MaxConsecutiveFailures: raftHealthCheck.MaxConsecutiveFailures,
-		GracePeriodSeconds:     raftHealthCheck.GracePeriodSeconds,
-		IntervalSeconds:        raftHealthCheck.IntervalSeconds,
-		TimeoutSeconds:         raftHealthCheck.TimeoutSeconds,
+		ID:                  raftHealthCheck.ID,
+		Address:             raftHealthCheck.Address,
+		Protocol:            raftHealthCheck.Protocol,
+		PortName:            raftHealthCheck.PortName,
+		Path:                raftHealthCheck.Path,
+		ConsecutiveFailures: raftHealthCheck.ConsecutiveFailures,
+		GracePeriodSeconds:  raftHealthCheck.GracePeriodSeconds,
+		IntervalSeconds:     raftHealthCheck.IntervalSeconds,
+		TimeoutSeconds:      raftHealthCheck.TimeoutSeconds,
 	}
 
 	if raftHealthCheck.Command != nil {
@@ -347,6 +347,7 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		State:                slot.State,
 		MarkForDeletion:      slot.MarkForDeletion(),
 		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
+		Healthy:              slot.Healthy(),
 	}
 
 	if slot.CurrentTask != nil {
@@ -370,6 +371,7 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
 		markForDeletion:      raftSlot.MarkForDeletion,
 		markForRollingUpdate: raftSlot.MarkForRollingUpdate,
+		healthy:              raftSlot.Healthy,
 	}
 
 	raftVersion, err := persistentStore.GetVersion(raftSlot.AppId, raftSlot.VersionId)

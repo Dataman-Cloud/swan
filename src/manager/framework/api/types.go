@@ -56,7 +56,8 @@ type Task struct {
 
 	Created time.Time `json:"created,omitempty"`
 
-	Image string `json:"image,omitempty"`
+	Image   string `json:"image,omitempty"`
+	Healthy bool   `json:"healthy,omitempty"`
 }
 
 type TaskHistory struct {

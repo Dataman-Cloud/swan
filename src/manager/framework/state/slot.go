@@ -71,6 +71,8 @@ type Slot struct {
 
 	restartPolicy *RestartPolicy
 
+	healthy bool
+
 	inTransaction bool
 	touched       bool
 }
@@ -379,18 +381,27 @@ func (slot *Slot) MarkForRollingUpdate() bool {
 	return slot.markForRollingUpdate
 }
 
+func (slot *Slot) Healthy() bool {
+	return slot.healthy
+}
+
+func (slot *Slot) SetHealthy(healthy bool) {
+	slot.healthy = healthy
+	slot.Touch(false)
+}
+
 func (slot *Slot) MarkForDeletion() bool {
 	return slot.markForDeletion
 }
 
 func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
-	slot.Touch(false)
 	slot.markForRollingUpdate = rollingUpdate
+	slot.Touch(false)
 }
 
 func (slot *Slot) SetMarkForDeletion(deletion bool) {
-	slot.Touch(false)
 	slot.markForDeletion = deletion
+	slot.Touch(false)
 }
 
 func (slot *Slot) Remove() {

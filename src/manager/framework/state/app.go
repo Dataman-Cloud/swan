@@ -518,11 +518,16 @@ func validateAndFormatVersion(version *types.Version) error {
 				return errors.New(fmt.Sprintf("no port name %s found in docker's PortMappings", hc.PortName))
 			}
 
-			if !utils.SliceContains([]string{"tcp", "http", "cmd", "TCP", "HTTP", "CMD"}, hc.Protocol) {
+			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP"}, hc.Protocol) {
 				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check", hc.Protocol))
 			}
-		}
 
+			if hc.Protocol == "http" || hc.Protocol == "HTTP" {
+				if len(hc.Path) == 0 {
+					return errors.New("no path provided for health check with HTTP protocol")
+				}
+			}
+		}
 	}
 
 	return nil

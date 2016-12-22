@@ -99,7 +99,7 @@ message HealthCheck {
     string portName = 6;
     Command command = 7;
     string path = 8;
-    uint32 maxConsecutiveFailures = 9;
+    uint32 consecutiveFailures = 9;
     double gracePeriodSeconds = 10;
     double intervalSeconds = 11;
     double timeoutSeconds = 12;
@@ -117,8 +117,9 @@ message Slot {
     string state = 5;
     bool markForDeletion = 6;
     bool markForRollingUpdate = 7;
-    Task CurrentTask = 8;
-    RestartPolicy restartPolicy = 9;
+    bool healthy = 8;
+    Task CurrentTask = 9;
+    RestartPolicy restartPolicy = 10;
 }
 
 message RestartPolicy {

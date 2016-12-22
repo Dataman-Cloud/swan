@@ -369,6 +369,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			ID:            slot.Id,
 			AppId:         slot.App.AppId, // either Name or Id, rename AppId later
 			VersionId:     slot.Version.ID,
+			Healthy:       slot.Healthy(),
 			Status:        string(slot.State),
 			OfferId:       slot.OfferId,
 			AgentId:       slot.AgentId,
