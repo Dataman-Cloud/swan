@@ -43,6 +43,9 @@ type Task struct {
 	AgentHostName string
 
 	Reason  string
+	Message string
+	Source  string
+
 	Created time.Time
 }
 

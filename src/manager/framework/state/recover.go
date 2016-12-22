@@ -20,17 +20,16 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 
 	for _, raftApp := range raftApps {
 		app := &App{
-			AppId:               raftApp.ID,
-			CurrentVersion:      VersionFromRaft(raftApp.Version),
-			State:               raftApp.State,
-			Mode:                AppMode(raftApp.Version.Mode),
-			Created:             time.Unix(0, raftApp.CreatedAt),
-			Updated:             time.Unix(0, raftApp.UpdatedAt),
-			Scontext:            scontext,
-			Slots:               make(map[int]*Slot),
-			InvalidateCallbacks: make(map[string][]AppInvalidateCallbackFuncs),
-			MesosConnector:      mesosConnector,
-			OfferAllocatorRef:   allocator,
+			AppId:             raftApp.ID,
+			CurrentVersion:    VersionFromRaft(raftApp.Version),
+			State:             raftApp.State,
+			Mode:              AppMode(raftApp.Version.Mode),
+			Created:           time.Unix(0, raftApp.CreatedAt),
+			Updated:           time.Unix(0, raftApp.UpdatedAt),
+			Scontext:          scontext,
+			slots:             make(map[int]*Slot),
+			MesosConnector:    mesosConnector,
+			OfferAllocatorRef: allocator,
 		}
 
 		raftVersions, err := persistentStore.ListVersions(raftApp.ID)
@@ -51,7 +50,7 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 		}
 
 		for _, slot := range slots {
-			app.Slots[int(slot.Index)] = slot
+			app.SetSlot(int(slot.Index), slot)
 		}
 
 		apps[app.AppId] = app
@@ -88,8 +87,8 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 			slot.CurrentTask.Version = app.CurrentVersion
 		}
 		slot.App = app
-
-		slot.StatesCallbacks = make(map[string][]SlotStateCallbackFuncs)
+		// TODO yaoyun
+		slot.Version = app.CurrentVersion
 
 		slots = append(slots, slot)
 	}

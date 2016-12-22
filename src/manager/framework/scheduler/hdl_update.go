@@ -20,6 +20,8 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	slotName := taskStatus.TaskId.GetValue()
 	taskState := taskStatus.GetState()
 	reason := taskStatus.GetReason()
+	source := taskStatus.GetSource()
+	message := taskStatus.GetMessage()
 	healthy := taskStatus.GetHealthy()
 
 	slotIndex_, appId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
@@ -35,7 +37,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	}
 	logrus.Debugf("found app %s", app.AppId)
 
-	slot, found := app.Slots[int(slotIndex)]
+	slot, found := app.GetSlot(int(slotIndex))
 	if !found {
 		logrus.Errorf("slot not found: %s", slotIndex)
 		return h, nil
@@ -49,16 +51,31 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		slot.SetState(state.SLOT_STATE_TASK_RUNNING)
 
 	case mesos.TaskState_TASK_FINISHED:
+		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		slot.CurrentTask.Message = message
+		slot.CurrentTask.Source = mesos.TaskStatus_Source_name[int32(source)]
+
 		slot.SetState(state.SLOT_STATE_TASK_FINISHED)
 
 	case mesos.TaskState_TASK_FAILED:
 		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		slot.CurrentTask.Message = message
+		slot.CurrentTask.Source = mesos.TaskStatus_Source_name[int32(source)]
+
 		slot.SetState(state.SLOT_STATE_TASK_FAILED)
 
 	case mesos.TaskState_TASK_KILLED:
+		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		slot.CurrentTask.Message = message
+		slot.CurrentTask.Source = mesos.TaskStatus_Source_name[int32(source)]
+
 		slot.SetState(state.SLOT_STATE_TASK_KILLED)
 
 	case mesos.TaskState_TASK_LOST:
+		slot.CurrentTask.Reason = mesos.TaskStatus_Reason_name[int32(reason)]
+		slot.CurrentTask.Message = message
+		slot.CurrentTask.Source = mesos.TaskStatus_Source_name[int32(source)]
+
 		slot.SetState(state.SLOT_STATE_TASK_LOST)
 	}
 

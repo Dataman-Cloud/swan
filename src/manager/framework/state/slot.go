@@ -49,15 +49,12 @@ const (
 	SLOT_STATE_TASK_UNKNOWN          = "slot_task_unknown"
 )
 
-type SlotStateCallbackFuncs func(slot *Slot)
-
 type Slot struct {
-	Index           int
-	Id              string
-	App             *App
-	Version         *types.Version
-	State           string
-	StatesCallbacks map[string][]SlotStateCallbackFuncs
+	Index   int
+	Id      string
+	App     *App
+	Version *types.Version
+	State   string
 
 	CurrentTask *Task
 	TaskHistory []*Task
@@ -69,10 +66,13 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	MarkForDeletion      bool
-	MarkForRollingUpdate bool
+	markForDeletion      bool
+	markForRollingUpdate bool
 
 	restartPolicy *RestartPolicy
+
+	inTransaction bool
+	touched       bool
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
@@ -85,16 +85,16 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 		resourceReservationLock: sync.Mutex{},
 
-		MarkForRollingUpdate: false,
-		MarkForDeletion:      false,
-		StatesCallbacks:      make(map[string][]SlotStateCallbackFuncs),
+		markForRollingUpdate: false,
+		markForDeletion:      false,
+
+		inTransaction: false,
+		touched:       true,
 	}
 
 	if slot.App.IsFixed() {
 		slot.Ip = app.CurrentVersion.Ip[index]
 	}
-
-	slot.DispatchNewTask(slot.Version)
 
 	// initialize restart policy
 	testAndRestartFunc := func(s *Slot) bool {
@@ -110,53 +110,61 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 	//slot.Version.BackoffFactor, slot.Version.MaxLaunchDelaySeconds, testAndRestartFunc)
 	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 1, time.Second*300, testAndRestartFunc)
 
+	slot.create()
+
 	return slot
 }
 
 // kill task doesn't need cleanup slot from app.Slots
 func (slot *Slot) KillTask() {
+	slot.BeginTx()
+	defer slot.Commit()
+
 	slot.StopRestartPolicy()
+
 	slot.SetState(SLOT_STATE_PENDING_KILL)
 	slot.CurrentTask.Kill()
 }
 
 // kill task and make slot sweeped after successfully kill task
 func (slot *Slot) Kill() {
+	slot.BeginTx()
+	defer slot.Commit()
+
 	slot.StopRestartPolicy()
 
-	slot.MarkForDeletion = true
+	slot.SetMarkForDeletion(true)
 	slot.SetState(SLOT_STATE_PENDING_KILL)
-
 	slot.CurrentTask.Kill()
 }
 
 func (slot *Slot) Archive() {
-	if err := WithConvertTask(context.TODO(), slot.CurrentTask,
-		func() { slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask) }, persistentStore.UpdateTask); err != nil {
-		logrus.Errorf("Put task: %s to histort failed, Error: %s", slot.CurrentTask.Id, err.Error())
-	}
+	slot.BeginTx()
+	defer slot.Commit()
+
+	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
+	WithConvertTask(context.TODO(), slot.CurrentTask, nil, persistentStore.UpdateTask)
 }
 
 func (slot *Slot) DispatchNewTask(version *types.Version) {
+	slot.BeginTx()
+	defer slot.Commit()
+
 	slot.Version = version
 	slot.CurrentTask = NewTask(slot.App.MesosConnector, slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)
-
 }
 
-func (slot *Slot) Update(version *types.Version) {
+func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
 	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
 
-	slot.MarkForRollingUpdate = true // mark as in progress of rolling update
+	slot.BeginTx()
+	defer slot.Commit()
 
-	onSlotFinished := func(slot *Slot) {
-		logrus.Infof("onSlotFinished func")
-		slot.Archive()
-		slot.DispatchNewTask(version)
-	}
-	slot.RegisterStateCallbacks(SLOT_STATE_TASK_FINISHED, onSlotFinished)
+	slot.Version = version
+	slot.SetMarkForRollingUpdate(isRollingUpdate)
 
 	slot.KillTask() // kill task but doesn't clean slot
 }
@@ -284,18 +292,9 @@ func (slot *Slot) StateIs(state string) bool {
 }
 
 func (slot *Slot) SetState(state string) error {
-	slot.State = state
-
-	// handle callback
-	if len(slot.StatesCallbacks[slot.State]) > 0 {
-		for _, cb := range slot.StatesCallbacks[slot.State] {
-			cb(slot)
-		}
-	}
-	slot.RemoveStateCallbacks(slot.State)
-
 	logrus.Infof("setting state for slot %s to %s", slot.Id, slot.State)
 
+	slot.State = state
 	switch slot.State {
 	case SLOT_STATE_PENDING_KILL:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
@@ -314,26 +313,27 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
+	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+		// TODO remove slot from OfferAllocator
+		logrus.Infof("removeSlot func")
+		slot.App.RemoveSlot(slot.Index)
+	}
+
+	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+		// TODO remove slot from OfferAllocator
+		logrus.Infof("archive current task")
+		slot.Archive()
+		slot.DispatchNewTask(slot.Version)
+	}
+
 	// skip app invalidation if slot state is not mesos driven
 	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
 		(slot.State != SLOT_STATE_PENDING_KILL) {
-		slot.App.InvalidateSlots()
+		slot.App.Reevaluate()
 	}
+
+	slot.Touch(false)
 	return nil
-}
-
-func (slot *Slot) AppendStateCallbacks(state string, callback SlotStateCallbackFuncs) {
-	slot.StatesCallbacks[state] = append(slot.StatesCallbacks[state], callback)
-}
-
-// empty callback queue first
-func (slot *Slot) RegisterStateCallbacks(state string, callback SlotStateCallbackFuncs) {
-	slot.RemoveStateCallbacks(state)
-	slot.StatesCallbacks[state] = append(slot.StatesCallbacks[state], callback)
-}
-
-func (slot *Slot) RemoveStateCallbacks(state string) {
-	slot.StatesCallbacks[state] = make([]SlotStateCallbackFuncs, 0)
 }
 
 func (slot *Slot) StopRestartPolicy() {
@@ -373,4 +373,69 @@ func (slot *Slot) EmitTaskEvent(t string) {
 			slot.App.EmitEvent(e)
 		}
 	}
+}
+
+func (slot *Slot) MarkForRollingUpdate() bool {
+	return slot.markForRollingUpdate
+}
+
+func (slot *Slot) MarkForDeletion() bool {
+	return slot.markForDeletion
+}
+
+func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
+	slot.Touch(false)
+	slot.markForRollingUpdate = rollingUpdate
+}
+
+func (slot *Slot) SetMarkForDeletion(deletion bool) {
+	slot.Touch(false)
+	slot.markForDeletion = deletion
+}
+
+func (slot *Slot) Remove() {
+	slot.remove()
+}
+
+func (slot *Slot) Touch(force bool) {
+	if force { // force update the app
+		slot.update()
+		return
+	}
+
+	if slot.inTransaction {
+		slot.touched = true
+		logrus.Infof("delay update action as current slot in between tranaction")
+	} else {
+		slot.update()
+	}
+}
+
+func (slot *Slot) BeginTx() {
+	slot.inTransaction = true
+}
+
+// here we persist the app anyway, no matter it touched or not
+func (slot *Slot) Commit() {
+	slot.inTransaction = false
+	slot.touched = false
+	slot.update()
+}
+
+func (slot *Slot) update() {
+	logrus.Debugf("update slot %s", slot.Id)
+	WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
+	slot.touched = false
+}
+
+func (slot *Slot) create() {
+	logrus.Debugf("create slot %s", slot.Id)
+	WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
+	slot.touched = false
+}
+
+func (slot *Slot) remove() {
+	logrus.Debugf("remove slot %s", slot.Id)
+	persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, nil)
+	slot.touched = false
 }
