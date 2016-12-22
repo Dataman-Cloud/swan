@@ -204,36 +204,19 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	}
 
 	// setup task health check
-	if task.Slot.App.Mode != APP_MODE_FIXED {
+	if task.Slot.App.IsReplicates() {
 		if len(task.Slot.Version.HealthChecks) > 0 {
 			for _, healthCheck := range task.Slot.Version.HealthChecks {
-				if healthCheck.PortIndex < 0 || int(healthCheck.PortIndex) >= len(taskInfo.Container.Docker.PortMappings) {
-					healthCheck.PortIndex = 0
-				}
-
-				hostPort := proto.Uint32(0)
-
-				for _, portMapping := range taskInfo.Container.Docker.PortMappings {
-					if portMapping.ContainerPort == proto.Uint32(uint32(healthCheck.Port)) {
-						hostPort = portMapping.HostPort
-					}
-				}
-
-				if healthCheck.PortName != "" {
-					for _, portMapping := range task.Slot.Version.Container.Docker.PortMappings {
-						if portMapping.Name == healthCheck.PortName {
-							containerPort := portMapping.ContainerPort
-							for _, portMapping := range taskInfo.Container.Docker.PortMappings {
-								if uint32(containerPort) == *portMapping.ContainerPort {
-									hostPort = portMapping.HostPort
-								}
+				var hostPort *uint32
+				for _, portMapping := range task.Slot.Version.Container.Docker.PortMappings {
+					if portMapping.Name == healthCheck.PortName {
+						containerPort := portMapping.ContainerPort
+						for _, portMapping := range taskInfo.Container.Docker.PortMappings {
+							if uint32(containerPort) == *portMapping.ContainerPort {
+								hostPort = portMapping.HostPort
 							}
 						}
 					}
-				}
-
-				if *hostPort == 0 {
-					hostPort = taskInfo.Container.Docker.PortMappings[healthCheck.PortIndex].HostPort
 				}
 
 				protocol := strings.ToLower(healthCheck.Protocol)

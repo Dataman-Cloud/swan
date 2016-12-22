@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +13,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -203,6 +205,10 @@ func (app *App) Delete() error {
 func (app *App) Update(version *types.Version, store store.Store) error {
 	if !app.StateIs(APP_STATE_NORMAL) || app.ProposedVersion != nil {
 		return errors.New("app not in normal state")
+	}
+
+	if err := validateAndFormatVersion(version); err != nil {
+		return err
 	}
 
 	if err := app.checkProposedVersionValid(version); err != nil {
@@ -442,6 +448,14 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 }
 
 func validateAndFormatVersion(version *types.Version) error {
+	if version.Container == nil {
+		return errors.New("swan only support mesos docker containerization, no container found")
+	}
+
+	if version.Container.Docker == nil {
+		return errors.New("swan only support mesos docker containerization, no container found")
+	}
+
 	if len(version.Mode) == 0 {
 		version.Mode = string(APP_MODE_REPLICATES)
 	}
@@ -450,10 +464,65 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New(fmt.Sprintf("enrecognized app mode %s", version.Mode))
 	}
 
+	// validation for fixed mode application
 	if version.Mode == string(APP_MODE_FIXED) {
 		if len(version.Ip) != int(version.Instances) {
 			return errors.New(fmt.Sprintf("should provide exactly %d ip for FIXED type app", version.Instances))
 		}
+
+		if len(version.Container.Docker.PortMappings) > 0 {
+			return errors.New("fixed mode application doesn't support portmapping")
+		}
+
+		if len(version.HealthChecks) > 0 {
+			return errors.New("fixed mode application doesn't health check")
+		}
+
+		if strings.ToLower(version.Container.Docker.Network) != SWAN_RESERVED_NETWORK {
+			return errors.New("fixed mode app suppose the only network driver should be macvlan and name is swan")
+		}
+	}
+
+	// validation for replicates mode app
+	if version.Mode == string(APP_MODE_REPLICATES) {
+		// the only network driver should be **bridge**
+		if strings.ToLower(version.Container.Docker.Network) != "bridge" {
+			return errors.New("replicates mode app suppose the only network driver should be bridge")
+		}
+
+		// portMapping.Name should be mandatory
+		for _, portmapping := range version.Container.Docker.PortMappings {
+			if strings.TrimSpace(portmapping.Name) == "" {
+				return errors.New("each port mapping should have a uniquely identified name")
+			}
+		}
+
+		portNames := make([]string, 0)
+		for _, portmapping := range version.Container.Docker.PortMappings {
+			portNames = append(portNames, portmapping.Name)
+		}
+
+		// portName should be unique
+		if !utils.SliceUnique(portNames) {
+			return errors.New("each port mapping should have a uniquely identified name")
+		}
+
+		// portName for health check should mandatory
+		for _, hc := range version.HealthChecks {
+			if strings.TrimSpace(hc.PortName) == "" {
+				return errors.New("port name should not empty and match name in docker's PortMappings")
+			}
+
+			// portName should present in dockers' portMappings definition
+			if !utils.SliceContains(portNames, hc.PortName) {
+				return errors.New(fmt.Sprintf("no port name %s found in docker's PortMappings", hc.PortName))
+			}
+
+			if !utils.SliceContains([]string{"tcp", "http", "cmd", "TCP", "HTTP", "CMD"}, hc.Protocol) {
+				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check", hc.Protocol))
+			}
+		}
+
 	}
 
 	return nil
