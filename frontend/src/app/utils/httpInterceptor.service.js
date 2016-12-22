@@ -35,7 +35,14 @@
       // optional method
       'responseError': function (rejection) {
         // do something on error
-        var msg = rejection.data ? rejection.data : '连接后端服务器异常。' + '</br>' + '请确认配置: ' + BACKEND_URL_BASE.defaultBase;
+        var msg = '';
+        if (-1 === rejection.status) {
+          msg = '连接后端服务器异常。' + '</br>' + '请确认配置: ' + BACKEND_URL_BASE.defaultBase;
+        } else if (rejection.data) {
+          msg = rejection.data;
+        } else {
+          msg = rejection.statusText;
+        }
         getNotification().error(msg);
         return $q.reject(rejection);
       }
