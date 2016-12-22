@@ -4,11 +4,13 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/labels"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -158,8 +160,23 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
+	appFilterOptions := scheduler.AppFilterOptions{}
+	labelFilter := request.QueryParameter("label")
+	if labelFilter != "" {
+		conditions := strings.Split(labelFilter, ",")
+		for _, condition := range conditions {
+			labelsSelector, err := labels.Parse(condition)
+			if err != nil {
+				logrus.Errorf("parse condition of label %s failed. Error: %+v", condition, err)
+				continue
+			}
+
+			appFilterOptions.LabelSelectors = append(appFilterOptions.LabelSelectors, labelsSelector)
+		}
+	}
+
 	appsRet := make([]*App, 0)
-	for _, app := range api.Scheduler.ListApps() {
+	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
 		version := app.CurrentVersion
 		appsRet = append(appsRet, &App{
 			ID:               version.AppId,

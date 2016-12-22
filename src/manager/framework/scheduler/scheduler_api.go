@@ -40,9 +40,9 @@ func (scheduler *Scheduler) DeleteApp(appId string) error {
 	return app.Delete()
 }
 
-func (scheduler *Scheduler) ListApps() []*state.App {
+func (scheduler *Scheduler) ListApps(appFilterOptions AppFilterOptions) []*state.App {
 	apps := make([]*state.App, 0)
-	for _, v := range scheduler.AppStorage.Data() {
+	for _, v := range scheduler.AppStorage.Filter(appFilterOptions) {
 		apps = append(apps, v)
 	}
 
