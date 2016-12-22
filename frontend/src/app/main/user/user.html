@@ -19,12 +19,13 @@
       </tr>
       </thead>
       <tbody md-body>
-      <tr md-row ng-repeat="dessert in [1,2,3,4,5,6,7,8,9,10]">
-        <td md-cell><a href="#">应用名称</a></td>
-        <td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>
-        <td md-cell>3</td>
+      <tr md-row ng-repeat="app in vm.apps track by $index">
+        <td md-cell><a ui-sref="home.app({appId: app.id})">{/app.name/}</a></td>
+        <!--<td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>-->
+        <td md-cell>{/app.state/}</td>
+        <td md-cell>{/app.instances/}</td>
         <td md-cell>3/0/0</td>
-        <td md-cell>2016-11-11 10:10:10</td>
+        <td md-cell>{/app.updated | date: 'yyyy-MM-dd HH:mm'/}</td>
         <td md-cell>0.3/0.05</td>
         <td md-cell>100M/59M</td>
         <td md-cell>10G/1.1G</td>
