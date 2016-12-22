@@ -93,32 +93,31 @@ func printTaskTable(tasks []*api.Task) {
 			task.VersionId,
 			fmt.Sprintf("%d", len(task.History)),
 		})
-		printHistoies(task.History)
 	}
 	tb.Render()
 }
 
-func printHistoies(histories []*api.TaskHistory) {
-	tb := tablewriter.NewWriter(os.Stdout)
-	tb.SetHeader([]string{
-		"ID",
-		"CPU",
-		"MEM",
-		"DISK",
-		"ADDRESS",
-		"REASON",
-		"VERSIONID",
-	})
-	for _, history := range histories {
-		tb.Append([]string{
-			history.ID,
-			fmt.Sprintf("%.2f", history.Cpu),
-			fmt.Sprintf("%.f", history.Mem),
-			fmt.Sprintf("%.f", history.Disk),
-			history.AgentHostname,
-			history.Reason,
-			history.VersionId,
-		})
-	}
-	tb.Render()
-}
+//func printHistoies(histories []*api.TaskHistory) {
+//	tb := tablewriter.NewWriter(os.Stdout)
+//	tb.SetHeader([]string{
+//		"ID",
+//		"CPU",
+//		"MEM",
+//		"DISK",
+//		"ADDRESS",
+//		"REASON",
+//		"VERSIONID",
+//	})
+//	for _, history := range histories {
+//		tb.Append([]string{
+//			history.ID,
+//			fmt.Sprintf("%.2f", history.Cpu),
+//			fmt.Sprintf("%.f", history.Mem),
+//			fmt.Sprintf("%.f", history.Disk),
+//			history.AgentHostname,
+//			history.Reason,
+//			history.VersionId,
+//		})
+//	}
+//	tb.Render()
+//}
