@@ -48,7 +48,7 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 		config: config,
 	}
 
-	manager.apiserver = apiserver.NewApiServer(config.ApiServerAddr)
+	manager.apiserver = apiserver.NewApiServer(config.HttpListener.TCPAddr, config.HttpListener.UnixAddr)
 
 	raftNode, err := raft.NewNode(config.Raft, db)
 	if err != nil {
