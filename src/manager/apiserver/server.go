@@ -7,9 +7,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
+
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
@@ -24,6 +27,10 @@ type ApiServer struct {
 	addr         string
 	sock         string
 	apiRegisters []ApiRegister
+}
+
+func init() {
+	metrics.Register()
 }
 
 func NewApiServer(addr, sock string) *ApiServer {
@@ -54,6 +61,9 @@ func (apiServer *ApiServer) Start() error {
 
 	// Add log filter
 	wsContainer.Filter(NCSACommonLogFormatLogger())
+
+	// Add prometheus metrics
+	wsContainer.Handle("/metrics", promhttp.Handler())
 
 	// Optionally, you can install the Swagger Service which provides a nice Web UI on your REST API
 	// You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
