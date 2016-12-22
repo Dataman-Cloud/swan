@@ -6,7 +6,7 @@
     .config(config);
 
   /** @ngInject */
-  function config($logProvider, $interpolateProvider, $locationProvider, cfpLoadingBarProvider) {
+  function config($logProvider, $interpolateProvider, $locationProvider, cfpLoadingBarProvider, $httpProvider) {
     // Enable log
     $logProvider.debugEnabled(true);
 
@@ -14,8 +14,10 @@
 
     $interpolateProvider.startSymbol('{/');
     $interpolateProvider.endSymbol('/}');
+    $httpProvider.interceptors.push('httpInterceptor');
 
     cfpLoadingBarProvider.includeSpinner = false;
+
   }
 
 })();
