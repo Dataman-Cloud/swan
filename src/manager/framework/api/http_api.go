@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -44,12 +45,12 @@ func (api *AppService) Register(container *restful.Container) {
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
 
-	ws.Route(ws.GET("/").To(api.ListApp).
+	ws.Route(ws.GET("/").To(metrics.InstrumentRouteFunc("GET", "Apps", api.ListApp)).
 		// docs
 		Doc("List Apps").
 		Operation("listApps").
 		Returns(200, "OK", []App{}))
-	ws.Route(ws.POST("/").To(api.CreateApp).
+	ws.Route(ws.POST("/").To(metrics.InstrumentRouteFunc("POST", "App", api.CreateApp)).
 		// docs
 		Doc("Create App").
 		Operation("createApp").
@@ -57,7 +58,7 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(400, "BadRequest", nil).
 		Reads(types.Version{}).
 		Writes(App{}))
-	ws.Route(ws.GET("/{app_id}").To(api.GetApp).
+	ws.Route(ws.GET("/{app_id}").To(metrics.InstrumentRouteFunc("GET", "App", api.GetApp)).
 		// docs
 		Doc("Get an App").
 		Operation("getApp").
@@ -65,45 +66,45 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", App{}).
 		Returns(404, "NotFound", nil).
 		Writes(App{}))
-	ws.Route(ws.DELETE("/{app_id}").To(api.DeleteApp).
+	ws.Route(ws.DELETE("/{app_id}").To(metrics.InstrumentRouteFunc("DELETE", "App", api.DeleteApp)).
 		// docs
 		Doc("Delete App").
 		Operation("deleteApp").
 		Returns(204, "OK", nil).
 		Returns(404, "NotFound", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
-	ws.Route(ws.PATCH("/{app_id}/scale-up").To(api.ScaleUp).
+	ws.Route(ws.PATCH("/{app_id}/scale-up").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ScaleUp)).
 		// docs
 		Doc("Scale Up App").
 		Operation("scaleUp").
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
-	ws.Route(ws.PATCH("/{app_id}/scale-down").To(api.ScaleDown).
+	ws.Route(ws.PATCH("/{app_id}/scale-down").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ScaleDown)).
 		// docs
 		Doc("Scale Down App").
 		Operation("scaleDown").
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
-	ws.Route(ws.PUT("/{app_id}").To(api.UpdateApp).
+	ws.Route(ws.PUT("/{app_id}").To(metrics.InstrumentRouteFunc("PUT", "App", api.UpdateApp)).
 		// docs
 		Doc("Update App").
 		Operation("updateApp").
 		Returns(404, "NotFound", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
-	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(api.ProceedUpdate).
+	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ProceedUpdate)).
 		// docs
 		Doc("Proceed Update App").
 		Operation("proceedUpdateApp").
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
-	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(api.CancelUpdate).
+	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.CancelUpdate)).
 		// docs
 		Doc("Cancel Update App").
 		Operation("cancelUpdateApp").
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 
-	ws.Route(ws.GET("/{app_id}/tasks/{task_id}").To(api.GetAppTask).
+	ws.Route(ws.GET("/{app_id}/tasks/{task_id}").To(metrics.InstrumentRouteFunc("GET", "AppTask", api.GetAppTask)).
 		// docs
 		Doc("Get a task in the given App").
 		Operation("getAppTask").
