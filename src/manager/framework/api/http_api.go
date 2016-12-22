@@ -49,7 +49,8 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("List Apps").
 		Operation("listApps").
-		Param(ws.QueryParameter("label", "app labels, e.g. USER==1").DataType("string")).
+		Param(ws.QueryParameter("labels", "app labels, e.g. labels=USER==1,cluster=beijing").DataType("string")).
+		Param(ws.QueryParameter("fields", "app fields, e.g. runAs==xxx").DataType("string")).
 		Returns(200, "OK", []App{}))
 	ws.Route(ws.POST("/").To(metrics.InstrumentRouteFunc("POST", "App", api.CreateApp)).
 		// docs
