@@ -60,12 +60,13 @@ html,body {
     background:-webkit-gradient(linear, 0 0, 0 bottom, from(rgb(78, 78, 108)), to(rgb(81, 99, 149)));
     background:-o-linear-gradient(top, rgb(78, 78, 108), rgb(81, 99, 149));
     background-attachment: fixed;*/
+    font-family: Helvetica, Arial, sans-serif;
 }
 .md-display-2, .md-headline, .md-title {
   padding-left: 16px;
   padding-right: 16px;
+  font-weight: 600;
 }
-
 a, a:visited {
   color: #427fed;
   text-decoration: none;
@@ -83,6 +84,7 @@ section {
 }
 section > header {
   border-bottom: 1px solid rgba(0,0,0,0.87);
+
 }
 .page-header {
   background-color: #101929;
@@ -145,4 +147,20 @@ table.md-table tr:hover td.md-cell {
   background-color: rgba(0,0,0,0.05);
 }
 
-
+.list-dl-h dl {
+  margin: 16px 0 0 16px;
+  font-size: 0;
+}
+.list-dl-h dl dt {
+  min-width: 160px;
+  font-size: 14px;
+  font-weight: 600;
+}
+.list-dl-h dl dt small {
+  margin-left: 5px;
+  color: rgba(0,0,0,0.6);
+  font-size: 0.4;
+}
+.list-dl-h dl dd {
+  font-size: 14px;
+}
