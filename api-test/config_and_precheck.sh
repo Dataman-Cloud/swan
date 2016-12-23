@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER_PATH=localhost:5015
+SERVER_PATH=localhost:9999
 PATH_PREFIX=v_beta
 APP_NAME=nginx0051
 WAIT_SECOND=10
