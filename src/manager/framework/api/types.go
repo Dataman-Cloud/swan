@@ -78,3 +78,18 @@ type TaskHistory struct {
 	Stdout string `json:"stdout,omitempty"`
 	Stderr string `json:"stderr,omitempty"`
 }
+
+type Stats struct {
+	AppCount  int `json:"appCount,omitempty"`
+	TaskCount int `json:"taskCount,omitempty"`
+
+	CpuTotalOffered  float64 `json:"cpuTotalOffered,omitempty"`
+	MemTotalOffered  float64 `json:"memTotalOffered,omitempty"`
+	DiskTotalOffered float64 `json:"diskTotalOffered,omitempty"`
+
+	CpuTotalUsed  float64 `json:"cpuTotalUsed,omitempty"`
+	MemTotalUsed  float64 `json:"memTotalUsed,omitempty"`
+	DiskTotalUsed float64 `json:"diskTotalUsed,omitempty"`
+
+	AppStats map[string]int `json:"appStats,omitempty"`
+}
