@@ -130,8 +130,10 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 
 func doAppStoreAction(tx *bolt.Tx, action types.StoreActionKind, app *types.Application) error {
 	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putApp(tx, app)
+	case types.StoreActionKindCreate:
+		return createApp(tx, app)
+	case types.StoreActionKindUpdate:
+		return updateApp(tx, app)
 	case types.StoreActionKindRemove:
 		return removeApp(tx, app.ID)
 	default:
@@ -152,8 +154,10 @@ func doFrameworkStoreAction(tx *bolt.Tx, action types.StoreActionKind, framework
 
 func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Slot) error {
 	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putSlot(tx, slot)
+	case types.StoreActionKindCreate:
+		return createSlot(tx, slot)
+	case types.StoreActionKindUpdate:
+		return updateSlot(tx, slot)
 	case types.StoreActionKindRemove:
 		return removeSlot(tx, slot.AppId, slot.Id)
 	default:
@@ -163,8 +167,10 @@ func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Sl
 
 func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Task) error {
 	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putTask(tx, task)
+	case types.StoreActionKindCreate:
+		return createTask(tx, task)
+	case types.StoreActionKindUpdate:
+		return updateTask(tx, task)
 	case types.StoreActionKindRemove:
 		return removeTask(tx, task.AppId, task.SlotId, task.Id)
 	default:
@@ -174,8 +180,10 @@ func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Ta
 
 func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *types.Version) error {
 	switch action {
-	case types.StoreActionKindCreate, types.StoreActionKindUpdate:
-		return putVersion(tx, version)
+	case types.StoreActionKindCreate:
+		return createVersion(tx, version)
+	case types.StoreActionKindUpdate:
+		return updateVersion(tx, version)
 	case types.StoreActionKindRemove:
 		return removeVersion(tx, version.AppId, version.ID)
 	default:

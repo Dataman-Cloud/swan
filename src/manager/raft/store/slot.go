@@ -32,8 +32,19 @@ func GetSlotBucket(tx *bolt.Tx, appId, slotId string) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeySlots, []byte(slotId))
 }
 
-func putSlot(tx *bolt.Tx, slot *types.Slot) error {
+func createSlot(tx *bolt.Tx, slot *types.Slot) error {
 	return withCreateSlotBucketIfNotExists(tx, slot.AppId, slot.Id, func(bkt *bolt.Bucket) error {
+		p, err := slot.Marshal()
+		if err != nil {
+			return err
+		}
+
+		return bkt.Put(BucketKeyData, p)
+	})
+}
+
+func updateSlot(tx *bolt.Tx, slot *types.Slot) error {
+	return WithSlotBucket(tx, slot.AppId, slot.Id, func(bkt *bolt.Bucket) error {
 		p, err := slot.Marshal()
 		if err != nil {
 			return err
