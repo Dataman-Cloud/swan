@@ -1,6 +1,38 @@
 <header class="page-header md-display-2">用户集群</header>
 <section>
   <header class="md-headline">用户名</header>
+  <md-list class="md-dense" layout="row" layout-wrap>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>10 / 4 / 1.3 / 8.7</h3>
+        <p>CPU<small>总额/申请/占用/空闲</small></p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>1024M / 824M / 100M / 200M</h3>
+        <p>内存<small>总额/申请/占用/空闲</small></p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>100G / 50G / 30G / 50G</h3>
+        <p>磁盘<small>总额/申请/占用/空闲</small></p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>31</h3>
+        <p>应用总数</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>128</h3>
+        <p>实例总数</p>
+      </div>
+    </md-list-item>
+  </md-list>
 </section>
 <section>
   <header class="md-headline">应用列表</header>
@@ -21,7 +53,6 @@
       <tbody md-body>
       <tr md-row ng-repeat="app in vm.apps track by $index">
         <td md-cell><a ui-sref="home.app({appId: app.id})">{/app.name/}</a></td>
-        <!--<td md-cell><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></td>-->
         <td md-cell>{/app.state/}</td>
         <td md-cell>{/app.instances/}</td>
         <td md-cell>3/0/0</td>

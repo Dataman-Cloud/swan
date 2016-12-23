@@ -16,9 +16,20 @@
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <!--<h3><i class="fa fa-play" aria-hidden="true"><md-tooltip>运行中</md-tooltip></i></h3>-->
         <h3>{/vm.task.status/}</h3>
         <p>状态</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>？？？</h3>
+        <p>所在主机</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>？？？</h3>
+        <p>端口</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
@@ -35,37 +46,32 @@
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>50G/30G</h3>
+        <h3>？？？50G/30G</h3>
         <p>磁盘<small>申请/占用</small></p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>192.168.1.160:<a href="#">端口1</a> - <a href="#">端口2</a> - <a href="#">端口3</a></h3>
+        <h3>？？？<a href="#">STDOUT</a> <a href="#">STDERR</a> <a href="#">/var/log/access.log</a></h3>
+        <p>日志</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>？？？192.168.1.160:<a href="#">端口1</a> - <a href="#">端口2</a> - <a href="#">端口3</a></h3>
         <p>地址</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>
-          <md-menu>
-            <md-button class="md-icon-button autowidth" ng-click="$mdOpenMenu($event)" aria-label="open menu">
-              <i class="fa fa-file-text-o" aria-hidden="true"></i>
-            </md-button>
-            <md-menu-content width="4">
-              <md-menu-item>
-                <md-button aria-label="STDOUT">STDOUT</md-button>
-              </md-menu-item>
-              <md-menu-item>
-                <md-button aria-label="STDERR">STDERR</md-button>
-              </md-menu-item>
-              <md-menu-item>
-                <md-button aria-label="LOG">/var/log/access.log</md-button>
-              </md-menu-item>
-            </md-menu-content>
-          </md-menu>
-        </h3>
-        <p>日志</p>
+        <h3>？？？</h3>
+        <p>失败次数</p>
+      </div>
+    </md-list-item>
+    <md-list-item class="md-2-line" flex="20">
+      <div class="md-list-item-text" layout="column">
+        <h3>？？？</h3>
+        <p>上次失败时间</p>
       </div>
     </md-list-item>
     <md-list>
