@@ -17,6 +17,7 @@ type Framework struct {
 	Scheduler   *scheduler.Scheduler
 	SwanContext *swancontext.SwanContext
 	RestApi     *api.AppService
+	StatsApi    *api.StatsService
 
 	StopC chan struct{}
 }
@@ -29,6 +30,7 @@ func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store s
 
 	f.Scheduler = scheduler.NewScheduler(config, SwanContext, store)
 	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
+	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler)
 	return f, nil
 }
 
