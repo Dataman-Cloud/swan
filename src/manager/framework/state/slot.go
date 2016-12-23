@@ -77,6 +77,16 @@ type Slot struct {
 	touched       bool
 }
 
+type SlotResource struct {
+	CPUOffered float64
+	MemOffered float64
+	DiskOffered float64
+
+	CPUUsed float64
+	MemUsed float64
+	DiskUsed float64
+}
+
 func NewSlot(app *App, version *types.Version, index int) *Slot {
 	slot := &Slot{
 		Index:       index,
@@ -94,6 +104,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		touched:       true,
 	}
 
+	slot.PrepareResources()
 	if slot.App.IsFixed() {
 		slot.Ip = app.CurrentVersion.Ip[index]
 	}
@@ -271,7 +282,7 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 	return WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 }
 
-func (slot *Slot) Resources() []*mesos.Resource {
+func (slot *Slot) PrepareResources() []*mesos.Resource {
 	var resources = []*mesos.Resource{}
 
 	if slot.Version.Cpus > 0 {
@@ -287,6 +298,18 @@ func (slot *Slot) Resources() []*mesos.Resource {
 	}
 
 	return resources
+}
+
+func (slot *Slot) GetResources() *SlotResource {
+	var slotResource SlotResource
+	if slot.StateIs(SLOT_STATE_TASK_STAGING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_KILLING) {
+		slotResource.CPUOffered = slot.Version.Cpus
+		slotResource.MemOffered = slot.Version.Mem
+		slotResource.DiskOffered = slot.Version.Disk
+
+		// TODO(xychu): add usage stats
+	}
+	return &slotResource
 }
 
 func (slot *Slot) StateIs(state string) bool {

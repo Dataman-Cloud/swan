@@ -69,7 +69,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 			Value: proto.String(task.TaskInfoId),
 		},
 		AgentId:   offer.AgentId,
-		Resources: task.Slot.Resources(),
+		Resources: task.Slot.PrepareResources(),
 		Command: &mesos.CommandInfo{
 			Shell: proto.Bool(false),
 			Value: nil,

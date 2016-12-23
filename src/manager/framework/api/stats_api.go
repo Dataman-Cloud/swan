@@ -46,13 +46,17 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
 		version := app.CurrentVersion
 		stats.AppCount += 1
+		stats.AppStats[version.RunAs] += 1
+
 		stats.TaskCount += int(version.Instances)
 
-		stats.CpuTotalOffered += version.Cpus * float64(version.Instances)
-		stats.MemTotalOffered += version.Mem * float64(version.Instances)
-		stats.DiskTotalOffered += version.Disk * float64(version.Instances)
+		for _, slot := range app.GetSlots() {
+			stats.CpuTotalOffered += slot.GetResources().CPUOffered
+			stats.MemTotalOffered += slot.GetResources().MemOffered
+			stats.DiskTotalOffered += slot.GetResources().DiskOffered
 
-		stats.AppStats[version.RunAs] += 1
+			// TODO(xychu): add usage stats
+		}
 	}
 
 	response.WriteEntity(stats)
