@@ -17,9 +17,7 @@
     }
 
     function getClusterInfo() {
-      clusterBackend.cluster().get(function (data) {
-        vm.cluster = data;
-      })
+      vm.cluster = clusterBackend.cluster().get();
     }
   }
 })();
