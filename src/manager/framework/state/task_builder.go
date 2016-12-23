@@ -172,10 +172,10 @@ func (builder *TaskBuilder) SetLabels(labelMap map[string]string) *TaskBuilder {
 			Key:   proto.String(k),
 			Value: proto.String(v),
 		})
+	}
 
-		builder.taskInfo.Labels = &mesos.Labels{
-			Labels: labels,
-		}
+	builder.taskInfo.Labels = &mesos.Labels{
+		Labels: labels,
 	}
 
 	return builder
@@ -244,7 +244,7 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
 				Type: mesos.HealthCheck_HTTP.Enum(),
 				Http: &mesos.HealthCheck_HTTPCheckInfo{
-					Scheme:   proto.String("http"),
+					Scheme:   proto.String(protocol),
 					Port:     hostPort,
 					Path:     &healthCheck.Path,
 					Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
