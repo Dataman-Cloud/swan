@@ -169,11 +169,9 @@ func (app *App) ScaleDown(removeInstances int) error {
 
 	for i := removeInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) + i - 1
-		defer func(slotIndex int) {
-			if slot, found := app.GetSlot(slotIndex); found {
-				slot.Kill()
-			}
-		}(slotIndex)
+		if slot, found := app.GetSlot(slotIndex); found {
+			slot.Kill()
+		}
 	}
 
 	return nil
@@ -344,14 +342,16 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 }
 
 func (app *App) RemoveSlot(index int) {
-	app.slotsLock.Lock()
-	defer app.slotsLock.Unlock()
 
 	if slot, found := app.GetSlot(index); found {
 		slot.Remove()
+
+		app.slotsLock.Lock()
+		delete(app.slots, index)
+		app.slotsLock.Unlock()
+
+		app.Touch(false)
 	}
-	delete(app.slots, index)
-	app.Touch(false)
 }
 
 func (app *App) GetSlot(index int) (*Slot, bool) {

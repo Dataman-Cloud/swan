@@ -318,7 +318,7 @@ func (slot *Slot) StateIs(state string) bool {
 }
 
 func (slot *Slot) SetState(state string) error {
-	logrus.Infof("setting state for slot %s to %s", slot.Id, slot.State)
+	logrus.Infof("setting state for slot %s from %s to %s", slot.Id, slot.State, state)
 
 	slot.State = state
 	switch slot.State {
