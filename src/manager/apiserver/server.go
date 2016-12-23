@@ -1,9 +1,11 @@
 package apiserver
 
 import (
+	"encoding/json"
 	"net"
 	"net/http"
 	"path/filepath"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,6 +20,13 @@ import (
 const (
 	API_VERSION = "v_beta"
 )
+
+// RootPaths lists the paths available at root.
+// For example: "/healthz", "/apis".
+type RootPaths struct {
+	// paths are the paths available at root.
+	Paths []string
+}
 
 type ApiRegister interface {
 	Register(*restful.Container)
@@ -82,6 +91,35 @@ func (apiServer *ApiServer) Start() error {
 		SwaggerFilePath: swggerUiPath,
 	}
 	swagger.RegisterSwaggerService(config, wsContainer)
+
+	// Add API index handler
+	wsContainer.ServeMux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		status := http.StatusOK
+		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
+			// Since "/" matches all paths, handleIndex is called for all paths for which there is no handler registered.
+			// We want to return a 404 status with a list of all valid paths, incase of an invalid URL request.
+			status = http.StatusNotFound
+			w.WriteHeader(status)
+			return
+		}
+		var handledPaths []string
+		// Extract the paths handled using restful.WebService
+		for _, ws := range wsContainer.RegisteredWebServices() {
+			handledPaths = append(handledPaths, ws.RootPath())
+		}
+		// Extract the paths handled using mux handler.
+		handledPaths = append(handledPaths, "/metrics", "/apidocs/")
+		sort.Strings(handledPaths)
+
+		output, err := json.MarshalIndent(RootPaths{Paths: handledPaths}, "", "  ")
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		w.Write(output)
+	})
 
 	go func() {
 		srv := &http.Server{
