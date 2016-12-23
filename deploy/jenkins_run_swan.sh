@@ -2,12 +2,12 @@
 set -xe
 
 export GOROOT=/usr/lib/golang
-export GOPATH=/data/jenkins/workspace/go-jobs
+export GOPATH=/data/jenkins/workspace/go-swan
 export GOBIN=$GOPATH/bin
 export PATH=$PATH:$HOME/bin:$GOROOT/bin:$GOBIN:/usr/local/bin
 export GO15VENDOREXPERIMENT=1
 
-cp /root/config.json ./config.json
+cp /var/.swan.config.json ./config.json
 
 make build-swan
 
@@ -26,5 +26,5 @@ rm -rf ./data/*
 # build new docker image
 docker build -f dockerfiles/Dockerfile_runtime -t swan:v1.0 .
 
-docker run -p 9999:9999 -v $(pwd)/config.json:/go-jobs/config.json -v $(pwd)/data:/go-jobs/data --name=swan -d swan:v1.0
+docker run -v $(pwd)/config.json:/go-swan/config.json -v $(pwd)/data:/go-swan/data --net host --name=swan -d swan:v1.0
 

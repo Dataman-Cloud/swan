@@ -1,14 +1,14 @@
-FROM golang:1.6.3-alpine 
+FROM demoregistry.dataman-inc.com/library/centos7-base:latest
 
 MAINTAINER Zheng Liu zliu@dataman-inc.com
 
-RUN mkdir /go-jobs
+RUN mkdir /go-swan
 
-ADD bin/swan /go-jobs/swan
-ADD swagger-ui-2.2.8 /go-jobs/swagger-ui-2.2.8
+ADD bin/swan /go-swan/swan
+ADD swagger-ui-2.2.8 /go-swan/swagger-ui-2.2.8
 
-WORKDIR /go-jobs
+WORKDIR /go-swan
 
 EXPOSE 9999
 
-ENTRYPOINT ["./swan"]
+ENTRYPOINT ["./swan --enable-dns --enable-proxy"]
