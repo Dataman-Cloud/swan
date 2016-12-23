@@ -32,8 +32,19 @@ func GetVersionBucket(tx *bolt.Tx, appId, versionId string) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions, []byte(versionId))
 }
 
-func putVersion(tx *bolt.Tx, version *types.Version) error {
+func createVersion(tx *bolt.Tx, version *types.Version) error {
 	return withCreateVersionBucketIfNotExists(tx, version.AppId, version.ID, func(bkt *bolt.Bucket) error {
+		p, err := version.Marshal()
+		if err != nil {
+			return err
+		}
+
+		return bkt.Put(BucketKeyData, p)
+	})
+}
+
+func updateVersion(tx *bolt.Tx, version *types.Version) error {
+	return WithVersionBucket(tx, version.AppId, version.ID, func(bkt *bolt.Bucket) error {
 		p, err := version.Marshal()
 		if err != nil {
 			return err

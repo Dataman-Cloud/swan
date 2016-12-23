@@ -35,8 +35,19 @@ func GetTaskBucket(tx *bolt.Tx, appId, slotId, taskId string) *bolt.Bucket {
 		bucketKeySlots, []byte(slotId), bucketKeyTasks, []byte(taskId))
 }
 
-func putTask(tx *bolt.Tx, task *types.Task) error {
+func createTask(tx *bolt.Tx, task *types.Task) error {
 	return withCreateTaskBucketIfNotExists(tx, task.AppId, task.SlotId, task.Id, func(bkt *bolt.Bucket) error {
+		p, err := task.Marshal()
+		if err != nil {
+			return err
+		}
+
+		return bkt.Put(BucketKeyData, p)
+	})
+}
+
+func updateTask(tx *bolt.Tx, task *types.Task) error {
+	return WithTaskBucket(tx, task.AppId, task.SlotId, task.Id, func(bkt *bolt.Bucket) error {
 		p, err := task.Marshal()
 		if err != nil {
 			return err

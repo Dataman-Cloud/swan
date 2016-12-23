@@ -32,8 +32,19 @@ func GetAppsBucket(tx *bolt.Tx) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps)
 }
 
-func putApp(tx *bolt.Tx, app *types.Application) error {
+func createApp(tx *bolt.Tx, app *types.Application) error {
 	return withCreateAppBucketIfNotExists(tx, app.ID, func(bkt *bolt.Bucket) error {
+		p, err := app.Marshal()
+		if err != nil {
+			return err
+		}
+
+		return bkt.Put(BucketKeyData, p)
+	})
+}
+
+func updateApp(tx *bolt.Tx, app *types.Application) error {
+	return WithAppBucket(tx, app.ID, func(bkt *bolt.Bucket) error {
 		p, err := app.Marshal()
 		if err != nil {
 			return err
