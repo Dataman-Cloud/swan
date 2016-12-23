@@ -51,9 +51,9 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 		stats.TaskCount += int(version.Instances)
 
 		for _, slot := range app.GetSlots() {
-			stats.CpuTotalOffered += slot.GetResources().CPUOffered
-			stats.MemTotalOffered += slot.GetResources().MemOffered
-			stats.DiskTotalOffered += slot.GetResources().DiskOffered
+			stats.CpuTotalOffered += slot.ResourcesUsed().CPU
+			stats.MemTotalOffered += slot.ResourcesUsed().Mem
+			stats.DiskTotalOffered += slot.ResourcesUsed().Disk
 
 			// TODO(xychu): add usage stats
 		}
