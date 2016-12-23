@@ -347,24 +347,6 @@ func (n *Node) Run(ctx context.Context) error {
 	}
 }
 
-func (n *Node) LoadSanpshot() {
-	snapshot, err := n.snapshotter.Load()
-	if err == snap.ErrNoSnapshot {
-		return
-	}
-
-	if err != nil && err != snap.ErrNoSnapshot {
-		log.L.Panic(err)
-	}
-
-	log.L.Printf("loading snapshot at term %d and index %d", snapshot.Metadata.Term, snapshot.Metadata.Index)
-
-	//TODO recover form snapshot
-	//if err := s.revocerFromSnapshot(snapshot.Data); err != nil {
-	//	log.L.Panic(err)
-	//}
-}
-
 func (n *Node) caughtUp() bool {
 	lastIndex, _ := n.raftStorage.LastIndex()
 	return n.appliedIndex >= lastIndex
@@ -554,11 +536,6 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 
 		// after commit update appliedIndex
 		n.appliedIndex = ents[i].Index
-
-		// sepcial nil commit to signal replay has finished
-		if ents[i].Index == n.lastIndex {
-			n.LoadSanpshot()
-		}
 	}
 
 	return nil
@@ -599,13 +576,11 @@ func (n *Node) replayWAL() (*wal.WAL, error) {
 		return nil, err
 	}
 
-	// appent to storage so raft starts at the right place log
+	// append to storage so raft starts at the right place log
 	n.raftStorage.Append(ents)
 
 	if len(ents) > 0 {
 		n.lastIndex = ents[len(ents)-1].Index
-	} else {
-		n.LoadSanpshot()
 	}
 
 	n.raftStorage.SetHardState(st)
@@ -717,8 +692,6 @@ func (n *Node) publishSnapshot(snapshotToSave raftpb.Snapshot) {
 		return
 	}
 
-	n.LoadSanpshot()
-
 	n.confState = snapshotToSave.Metadata.ConfState
 	n.snapshotIndex = snapshotToSave.Metadata.Index
 	n.appliedIndex = snapshotToSave.Metadata.Index
@@ -731,13 +704,6 @@ func (n *Node) maybeTriggerSnapshot() {
 
 	log.L.Printf("maybeTriggerSnapshot: start snapshot [applied index %d | last snapshot index %d]",
 		n.appliedIndex, n.snapshotIndex)
-
-	//TODO add getSanpshot() in store
-	//data, err := n.store.GetSnapshot()
-	//if err != nil {
-	//	log.L.Error("maybeTriggerSnapshot: get snapshot failed error: ", err)
-	//	return
-	//}
 
 	data := []byte{}
 	snap, err := n.raftStorage.CreateSnapshot(n.appliedIndex, &n.confState, data)
