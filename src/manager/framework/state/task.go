@@ -20,11 +20,10 @@ const (
 )
 
 type Task struct {
-	Id             string
-	TaskInfoId     string
-	MesosConnector *mesos_connector.MesosConnector
-	Version        *types.Version
-	Slot           *Slot
+	Id         string
+	TaskInfoId string
+	Version    *types.Version
+	Slot       *Slot
 
 	State  string
 	Stdout string
@@ -43,14 +42,13 @@ type Task struct {
 	Created time.Time
 }
 
-func NewTask(mesosConnector *mesos_connector.MesosConnector, version *types.Version, slot *Slot) *Task {
+func NewTask(version *types.Version, slot *Slot) *Task {
 	task := &Task{
-		Id:             strings.Replace(uuid.NewV4().String(), "-", "", -1),
-		MesosConnector: mesosConnector,
-		Version:        version,
-		Slot:           slot,
-		HostPorts:      make([]uint64, 0),
-		Created:        time.Now(),
+		Id:        strings.Replace(uuid.NewV4().String(), "-", "", -1),
+		Version:   version,
+		Slot:      slot,
+		HostPorts: make([]uint64, 0),
+		Created:   time.Now(),
 	}
 
 	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)
@@ -272,7 +270,7 @@ func createRangeResource(name string, begin, end uint64) *mesos.Resource {
 func (task *Task) Kill() {
 	logrus.Infof("Kill task %s", task.Slot.Id)
 	call := &sched.Call{
-		FrameworkId: task.MesosConnector.Framework.GetId(),
+		FrameworkId: mesos_connector.Instance().Framework.GetId(),
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
@@ -294,5 +292,5 @@ func (task *Task) Kill() {
 		}
 	}
 
-	task.MesosConnector.MesosCallChan <- call
+	mesos_connector.Instance().MesosCallChan <- call
 }

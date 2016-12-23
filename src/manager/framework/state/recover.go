@@ -28,7 +28,6 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 			Updated:           time.Unix(0, raftApp.UpdatedAt),
 			Scontext:          scontext,
 			slots:             make(map[int]*Slot),
-			MesosConnector:    mesosConnector,
 			OfferAllocatorRef: allocator,
 		}
 
@@ -81,7 +80,6 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 		slot.TaskHistory = tasks
 
 		slot.CurrentTask.Slot = slot
-		slot.CurrentTask.MesosConnector = app.MesosConnector
 
 		if slot.CurrentTask.Version == nil {
 			slot.CurrentTask.Version = app.CurrentVersion

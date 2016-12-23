@@ -7,6 +7,7 @@ import (
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -83,7 +84,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, app.MesosConnector.ClusterId), // should be app.AppId
+		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, mesos_connector.Instance().ClusterId), // should be app.AppId
 
 		resourceReservationLock: sync.Mutex{},
 
@@ -153,7 +154,7 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	defer slot.Commit()
 
 	slot.Version = version
-	slot.CurrentTask = NewTask(slot.App.MesosConnector, slot.Version, slot)
+	slot.CurrentTask = NewTask(slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot)

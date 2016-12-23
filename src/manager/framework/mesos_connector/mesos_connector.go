@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -18,6 +19,13 @@ import (
 	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 )
+
+var instance *MesosConnector
+var once sync.Once
+
+func init() {
+	once = sync.Once{}
+}
 
 type MesosConnector struct {
 	// mesos framework related
@@ -35,11 +43,23 @@ type MesosConnector struct {
 }
 
 func NewMesosConnector(config config.Scheduler) *MesosConnector {
+	once.Do(func() {
+		instance = &MesosConnector{
+			config:         config,
+			MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
+			MesosCallChan:  make(chan *sched.Call, 1024),
+		}
+	})
 
-	return &MesosConnector{
-		config:         config,
-		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
-		MesosCallChan:  make(chan *sched.Call, 1024),
+	return instance
+}
+
+func Instance() *MesosConnector {
+	if instance == nil {
+		logrus.Errorf("mesos connector is nil now, need reconnect")
+		return nil
+	} else {
+		return instance
 	}
 }
 

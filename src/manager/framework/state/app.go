@@ -63,16 +63,15 @@ type App struct {
 	Created           time.Time
 	Updated           time.Time
 
-	State string
+	State     string
+	ClusterId string
 
-	MesosConnector *mesos_connector.MesosConnector
-	inTransaction  bool
-	touched        bool
+	inTransaction bool
+	touched       bool
 }
 
 func NewApp(version *types.Version,
 	allocator *OfferAllocator,
-	MesosConnector *mesos_connector.MesosConnector,
 	scontext *swancontext.SwanContext) (*App, error) {
 
 	err := validateAndFormatVersion(version)
@@ -86,12 +85,13 @@ func NewApp(version *types.Version,
 		CurrentVersion:    version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
-		MesosConnector:    MesosConnector,
+		ClusterId:         mesos_connector.Instance().ClusterId,
 		Scontext:          scontext,
-		Created:           time.Now(),
-		Updated:           time.Now(),
-		inTransaction:     false,
-		touched:           true,
+
+		Created:       time.Now(),
+		Updated:       time.Now(),
+		inTransaction: false,
+		touched:       true,
 	}
 
 	if version.Mode == "fixed" {
