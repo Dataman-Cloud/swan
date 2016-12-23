@@ -12,6 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/golang/protobuf/proto"
 	"golang.org/x/net/context"
 )
 
@@ -79,13 +80,9 @@ type Slot struct {
 }
 
 type SlotResource struct {
-	CPUOffered float64
-	MemOffered float64
-	DiskOffered float64
-
-	CPUUsed float64
-	MemUsed float64
-	DiskUsed float64
+	CPU  float64
+	Mem  float64
+	Disk float64
 }
 
 func NewSlot(app *App, version *types.Version, index int) *Slot {
@@ -105,7 +102,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		touched:       true,
 	}
 
-	slot.PrepareResources()
 	if slot.App.IsFixed() {
 		slot.Ip = app.CurrentVersion.Ip[index]
 	}
@@ -283,30 +279,30 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 	return WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 }
 
-func (slot *Slot) PrepareResources() []*mesos.Resource {
+func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
 	var resources = []*mesos.Resource{}
 
 	if slot.Version.Cpus > 0 {
-		resources = append(resources, createScalarResource("cpus", slot.Version.Cpus))
+		resources = append(resources, buildScalarResource("cpus", slot.Version.Cpus))
 	}
 
 	if slot.Version.Mem > 0 {
-		resources = append(resources, createScalarResource("mem", slot.Version.Cpus))
+		resources = append(resources, buildScalarResource("mem", slot.Version.Cpus))
 	}
 
 	if slot.Version.Disk > 0 {
-		resources = append(resources, createScalarResource("disk", slot.Version.Disk))
+		resources = append(resources, buildScalarResource("disk", slot.Version.Disk))
 	}
 
 	return resources
 }
 
-func (slot *Slot) GetResources() *SlotResource {
+func (slot *Slot) ResourcesUsed() *SlotResource {
 	var slotResource SlotResource
 	if slot.StateIs(SLOT_STATE_TASK_STAGING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_KILLING) {
-		slotResource.CPUOffered = slot.Version.Cpus
-		slotResource.MemOffered = slot.Version.Mem
-		slotResource.DiskOffered = slot.Version.Disk
+		slotResource.CPU = slot.Version.Cpus
+		slotResource.Mem = slot.Version.Mem
+		slotResource.Disk = slot.Version.Disk
 
 		// TODO(xychu): add usage stats
 	}
@@ -473,4 +469,27 @@ func (slot *Slot) remove() {
 	logrus.Debugf("remove slot %s", slot.Id)
 	persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, nil)
 	slot.touched = false
+}
+
+func buildScalarResource(name string, value float64) *mesos.Resource {
+	return &mesos.Resource{
+		Name:   &name,
+		Type:   mesos.Value_SCALAR.Enum(),
+		Scalar: &mesos.Value_Scalar{Value: &value},
+	}
+}
+
+func buildRangeResource(name string, begin, end uint64) *mesos.Resource {
+	return &mesos.Resource{
+		Name: &name,
+		Type: mesos.Value_RANGES.Enum(),
+		Ranges: &mesos.Value_Ranges{
+			Range: []*mesos.Value_Range{
+				{
+					Begin: proto.Uint64(begin),
+					End:   proto.Uint64(end),
+				},
+			},
+		},
+	}
 }
