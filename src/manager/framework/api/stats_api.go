@@ -33,7 +33,7 @@ func (api *StatsService) Register(container *restful.Container) {
 		// docs
 		Doc("Get Stats").
 		Operation("getStats").
-		Returns(200, "OK", []Stats{}))
+		Returns(200, "OK", Stats{}))
 
 	container.Add(ws)
 }
