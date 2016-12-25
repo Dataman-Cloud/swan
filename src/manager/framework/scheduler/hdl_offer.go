@@ -22,7 +22,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 			taskInfos := make([]*mesos.TaskInfo, 0)
 			for {
 				// loop through all pending offer slots
-				slot := h.Manager.SchedulerRef.Allocator.NextPendingOffer()
+				slot := h.Manager.SchedulerRef.Allocator.PopNextPendingOffer()
 				if slot == nil {
 					break
 				}

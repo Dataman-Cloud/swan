@@ -26,7 +26,7 @@ func NewOfferAllocator() *OfferAllocator {
 	return allocator
 }
 
-func (allocator *OfferAllocator) NextPendingOffer() *Slot {
+func (allocator *OfferAllocator) PopNextPendingOffer() *Slot {
 	if len(allocator.PendingOfferSlots) == 0 {
 		return nil
 	}
