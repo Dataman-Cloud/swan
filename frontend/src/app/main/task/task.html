@@ -1,6 +1,72 @@
 <header class="page-header md-display-2">实例详情</header>
 <section>
   <header class="md-headline">{/vm.task.id/}</header>
+  <div layout="column" class="list-dl-h">
+    
+    <dl layout="row">
+      <dt>创建时间</dt>
+      <dd>{/vm.task.created | date: 'yyyy-MM-dd HH:mm'/}</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>镜像名称</dt>
+      <dd>{/vm.task.image/}</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>状态</dt>
+      <dd>{/vm.task.status/}</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>所在主机</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>端口</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>CPU<small>申请 / 占用</small></dt>
+      <dd>{/vm.task.cpu/} / ???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>内存<small>申请 / 占用</small></dt>
+      <dd>{/vm.task.mem | size: 'MB'/} / ???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>磁盘<small>申请 / 占用</small></dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>日志</dt>
+      <dd>???<a href="#">STDOUT</a> / <a href="#">STDERR</a> / <a href="#">/var/log/access.log</a></dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>地址</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>失败次数</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>上次失败时间</dt>
+      <dd>???</dd>
+    </dl>
+
+  </div>
+
+
+<!--
   <md-list class="md-dense" layout="row" layout-wrap>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
@@ -75,4 +141,5 @@
       </div>
     </md-list-item>
     <md-list>
+  -->
 </section>
