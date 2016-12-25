@@ -6,13 +6,18 @@
     .controller('ClusterController', ClusterController);
 
   /** @ngInject */
-  function ClusterController() {
+  function ClusterController(clusterBackend) {
     var vm = this;
+    vm.cluster = {};
 
     activate();
 
     function activate() {
-      //TODO
+      getClusterInfo()
+    }
+
+    function getClusterInfo() {
+      vm.cluster = clusterBackend.cluster().get();
     }
   }
 })();

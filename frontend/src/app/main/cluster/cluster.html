@@ -29,32 +29,38 @@
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>4/1.3/0.5/0.8</h3>
-        <p>CPU<small>总额/申请/占用/空闲</small></p>
+        <h3>4/{/vm.cluster.cpuTotalOffered.toFixed(2)/}/{/vm.cluster.cpuTotalUsed.toFixed(2)/}/0.8</h3>
+        <p>CPU
+          <small>总额/申请/占用/空闲</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>1024M/824M/100M/200M</h3>
-        <p>内存<small>总额/申请/占用/空闲</small></p>
+        <h3>1024M/{/vm.cluster.memTotalOffered | size: 'MB'/}/{/vm.cluster.memTotalUsed | size: 'MB'/}/200M</h3>
+        <p>内存
+          <small>总额/申请/占用/空闲</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>100G/50G/30G/50G</h3>
-        <p>磁盘<small>总额/申请/占用/空闲</small></p>
+        <h3>100G/{/vm.cluster.diskTotalOffered/}/{/vm.cluster.diskTotalUsed/}/50G</h3>
+        <p>磁盘
+          <small>总额/申请/占用/空闲</small>
+        </p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>31</h3>
-        <p>应用总数</p>
+        <h3>{/vm.cluster.appCount/}</h3>
+        <p>应用数</p>
       </div>
     </md-list-item>
     <md-list-item class="md-2-line" flex="20">
       <div class="md-list-item-text" layout="column">
-        <h3>128</h3>
-        <p>实例总数</p>
+        <h3>{/vm.cluster.taskCount/}</h3>
+        <p>实例数</p>
       </div>
     </md-list-item>
     <md-list>
@@ -71,9 +77,9 @@
       </tr>
       </thead>
       <tbody md-body>
-      <tr md-row ng-repeat="dessert in [1,2,3,4,5,6,7,8,9,10]">
-        <td md-cell><a href="#">用户名</a></td>
-        <td md-cell><a href="#">应用数</a></td>
+      <tr md-row ng-repeat="(user, appNum) in vm.cluster.appStats track by $index">
+        <td md-cell><a ui-sref="home.user({fields: 'runAs==' + user})">{/user/}</a></td>
+        <td md-cell><a href="#">{/appNum/}</a></td>
         <td md-cell><a href="#">资源详情</a></td>
       </tr>
       </tbody>
