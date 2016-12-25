@@ -11,4 +11,4 @@ WORKDIR /go-swan
 
 EXPOSE 9999
 
-ENTRYPOINT ["./swan --enable-dns --enable-proxy"]
+ENTRYPOINT ["./swan", "--enable-proxy", "--enable-dns"]
