@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 
@@ -175,6 +176,13 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 	s.ClusterId = state.Cluster
 	if s.ClusterId == "" {
 		s.ClusterId = "unamed"
+	}
+
+	match, _ := regexp.MatchString("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)", cluster)
+	if match {
+		err = errors.New(fmt.Sprintf(`mesos cluster name(%s) should not contain special characters "-.$*+?{}()[]|"`, cluster))
+		logrus.Errorf("%s Check your mesos master configuration", err)
+		mesosFailureChan <- err
 	}
 
 	s.subscribe(ctx, mesosFailureChan)

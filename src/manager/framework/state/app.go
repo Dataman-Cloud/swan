@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -454,6 +455,21 @@ func validateAndFormatVersion(version *types.Version) error {
 
 	if version.Container.Docker == nil {
 		return errors.New("swan only support mesos docker containerization, no container found")
+	}
+
+	r, _ := regexp.Compile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
+
+	//validation of AppId
+	match := r.MatchString(version.AppId)
+	if match {
+		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppId, errMsg))
+	}
+
+	//validation of RunAs
+	match = r.MatchString(version.RunAs)
+	if match {
+		return errors.New(fmt.Sprintf("invalid runAs [%s]: %s", version.RunAs, errMsg))
 	}
 
 	if len(version.Mode) == 0 {
