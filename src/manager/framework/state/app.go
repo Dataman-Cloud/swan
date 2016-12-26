@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"sort"
 	"strings"
 	"sync"
@@ -442,8 +443,17 @@ func (app *App) EmitEvent(swanEvent *swanevent.Event) {
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
 	// mode can not change
+	if version.Mode != app.CurrentVersion.Mode {
+		return errors.New(fmt.Sprintf("mode can not change when update app, current version is %s", app.CurrentVersion.Mode))
+	}
 	// runAs can not change
+	if version.RunAs != app.CurrentVersion.RunAs {
+		return errors.New(fmt.Sprintf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs))
+	}
 	// app instances should same as current instances
+	if version.Instances != app.CurrentVersion.Instances {
+		return errors.New(fmt.Sprintf("instances can not change when update app, current version is %s", app.CurrentVersion.Instances))
+	}
 	return nil
 }
 
@@ -454,6 +464,21 @@ func validateAndFormatVersion(version *types.Version) error {
 
 	if version.Container.Docker == nil {
 		return errors.New("swan only support mesos docker containerization, no container found")
+	}
+
+	r, _ := regexp.Compile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
+
+	//validation of AppId
+	match := r.MatchString(version.AppId)
+	if match {
+		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppId, errMsg))
+	}
+
+	//validation of RunAs
+	match = r.MatchString(version.RunAs)
+	if match {
+		return errors.New(fmt.Sprintf("invalid runAs [%s]: %s", version.RunAs, errMsg))
 	}
 
 	if len(version.Mode) == 0 {
@@ -510,7 +535,7 @@ func validateAndFormatVersion(version *types.Version) error {
 		// portName for health check should mandatory
 		for _, hc := range version.HealthChecks {
 			if strings.TrimSpace(hc.PortName) == "" {
-				return errors.New("port name should not empty and match name in docker's PortMappings")
+				return errors.New("port name in healthChecks should not be empty and match name in docker's PortMappings")
 			}
 
 			// portName should present in dockers' portMappings definition
