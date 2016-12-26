@@ -2,7 +2,7 @@
 set -xe
 
 export GOROOT=/usr/lib/golang
-export GOPATH=/data/jenkins/workspace/go-swan
+export GOPATH=/data/jenkins/workspace/go-jobs
 export GOBIN=$GOPATH/bin
 export PATH=$PATH:$HOME/bin:$GOROOT/bin:$GOBIN:/usr/local/bin
 export GO15VENDOREXPERIMENT=1
