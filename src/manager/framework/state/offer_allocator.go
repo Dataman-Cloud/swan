@@ -4,12 +4,16 @@ import (
 	"errors"
 	"sync"
 
+	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+
+	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 type OfferAllocator struct {
 	PendingOfferSlots []*Slot
-	BySlotName        map[string]*mesos.OfferID // record allocated offers that map slot
+	BySlotId          map[string]*mesos.OfferID // record allocated offers that map slot
 
 	pendingOfferRWLock sync.RWMutex
 	allocatedOfferLock sync.Mutex
@@ -18,7 +22,7 @@ type OfferAllocator struct {
 func NewOfferAllocator() *OfferAllocator {
 	allocator := &OfferAllocator{
 		PendingOfferSlots:  make([]*Slot, 0),
-		BySlotName:         make(map[string]*mesos.OfferID),
+		BySlotId:           make(map[string]*mesos.OfferID),
 		pendingOfferRWLock: sync.RWMutex{},
 		allocatedOfferLock: sync.Mutex{},
 	}
@@ -26,7 +30,7 @@ func NewOfferAllocator() *OfferAllocator {
 	return allocator
 }
 
-func (allocator *OfferAllocator) NextPendingOffer() *Slot {
+func (allocator *OfferAllocator) PopNextPendingOffer() *Slot {
 	if len(allocator.PendingOfferSlots) == 0 {
 		return nil
 	}
@@ -46,28 +50,60 @@ func (allocator *OfferAllocator) PutSlotBackToPendingQueue(slot *Slot) {
 	allocator.pendingOfferRWLock.Unlock()
 }
 
-func (allocator *OfferAllocator) SetOfferIdForSlotId(offerId *mesos.OfferID, slotName string) {
+func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
+	slotIndex := -1
+
+	for index, pendingOfferSlot := range allocator.PendingOfferSlots {
+		if pendingOfferSlot.Id == slot.Id {
+			slotIndex = index
+			break
+		}
+	}
+
+	if slotIndex == -1 {
+		return
+	}
+	allocator.pendingOfferRWLock.Lock()
+	defer allocator.pendingOfferRWLock.Unlock()
+
+	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots[:slotIndex], allocator.PendingOfferSlots[slotIndex+1:]...)
+}
+
+func (allocator *OfferAllocator) SetOfferSlotMap(offerId *mesos.OfferID, slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
-	allocator.BySlotName[slotName] = offerId
+	allocator.BySlotId[slot.Id] = offerId
+	allocator.create(slot.Id, *offerId.Value)
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) DeleteSlotIdOfferIdMap(offerId *mesos.OfferID) {
+func (allocator *OfferAllocator) RemoveOfferSlotMapBySlot(slot *Slot) {
+	allocator.allocatedOfferLock.Lock()
+	delete(allocator.BySlotId, slot.Id)
+	allocator.allocatedOfferLock.Unlock()
+	allocator.remove(slot.Id)
+}
+
+func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId *mesos.OfferID) {
 	key := ""
-	for k, v := range allocator.BySlotName {
+	for k, v := range allocator.BySlotId {
 		if v.Value == offerId.Value {
 			key = k
 		}
 	}
 
+	// shortcut execution if not found
+	if len(key) == 0 {
+		return
+	}
+
 	allocator.allocatedOfferLock.Lock()
-	delete(allocator.BySlotName, key)
+	delete(allocator.BySlotId, key)
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) RetriveSlotIdOfferId(offerId *mesos.OfferID) (string, error) {
+func (allocator *OfferAllocator) RetriveSlotIdWithOfferId(offerId *mesos.OfferID) (string, error) {
 	key := ""
-	for k, v := range allocator.BySlotName {
+	for k, v := range allocator.BySlotId {
 		if v.Value == offerId.Value {
 			key = k
 		}
@@ -78,4 +114,19 @@ func (allocator *OfferAllocator) RetriveSlotIdOfferId(offerId *mesos.OfferID) (s
 	}
 
 	return key, nil
+}
+
+func (allocator *OfferAllocator) RemoveSlot(slot *Slot) {
+	allocator.RemoveSlotFromPendingOfferQueue(slot)
+	allocator.RemoveOfferSlotMapBySlot(slot)
+}
+
+func (allocator *OfferAllocator) create(slotId, offerId string) {
+	logrus.Debugf("create offer allocator item %s => %s", slotId, offerId)
+	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{OfferId: offerId, SlotId: slotId}, nil)
+}
+
+func (allocator *OfferAllocator) remove(slotId string) {
+	logrus.Debugf("remove offer allocator item  %s", slotId)
+	persistentStore.DeleteOfferAllocatorItem(context.TODO(), slotId, nil)
 }

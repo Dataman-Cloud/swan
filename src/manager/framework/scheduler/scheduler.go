@@ -84,6 +84,21 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 		for _, app := range apps {
 			scheduler.AppStorage.Add(app.AppId, app)
+
+			for _, slot := range app.GetSlots() {
+				if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
+					slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot) // push the slot into pending offer queue
+				}
+			}
+		}
+
+		list, err := state.LoadOfferAllocatorMap()
+		if err != nil {
+			return err
+		}
+
+		for k, v := range list {
+			scheduler.Allocator.BySlotId[k] = v
 		}
 	}
 

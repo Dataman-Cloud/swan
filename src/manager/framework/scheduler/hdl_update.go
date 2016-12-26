@@ -48,7 +48,9 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:
+		slot.SetState(state.SLOT_STATE_TASK_STAGING)
 	case mesos.TaskState_TASK_STARTING:
+		slot.SetState(state.SLOT_STATE_TASK_STARTING)
 	case mesos.TaskState_TASK_RUNNING:
 		if !slot.StateIs(state.SLOT_STATE_TASK_RUNNING) { // set state to running only if is not previously marked as running
 			slot.SetState(state.SLOT_STATE_TASK_RUNNING)

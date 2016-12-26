@@ -26,4 +26,8 @@ type Store interface {
 	ListTasks(appId, slotId string) ([]*types.Task, error)
 	UpdateFrameworkId(ctx context.Context, frameworkId string, cb func()) error
 	GetFrameworkId() (string, error)
+
+	CreateOfferAllocatorItem(context.Context, *types.OfferAllocatorItem, func()) error
+	DeleteOfferAllocatorItem(context.Context, string, func()) error
+	ListOfferallocatorItems() ([]*types.OfferAllocatorItem, error)
 }

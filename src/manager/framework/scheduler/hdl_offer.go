@@ -22,7 +22,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 			taskInfos := make([]*mesos.TaskInfo, 0)
 			for {
 				// loop through all pending offer slots
-				slot := h.Manager.SchedulerRef.Allocator.NextPendingOffer()
+				slot := h.Manager.SchedulerRef.Allocator.PopNextPendingOffer()
 				if slot == nil {
 					break
 				}
@@ -32,7 +32,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 					// TODO the following code logic complex, need improvement
 					// offerWrapper cpu/mem/disk deduction recorded within the obj itself
 					_, taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
-					h.Manager.SchedulerRef.Allocator.SetOfferIdForSlotId(offer.GetId(), slot.Id)
+					h.Manager.SchedulerRef.Allocator.SetOfferSlotMap(offer.GetId(), slot)
 					taskInfos = append(taskInfos, taskInfo)
 				} else {
 					// put the slot back into the queue, in the end
