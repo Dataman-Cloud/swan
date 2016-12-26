@@ -4,12 +4,12 @@
   <div layout="column" class="list-dl-h">
 
     <dl layout="row">
-      <dt>创建时间</dt>
+      <dt>Created</dt>
       <dd>2016-10-31 16:38:42</dd>
     </dl>
 
     <dl layout="row">
-      <dt>集群属性</dt>
+      <dt>Attributes</dt>
       <dd>???</dd>
     </dl>
 
@@ -25,46 +25,46 @@
 
     <dl layout="row">
       <dt>CPU
-        <small>总额 / 申请 / 占用 / 空闲</small>
+        <small>Total / Allocated / Used / Idle</small>
       </dt>
       <dd>??? / {/vm.cluster.cpuTotalOffered.toFixed(2)/} / {/vm.cluster.cpuTotalUsed.toFixed(2)/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>内存
-        <small>总额 / 申请 / 占用 / 空闲</small>
+      <dt>Memory
+        <small>Total / Allocated / Used / Idle</small>
       </dt>
       <dd>??? / {/vm.cluster.memTotalOffered | size: 'MB'/} / {/vm.cluster.memTotalUsed | size: 'MB'/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>磁盘
-        <small>总额 / 申请 / 占用 / 空闲</small>
+      <dt>Disk
+        <small>Total / Allocated / Used / Idle</small>
       </dt>
       <dd>??? / {/vm.cluster.diskTotalOffered/} / {/vm.cluster.diskTotalUsed/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>应用总数</dt>
+      <dt>Applications</dt>
       <dd>{/vm.cluster.appCount/}</dd>
     </dl>
 
     <dl layout="row">
-      <dt>实例总数</dt>
+      <dt>Slots</dt>
       <dd>{/vm.cluster.taskCount/}</dd>
     </dl>
 
   </div>
 </section>
 <section>
-  <header class="md-headline">正在使用该集群的用户</header>
+  <header class="md-headline">Users</header>
   <md-table-container>
     <table md-table>
       <thead md-head>
       <tr md-row>
-        <th md-column>用户名</th>
-        <th md-column>应用数</th>
-        <th md-column>资源详情</th>
+        <th md-column>Username</th>
+        <th md-column>Applications</th>
+        <th md-column>Resources</th>
       </tr>
       </thead>
       <tbody md-body>

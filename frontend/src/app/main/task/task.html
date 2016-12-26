@@ -4,68 +4,68 @@
   <div layout="column" class="list-dl-h">
 
     <dl layout="row">
-      <dt>创建时间</dt>
+      <dt>Created</dt>
       <dd>{/vm.task.created | date: 'yyyy-MM-dd HH:mm'/}</dd>
     </dl>
 
     <dl layout="row">
-      <dt>镜像名称</dt>
+      <dt>Image</dt>
       <dd>{/vm.task.image/}</dd>
     </dl>
 
     <dl layout="row">
-      <dt>状态</dt>
+      <dt>Status</dt>
       <dd>{/vm.task.status/}</dd>
     </dl>
 
     <dl layout="row">
-      <dt>所在主机</dt>
+      <dt>Host</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>端口</dt>
+      <dt>Ports</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
       <dt>CPU
-        <small>申请 / 占用</small>
+        <small>Allocated / Used</small>
       </dt>
       <dd>{/vm.task.cpu/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>内存
-        <small>申请 / 占用</small>
+      <dt>Memory
+        <small>Allocated / Used</small>
       </dt>
       <dd>{/vm.task.mem | size: 'MB'/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>磁盘
-        <small>申请 / 占用</small>
+      <dt>Disk
+        <small>Allocated / Used</small>
       </dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>日志</dt>
+      <dt>Logs</dt>
       <dd>???<a href="#">STDOUT</a> / <a href="#">STDERR</a> / <a href="#">/var/log/access.log</a></dd>
     </dl>
 
     <dl layout="row">
-      <dt>地址</dt>
+      <dt>Address</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>失败次数</dt>
+      <dt>Error times</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>上次失败时间</dt>
+      <dt>Latest Error</dt>
       <dd>???</dd>
     </dl>
 
