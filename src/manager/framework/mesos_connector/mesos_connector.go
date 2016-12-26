@@ -178,9 +178,9 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 		s.ClusterId = "unamed"
 	}
 
-	match, _ := regexp.MatchString("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)", cluster)
+	match, _ := regexp.MatchString("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)", s.ClusterId)
 	if match {
-		err = errors.New(fmt.Sprintf(`mesos cluster name(%s) should not contain special characters "-.$*+?{}()[]|"`, cluster))
+		err = errors.New(fmt.Sprintf(`mesos cluster name(%s) should not contain special characters "-.$*+?{}()[]|"`, s.ClusterId))
 		logrus.Errorf("%s Check your mesos master configuration", err)
 		mesosFailureChan <- err
 	}
