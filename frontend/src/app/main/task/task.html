@@ -2,7 +2,7 @@
 <section>
   <header class="md-headline">{/vm.task.id/}</header>
   <div layout="column" class="list-dl-h">
-    
+
     <dl layout="row">
       <dt>创建时间</dt>
       <dd>{/vm.task.created | date: 'yyyy-MM-dd HH:mm'/}</dd>
@@ -29,17 +29,23 @@
     </dl>
 
     <dl layout="row">
-      <dt>CPU<small>申请 / 占用</small></dt>
+      <dt>CPU
+        <small>申请 / 占用</small>
+      </dt>
       <dd>{/vm.task.cpu/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>内存<small>申请 / 占用</small></dt>
+      <dt>内存
+        <small>申请 / 占用</small>
+      </dt>
       <dd>{/vm.task.mem | size: 'MB'/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>磁盘<small>申请 / 占用</small></dt>
+      <dt>磁盘
+        <small>申请 / 占用</small>
+      </dt>
       <dd>???</dd>
     </dl>
 
@@ -64,82 +70,4 @@
     </dl>
 
   </div>
-
-
-<!--
-  <md-list class="md-dense" layout="row" layout-wrap>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.task.created | date: 'yyyy-MM-dd HH:mm'/}</h3>
-        <p>创建时间</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.task.image/}</h3>
-        <p>镜像名称</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.task.status/}</h3>
-        <p>状态</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？</h3>
-        <p>所在主机</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？</h3>
-        <p>端口</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.task.cpu/}/0.5</h3>
-        <p>CPU<small>申请/占用</small></p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.task.mem | size: 'MB'/}/100M</h3>
-        <p>内存<small>申请/占用</small></p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？50G/30G</h3>
-        <p>磁盘<small>申请/占用</small></p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？<a href="#">STDOUT</a> <a href="#">STDERR</a> <a href="#">/var/log/access.log</a></h3>
-        <p>日志</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？192.168.1.160:<a href="#">端口1</a> - <a href="#">端口2</a> - <a href="#">端口3</a></h3>
-        <p>地址</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？</h3>
-        <p>失败次数</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>？？？</h3>
-        <p>上次失败时间</p>
-      </div>
-    </md-list-item>
-    <md-list>
-  -->
 </section>
