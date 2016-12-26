@@ -2,11 +2,11 @@ package mesos_connector
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -21,11 +21,6 @@ import (
 )
 
 var instance *MesosConnector
-var once sync.Once
-
-func init() {
-	once = sync.Once{}
-}
 
 type MesosConnector struct {
 	// mesos framework related
@@ -43,13 +38,11 @@ type MesosConnector struct {
 }
 
 func NewMesosConnector(config config.Scheduler) *MesosConnector {
-	once.Do(func() {
-		instance = &MesosConnector{
-			config:         config,
-			MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
-			MesosCallChan:  make(chan *sched.Call, 1024),
-		}
-	})
+	instance = &MesosConnector{
+		config:         config,
+		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
+		MesosCallChan:  make(chan *sched.Call, 1024),
+	}
 
 	return instance
 }
@@ -63,32 +56,7 @@ func Instance() *MesosConnector {
 	}
 }
 
-// start starts the mesos_connector and subscribes to event stream
-func (s *MesosConnector) ConnectToMesosAndAcceptEvent() error {
-	var err error
-	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
-	if err != nil {
-		logrus.Errorf("%s Check your mesos master configuration", err)
-		return err
-	}
-
-	s.master = state.Leader
-	cluster := state.Cluster
-	if cluster == "" {
-		cluster = "Unamed"
-	}
-	s.ClusterId = cluster
-	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
-
-	if err := s.subscribe(); err != nil {
-		logrus.Error(err)
-		return err
-	}
-
-	return nil
-}
-
-func (s *MesosConnector) subscribe() error {
+func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) {
 	logrus.Infof("Subscribe with mesos master %s", s.master)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
@@ -105,21 +73,19 @@ func (s *MesosConnector) subscribe() error {
 
 	resp, err := s.Send(call)
 	if err != nil {
-		return err
+		mesosFailureChan <- err
 	}
 
 	// http might now be the default transport in future release
 	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
+		mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
 	}
 
 	logrus.Info(s.client.StreamID)
-	go s.handleEvents(resp)
-
-	return nil
+	go s.handleEvents(ctx, resp, mesosFailureChan)
 }
 
-func (s *MesosConnector) handleEvents(resp *http.Response) {
+func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, mesosFailureChan chan error) {
 	defer func() {
 		resp.Body.Close()
 	}()
@@ -128,36 +94,40 @@ func (s *MesosConnector) handleEvents(resp *http.Response) {
 	dec := json.NewDecoder(r)
 
 	for {
-		event := new(sched.Event)
-		if err := dec.Decode(event); err != nil {
-			logrus.Errorf("Deocde event failed: %s", err)
+		select {
+		case <-ctx.Done():
+			logrus.Infof("handleEvents cancelled %s", ctx.Err())
 			return
-		}
+		default:
+			event := new(sched.Event)
+			if err := dec.Decode(event); err != nil {
+				logrus.Errorf("Deocde event failed: %s", err)
+				mesosFailureChan <- err
+			}
 
-		switch event.GetType() {
-		case sched.Event_SUBSCRIBED:
-			s.AddEvent(sched.Event_SUBSCRIBED, event)
-		case sched.Event_OFFERS:
-			s.AddEvent(sched.Event_OFFERS, event)
-		case sched.Event_RESCIND:
-			s.AddEvent(sched.Event_RESCIND, event)
-		case sched.Event_UPDATE:
-			s.AddEvent(sched.Event_UPDATE, event)
-		case sched.Event_MESSAGE:
-			s.AddEvent(sched.Event_MESSAGE, event)
-		case sched.Event_FAILURE:
-			s.AddEvent(sched.Event_FAILURE, event)
-		case sched.Event_ERROR:
-			s.AddEvent(sched.Event_ERROR, event)
-		case sched.Event_HEARTBEAT:
-			s.AddEvent(sched.Event_HEARTBEAT, event)
+			switch event.GetType() {
+			case sched.Event_SUBSCRIBED:
+				s.addEvent(sched.Event_SUBSCRIBED, event)
+			case sched.Event_OFFERS:
+				s.addEvent(sched.Event_OFFERS, event)
+			case sched.Event_RESCIND:
+				s.addEvent(sched.Event_RESCIND, event)
+			case sched.Event_UPDATE:
+				s.addEvent(sched.Event_UPDATE, event)
+			case sched.Event_MESSAGE:
+				s.addEvent(sched.Event_MESSAGE, event)
+			case sched.Event_FAILURE:
+				s.addEvent(sched.Event_FAILURE, event)
+			case sched.Event_ERROR:
+				s.addEvent(sched.Event_ERROR, event)
+			case sched.Event_HEARTBEAT:
+				s.addEvent(sched.Event_HEARTBEAT, event)
+			}
 		}
 	}
 }
 
-// create frameworkInfo on initial start
-// OR load preexisting frameworkId make mesos believe it's a RESTART of framework
-func CreateOrLoadFrameworkInfo(config config.Scheduler) (*mesos.FrameworkInfo, error) {
+func CreateFrameworkInfo(config config.Scheduler) *mesos.FrameworkInfo {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(config.MesosFrameworkUser),
 		Name:            proto.String("swan"),
@@ -165,7 +135,7 @@ func CreateOrLoadFrameworkInfo(config config.Scheduler) (*mesos.FrameworkInfo, e
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
-	return fw, nil
+	return fw
 }
 
 func stateFromMasters(masters []string) (*megos.State, error) {
@@ -187,23 +157,43 @@ func (s *MesosConnector) Send(call *sched.Call) (*http.Response, error) {
 	return s.client.Send(payload)
 }
 
-func (s *MesosConnector) AddEvent(eventType sched.Event_Type, e *sched.Event) {
+func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *MesosConnector) Start(ctx context.Context) {
+func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
+	var err error
+	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
+	if err != nil {
+		logrus.Errorf("%s Check your mesos master configuration", err)
+		mesosFailureChan <- err
+	}
+
+	s.master = state.Leader
+	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
+
+	s.ClusterId = state.Cluster
+	if s.ClusterId == "" {
+		s.ClusterId = "unamed"
+	}
+
+	s.subscribe(ctx, mesosFailureChan)
+
 	for {
 		select {
 		case <-ctx.Done():
+			logrus.Errorf("mesosConnector got signal %s", ctx.Err())
 			return
 		case call := <-s.MesosCallChan:
 			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("")
 			resp, err := s.Send(call)
 			if err != nil {
 				logrus.Errorf("%s", err)
+				mesosFailureChan <- err
 			}
 			if resp.StatusCode != 202 {
 				logrus.Infof("send response not 202 but %d", resp.StatusCode)
+				mesosFailureChan <- errors.New("http got respose not 202")
 			}
 		}
 	}

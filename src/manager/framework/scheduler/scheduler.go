@@ -28,10 +28,11 @@ type Scheduler struct {
 
 	AppStorage *memoryStore
 
-	Allocator      *state.OfferAllocator
-	MesosConnector *mesos_connector.MesosConnector
-	store          store.Store
-	config         config.SwanConfig
+	Allocator               *state.OfferAllocator
+	MesosConnector          *mesos_connector.MesosConnector
+	mesosConnectorCancelFun context.CancelFunc
+	store                   store.Store
+	config                  config.SwanConfig
 }
 
 func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
@@ -43,6 +44,8 @@ func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, s
 		AppStorage: NewMemoryStore(),
 		store:      store,
 		config:     config,
+
+		mesosFailureChan: make(chan error, 1),
 	}
 
 	RegiserFun := func(m *HandlerManager) {
@@ -86,7 +89,16 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 	// temp solution
 	go func() {
-		scheduler.MesosConnector.Start(ctx)
+		framework := mesos_connector.CreateFrameworkInfo(scheduler.config.Scheduler)
+		frameworkId, err := scheduler.store.GetFrameworkId()
+		if err == nil {
+			framework.Id = &mesos.FrameworkID{Value: &frameworkId}
+		}
+		scheduler.MesosConnector.Framework = framework
+
+		var c context.Context
+		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
+		scheduler.MesosConnector.Start(c, scheduler.mesosFailureChan)
 	}()
 
 	return scheduler.Run(context.Background()) // context as a placeholder
@@ -94,27 +106,6 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 // main loop
 func (scheduler *Scheduler) Run(ctx context.Context) error {
-	frameworkId, err := scheduler.store.GetFrameworkId()
-	if err != nil {
-		return err
-	}
-
-	framework, err := mesos_connector.CreateOrLoadFrameworkInfo(scheduler.config.Scheduler)
-	if err != nil {
-		return err
-	}
-
-	if frameworkId != "" {
-		framework.Id = &mesos.FrameworkID{Value: &frameworkId}
-	}
-
-	scheduler.MesosConnector.Framework = framework
-
-	if err := scheduler.MesosConnector.ConnectToMesosAndAcceptEvent(); err != nil {
-		logrus.Errorf("ConnectToMesosAndAcceptEvent got error %s", err)
-		return err
-	}
-
 	for {
 		select {
 		case e := <-scheduler.MesosConnector.MesosEventChan:
@@ -123,6 +114,7 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
+			scheduler.mesosConnectorCancelFun()
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
 
