@@ -2,12 +2,12 @@
 <section>
   <header class="md-headline">集群名</header>
   <div layout="column" class="list-dl-h">
-    
+
     <dl layout="row">
       <dt>创建时间</dt>
       <dd>2016-10-31 16:38:42</dd>
     </dl>
-    
+
     <dl layout="row">
       <dt>集群属性</dt>
       <dd>???</dd>
@@ -24,95 +24,37 @@
     </dl>
 
     <dl layout="row">
-      <dt>CPU<small>总额 / 申请 / 占用 / 空闲</small></dt>
-      <dd>??? / ??? / ??? / ???</dd>
+      <dt>CPU
+        <small>总额 / 申请 / 占用 / 空闲</small>
+      </dt>
+      <dd>??? / {/vm.cluster.cpuTotalOffered.toFixed(2)/} / {/vm.cluster.cpuTotalUsed.toFixed(2)/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>内存<small>总额 / 申请 / 占用 / 空闲</small></dt>
-      <dd>??? / ??? / ??? / ???</dd>
+      <dt>内存
+        <small>总额 / 申请 / 占用 / 空闲</small>
+      </dt>
+      <dd>??? / {/vm.cluster.memTotalOffered | size: 'MB'/} / {/vm.cluster.memTotalUsed | size: 'MB'/} / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>磁盘<small>总额 / 申请 / 占用 / 空闲</small></dt>
-      <dd>??? / ??? / ??? / ???</dd>
+      <dt>磁盘
+        <small>总额 / 申请 / 占用 / 空闲</small>
+      </dt>
+      <dd>??? / {/vm.cluster.diskTotalOffered/} / {/vm.cluster.diskTotalUsed/} / ???</dd>
     </dl>
 
     <dl layout="row">
       <dt>应用总数</dt>
-      <dd>???</dd>
+      <dd>{/vm.cluster.appCount/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>实例总数</dt>
-      <dd>???</dd>
+      <dd>{/vm.cluster.taskCount/}</dd>
     </dl>
 
   </div>
-<!--
-  <md-list class="md-dense" layout="row" layout-wrap>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>2016-10-31 16:38:42</h3>
-        <p>创建时间</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>-</h3>
-        <p>集群属性</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>3</h3>
-        <p>Master</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>20</h3>
-        <p>Slave</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>4/{/vm.cluster.cpuTotalOffered.toFixed(2)/}/{/vm.cluster.cpuTotalUsed.toFixed(2)/}/0.8</h3>
-        <p>CPU
-          <small>总额/申请/占用/空闲</small>
-        </p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>1024M/{/vm.cluster.memTotalOffered | size: 'MB'/}/{/vm.cluster.memTotalUsed | size: 'MB'/}/200M</h3>
-        <p>内存
-          <small>总额/申请/占用/空闲</small>
-        </p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>100G/{/vm.cluster.diskTotalOffered/}/{/vm.cluster.diskTotalUsed/}/50G</h3>
-        <p>磁盘
-          <small>总额/申请/占用/空闲</small>
-        </p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.cluster.appCount/}</h3>
-        <p>应用数</p>
-      </div>
-    </md-list-item>
-    <md-list-item class="md-2-line" flex="20">
-      <div class="md-list-item-text" layout="column">
-        <h3>{/vm.cluster.taskCount/}</h3>
-        <p>实例数</p>
-      </div>
-    </md-list-item>
-    <md-list>
-  -->
 </section>
 <section>
   <header class="md-headline">正在使用该集群的用户</header>
