@@ -10,80 +10,90 @@
   <div layout="column" class="list-dl-h">
 
     <dl layout="row">
-      <dt>最近更新时间</dt>
+      <dt>Updated</dt>
       <dd>{/vm.app.updated | date: 'yyyy-MM-dd HH:mm'/}</dd>
     </dl>
 
     <dl layout="row">
-      <dt>运行状态</dt>
+      <dt>Status</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>健康检查类型</dt>
+      <dt>HC Protocol</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>HC</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
       <dt>CPU
-        <small>申请 / 占用</small>
+        <small>Allocated / Used</small>
       </dt>
       <dd>??? / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>内存
-        <small>申请 / 占用</small>
+      <dt>Memory
+        <small>Allocated / Used</small>
       </dt>
       <dd>??? / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>磁盘
-        <small>申请 / 占用</small>
+      <dt>Disk
+        <small>Allocated / Used</small>
       </dt>
       <dd>??? / ???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>CMD</dt>
+      <dt>Application type</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>版本</dt>
+      <dt>Command</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>应用地址</dt>
+      <dt>Version</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>协议</dt>
+      <dt>Address</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>映射端口</dt>
+      <dt>Protocol</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>仓库认证</dt>
+      <dt>Mapping port</dt>
       <dd>???</dd>
     </dl>
 
     <dl layout="row">
-      <dt>环境变量</dt>
+      <dt>Registry auth</dt>
+      <dd>???</dd>
+    </dl>
+
+    <dl layout="row">
+      <dt>Env</dt>
       <dd ng-repeat="(key, value) in vm.app.env">
         {/key/}:{/value/}
       </dd>
     </dl>
 
     <dl layout="row">
-      <dt>限制条件</dt>
+      <dt>Constraints</dt>
       <dd ng-repeat="constraint in vm.app.constraints">{/constraint/}</dd>
     </dl>
 
@@ -91,20 +101,20 @@
 </section>
 <section id="task-list">
   <header class="md-headline">
-    实例列表
+    Slots
   </header>
   <md-table-container>
     <table md-table>
       <thead md-head>
       <tr md-row>
         <th md-column>
-          实例 ID
+          Slot
         </th>
-        <th md-column>地址</th>
-        <th md-column>健康状态</th>
-        <th md-column>运行状态</th>
-        <th md-column>版本</th>
-        <th md-column>更新时间</th>
+        <th md-column>Address</th>
+        <th md-column>Health</th>
+        <th md-column>Status</th>
+        <th md-column>Version</th>
+        <th md-column>Updated</th>
       </tr>
       </thead>
       <tbody md-body>
@@ -131,14 +141,14 @@
 </section>
 <section id="event">
   <header class="md-headline">
-    事件
+    Application Events
   </header>
   <md-table-container>
     <table md-table>
       <thead md-head>
       <tr md-row>
-        <th md-column style="width: 150px;">时间</th>
-        <th md-column>事件内容</th>
+        <th md-column style="width: 150px;">Time</th>
+        <th md-column>Contents</th>
       </tr>
       </thead>
       <tbody md-body>
@@ -156,7 +166,7 @@
 </section>
 <section id="history">
   <header class="md-headline">
-    应用配置历史版本
+    Previous Versions
   </header>
   <md-list>
     <md-list-item class="md-2-line" ng-click="null">
