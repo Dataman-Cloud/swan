@@ -141,6 +141,8 @@ func (slot *Slot) Kill() {
 	slot.BeginTx()
 	defer slot.Commit()
 
+	slot.App.OfferAllocatorRef.RemoveSlot(slot) // remove this slot
+
 	slot.StopRestartPolicy()
 
 	slot.SetMarkForDeletion(true)

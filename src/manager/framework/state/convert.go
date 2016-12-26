@@ -425,3 +425,16 @@ func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 
 	return task
 }
+
+func OfferAllocatorItemToRaft(slotId, offerId string) *rafttypes.OfferAllocatorItem {
+	item := &rafttypes.OfferAllocatorItem{
+		OfferId: offerId,
+		SlotId:  slotId,
+	}
+
+	return item
+}
+
+func OfferAllocatorItemFromRaft(item *rafttypes.OfferAllocatorItem) (slotId, offerId string) {
+	return item.SlotId, item.OfferId
+}

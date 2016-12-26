@@ -142,3 +142,8 @@ message Task {
     string reason = 14;
     int64 createdAt = 15;
 }
+
+message OfferAllocatorItem {
+    string slot_id = 1;
+    string offer_id = 2;
+}

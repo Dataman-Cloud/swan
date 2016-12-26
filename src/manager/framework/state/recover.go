@@ -5,7 +5,10 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
+
+	"github.com/golang/protobuf/proto"
 )
 
 // load app data frm persistent data
@@ -92,4 +95,18 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 	}
 
 	return slots, nil
+}
+
+func LoadOfferAllocatorMap() (map[string]*mesos.OfferID, error) {
+	m := make(map[string]*mesos.OfferID)
+	if list, err := persistentStore.ListOfferallocatorItems(); err == nil {
+		for _, item := range list {
+			slotId, offerId := OfferAllocatorItemFromRaft(item)
+			m[slotId] = &mesos.OfferID{Value: proto.String(offerId)}
+		}
+	} else {
+		return m, err
+	}
+
+	return m, nil
 }

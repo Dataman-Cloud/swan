@@ -19,6 +19,7 @@ var (
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyVersions       = []byte("versions")
 	bucketKeySlots          = []byte("slots")
+	bucketKeyOfferAllocator = []byte("offer_allocator")
 
 	BucketKeyData = []byte("data")
 )
@@ -123,6 +124,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doVersionStoreAction(tx, action.Action, action.GetVersion())
 	case *types.StoreAction_Slot:
 		return doSlotStoreAction(tx, action.Action, action.GetSlot())
+	case *types.StoreAction_OfferAllocatorItem:
+		return doOfferAllocatorItemStoreAction(tx, action.Action, action.GetOfferAllocatorItem())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -186,6 +189,17 @@ func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *ty
 		return updateVersion(tx, version)
 	case types.StoreActionKindRemove:
 		return removeVersion(tx, version.AppId, version.ID)
+	default:
+		return ErrUndefineVersionAction
+	}
+}
+
+func doOfferAllocatorItemStoreAction(tx *bolt.Tx, action types.StoreActionKind, item *types.OfferAllocatorItem) error {
+	switch action {
+	case types.StoreActionKindCreate:
+		return createOfferAllocatorItem(tx, item)
+	case types.StoreActionKindRemove:
+		return removeOfferAllocatorItem(tx, item)
 	default:
 		return ErrUndefineVersionAction
 	}
