@@ -1,7 +1,6 @@
 package store
 
 import (
-	"fmt"
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/boltdb/bolt"
@@ -41,9 +40,6 @@ func (s *FrameworkStore) ListOfferallocatorItems() ([]*types.OfferAllocatorItem,
 	}); err != nil {
 		return nil, err
 	}
-
-	fmt.Println("xxxxxxxxxxxxxxxxxxxxxxxxxxxx000000000000")
-	fmt.Println(items)
 
 	return items, nil
 }
