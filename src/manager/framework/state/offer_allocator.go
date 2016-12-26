@@ -64,7 +64,7 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 		return
 	}
 	allocator.pendingOfferRWLock.Lock()
-	allocator.pendingOfferRWLock.Unlock()
+	defer allocator.pendingOfferRWLock.Unlock()
 
 	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots[:slotIndex], allocator.PendingOfferSlots[slotIndex+1:]...)
 }

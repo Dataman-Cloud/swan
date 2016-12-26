@@ -44,7 +44,7 @@ message StoreAction {
         Version version = 4;
         Slot slot = 5;
         Task task = 6;
-        OfferAllocatorItem offer_allocator_item = 7;
+        OfferAllocatorItem offerAllocatorItem = 7;
 	}
 }
 
