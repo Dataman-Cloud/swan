@@ -21,7 +21,6 @@ type SwanConfig struct {
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
 	HttpListener HttpListener `json:"httpListener"`
-	IPAM         IPAM         `json:"ipam"`
 	Raft         Raft         `json:"raft"`
 	SwanCluster  []string     `json:swanCluster`
 
@@ -137,7 +136,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
 	swanConfig.DNS.EnableDns = c.Bool("enable-dns")
 
-	swanConfig.IPAM.StorePath = swanConfig.DataDir
 	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
