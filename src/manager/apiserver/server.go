@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -122,6 +123,12 @@ func (apiServer *ApiServer) Start() error {
 	})
 
 	go func() {
+		if _, err := os.Stat(apiServer.sock); err == nil {
+			// remove the sock file if it's already existed
+			if err := os.Remove(apiServer.sock); err != nil {
+				logrus.Errorf("can't listen on socket %s remove existed file failed. Error: %s", apiServer.sock, err.Error())
+			}
+		}
 		srv := &http.Server{
 			Addr:    apiServer.sock,
 			Handler: wsContainer,
