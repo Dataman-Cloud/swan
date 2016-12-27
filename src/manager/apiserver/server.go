@@ -78,7 +78,7 @@ func (apiServer *ApiServer) Start() error {
 	// You need to download the Swagger HTML5 assets and change the FilePath location in the config below.
 	// Open http://localhost:8080/apidocs and enter http://localhost:8080/apidocs.json in the api input field.
 	// TODO(xychu): add a config flag for swagger UI, and also for the swagger UI file path.
-	swggerUiPath, _ := filepath.Abs("./swagger-ui-2.2.8")
+	swggerUiPath, _ := filepath.Abs("./third_party/swagger-ui-2.2.8")
 	logrus.Debugf("xychu:  swaggerUIPath: %s", swggerUiPath)
 	config := swagger.Config{
 		WebServices: wsContainer.RegisteredWebServices(), // you control what services are visible
