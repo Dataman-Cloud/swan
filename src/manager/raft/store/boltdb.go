@@ -6,6 +6,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
 
 	"github.com/boltdb/bolt"
+	"github.com/coreos/etcd/raft/raftpb"
 )
 
 type BoltbDb struct {
@@ -20,6 +21,7 @@ var (
 	bucketKeyVersions       = []byte("versions")
 	bucketKeySlots          = []byte("slots")
 	bucketKeyOfferAllocator = []byte("offer_allocator")
+	BucketKeyRaftState      = []byte("raft_hard_state")
 
 	BucketKeyData = []byte("data")
 )
@@ -203,4 +205,25 @@ func doOfferAllocatorItemStoreAction(tx *bolt.Tx, action types.StoreActionKind, 
 	default:
 		return ErrUndefineVersionAction
 	}
+}
+
+func (db *BoltbDb) SaveRaftState(state raftpb.HardState) error {
+	return db.Update(func(tx *bolt.Tx) error {
+		return putRaftState(tx, state)
+	})
+}
+
+func (db *BoltbDb) GetRaftState() (raftpb.HardState, error) {
+	var state raftpb.HardState
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		var err error
+		state, err = getRaftState(tx)
+		return err
+
+	}); err != nil {
+		return state, err
+	}
+
+	return state, nil
 }

@@ -93,6 +93,7 @@ type Node struct {
 	isMember            uint32
 	ticker              clock.Ticker
 	store               *store.BoltbDb
+	appliedState        raftpb.HardState
 
 	// there has some diffrent between this two braodcast
 	// leadershipBroadcast notify myself identity have been switched
@@ -176,6 +177,13 @@ func (n *Node) StartRaft(ctx context.Context) error {
 		startPeers[i] = raft.Peer{ID: uint64(i + 1)}
 	}
 
+	appliedState, err := n.store.GetRaftState()
+	if err != nil {
+		log.L.Errorf("recover raft hardState fron boltdb failed. Err: %v", err)
+	} else {
+		n.appliedState = appliedState
+	}
+
 	n.Config = &raft.Config{
 		ID:              uint64(n.id),
 		ElectionTick:    3,
@@ -183,6 +191,7 @@ func (n *Node) StartRaft(ctx context.Context) error {
 		Storage:         n.raftStorage,
 		MaxSizePerMsg:   1024 * 1024,
 		MaxInflightMsgs: 256,
+		//Applied:         3,
 	}
 
 	if oldwal {
@@ -317,6 +326,12 @@ func (n *Node) Run(ctx context.Context) error {
 			if err := n.publishEntries(n.entriesToApply(rd.CommittedEntries)); err != nil {
 				log.L.Errorf("raft: store data failed. Error: %s", err.Error())
 				continue
+			}
+
+			if err := n.store.SaveRaftState(rd.HardState); err != nil {
+				log.L.Errorf("save raft hardState of commit %d failed. Err: %v", rd.HardState.Commit, err)
+			} else {
+				n.appliedState = rd.HardState
 			}
 
 			n.maybeTriggerSnapshot()
@@ -507,10 +522,13 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 	for i := range ents {
 		switch ents[i].Type {
 		case raftpb.EntryNormal:
-			r, err := n.saveToStorage(ents[i].Data)
+			if n.appliedState.Commit < ents[i].Index {
+				r, err := n.saveToStorage(ents[i].Data)
 
-			if !n.wait.trigger(r.ID, &applyResult{resp: r, err: err}) {
-				n.wait.cancelAll()
+				if !n.wait.trigger(r.ID, &applyResult{resp: r, err: err}) {
+					n.wait.cancelAll()
+				}
+
 			}
 
 		case raftpb.EntryConfChange:
