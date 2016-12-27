@@ -54,8 +54,6 @@ func NewTask(version *types.Version, slot *Slot) *Task {
 
 	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)
 
-	task.taskBuilder = NewTaskBuilder(task)
-
 	return task
 }
 
@@ -67,6 +65,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	containerSpec := task.Slot.Version.Container
 	dockerSpec := task.Slot.Version.Container.Docker
 
+	task.taskBuilder = NewTaskBuilder(task)
 	task.taskBuilder.SetName(task.TaskInfoId).SetTaskId(task.TaskInfoId).SetAgentId(*offer.GetAgentId().Value)
 	task.taskBuilder.SetResources(task.Slot.ResourcesNeeded())
 	task.taskBuilder.SetCommand(false, "")
@@ -89,6 +88,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	}
 
 	task.taskBuilder.SetNetwork(dockerSpec.Network, ow.PortsRemain())
+	task.HostPorts = task.taskBuilder.HostPorts
 
 	return task.taskBuilder.taskInfo
 }

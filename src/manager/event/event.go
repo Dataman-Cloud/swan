@@ -1,17 +1,23 @@
 package event
 
+import (
+	"github.com/satori/go.uuid"
+)
+
 const (
 	EventTypeTaskAdd = "task_add"
 	EventTypeTaskRm  = "task_rm"
 )
 
 type Event struct {
+	Id      string
 	Type    string
 	Payload interface{}
 }
 
 func NewEvent(t string, payload interface{}) *Event {
 	return &Event{
+		Id:      uuid.NewV4().String(),
 		Type:    t,
 		Payload: payload,
 	}

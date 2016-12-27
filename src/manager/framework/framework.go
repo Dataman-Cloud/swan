@@ -3,34 +3,32 @@ package framework
 import (
 	"sync"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 	"golang.org/x/net/context"
 )
 
 type Framework struct {
-	Scheduler   *scheduler.Scheduler
-	SwanContext *swancontext.SwanContext
-	RestApi     *api.AppService
-	StatsApi    *api.StatsService
+	Scheduler *scheduler.Scheduler
+	RestApi   *api.AppService
+	StatsApi  *api.StatsService
+	EventsApi *api.EventsService
 
 	StopC chan struct{}
 }
 
-func New(SwanContext *swancontext.SwanContext, config config.SwanConfig, store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) {
+func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) {
 	f := &Framework{
-		StopC:       make(chan struct{}),
-		SwanContext: SwanContext,
+		StopC: make(chan struct{}),
 	}
 
-	f.Scheduler = scheduler.NewScheduler(config, SwanContext, store)
+	f.Scheduler = scheduler.NewScheduler(store)
 	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
 	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler)
+	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler)
 	return f, nil
 }
 
