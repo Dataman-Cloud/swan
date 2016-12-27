@@ -130,7 +130,6 @@ func CreateFrameworkInfo() *mesos.FrameworkInfo {
 	fw := &mesos.FrameworkInfo{
 		User:            proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
 		Name:            proto.String("swan"),
-		Hostname:        proto.String(swancontext.Instance().Config.Scheduler.Hostname),
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
