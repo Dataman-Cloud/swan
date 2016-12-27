@@ -183,7 +183,7 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 			logrus.Errorf("mesosConnector got signal %s", ctx.Err())
 			return
 		case call := <-s.MesosCallChan:
-			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("")
+			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
 			resp, err := s.Send(call)
 			if err != nil {
 				logrus.Errorf("%s", err)

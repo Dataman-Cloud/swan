@@ -392,14 +392,15 @@ func FilterTasksFromApp(app *state.App) []*Task {
 					OfferId:       v.OfferId,
 					AgentId:       v.AgentId,
 					AgentHostname: v.AgentHostName,
-					VersionId:     v.Version.ID,
-
-					Cpu:  v.Version.Cpus,
-					Mem:  v.Version.Mem,
-					Disk: v.Version.Disk,
 
 					Stderr: v.Stderr,
 					Stdout: v.Stdout,
+				}
+				if v.Version != nil {
+					staleTask.VersionId = v.Version.ID
+					staleTask.Cpu = v.Version.Cpus
+					staleTask.Mem = v.Version.Mem
+					staleTask.Disk = v.Version.Disk
 				}
 
 				task.History = append(task.History, staleTask)

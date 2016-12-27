@@ -10,9 +10,9 @@ import (
 )
 
 func OfferHandler(h *Handler) (*Handler, error) {
-	logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("")
 
 	for _, offer := range h.MesosEvent.Event.Offers.Offers {
+		logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("offerId: %s", *offer.GetId().Value)
 		// when no pending offer slot
 		if len(h.Manager.SchedulerRef.Allocator.PendingOfferSlots) == 0 {
 			RejectOffer(h, offer)

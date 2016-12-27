@@ -70,7 +70,6 @@ func (scheduler *Scheduler) Stop() error {
 
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
-
 	if !swancontext.Instance().Config.NoRecover {
 		apps, err := state.LoadAppData(scheduler.Allocator, scheduler.MesosConnector)
 		if err != nil {
@@ -144,6 +143,7 @@ func (scheduler *Scheduler) InvalidateApps() {
 	appsPendingRemove := make([]string, 0)
 	for _, app := range scheduler.AppStorage.Data() {
 		if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
+			app.Remove()
 			appsPendingRemove = append(appsPendingRemove, app.AppId)
 		}
 	}

@@ -34,6 +34,7 @@ import (
 const (
 	SLOT_STATE_PENDING_OFFER = "slot_task_pending_offer"
 	SLOT_STATE_PENDING_KILL  = "slot_task_pending_killed"
+	SLOT_STATE_REAP          = "slot_task_reap"
 
 	SLOT_STATE_TASK_STAGING          = "slot_task_staging"
 	SLOT_STATE_TASK_STARTING         = "slot_task_starting"
@@ -132,8 +133,12 @@ func (slot *Slot) KillTask() {
 
 	slot.StopRestartPolicy()
 
-	slot.SetState(SLOT_STATE_PENDING_KILL)
-	slot.CurrentTask.Kill()
+	if slot.Dispatched() {
+		slot.SetState(SLOT_STATE_PENDING_KILL)
+		slot.CurrentTask.Kill()
+	} else {
+		slot.SetState(SLOT_STATE_REAP)
+	}
 }
 
 // kill task and make slot sweeped after successfully kill task
@@ -141,13 +146,16 @@ func (slot *Slot) Kill() {
 	slot.BeginTx()
 	defer slot.Commit()
 
-	slot.App.OfferAllocatorRef.RemoveSlot(slot) // remove this slot
-
 	slot.StopRestartPolicy()
 
 	slot.SetMarkForDeletion(true)
-	slot.SetState(SLOT_STATE_PENDING_KILL)
-	slot.CurrentTask.Kill()
+
+	if slot.Dispatched() {
+		slot.SetState(SLOT_STATE_PENDING_KILL)
+		slot.CurrentTask.Kill()
+	} else {
+		slot.SetState(SLOT_STATE_REAP)
+	}
 }
 
 func (slot *Slot) Archive() {
@@ -320,6 +328,8 @@ func (slot *Slot) SetState(state string) error {
 
 	slot.State = state
 	switch slot.State {
+	case SLOT_STATE_REAP:
+
 	case SLOT_STATE_PENDING_KILL:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
 
@@ -335,7 +345,7 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_REAP) || slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
 		// TODO remove slot from OfferAllocator
 		logrus.Infof("removeSlot func")
 		slot.App.RemoveSlot(slot.Index)
@@ -366,7 +376,11 @@ func (slot *Slot) StopRestartPolicy() {
 }
 
 func (slot *Slot) Abnormal() bool {
-	return slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FINISHED)
+	return slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_REAP)
+}
+
+func (slot *Slot) Dispatched() bool {
+	return slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_STAGING)
 }
 
 func (slot *Slot) Normal() bool {

@@ -23,6 +23,7 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 		app := &App{
 			AppId:             raftApp.ID,
 			CurrentVersion:    VersionFromRaft(raftApp.Version),
+			ProposedVersion:   VersionFromRaft(raftApp.ProposedVersion),
 			State:             raftApp.State,
 			Mode:              AppMode(raftApp.Version.Mode),
 			Created:           time.Unix(0, raftApp.CreatedAt),

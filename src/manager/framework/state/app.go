@@ -179,7 +179,6 @@ func (app *App) Delete() error {
 	defer app.Commit()
 
 	app.SetState(APP_STATE_MARK_FOR_DELETION)
-
 	for _, slot := range app.slots {
 		slot.Kill()
 	}
@@ -339,6 +338,8 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
+		app.OfferAllocatorRef.RemoveSlot(slot)
+
 		slot.Remove()
 
 		app.slotsLock.Lock()
@@ -574,6 +575,6 @@ func (app *App) create() {
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.AppId)
-	WithConvertApp(context.TODO(), nil, nil, persistentStore.UpdateApp)
+	persistentStore.DeleteApp(context.TODO(), app.AppId, nil)
 	app.touched = false
 }
