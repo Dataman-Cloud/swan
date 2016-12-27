@@ -338,7 +338,6 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 }
 
 func (app *App) RemoveSlot(index int) {
-
 	if slot, found := app.GetSlot(index); found {
 		slot.Remove()
 

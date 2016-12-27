@@ -328,12 +328,10 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_TASK_FINISHED:
 		slot.StopRestartPolicy()
 	case SLOT_STATE_TASK_RUNNING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskAdd)
 	case SLOT_STATE_TASK_LOST:
 
 	case SLOT_STATE_TASK_FAILED:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
-		// restart if needed
 	default:
 	}
 
@@ -409,6 +407,9 @@ func (slot *Slot) Healthy() bool {
 
 func (slot *Slot) SetHealthy(healthy bool) {
 	slot.healthy = healthy
+	if healthy {
+		slot.EmitTaskEvent(swanevent.EventTypeTaskAdd)
+	}
 	slot.Touch(false)
 }
 
