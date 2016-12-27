@@ -23,13 +23,16 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 		app := &App{
 			AppId:             raftApp.ID,
 			CurrentVersion:    VersionFromRaft(raftApp.Version),
-			ProposedVersion:   VersionFromRaft(raftApp.ProposedVersion),
 			State:             raftApp.State,
 			Mode:              AppMode(raftApp.Version.Mode),
 			Created:           time.Unix(0, raftApp.CreatedAt),
 			Updated:           time.Unix(0, raftApp.UpdatedAt),
 			slots:             make(map[int]*Slot),
 			OfferAllocatorRef: allocator,
+		}
+
+		if raftApp.ProposedVersion != nil {
+			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
 		}
 
 		raftVersions, err := persistentStore.ListVersions(raftApp.ID)
