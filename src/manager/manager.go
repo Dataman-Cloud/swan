@@ -33,14 +33,12 @@ type Manager struct {
 
 	raftNode   *raft.Node
 	CancelFunc context.CancelFunc
-	eventBus   *event.EventBus
 
 	framework *framework.Framework
 
-	swanContext *swancontext.SwanContext
-	config      config.SwanConfig
-	cluster     []string
-	apiserver   *apiserver.ApiServer
+	config    config.SwanConfig
+	cluster   []string
+	apiserver *apiserver.ApiServer
 }
 
 func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
@@ -57,15 +55,10 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 	manager.raftNode = raftNode
 
-	manager.eventBus = event.New()
+	swancontext.NewSwanContext(config, event.New())
 
-	manager.swanContext = &swancontext.SwanContext{
-		Config:   config,
-		EventBus: manager.eventBus,
-	}
-
-	manager.swanContext.Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
-	manager.ipamAdapter, err = ipam.New(manager.swanContext)
+	swancontext.Instance().Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
+	manager.ipamAdapter, err = ipam.New(swancontext.Instance())
 	if err != nil {
 		logrus.Errorf("init ipam adapter failed. Error: %s", err.Error())
 		return nil, err
@@ -106,7 +99,7 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	}
 
 	frameworkStore := fstore.NewStore(db, raftNode)
-	manager.framework, err = framework.New(manager.swanContext, manager.config, frameworkStore, manager.apiserver)
+	manager.framework, err = framework.New(frameworkStore, manager.apiserver)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
@@ -146,7 +139,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 	if manager.config.DNS.EnableDns {
 		go func() {
 			resolverCtx, _ := context.WithCancel(ctx)
-			manager.resolverSubscriber.Subscribe(manager.eventBus)
+			manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
 			errCh <- manager.resolver.Start(resolverCtx)
 		}()
 	}
@@ -159,7 +152,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 	}()
 
 	if manager.config.Janitor.EnableProxy {
-		manager.janitorSubscriber.Subscribe(manager.eventBus)
+		manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 		go manager.janitorServer.Init().Run()
 		// send proxy info to dns proxy listener
 		if manager.config.DNS.EnableDns {
@@ -196,7 +189,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a leader !!!")
 				// TODO
 				go func() {
-					manager.eventBus.Start()
+					swancontext.Instance().EventBus.Start()
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)

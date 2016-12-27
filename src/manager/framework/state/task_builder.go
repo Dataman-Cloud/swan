@@ -10,14 +10,16 @@ import (
 )
 
 type TaskBuilder struct {
-	task     *Task
-	taskInfo *mesos.TaskInfo
+	task      *Task
+	taskInfo  *mesos.TaskInfo
+	HostPorts []uint64
 }
 
 func NewTaskBuilder(task *Task) *TaskBuilder {
 	builder := &TaskBuilder{
-		task:     task,
-		taskInfo: &mesos.TaskInfo{},
+		task:      task,
+		taskInfo:  &mesos.TaskInfo{},
+		HostPorts: make([]uint64, 0),
 	}
 
 	return builder
@@ -182,6 +184,7 @@ func (builder *TaskBuilder) SetLabels(labelMap map[string]string) *TaskBuilder {
 }
 
 func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) *TaskBuilder {
+	builder.HostPorts = make([]uint64, 0) // clear this array on every loop
 	switch network {
 	case "NONE":
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
@@ -190,6 +193,7 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 	case "BRIDGE":
 		for index, m := range builder.task.Slot.Version.Container.Docker.PortMappings {
 			hostPort := portsAvailable[index]
+			builder.HostPorts = append(builder.HostPorts, hostPort)
 			builder.taskInfo.Container.Docker.PortMappings = append(builder.taskInfo.Container.Docker.PortMappings,
 				&mesos.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(hostPort)),

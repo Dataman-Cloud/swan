@@ -50,8 +50,6 @@ type App struct {
 	slotsLock sync.Mutex
 	slots     map[int]*Slot `json:"slots"`
 
-	Scontext *swancontext.SwanContext
-
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
 	// use when app updated, ProposedVersion can either be commit or revert
@@ -71,8 +69,7 @@ type App struct {
 }
 
 func NewApp(version *types.Version,
-	allocator *OfferAllocator,
-	scontext *swancontext.SwanContext) (*App, error) {
+	allocator *OfferAllocator) (*App, error) {
 
 	err := validateAndFormatVersion(version)
 	if err != nil {
@@ -86,7 +83,6 @@ func NewApp(version *types.Version,
 		OfferAllocatorRef: allocator,
 		AppId:             version.AppId,
 		ClusterId:         mesos_connector.Instance().ClusterId,
-		Scontext:          scontext,
 
 		Created:       time.Now(),
 		Updated:       time.Now(),
@@ -436,7 +432,7 @@ func (app *App) Reevaluate() {
 }
 
 func (app *App) EmitEvent(swanEvent *swanevent.Event) {
-	app.Scontext.EventBus.EventChan <- swanEvent
+	swancontext.Instance().EventBus.EventChan <- swanEvent
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion

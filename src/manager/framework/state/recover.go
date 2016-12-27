@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -12,8 +11,7 @@ import (
 )
 
 // load app data frm persistent data
-func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.MesosConnector,
-	scontext *swancontext.SwanContext) (map[string]*App, error) {
+func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.MesosConnector) (map[string]*App, error) {
 	raftApps, err := persistentStore.ListApps()
 	if err != nil {
 		return nil, err
@@ -29,7 +27,6 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 			Mode:              AppMode(raftApp.Version.Mode),
 			Created:           time.Unix(0, raftApp.CreatedAt),
 			Updated:           time.Unix(0, raftApp.UpdatedAt),
-			Scontext:          scontext,
 			slots:             make(map[int]*Slot),
 			OfferAllocatorRef: allocator,
 		}

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
@@ -28,7 +28,6 @@ type MesosConnector struct {
 	master           string
 	client           *MesosHttpClient
 	lastHearBeatTime time.Time
-	config           config.Scheduler
 
 	MesosCallChan chan *sched.Call
 
@@ -37,9 +36,8 @@ type MesosConnector struct {
 	Framework      *mesos.FrameworkInfo
 }
 
-func NewMesosConnector(config config.Scheduler) *MesosConnector {
+func NewMesosConnector() *MesosConnector {
 	instance = &MesosConnector{
-		config:         config,
 		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
 		MesosCallChan:  make(chan *sched.Call, 1024),
 	}
@@ -127,11 +125,11 @@ func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, 
 	}
 }
 
-func CreateFrameworkInfo(config config.Scheduler) *mesos.FrameworkInfo {
+func CreateFrameworkInfo() *mesos.FrameworkInfo {
 	fw := &mesos.FrameworkInfo{
-		User:            proto.String(config.MesosFrameworkUser),
+		User:            proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
 		Name:            proto.String("swan"),
-		Hostname:        proto.String(config.Hostname),
+		Hostname:        proto.String(swancontext.Instance().Config.Scheduler.Hostname),
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 	}
 
@@ -163,7 +161,7 @@ func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 
 func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
 	var err error
-	state, err := stateFromMasters(strings.Split(s.config.MesosMasters, ","))
+	state, err := stateFromMasters(strings.Split(swancontext.Instance().Config.Scheduler.MesosMasters, ","))
 	if err != nil {
 		logrus.Errorf("%s Check your mesos master configuration", err)
 		mesosFailureChan <- err

@@ -3,7 +3,6 @@ package scheduler
 import (
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
@@ -18,7 +17,6 @@ import (
 )
 
 type Scheduler struct {
-	scontext         *swancontext.SwanContext
 	heartbeater      *time.Ticker
 	mesosFailureChan chan error
 
@@ -32,18 +30,15 @@ type Scheduler struct {
 	MesosConnector          *mesos_connector.MesosConnector
 	mesosConnectorCancelFun context.CancelFunc
 	store                   store.Store
-	config                  config.SwanConfig
 }
 
-func NewScheduler(config config.SwanConfig, scontext *swancontext.SwanContext, store store.Store) *Scheduler {
+func NewScheduler(store store.Store) *Scheduler {
 	scheduler := &Scheduler{
-		MesosConnector: mesos_connector.NewMesosConnector(config.Scheduler),
+		MesosConnector: mesos_connector.NewMesosConnector(),
 		heartbeater:    time.NewTicker(10 * time.Second),
-		scontext:       scontext,
 
 		AppStorage: NewMemoryStore(),
 		store:      store,
-		config:     config,
 
 		mesosFailureChan: make(chan error, 1),
 	}
@@ -76,8 +71,8 @@ func (scheduler *Scheduler) Stop() error {
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
 
-	if !scheduler.config.NoRecover {
-		apps, err := state.LoadAppData(scheduler.Allocator, scheduler.MesosConnector, scheduler.scontext)
+	if !swancontext.Instance().Config.NoRecover {
+		apps, err := state.LoadAppData(scheduler.Allocator, scheduler.MesosConnector)
 		if err != nil {
 			return err
 		}
@@ -104,7 +99,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 	// temp solution
 	go func() {
-		framework := mesos_connector.CreateFrameworkInfo(scheduler.config.Scheduler)
+		framework := mesos_connector.CreateFrameworkInfo()
 		frameworkId, err := scheduler.store.GetFrameworkId()
 		if err == nil {
 			framework.Id = &mesos.FrameworkID{Value: &frameworkId}
@@ -159,5 +154,5 @@ func (scheduler *Scheduler) InvalidateApps() {
 }
 
 func (scheduler *Scheduler) EmitEvent(swanEvent *swanevent.Event) {
-	scheduler.scontext.EventBus.EventChan <- swanEvent
+	swancontext.Instance().EventBus.EventChan <- swanEvent
 }
