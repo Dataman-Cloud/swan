@@ -12,7 +12,7 @@ type Version struct {
 	Disk              float64
 	Instances         int32
 	RunAs             string
-	Priority          int
+	Priority          int32
 	Container         *Container
 	Labels            map[string]string
 	HealthChecks      []*HealthCheck
