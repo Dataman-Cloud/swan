@@ -97,3 +97,12 @@ type Stats struct {
 type ProceedUpdateParam struct {
 	Instances int `json:"instances"`
 }
+
+type ScaleUpParam struct {
+	Instances int `json:"instances"`
+	IPs []string `json:"ips"`
+}
+
+type ScaleDownParam struct {
+	Instances int `json:"instances"`
+}

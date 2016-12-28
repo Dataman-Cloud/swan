@@ -79,12 +79,16 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Scale Up App").
 		Operation("scaleUp").
+		Reads(ScaleUpParam{}).
+		Returns(200, "OK", nil).
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/scale-down").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ScaleDown)).
 		// docs
 		Doc("Scale Down App").
 		Operation("scaleDown").
+		Reads(ScaleDownParam{}).
+		Returns(200, "OK", nil).
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PUT("/{app_id}").To(metrics.InstrumentRouteFunc("PUT", "App", api.UpdateApp)).
@@ -239,9 +243,7 @@ func (api *AppService) DeleteApp(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ScaleDown(request *restful.Request, response *restful.Response) {
-	var param struct {
-		RemoveInstances int `json:"instances"`
-	}
+	var param ScaleDownParam
 
 	err := request.ReadEntity(&param)
 	if err != nil {
@@ -249,7 +251,7 @@ func (api *AppService) ScaleDown(request *restful.Request, response *restful.Res
 		response.WriteError(http.StatusBadRequest, err)
 	}
 
-	err = api.Scheduler.ScaleDown(request.PathParameter("app_id"), param.RemoveInstances)
+	err = api.Scheduler.ScaleDown(request.PathParameter("app_id"), param.Instances)
 	if err != nil {
 		logrus.Errorf("Scale down app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
@@ -259,10 +261,7 @@ func (api *AppService) ScaleDown(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ScaleUp(request *restful.Request, response *restful.Response) {
-	var param struct {
-		NewInstances int      `json:"instances"`
-		Ip           []string `json:"ip"`
-	}
+	var param ScaleUpParam
 	err := request.ReadEntity(&param)
 	if err != nil {
 		logrus.Errorf("Scale up app error: %s", err.Error())
@@ -270,7 +269,7 @@ func (api *AppService) ScaleUp(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	err = api.Scheduler.ScaleUp(request.PathParameter("app_id"), param.NewInstances, param.Ip)
+	err = api.Scheduler.ScaleUp(request.PathParameter("app_id"), param.Instances, param.IPs)
 	if err != nil {
 		logrus.Errorf("Scale up app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
