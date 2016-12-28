@@ -130,44 +130,46 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 	if err != nil {
 		logrus.Errorf("Create app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
 
 	err = CheckVersion(&version)
 	if err != nil {
 		logrus.Errorf("Create app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
 
 	app, err := api.Scheduler.CreateApp(&version)
 	if err != nil {
 		logrus.Errorf("Create app error: %s", err.Error())
 		response.WriteError(http.StatusInternalServerError, err)
-	} else {
-		appRet := &App{
-			ID:               version.AppId,
-			Name:             version.AppId,
-			Instances:        int(version.Instances),
-			RunningInstances: app.RunningInstances(),
-			RunAs:            version.RunAs,
-			ClusterId:        app.ClusterId,
-			Created:          app.Created,
-			Updated:          app.Updated,
-			Mode:             string(app.Mode),
-			State:            app.State,
-			Labels:           version.Labels,
-			Env:              version.Env,
-			Constraints:      version.Constraints,
-			Uris:             version.Uris,
-		}
-
-		appRet.Versions = make([]string, 0)
-		for _, v := range app.Versions {
-			appRet.Versions = append(appRet.Versions, v.ID)
-		}
-
-		appRet.Tasks = FilterTasksFromApp(app)
-		response.WriteHeaderAndEntity(http.StatusCreated, appRet)
+		return
 	}
+	appRet := &App{
+		ID:               version.AppId,
+		Name:             version.AppId,
+		Instances:        int(version.Instances),
+		RunningInstances: app.RunningInstances(),
+		RunAs:            version.RunAs,
+		ClusterId:        app.ClusterId,
+		Created:          app.Created,
+		Updated:          app.Updated,
+		Mode:             string(app.Mode),
+		State:            app.State,
+		Labels:           version.Labels,
+		Env:              version.Env,
+		Constraints:      version.Constraints,
+		Uris:             version.Uris,
+	}
+
+	appRet.Versions = make([]string, 0)
+	for _, v := range app.Versions {
+		appRet.Versions = append(appRet.Versions, v.ID)
+	}
+
+	appRet.Tasks = FilterTasksFromApp(app)
+	response.WriteHeaderAndEntity(http.StatusCreated, appRet)
 }
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
@@ -221,9 +223,9 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 	if err != nil {
 		logrus.Errorf("Get app error: %s", err.Error())
 		response.WriteError(http.StatusNotFound, err)
-	} else {
-		response.WriteEntity(FormAppRet(app))
+		return
 	}
+	response.WriteEntity(FormAppRet(app))
 }
 
 func (api *AppService) DeleteApp(request *restful.Request, response *restful.Response) {
@@ -231,9 +233,9 @@ func (api *AppService) DeleteApp(request *restful.Request, response *restful.Res
 	if err != nil {
 		logrus.Errorf("Delete app error: %s", err.Error())
 		response.WriteError(http.StatusNotFound, err)
-	} else {
-		response.WriteHeader(http.StatusNoContent)
+		return
 	}
+	response.WriteHeader(http.StatusNoContent)
 }
 
 func (api *AppService) ScaleDown(request *restful.Request, response *restful.Response) {
@@ -251,9 +253,9 @@ func (api *AppService) ScaleDown(request *restful.Request, response *restful.Res
 	if err != nil {
 		logrus.Errorf("Scale down app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
-	} else {
-		response.WriteHeader(http.StatusOK)
+		return
 	}
+	response.WriteHeader(http.StatusOK)
 }
 
 func (api *AppService) ScaleUp(request *restful.Request, response *restful.Response) {
@@ -265,15 +267,16 @@ func (api *AppService) ScaleUp(request *restful.Request, response *restful.Respo
 	if err != nil {
 		logrus.Errorf("Scale up app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
 
 	err = api.Scheduler.ScaleUp(request.PathParameter("app_id"), param.NewInstances, param.Ip)
 	if err != nil {
 		logrus.Errorf("Scale up app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
-	} else {
-		response.WriteHeader(http.StatusOK)
+		return
 	}
+	response.WriteHeader(http.StatusOK)
 }
 
 func (api *AppService) UpdateApp(request *restful.Request, response *restful.Response) {
@@ -283,6 +286,7 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 	if err != nil {
 		logrus.Errorf("Update app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
 
 	if CheckVersion(&version) == nil {
@@ -290,15 +294,15 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 		if err != nil {
 			logrus.Errorf("Update app error: %s", err.Error())
 			response.WriteError(http.StatusBadRequest, err)
-		} else {
-			app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
-			if err != nil {
-				logrus.Errorf("Update app error: %s", err.Error())
-				response.WriteError(http.StatusNotFound, err)
-			} else {
-				response.WriteEntity(FormAppRet(app))
-			}
+			return
 		}
+		app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+		if err != nil {
+			logrus.Errorf("Update app error: %s", err.Error())
+			response.WriteError(http.StatusNotFound, err)
+			return
+		}
+		response.WriteEntity(FormAppRet(app))
 	} else {
 		response.WriteErrorString(http.StatusBadRequest, "Invalid Version.")
 	}
@@ -311,15 +315,16 @@ func (api *AppService) ProceedUpdate(request *restful.Request, response *restful
 	if err != nil {
 		logrus.Errorf("Proceed update app error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
 
 	err = api.Scheduler.ProceedUpdate(request.PathParameter("app_id"), param.Instances)
 	if err != nil {
 		logrus.Errorf("Proceed update error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
-	} else {
-		response.Write([]byte("Update proceeded"))
+		return
 	}
+	response.Write([]byte("Update proceeded"))
 }
 
 func (api *AppService) CancelUpdate(request *restful.Request, response *restful.Response) {
@@ -327,9 +332,9 @@ func (api *AppService) CancelUpdate(request *restful.Request, response *restful.
 	if err != nil {
 		logrus.Errorf("Cancel update error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
-	} else {
-		response.Write([]byte("Update canceled"))
+		return
 	}
+	response.Write([]byte("Update canceled"))
 }
 
 func (api *AppService) GetAppTask(request *restful.Request, response *restful.Response) {
@@ -337,22 +342,23 @@ func (api *AppService) GetAppTask(request *restful.Request, response *restful.Re
 	if err != nil {
 		logrus.Errorf("Get app task error: %s", err.Error())
 		response.WriteError(http.StatusNotFound, err)
-	} else {
-		task_id := request.PathParameter("task_id")
-		task_index, err := strconv.Atoi(task_id)
-		if err != nil {
-			logrus.Errorf("Get task index err: %s", err.Error())
-			response.WriteErrorString(http.StatusBadRequest, "Get task index err: "+err.Error())
-		} else {
-			appTaskRet, err := GetTaskFromApp(app, task_index)
-			if err != nil {
-				logrus.Errorf("Get task err: %s", err.Error())
-				response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
-			} else {
-				response.WriteEntity(appTaskRet)
-			}
-		}
+		return
 	}
+	task_id := request.PathParameter("task_id")
+	task_index, err := strconv.Atoi(task_id)
+	if err != nil {
+		logrus.Errorf("Get task index err: %s", err.Error())
+		response.WriteErrorString(http.StatusBadRequest, "Get task index err: "+err.Error())
+		return
+	}
+
+	appTaskRet, err := GetTaskFromApp(app, task_index)
+	if err != nil {
+		logrus.Errorf("Get task err: %s", err.Error())
+		response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
+		return
+	}
+	response.WriteEntity(appTaskRet)
 }
 
 func FormAppRet(app *state.App) *App {
