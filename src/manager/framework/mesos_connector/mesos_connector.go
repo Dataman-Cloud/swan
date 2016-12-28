@@ -175,11 +175,12 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 		s.ClusterId = "unamed"
 	}
 
-	match, _ := regexp.MatchString("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)", s.ClusterId)
+	r, _ := regexp.Compile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	match := r.MatchString(s.ClusterId)
 	if match {
-		err = errors.New(fmt.Sprintf(`mesos cluster name(%s) should not contain special characters "-.$*+?{}()[]|"`, s.ClusterId))
-		logrus.Errorf("%s Check your mesos master configuration", err)
-		mesosFailureChan <- err
+		logrus.Warnf(`Swan do not work with mesos cluster name(%s) with special characters "-.$*+?{}()[]|".`)
+		s.ClusterId = r.ReplaceAllString(s.ClusterId, "")
+		logrus.Infof("Swan acceptable cluster name: %s", s.ClusterId)
 	}
 
 	s.subscribe(ctx, mesosFailureChan)
