@@ -11,6 +11,7 @@ type App struct {
 	UpdatedInstances int       `json:"updatedInstances,omitempty"`
 	RunningInstances int       `json:"runningInstances"`
 	RunAs            string    `json:"runAs,omitempty"`
+	Priority         int       `json:"priority"`
 	ClusterId        string    `json:"clusterId,omitempty"`
 	Status           string    `json:"status,omitempty"`
 	Created          time.Time `json:"created,omitempty"`
