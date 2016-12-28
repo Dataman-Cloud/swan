@@ -2,8 +2,10 @@ package apiserver
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"sort"
@@ -36,6 +38,7 @@ type ApiRegister interface {
 type ApiServer struct {
 	addr         string
 	sock         string
+	leaderAddr   string
 	apiRegisters []ApiRegister
 }
 
@@ -52,6 +55,10 @@ func NewApiServer(addr, sock string) *ApiServer {
 
 func Install(apiServer *ApiServer, apiRegister ApiRegister) {
 	apiServer.apiRegisters = append(apiServer.apiRegisters, apiRegister)
+}
+
+func (apiServer *ApiServer) UpdateLeaderAddr(addr string) {
+	apiServer.leaderAddr = addr
 }
 
 func (apiServer *ApiServer) Start() error {
@@ -71,6 +78,9 @@ func (apiServer *ApiServer) Start() error {
 
 	// Add log filter
 	wsContainer.Filter(NCSACommonLogFormatLogger())
+
+	// proxy the request to leader server
+	wsContainer.Filter(apiServer.proxy())
 
 	// Add prometheus metrics
 	wsContainer.Handle("/metrics", promhttp.Handler())
@@ -167,5 +177,64 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 			resp.StatusCode(),
 			resp.ContentLength(),
 		)
+	}
+}
+
+func (apiServer *ApiServer) proxy() restful.FilterFunction {
+	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		if apiServer.leaderAddr == apiServer.addr {
+			chain.ProcessFilter(req, resp)
+			return
+		}
+
+		r := req.Request
+
+		leaderUrl, err := url.Parse(apiServer.leaderAddr + r.URL.Path)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if leaderUrl.Scheme == "" {
+			leaderUrl.Scheme = "http"
+		}
+
+		rr, err := http.NewRequest(r.Method, leaderUrl.String(), r.Body)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		copyHeader(r.Header, &rr.Header)
+
+		// Create a client and query the target
+		var transport http.Transport
+		leaderResp, err := transport.RoundTrip(rr)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		defer leaderResp.Body.Close()
+		body, err := ioutil.ReadAll(leaderResp.Body)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		dH := resp.Header()
+		copyHeader(leaderResp.Header, &dH)
+		dH.Add("Requested-Host", rr.Host)
+
+		resp.Write(body)
+		return
+	}
+}
+
+func copyHeader(source http.Header, dest *http.Header) {
+	for n, v := range source {
+		for _, vv := range v {
+			dest.Add(n, vv)
+		}
 	}
 }

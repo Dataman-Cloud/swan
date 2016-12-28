@@ -205,6 +205,8 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 			} else {
 				leaderAddr = manager.cluster[int(leader)-1]
 			}
+
+			manager.apiserver.UpdateLeaderAddr(leaderAddr)
 			log.G(ctx).Info("Now leader is change to ", leaderAddr)
 
 		case <-ctx.Done():
