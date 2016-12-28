@@ -91,6 +91,7 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Update App").
 		Operation("updateApp").
+		Returns(200, "OK", App{}).
 		Returns(404, "NotFound", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ProceedUpdate)).
@@ -213,32 +214,7 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 	if err != nil {
 		response.WriteErrorString(http.StatusNotFound, err.Error())
 	} else {
-		version := app.CurrentVersion
-		appRet := &App{
-			ID:               version.AppId,
-			Name:             version.AppId,
-			Instances:        int(version.Instances),
-			RunningInstances: app.RunningInstances(),
-			RunAs:            version.RunAs,
-			ClusterId:        app.ClusterId,
-			Created:          app.Created,
-			Updated:          app.Updated,
-			Mode:             string(app.Mode),
-			State:            app.State,
-			Labels:           version.Labels,
-			Env:              version.Env,
-			Constraints:      version.Constraints,
-			Uris:             version.Uris,
-		}
-
-		appRet.Versions = make([]string, 0)
-		for _, v := range app.Versions {
-			appRet.Versions = append(appRet.Versions, v.ID)
-		}
-
-		appRet.Tasks = FilterTasksFromApp(app)
-
-		response.WriteEntity(appRet)
+		response.WriteEntity(FormAppRet(app))
 	}
 }
 
@@ -300,7 +276,12 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 		if err != nil {
 			response.WriteErrorString(http.StatusBadRequest, err.Error())
 		} else {
-			response.WriteHeaderAndJson(http.StatusOK, []string{"version accepted"}, restful.MIME_JSON)
+			app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+			if err != nil {
+				response.WriteErrorString(http.StatusNotFound, err.Error())
+			} else {
+				response.WriteEntity(FormAppRet(app))
+			}
 		}
 	} else {
 		response.WriteErrorString(http.StatusBadRequest, "Invalid Version.")
@@ -353,6 +334,34 @@ func (api *AppService) GetAppTask(request *restful.Request, response *restful.Re
 			}
 		}
 	}
+}
+
+func FormAppRet(app *state.App) *App {
+	version := app.CurrentVersion
+	appRet := &App{
+		ID:               version.AppId,
+		Name:             version.AppId,
+		Instances:        int(version.Instances),
+		RunningInstances: app.RunningInstances(),
+		RunAs:            version.RunAs,
+		ClusterId:        app.ClusterId,
+		Created:          app.Created,
+		Updated:          app.Updated,
+		Mode:             string(app.Mode),
+		State:            app.State,
+		Labels:           version.Labels,
+		Env:              version.Env,
+		Constraints:      version.Constraints,
+		Uris:             version.Uris,
+	}
+
+	appRet.Versions = make([]string, 0)
+	for _, v := range app.Versions {
+		appRet.Versions = append(appRet.Versions, v.ID)
+	}
+
+	appRet.Tasks = FilterTasksFromApp(app)
+	return appRet
 }
 
 func CheckVersion(version *types.Version) error {
