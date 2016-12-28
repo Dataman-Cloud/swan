@@ -21,7 +21,6 @@ type SwanConfig struct {
 	Scheduler    Scheduler    `json:"scheduler"`
 	DNS          DNS          `json:"dns"`
 	HttpListener HttpListener `json:"httpListener"`
-	IPAM         IPAM         `json:"ipam"`
 	Raft         Raft         `json:"raft"`
 	SwanCluster  []string     `json:swanCluster`
 
@@ -29,11 +28,10 @@ type SwanConfig struct {
 }
 
 type Scheduler struct {
-	MesosMasters           string `json:"mesos-masters"`
-	MesosFrameworkUser     string `json:"mesos-framwork-user"`
-	Hostname               string `json:"hostname"`
-	EnableLocalHealthcheck bool   `json:"local-healthcheck"`
-	UnixAddr               string
+	MesosMasters       string `json:"mesos-masters"`
+	MesosFrameworkUser string `json:"mesos-framwork-user"`
+	Hostname           string `json:"hostname"`
+	UnixAddr           string
 }
 
 type DNS struct {
@@ -128,10 +126,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Scheduler.MesosMasters = c.String("mesos-master")
 	}
 
-	if c.String("local-healthcheck") != "" {
-		swanConfig.Scheduler.EnableLocalHealthcheck = c.Bool("local-healthcheck")
-	}
-
 	if c.String("raft-cluster") != "" {
 		swanConfig.Raft.Cluster = c.String("raft-cluster")
 	}
@@ -142,7 +136,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
 	swanConfig.DNS.EnableDns = c.Bool("enable-dns")
 
-	swanConfig.IPAM.StorePath = swanConfig.DataDir
 	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]

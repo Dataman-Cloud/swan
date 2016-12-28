@@ -1,30 +1,18 @@
 {
     "log-level": "info",
     "manager": "mixed",
-    "standalone": false,
     "swanCluster": ["0.0.0.0:9999"],
     "data-dir": "./data",
     "scheduler": {
 	    "mesos-masters": "127.0.0.1:5050",
 	    "mesos-framwork-user": "root",
-	    "hostname": "",
-	    "local-healthcheck": false
     },
     "dns": {
 	    "enable-dns": false,
 	    "domain": "dev.swan.sry.com",
-	    "recurse_on": true,
 	    "ip": "0.0.0.0",
 	    "port": 53,
-	    "soarname": "",
-	    "soamname": "",
-	    "soaserial": 0,
-	    "soarefresh": 0,
-	    "soaretry": 0,
-	    "soaexpire": 0,
-	    "ttl": 0,
-	    "resolvers": ["114.114.114.114"],
-	    "exchange_timeout": 1
+	    "resolvers": ["114.114.114.114"]
     },
     "httpListener": {
 	    "addr": "0.0.0.0:9999" ,
@@ -36,7 +24,6 @@
     "raft": {
 	    "cluster": "http://127.0.0.1:2111",
 	    "raftid": 1,
-	    "store_path": "./data/"
     },
     "janitor": {
 	    "enableProxy": true,

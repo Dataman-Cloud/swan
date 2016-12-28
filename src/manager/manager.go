@@ -10,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/manager/ipam"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
@@ -23,8 +22,6 @@ import (
 )
 
 type Manager struct {
-	ipamAdapter *ipam.IpamAdapter
-
 	resolver           *nameserver.Resolver
 	resolverSubscriber *event.DNSSubscriber
 
@@ -56,13 +53,6 @@ func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager.raftNode = raftNode
 
 	swancontext.NewSwanContext(config, event.New())
-
-	swancontext.Instance().Config.IPAM.StorePath = fmt.Sprintf(manager.config.IPAM.StorePath+"ipam.db.%d", config.Raft.RaftId)
-	manager.ipamAdapter, err = ipam.New(swancontext.Instance())
-	if err != nil {
-		logrus.Errorf("init ipam adapter failed. Error: %s", err.Error())
-		return nil, err
-	}
 
 	manager.cluster = manager.config.SwanCluster
 
@@ -143,13 +133,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 			errCh <- manager.resolver.Start(resolverCtx)
 		}()
 	}
-
-	go func() {
-		if err := manager.ipamAdapter.Start(); err != nil {
-			errCh <- err
-			return
-		}
-	}()
 
 	if manager.config.Janitor.EnableProxy {
 		manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
