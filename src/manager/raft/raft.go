@@ -191,7 +191,6 @@ func (n *Node) StartRaft(ctx context.Context) error {
 		Storage:         n.raftStorage,
 		MaxSizePerMsg:   1024 * 1024,
 		MaxInflightMsgs: 256,
-		//Applied:         3,
 	}
 
 	if oldwal {

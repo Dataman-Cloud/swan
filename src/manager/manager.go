@@ -196,9 +196,15 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 	for {
 		select {
 		case leaderChangeEvent := <-leaderChangeCh:
+			var leaderAddr string
 			leader := leaderChangeEvent.(uint64)
 
-			leaderAddr := manager.cluster[int(leader)-1]
+			// If leader was losted, this value is 0
+			if int(leader) == 0 {
+				leaderAddr = ""
+			} else {
+				leaderAddr = manager.cluster[int(leader)-1]
+			}
 			log.G(ctx).Info("Now leader is change to ", leaderAddr)
 
 		case <-ctx.Done():
