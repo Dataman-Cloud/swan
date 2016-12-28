@@ -5,6 +5,7 @@
   "mem": 5,
   "disk": 0,
   "runAs": "xcm",
+  "priority": 100,
   "instances": 3,
   "constraints": [
   ],

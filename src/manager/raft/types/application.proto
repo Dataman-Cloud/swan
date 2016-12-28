@@ -20,9 +20,10 @@ message Application {
     Version version = 3;
     Version proposedVersion = 4;
     string clusterId = 5;
-    string state = 6;
-    int64 createdAt = 7;
-    int64 updatedAt = 8;
+    int64 priority = 6; 
+    string state = 7;
+    int64 createdAt = 8;
+    int64 updatedAt = 9;
 }
 
 message Version {
