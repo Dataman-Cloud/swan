@@ -93,3 +93,7 @@ type Stats struct {
 
 	AppStats map[string]int `json:"appStats,omitempty"`
 }
+
+type ProceedUpdateParam struct {
+	Instances int `json:"instances"`
+}
