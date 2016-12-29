@@ -12,9 +12,15 @@ import (
 )
 
 func UpdateHandler(h *Handler) (*Handler, error) {
-	logrus.WithFields(logrus.Fields{"handler": "update"}).Debugf("logger handler report got event type: %s", h.MesosEvent.EventType)
+	logrus.WithFields(logrus.Fields{"handler": "update"}).Debugf("logger handler report got event type: %s", h.Event.GetEventType())
 
-	taskStatus := h.MesosEvent.Event.GetUpdate().GetStatus()
+	e, ok := h.Event.GetEvent().(*sched.Event)
+	if !ok {
+		logrus.Errorf("event conversion error %+v", h.Event)
+		return h, nil
+	}
+
+	taskStatus := e.GetUpdate().GetStatus()
 	AckUpdateEvent(h, taskStatus)
 
 	slotName := taskStatus.TaskId.GetValue()

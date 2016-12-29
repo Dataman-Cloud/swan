@@ -10,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -43,14 +42,14 @@ func NewScheduler(store store.Store) *Scheduler {
 	}
 
 	RegiserFun := func(m *HandlerManager) {
-		m.Register(sched.Event_SUBSCRIBED, LoggerHandler, SubscribedHandler)
-		m.Register(sched.Event_HEARTBEAT, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
-		m.Register(sched.Event_RESCIND, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
-		m.Register(sched.Event_FAILURE, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_MESSAGE, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_ERROR, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
+		m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_RESCIND, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
 	}
 
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)

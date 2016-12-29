@@ -10,8 +10,13 @@ import (
 )
 
 func OfferHandler(h *Handler) (*Handler, error) {
+	e, ok := h.Event.GetEvent().(*sched.Event)
+	if !ok {
+		logrus.Errorf("event conversion error %+v", h.Event)
+		return h, nil
+	}
 
-	for _, offer := range h.MesosEvent.Event.Offers.Offers {
+	for _, offer := range e.Offers.Offers {
 		logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("offerId: %s", *offer.GetId().Value)
 		// when no pending offer slot
 		offerWrapper := state.NewOfferWrapper(offer)

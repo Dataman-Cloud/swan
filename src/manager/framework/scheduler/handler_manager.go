@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
@@ -20,7 +19,7 @@ type HandlerFuncs []HandlerFunc
 type HandlerManager struct {
 	lock       sync.Mutex
 	handlers   map[string]*Handler
-	handlerMap map[sched.Event_Type]HandlerFuncs
+	handlerMap map[string]HandlerFuncs
 
 	SchedulerRef *Scheduler
 }
@@ -28,7 +27,7 @@ type HandlerManager struct {
 func NewHanlderManager(scheduler *Scheduler, installFun func(*HandlerManager)) *HandlerManager {
 	manager := &HandlerManager{
 		handlers:     make(map[string]*Handler),
-		handlerMap:   make(map[sched.Event_Type]HandlerFuncs),
+		handlerMap:   make(map[string]HandlerFuncs),
 		lock:         sync.Mutex{},
 		SchedulerRef: scheduler,
 	}
@@ -39,11 +38,11 @@ func NewHanlderManager(scheduler *Scheduler, installFun func(*HandlerManager)) *
 	return manager
 }
 
-func (m *HandlerManager) Register(etype sched.Event_Type, funcs ...HandlerFunc) {
+func (m *HandlerManager) Register(etype string, funcs ...HandlerFunc) {
 	m.handlerMap[etype] = HandlerFuncs(funcs)
 }
 
-func (m *HandlerManager) HandlerFuncs(etype sched.Event_Type) HandlerFuncs {
+func (m *HandlerManager) HandlerFuncs(etype string) HandlerFuncs {
 	return m.handlerMap[etype]
 }
 
