@@ -2,6 +2,8 @@ package api
 
 import (
 	"time"
+
+	"github.com/Dataman-Cloud/swan/src/types"
 )
 
 type App struct {
@@ -20,9 +22,10 @@ type App struct {
 	State            string    `json:"state"`
 
 	// use task for compatability now, should be slot here
-	Tasks    []*Task  `json:"tasks,omitempty"`
-	Versions []string `json:"versions,omitempty"`
-	IP       []string `json:"ip,omitempty"`
+	Tasks          []*Task        `json:"tasks,omitempty"`
+	CurrentVersion *types.Version `json:"current_version"`
+	Versions       []string       `json:"versions,omitempty"`
+	IP             []string       `json:"ip,omitempty"`
 
 	// current version related info
 	Labels      map[string]string `json:"labels,omitempty"`
