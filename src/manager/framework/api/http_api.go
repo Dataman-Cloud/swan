@@ -124,6 +124,14 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", Task{}).
 		Returns(404, "NotFound", nil))
 
+	ws.Route(ws.GET("/{app_id}/versions").To(metrics.InstrumentRouteFunc("GET", "AppVersions", api.GetAppVersions)).
+		// docs
+		Doc("Get all versions in the given App").
+		Operation("getAppVersions").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Returns(200, "OK", []types.Version{}).
+		Returns(404, "NotFound", nil))
+
 	container.Add(ws)
 }
 
@@ -358,6 +366,16 @@ func (api *AppService) GetAppTask(request *restful.Request, response *restful.Re
 		return
 	}
 	response.WriteEntity(appTaskRet)
+}
+
+func (api *AppService) GetAppVersions(request *restful.Request, response *restful.Response) {
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app versions error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	response.WriteEntity(app.Versions)
 }
 
 func FormAppRet(app *state.App) *App {
