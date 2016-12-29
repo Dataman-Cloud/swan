@@ -231,15 +231,10 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 
 func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *TaskBuilder {
 	for _, healthCheck := range healthChecks {
-		var hostPort *uint32
+		var containerPort int32
 		for _, portMapping := range builder.task.Slot.Version.Container.Docker.PortMappings {
 			if portMapping.Name == healthCheck.PortName {
-				containerPort := portMapping.ContainerPort
-				for _, portMapping := range builder.taskInfo.Container.Docker.PortMappings {
-					if uint32(containerPort) == *portMapping.ContainerPort {
-						hostPort = portMapping.HostPort
-					}
-				}
+				containerPort = portMapping.ContainerPort
 			}
 		}
 
@@ -249,7 +244,7 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 				Type: mesos.HealthCheck_HTTP.Enum(),
 				Http: &mesos.HealthCheck_HTTPCheckInfo{
 					Scheme:   proto.String(protocol),
-					Port:     hostPort,
+					Port:     proto.Uint32(uint32(containerPort)),
 					Path:     &healthCheck.Path,
 					Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
 				},
@@ -260,7 +255,7 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
 				Type: mesos.HealthCheck_TCP.Enum(),
 				Tcp: &mesos.HealthCheck_TCPCheckInfo{
-					Port: hostPort,
+					Port: proto.Uint32(uint32(containerPort)),
 				},
 			}
 		}
