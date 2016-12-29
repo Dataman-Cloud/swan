@@ -1,8 +1,6 @@
 package framework
 
 import (
-	"sync"
-
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
@@ -33,29 +31,15 @@ func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) 
 }
 
 func (f *Framework) Start(ctx context.Context) error {
-	apiStopC := make(chan struct{})
-	schedulerStopC := make(chan struct{})
+	errChan := make(chan error, 1)
+	go func() { errChan <- f.Scheduler.Start(ctx) }()
 
-	go func() {
-		<-ctx.Done()
-		apiStopC <- struct{}{}
-		schedulerStopC <- struct{}{}
-		f.StopC <- struct{}{}
-	}()
-
-	var err error
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		wg.Done()
-		err = f.Scheduler.Start(ctx)
-	}()
-
-	wg.Wait()
-	if err != nil {
-		return err
+	for {
+		select {
+		case err := <-errChan:
+			return err
+		case <-ctx.Done():
+			f.StopC <- struct{}{}
+		}
 	}
-
-	return nil
 }

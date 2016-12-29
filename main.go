@@ -130,6 +130,7 @@ func main() {
 		go func() {
 			if err := node.Start(context.Background()); err != nil {
 				logrus.Errorf("strart node got error: %s", err.Error())
+				os.Exit(1)
 			}
 		}()
 

@@ -165,6 +165,7 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 	if err != nil {
 		logrus.Errorf("%s Check your mesos master configuration", err)
 		mesosFailureChan <- err
+		return
 	}
 
 	s.master = state.Leader
