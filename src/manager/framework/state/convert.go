@@ -86,7 +86,7 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 	}
 
 	if raftVersion.Container != nil {
-		version.Container = ContainerFromContainer(raftVersion.Container)
+		version.Container = ContainerFromRaft(raftVersion.Container)
 	}
 
 	if raftVersion.KillPolicy != nil {
@@ -131,7 +131,7 @@ func ContainerToRaft(container *types.Container) *rafttypes.Container {
 	return raftContainer
 }
 
-func ContainerFromContainer(raftContainer *rafttypes.Container) *types.Container {
+func ContainerFromRaft(raftContainer *rafttypes.Container) *types.Container {
 	container := &types.Container{
 		Type: raftContainer.Type,
 	}
