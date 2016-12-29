@@ -132,6 +132,15 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", []types.Version{}).
 		Returns(404, "NotFound", nil))
 
+	ws.Route(ws.GET("/{app_id}/versions/{version_id}").To(metrics.InstrumentRouteFunc("GET", "AppVersion", api.GetAppVersion)).
+		// docs
+		Doc("Get a version in the given App").
+		Operation("getAppVersion").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Param(ws.PathParameter("version_id", "identifier of the app version").DataType("string")).
+		Returns(200, "OK", types.Version{}).
+		Returns(404, "NotFound", nil))
+
 	container.Add(ws)
 }
 
@@ -376,6 +385,25 @@ func (api *AppService) GetAppVersions(request *restful.Request, response *restfu
 		return
 	}
 	response.WriteEntity(app.Versions)
+}
+
+func (api *AppService) GetAppVersion(request *restful.Request, response *restful.Response) {
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app versions error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	version_id := request.PathParameter("version_id")
+
+	for _, v := range app.Versions {
+		if v.ID == version_id {
+			response.WriteEntity(v)
+			return
+		}
+	}
+	logrus.Errorf("No versions found with ID: %s", version_id)
+	response.WriteErrorString(http.StatusNotFound, "No versions found")
 }
 
 func FormAppRet(app *state.App) *App {
