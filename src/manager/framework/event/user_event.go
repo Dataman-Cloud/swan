@@ -1,10 +1,5 @@
 package event
 
-const (
-	UserEventType1 = "1"
-	UserEventType2 = "2"
-)
-
 type UserEvent struct {
 	Type  string
 	Param interface{}

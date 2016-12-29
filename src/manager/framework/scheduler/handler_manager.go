@@ -46,7 +46,7 @@ func (m *HandlerManager) HandlerFuncs(etype string) HandlerFuncs {
 	return m.handlerMap[etype]
 }
 
-func (m *HandlerManager) Handle(e *event.MesosEvent) *Handler {
+func (m *HandlerManager) Handle(e event.Event) *Handler {
 	handlerId := uuid.NewV4().String()
 	h := NewHandler(handlerId, m, e)
 

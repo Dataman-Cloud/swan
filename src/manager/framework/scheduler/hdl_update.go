@@ -91,8 +91,6 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		slot.SetState(state.SLOT_STATE_TASK_LOST)
 	}
 
-	h.Manager.SchedulerRef.InvalidateApps()
-
 	return h, nil
 }
 

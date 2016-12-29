@@ -27,6 +27,7 @@ type Scheduler struct {
 
 	MesosConnector          *mesos_connector.MesosConnector
 	mesosConnectorCancelFun context.CancelFunc
+	UserEventChan           chan *event.UserEvent
 	store                   store.Store
 }
 
@@ -39,6 +40,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		store:      store,
 
 		mesosFailureChan: make(chan error, 1),
+		UserEventChan:    make(chan *event.UserEvent, 1024),
 	}
 
 	RegiserFun := func(m *HandlerManager) {
@@ -50,6 +52,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
 		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
 		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
 	}
 
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)
@@ -115,7 +118,11 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 		select {
 		case e := <-scheduler.MesosConnector.MesosEventChan:
 			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
-			scheduler.handlerMesosEvent(e)
+			scheduler.handleEvent(e)
+
+		case e := <-scheduler.UserEventChan:
+			logrus.WithFields(logrus.Fields{"user event chan": "yes"}).Debugf("")
+			scheduler.handleEvent(e)
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
@@ -131,8 +138,8 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 	}
 }
 
-func (scheduler *Scheduler) handlerMesosEvent(event *event.MesosEvent) {
-	scheduler.handlerManager.Handle(event)
+func (scheduler *Scheduler) handleEvent(e event.Event) {
+	scheduler.handlerManager.Handle(e)
 }
 
 // reevaluation of apps state, clean up stale apps

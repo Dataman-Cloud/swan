@@ -9,6 +9,8 @@ const (
 	EVENT_TYPE_MESOS_FAILURE    = "mesos_failure"
 	EVENT_TYPE_MESOS_MESSAGE    = "mesos_message"
 	EVENT_TYPE_MESOS_ERROR      = "mesos_error"
+
+	EVENT_TYPE_USER_INVALID_APPS = "user_invalidapps"
 )
 
 type Event interface {
