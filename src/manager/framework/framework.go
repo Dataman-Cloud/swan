@@ -43,3 +43,7 @@ func (f *Framework) Start(ctx context.Context) error {
 		}
 	}
 }
+
+func (f *Framework) Stop() {
+	f.Scheduler.Stop()
+}
