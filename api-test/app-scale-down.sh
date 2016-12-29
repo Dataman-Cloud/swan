@@ -9,7 +9,7 @@ wait_a_moment # wait scalling up operation done
 # should be empty before first app created
 msg "scale down app to 2 instances"
 apps=`http --check-status --ignore-stdin --timeout=4.5 get $SERVER_PATH/$PATH_PREFIX/apps`
-appsLen=`echo ${apps} | jq '.apps | length'`
+appsLen=`echo ${apps} | jq 'length'`
 
 if [ "$appsLen" != "2" ]
 then

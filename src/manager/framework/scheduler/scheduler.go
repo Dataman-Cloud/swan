@@ -26,7 +26,6 @@ type Scheduler struct {
 
 	AppStorage *memoryStore
 
-	Allocator               *state.OfferAllocator
 	MesosConnector          *mesos_connector.MesosConnector
 	mesosConnectorCancelFun context.CancelFunc
 	store                   store.Store
@@ -55,7 +54,6 @@ func NewScheduler(store store.Store) *Scheduler {
 	}
 
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)
-	scheduler.Allocator = state.NewOfferAllocator()
 
 	state.SetStore(store)
 
@@ -71,7 +69,7 @@ func (scheduler *Scheduler) Stop() error {
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
 	if !swancontext.Instance().Config.NoRecover {
-		apps, err := state.LoadAppData(scheduler.Allocator, scheduler.MesosConnector)
+		apps, err := state.LoadAppData()
 		if err != nil {
 			return err
 		}
@@ -81,7 +79,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 			for _, slot := range app.GetSlots() {
 				if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
-					slot.App.OfferAllocatorRef.PutSlotBackToPendingQueue(slot) // push the slot into pending offer queue
+					state.OfferAllocatorInstance().PutSlotBackToPendingQueue(slot) // push the slot into pending offer queue
 				}
 			}
 		}
@@ -92,7 +90,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 		}
 
 		for k, v := range list {
-			scheduler.Allocator.BySlotId[k] = v
+			state.OfferAllocatorInstance().BySlotId[k] = v
 		}
 	}
 

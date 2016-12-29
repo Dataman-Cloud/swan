@@ -3,7 +3,6 @@ package state
 import (
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -11,7 +10,7 @@ import (
 )
 
 // load app data frm persistent data
-func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.MesosConnector) (map[string]*App, error) {
+func LoadAppData() (map[string]*App, error) {
 	raftApps, err := persistentStore.ListApps()
 	if err != nil {
 		return nil, err
@@ -21,14 +20,13 @@ func LoadAppData(allocator *OfferAllocator, mesosConnector *mesos_connector.Meso
 
 	for _, raftApp := range raftApps {
 		app := &App{
-			AppId:             raftApp.ID,
-			CurrentVersion:    VersionFromRaft(raftApp.Version),
-			State:             raftApp.State,
-			Mode:              AppMode(raftApp.Version.Mode),
-			Created:           time.Unix(0, raftApp.CreatedAt),
-			Updated:           time.Unix(0, raftApp.UpdatedAt),
-			slots:             make(map[int]*Slot),
-			OfferAllocatorRef: allocator,
+			AppId:          raftApp.ID,
+			CurrentVersion: VersionFromRaft(raftApp.Version),
+			State:          raftApp.State,
+			Mode:           AppMode(raftApp.Version.Mode),
+			Created:        time.Unix(0, raftApp.CreatedAt),
+			Updated:        time.Unix(0, raftApp.UpdatedAt),
+			slots:          make(map[int]*Slot),
 		}
 
 		if raftApp.ProposedVersion != nil {

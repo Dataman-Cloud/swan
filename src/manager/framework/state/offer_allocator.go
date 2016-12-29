@@ -11,6 +11,9 @@ import (
 	"golang.org/x/net/context"
 )
 
+var instance *OfferAllocator
+var once sync.Once
+
 type OfferAllocator struct {
 	PendingOfferSlots []*Slot
 	BySlotId          map[string]*mesos.OfferID // record allocated offers that map slot
@@ -19,15 +22,17 @@ type OfferAllocator struct {
 	allocatedOfferLock sync.Mutex
 }
 
-func NewOfferAllocator() *OfferAllocator {
-	allocator := &OfferAllocator{
-		PendingOfferSlots:  make([]*Slot, 0),
-		BySlotId:           make(map[string]*mesos.OfferID),
-		pendingOfferRWLock: sync.RWMutex{},
-		allocatedOfferLock: sync.Mutex{},
-	}
+func OfferAllocatorInstance() *OfferAllocator {
+	once.Do(func() {
+		instance = &OfferAllocator{
+			PendingOfferSlots:  make([]*Slot, 0),
+			BySlotId:           make(map[string]*mesos.OfferID),
+			pendingOfferRWLock: sync.RWMutex{},
+			allocatedOfferLock: sync.Mutex{},
+		}
+	})
 
-	return allocator
+	return instance
 }
 
 func (allocator *OfferAllocator) PopNextPendingOffer() *Slot {

@@ -58,9 +58,8 @@ type App struct {
 
 	Mode AppMode `json:"mode"` // fixed or repliactes
 
-	OfferAllocatorRef *OfferAllocator
-	Created           time.Time
-	Updated           time.Time
+	Created time.Time
+	Updated time.Time
 
 	State     string
 	ClusterId string
@@ -69,8 +68,7 @@ type App struct {
 	touched       bool
 }
 
-func NewApp(version *types.Version,
-	allocator *OfferAllocator) (*App, error) {
+func NewApp(version *types.Version) (*App, error) {
 
 	err := validateAndFormatVersion(version)
 	if err != nil {
@@ -78,12 +76,11 @@ func NewApp(version *types.Version,
 	}
 
 	app := &App{
-		Versions:          []*types.Version{version},
-		slots:             make(map[int]*Slot),
-		CurrentVersion:    version,
-		OfferAllocatorRef: allocator,
-		AppId:             version.AppId,
-		ClusterId:         mesos_connector.Instance().ClusterId,
+		Versions:       []*types.Version{version},
+		slots:          make(map[int]*Slot),
+		CurrentVersion: version,
+		AppId:          version.AppId,
+		ClusterId:      mesos_connector.Instance().ClusterId,
 
 		Created:       time.Now(),
 		Updated:       time.Now(),
@@ -339,7 +336,7 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
-		app.OfferAllocatorRef.RemoveSlot(slot)
+		OfferAllocatorInstance().RemoveSlot(slot)
 
 		slot.Remove()
 
