@@ -52,6 +52,7 @@ func (sses *SSESubscriber) Write(e *Event) error {
 		Data:  e.Payload,
 	})
 
+	// TODO
 	if f, ok := sses.rw.(http.Flusher); ok {
 		f.Flush()
 	}
