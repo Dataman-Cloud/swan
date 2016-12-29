@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
@@ -22,6 +23,7 @@ import (
 )
 
 var instance *MesosConnector
+var once sync.Once
 
 type MesosConnector struct {
 	// mesos framework related
@@ -38,21 +40,19 @@ type MesosConnector struct {
 }
 
 func NewMesosConnector() *MesosConnector {
-	instance = &MesosConnector{
-		MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
-		MesosCallChan:  make(chan *sched.Call, 1024),
-	}
-
-	return instance
+	return Instance() // call initialize method
 }
 
 func Instance() *MesosConnector {
-	if instance == nil {
-		logrus.Errorf("mesos connector is nil now, need reconnect")
-		return nil
-	} else {
-		return instance
-	}
+	once.Do(
+		func() {
+			instance = &MesosConnector{
+				MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
+				MesosCallChan:  make(chan *sched.Call, 1024),
+			}
+		})
+
+	return instance
 }
 
 func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) {
