@@ -20,10 +20,9 @@ message Application {
     Version version = 3;
     Version proposedVersion = 4;
     string clusterId = 5;
-    int64 priority = 6; 
-    string state = 7;
-    int64 createdAt = 8;
-    int64 updatedAt = 9;
+    string state = 6;
+    int64 createdAt = 7;
+    int64 updatedAt = 8;
 }
 
 message Version {
@@ -46,6 +45,7 @@ message Version {
     repeated string ip = 17;
     string mode = 18;
     string appId = 19;
+    int32 priority = 20;
 }
 
 message Container {
