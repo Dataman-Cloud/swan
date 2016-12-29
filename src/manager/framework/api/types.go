@@ -41,7 +41,7 @@ type Task struct {
 	AppId     string `json:"appId,omitempty"`
 	VersionId string `json:"versionId,omitempty"`
 
-	Status string `json:"status,omitempty"`
+	Status string `json:"status"`
 
 	OfferId       string `json:"offerId,omitempty"`
 	AgentId       string `json:"agentId,omitempty"`
@@ -58,7 +58,7 @@ type Task struct {
 	Created time.Time `json:"created,omitempty"`
 
 	Image   string `json:"image,omitempty"`
-	Healthy bool   `json:"healthy,omitempty"`
+	Healthy bool   `json:"healthy"`
 }
 
 type TaskHistory struct {
@@ -100,8 +100,8 @@ type ProceedUpdateParam struct {
 }
 
 type ScaleUpParam struct {
-	Instances int `json:"instances"`
-	IPs []string `json:"ips"`
+	Instances int      `json:"instances"`
+	IPs       []string `json:"ips"`
 }
 
 type ScaleDownParam struct {
