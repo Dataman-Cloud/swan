@@ -63,9 +63,8 @@ func NewScheduler(store store.Store) *Scheduler {
 }
 
 // shutdown main scheduler and related
-func (scheduler *Scheduler) Stop() error {
+func (scheduler *Scheduler) Stop() {
 	scheduler.stopC <- struct{}{}
-	return nil
 }
 
 // revive from crash or rotate from leader change

@@ -163,33 +163,45 @@ func (manager *Manager) Start(ctx context.Context) error {
 }
 
 func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
+	var eventBusStarted, frameworkStarted bool
 	for {
 		select {
 		case leadershipEvent := <-leadershipCh:
 			// TODO lock it and if manager stop return
 			newState := leadershipEvent.(raft.LeadershipState)
 
-			var cancelFunc context.CancelFunc
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
-				// TODO
+
+				eventBusCtx, _ := context.WithCancel(ctx)
 				go func() {
-					swancontext.Instance().EventBus.Start()
+					eventBusStarted = true
+					log.G(eventBusCtx).Info("starting eventBus in leader.")
+					swancontext.Instance().EventBus.Start(ctx)
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
 				go func() {
+					frameworkStarted = true
+					log.G(frameworkCtx).Info("starting framework in leader.")
 					manager.criticalErrorChan <- manager.framework.Start(frameworkCtx)
 				}()
 
 			} else if newState == raft.IsFollower {
 				log.G(ctx).Info("Now i become a follower !!!")
-				if cancelFunc != nil {
-					cancelFunc()
-					log.G(ctx).Info("Scheduler has been stopped")
+
+				if eventBusStarted {
+					swancontext.Instance().EventBus.Stop()
+					log.G(ctx).Info("eventBus has been stopped")
+					eventBusStarted = false
 				}
-				cancelFunc = nil
+
+				if frameworkStarted {
+					manager.framework.Stop()
+					log.G(ctx).Info("framework has been stopped")
+					frameworkStarted = false
+				}
 			}
 		case <-ctx.Done():
 			return
