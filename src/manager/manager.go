@@ -36,11 +36,14 @@ type Manager struct {
 	config    config.SwanConfig
 	cluster   []string
 	apiserver *apiserver.ApiServer
+
+	criticalErrorChan chan error
 }
 
 func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
 	manager := &Manager{
-		config: config,
+		config:            config,
+		criticalErrorChan: make(chan error, 1),
 	}
 
 	manager.apiserver = apiserver.NewApiServer(config.HttpListener.TCPAddr, config.HttpListener.UnixAddr)
@@ -104,7 +107,6 @@ func (manager *Manager) Stop(cancel context.CancelFunc) {
 }
 
 func (manager *Manager) Start(ctx context.Context) error {
-	errCh := make(chan error)
 	leadershipCh, QueueCancel := manager.raftNode.SubscribeLeadership()
 	defer QueueCancel()
 
@@ -130,7 +132,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 		go func() {
 			resolverCtx, _ := context.WithCancel(ctx)
 			manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
-			errCh <- manager.resolver.Start(resolverCtx)
+			manager.criticalErrorChan <- manager.resolver.Start(resolverCtx)
 		}()
 	}
 
@@ -148,15 +150,16 @@ func (manager *Manager) Start(ctx context.Context) error {
 		}
 	}
 
-	manager.apiserver.Start()
-	//go func() {
-	//	if err := manager.apiserver.Start(manager.framework.RestApi); err != nil {
-	//		errCh <- err
-	//		return
-	//	}
-	//}()
+	go manager.apiserver.Start()
 
-	return <-errCh
+	for {
+		select {
+		case err := <-manager.criticalErrorChan:
+			return err
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
 }
 
 func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
@@ -176,7 +179,9 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
-				manager.framework.Start(frameworkCtx)
+				go func() {
+					manager.criticalErrorChan <- manager.framework.Start(frameworkCtx)
+				}()
 
 			} else if newState == raft.IsFollower {
 				log.G(ctx).Info("Now i become a follower !!!")
