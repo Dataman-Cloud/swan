@@ -2,87 +2,89 @@ package types
 
 // UNMAINTAINED: DO NOT IMPORT THIS PKG IN NEW FILE
 
+// TODO(xychu): refine struct names, typo: PerviousVersionID -> PreviousVersionID
+//              and Id -> ID, Cpus -> CPUs, Uris -> URIs, Ip -> IP.
 type Version struct {
-	ID                string
-	AppId             string
-	PerviousVersionID string
-	Command           string
-	Cpus              float64
-	Mem               float64
-	Disk              float64
-	Instances         int32
-	RunAs             string
-	Priority          int32
-	Container         *Container
-	Labels            map[string]string
-	HealthChecks      []*HealthCheck
-	Env               map[string]string
-	KillPolicy        *KillPolicy
-	UpdatePolicy      *UpdatePolicy
-	Constraints       []string
-	Uris              []string
-	Ip                []string
-	Mode              string
+	ID                string            `json:"id,omitempty"`
+	AppId             string            `json:"appId,omitempty"`
+	PerviousVersionID string            `json:"perviousVersionId,omitempty"`
+	Command           string            `json:"command,omitempty"`
+	Cpus              float64           `json:"cpus,omitempty"`
+	Mem               float64           `json:"mem,omitempty"`
+	Disk              float64           `json:"disk,omitempty"`
+	Instances         int32             `json:"instances,omitempty"`
+	RunAs             string            `json:"runAs,omitempty"`
+	Priority          int32             `json:"priority,omitempty"`
+	Container         *Container        `json:"container,omitempty"`
+	Labels            map[string]string `json:"labels,omitempty"`
+	HealthChecks      []*HealthCheck    `json:"healthChecks,omitempty"`
+	Env               map[string]string `json:"env,omitempty"`
+	KillPolicy        *KillPolicy       `json:"killPolicy,omitempty"`
+	UpdatePolicy      *UpdatePolicy     `json:"updatPolicy,omitempty"`
+	Constraints       []string          `json:"constraints,omitempty"`
+	Uris              []string          `json:"uris,omitempty"`
+	Ip                []string          `json:"ip,omitempty"`
+	Mode              string            `json:"mode,omitempty"`
 }
 
 type Container struct {
-	Type    string
-	Docker  *Docker
-	Volumes []*Volume
+	Type    string    `json:"type,omitempty"`
+	Docker  *Docker   `json:"docker,omitempty"`
+	Volumes []*Volume `json:"volumes,omitempty"`
 }
 
 type Docker struct {
-	ForcePullImage bool
-	Image          string
-	Network        string
-	Parameters     []*Parameter
-	PortMappings   []*PortMapping
-	Privileged     bool
+	ForcePullImage bool           `json:"forcePullImage,omitempty"`
+	Image          string         `json:"image,omitempty"`
+	Network        string         `json:"network,omitempty"`
+	Parameters     []*Parameter   `json:"parameters,omitempty"`
+	PortMappings   []*PortMapping `json:"portMappings,omitempty"`
+	Privileged     bool           `json:"privileged,omitempty"`
 }
 
 type Parameter struct {
-	Key   string
-	Value string
+	Key   string `json:"key,omitempty"`
+	Value string `json:"value,omitempty"`
 }
 
 type PortMapping struct {
-	ContainerPort int32
-	Name          string
-	Protocol      string
+	ContainerPort int32  `json:"containerPort,omitempty"`
+	Name          string `json:"name,omitempty"`
+	Protocol      string `json:"protocol,omitempty"`
 }
 
 type Volume struct {
-	ContainerPath string
-	HostPath      string
-	Mode          string
+	ContainerPath string `json:"containerPath,omitempty"`
+	HostPath      string `json:"hostPath,omitempty"`
+	Mode          string `json:"mode,omitempty"`
 }
 
 type KillPolicy struct {
-	Duration int64
+	Duration int64 `json:"duration,omitempty"`
 }
 
 type UpdatePolicy struct {
-	UpdateDelay  int32
-	MaxRetries   int32
-	MaxFailovers int32
-	Action       string
+	UpdateDelay  int32  `json:"updateDelay,omitempty"`
+	MaxRetries   int32  `json:"maxRetries,omitempty"`
+	MaxFailovers int32  `json:"maxFailovers,omitempty"`
+	Action       string `json:"action,omitempty"`
 }
 
 type HealthCheck struct {
-	ID                  string
-	Address             string
-	TaskID              string
-	AppID               string
-	Protocol            string
-	PortName            string
-	Command             *Command
-	Path                string
-	ConsecutiveFailures uint32
-	GracePeriodSeconds  float64
-	IntervalSeconds     float64
-	TimeoutSeconds      float64
+	ID                  string   `json:"id,omitempty"`
+	Address             string   `json:"address,omitempty"`
+	TaskID              string   `json:"taskID,omitempty"`
+	AppID               string   `json:"appID,omitempty"`
+	Protocol            string   `json:"protocol,omitempty"`
+	PortName            string   `json:"portName,omitempty"`
+	Command             *Command `json:"command,omitempty"`
+	Path                string   `json:"path,omitempty"`
+	ConsecutiveFailures uint32   `json:"consecutiveFailures,omitempty"`
+	GracePeriodSeconds  float64  `json:"gracePeriodSeconds,omitempty"`
+	IntervalSeconds     float64  `json:"intervalSeconds,omitempty"`
+	TimeoutSeconds      float64  `json:"timeoutSeconds,omitempty"`
 }
 
 type Command struct {
-	Value string
+	Value string `json:"value,omitempty"`
 }
