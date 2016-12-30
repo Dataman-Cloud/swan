@@ -3,10 +3,11 @@ package command
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
-	"os"
 )
 
 // NewInspectCommand returns the CLI command for "show"
@@ -84,13 +85,13 @@ func printTaskTable(tasks []*api.Task) {
 	for _, task := range tasks {
 		tb.Append([]string{
 			task.ID,
-			task.AppId,
+			task.AppID,
 			fmt.Sprintf("%.2f", task.Cpu),
 			fmt.Sprintf("%.f", task.Mem),
 			fmt.Sprintf("%.f", task.Disk),
 			task.AgentHostname,
 			task.Status,
-			task.VersionId,
+			task.VersionID,
 			fmt.Sprintf("%d", len(task.History)),
 		})
 	}

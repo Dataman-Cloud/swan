@@ -6,9 +6,9 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appId, slotId, taskId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
-		bucketKeySlots, []byte(slotId), bucketKeyTasks, []byte(taskId))
+func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appID, slotID, taskID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID),
+		bucketKeySlots, []byte(slotID), bucketKeyTasks, []byte(taskID))
 	if err != nil {
 		return err
 	}
@@ -16,8 +16,8 @@ func withCreateTaskBucketIfNotExists(tx *bolt.Tx, appId, slotId, taskId string, 
 	return fn(bkt)
 }
 
-func WithTaskBucket(tx *bolt.Tx, appId, slotId, taskId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt := GetTaskBucket(tx, appId, taskId, slotId)
+func WithTaskBucket(tx *bolt.Tx, appID, slotID, taskID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt := GetTaskBucket(tx, appID, taskID, slotID)
 	if bkt == nil {
 		return ErrTaskUnknown
 	}
@@ -25,18 +25,18 @@ func WithTaskBucket(tx *bolt.Tx, appId, slotId, taskId string, fn func(bkt *bolt
 	return fn(bkt)
 }
 
-func GetTasksBucket(tx *bolt.Tx, appId, slotId string) *bolt.Bucket {
-	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
-		bucketKeySlots, []byte(slotId), bucketKeyTasks)
+func GetTasksBucket(tx *bolt.Tx, appID, slotID string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID),
+		bucketKeySlots, []byte(slotID), bucketKeyTasks)
 }
 
-func GetTaskBucket(tx *bolt.Tx, appId, slotId, taskId string) *bolt.Bucket {
-	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId),
-		bucketKeySlots, []byte(slotId), bucketKeyTasks, []byte(taskId))
+func GetTaskBucket(tx *bolt.Tx, appID, slotID, taskID string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID),
+		bucketKeySlots, []byte(slotID), bucketKeyTasks, []byte(taskID))
 }
 
 func createTask(tx *bolt.Tx, task *types.Task) error {
-	return withCreateTaskBucketIfNotExists(tx, task.AppId, task.SlotId, task.Id, func(bkt *bolt.Bucket) error {
+	return withCreateTaskBucketIfNotExists(tx, task.AppID, task.SlotID, task.ID, func(bkt *bolt.Bucket) error {
 		p, err := task.Marshal()
 		if err != nil {
 			return err
@@ -47,7 +47,7 @@ func createTask(tx *bolt.Tx, task *types.Task) error {
 }
 
 func updateTask(tx *bolt.Tx, task *types.Task) error {
-	return WithTaskBucket(tx, task.AppId, task.SlotId, task.Id, func(bkt *bolt.Bucket) error {
+	return WithTaskBucket(tx, task.AppID, task.SlotID, task.ID, func(bkt *bolt.Bucket) error {
 		p, err := task.Marshal()
 		if err != nil {
 			return err
@@ -57,11 +57,11 @@ func updateTask(tx *bolt.Tx, task *types.Task) error {
 	})
 }
 
-func removeTask(tx *bolt.Tx, appId, slotId, taskId string) error {
-	tasksBkt := GetTasksBucket(tx, appId, slotId)
+func removeTask(tx *bolt.Tx, appID, slotID, taskID string) error {
+	tasksBkt := GetTasksBucket(tx, appID, slotID)
 	if tasksBkt == nil {
 		return nil
 	}
 
-	return tasksBkt.DeleteBucket([]byte(taskId))
+	return tasksBkt.DeleteBucket([]byte(taskID))
 }

@@ -46,7 +46,7 @@ func SetStore(newStore store.Store) {
 
 type App struct {
 	// app name
-	AppId    string           `json:"appId"`
+	ID       string           `json:"id"`
 	Versions []*types.Version `json:"versions"`
 
 	slotsLock sync.Mutex
@@ -63,7 +63,7 @@ type App struct {
 	Updated time.Time
 
 	State     string
-	ClusterId string
+	ClusterID string
 
 	inTransaction bool
 	touched       bool
@@ -83,8 +83,8 @@ func NewApp(version *types.Version,
 		Versions:       []*types.Version{version},
 		slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		AppId:          version.AppId,
-		ClusterId:      mesos_connector.Instance().ClusterId,
+		ID:             version.AppID,
+		ClusterID:      mesos_connector.Instance().ClusterID,
 
 		Created:       time.Now(),
 		Updated:       time.Now(),
@@ -295,7 +295,7 @@ func (app *App) IsFixed() bool {
 func (app *App) SetState(state string) {
 	app.State = state
 	app.Touch(false)
-	logrus.Infof("app %s now has state %s", app.AppId, app.State)
+	logrus.Infof("app %s now has state %s", app.ID, app.State)
 }
 
 func (app *App) StateIs(state string) bool {
@@ -474,9 +474,9 @@ func validateAndFormatVersion(version *types.Version) error {
 	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
 
 	//validation of AppId
-	match := r.MatchString(version.AppId)
+	match := r.MatchString(version.AppID)
 	if match {
-		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppId, errMsg))
+		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppID, errMsg))
 	}
 
 	//validation of RunAs
@@ -595,19 +595,19 @@ func (app *App) Commit() {
 }
 
 func (app *App) update() {
-	logrus.Debugf("update app %s", app.AppId)
+	logrus.Debugf("update app %s", app.ID)
 	WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp)
 	app.touched = false
 }
 
 func (app *App) create() {
-	logrus.Debugf("create app %s", app.AppId)
+	logrus.Debugf("create app %s", app.ID)
 	WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp)
 	app.touched = false
 }
 
 func (app *App) remove() {
-	logrus.Debugf("remove app %s", app.AppId)
-	persistentStore.DeleteApp(context.TODO(), app.AppId, nil)
+	logrus.Debugf("remove app %s", app.ID)
+	persistentStore.DeleteApp(context.TODO(), app.ID, nil)
 	app.touched = false
 }

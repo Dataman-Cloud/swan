@@ -168,13 +168,13 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		return
 	}
 	appRet := &App{
-		ID:               version.AppId,
-		Name:             version.AppId,
+		ID:               version.AppID,
+		Name:             version.AppID,
 		Instances:        int(version.Instances),
 		RunningInstances: app.RunningInstances(),
 		RunAs:            version.RunAs,
 		Priority:         int(version.Priority),
-		ClusterId:        app.ClusterId,
+		ClusterID:        app.ClusterID,
 		Created:          app.Created,
 		Updated:          app.Updated,
 		Mode:             string(app.Mode),
@@ -221,13 +221,13 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
 		version := app.CurrentVersion
 		appsRet = append(appsRet, &App{
-			ID:               version.AppId,
-			Name:             version.AppId,
+			ID:               version.AppID,
+			Name:             version.AppID,
 			Instances:        int(version.Instances),
 			RunningInstances: app.RunningInstances(),
 			RunAs:            version.RunAs,
 			Priority:         int(version.Priority),
-			ClusterId:        app.ClusterId,
+			ClusterID:        app.ClusterID,
 			Created:          app.Created,
 			Updated:          app.Updated,
 			Mode:             string(app.Mode),
@@ -413,12 +413,12 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 func FormAppRet(app *state.App) *App {
 	version := app.CurrentVersion
 	appRet := &App{
-		ID:               version.AppId,
-		Name:             version.AppId,
+		ID:               version.AppID,
+		Name:             version.AppID,
 		Instances:        int(version.Instances),
 		RunningInstances: app.RunningInstances(),
 		RunAs:            version.RunAs,
-		ClusterId:        app.ClusterId,
+		ClusterID:        app.ClusterID,
 		Created:          app.Created,
 		Updated:          app.Updated,
 		Mode:             string(app.Mode),
@@ -450,13 +450,13 @@ func FilterTasksFromApp(app *state.App) []*Task {
 	tasks := make([]*Task, 0)
 	for _, slot := range app.GetSlots() {
 		task := &Task{ // aka Slot
-			ID:            slot.Id,
-			AppId:         slot.App.AppId, // either Name or Id, rename AppId later
-			VersionId:     slot.Version.ID,
+			ID:            slot.ID,
+			AppID:         slot.App.ID, // either Name or ID
+			VersionID:     slot.Version.ID,
 			Healthy:       slot.Healthy(),
 			Status:        string(slot.State),
-			OfferId:       slot.OfferId,
-			AgentId:       slot.AgentId,
+			OfferID:       slot.OfferID,
+			AgentID:       slot.AgentID,
 			AgentHostname: slot.AgentHostName,
 			History:       make([]*TaskHistory, 0), // aka Task
 			Cpu:           slot.Version.Cpus,
@@ -470,18 +470,18 @@ func FilterTasksFromApp(app *state.App) []*Task {
 		if len(slot.TaskHistory) > 0 {
 			for _, v := range slot.TaskHistory {
 				staleTask := &TaskHistory{
-					ID:            v.Id,
+					ID:            v.ID,
 					State:         v.State,
 					Reason:        v.Reason,
-					OfferId:       v.OfferId,
-					AgentId:       v.AgentId,
+					OfferID:       v.OfferID,
+					AgentID:       v.AgentID,
 					AgentHostname: v.AgentHostName,
 
 					Stderr: v.Stderr,
 					Stdout: v.Stdout,
 				}
 				if v.Version != nil {
-					staleTask.VersionId = v.Version.ID
+					staleTask.VersionID = v.Version.ID
 					staleTask.Cpu = v.Version.Cpus
 					staleTask.Mem = v.Version.Mem
 					staleTask.Disk = v.Version.Disk
@@ -507,12 +507,12 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 	slot := slots[task_index]
 
 	task := &Task{ // aka Slot
-		ID:            slot.Id,
-		AppId:         slot.App.AppId, // either Name or Id, rename AppId later
-		VersionId:     slot.Version.ID,
+		ID:            slot.ID,
+		AppID:         slot.App.ID, // either Name or ID
+		VersionID:     slot.Version.ID,
 		Status:        string(slot.State),
-		OfferId:       slot.OfferId,
-		AgentId:       slot.AgentId,
+		OfferID:       slot.OfferID,
+		AgentID:       slot.AgentID,
 		AgentHostname: slot.AgentHostName,
 		History:       make([]*TaskHistory, 0), // aka Task
 		Cpu:           slot.Version.Cpus,
@@ -526,13 +526,13 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 	if len(slot.TaskHistory) > 0 {
 		for _, v := range slot.TaskHistory {
 			staleTask := &TaskHistory{
-				ID:            v.Id,
+				ID:            v.ID,
 				State:         v.State,
 				Reason:        v.Reason,
-				OfferId:       v.OfferId,
-				AgentId:       v.AgentId,
+				OfferID:       v.OfferID,
+				AgentID:       v.AgentID,
 				AgentHostname: v.AgentHostName,
-				VersionId:     v.Version.ID,
+				VersionID:     v.Version.ID,
 
 				Cpu:  v.Version.Cpus,
 				Mem:  v.Version.Mem,

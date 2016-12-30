@@ -20,7 +20,7 @@ func LoadAppData() (map[string]*App, error) {
 
 	for _, raftApp := range raftApps {
 		app := &App{
-			AppId:          raftApp.ID,
+			ID:             raftApp.ID,
 			CurrentVersion: VersionFromRaft(raftApp.Version),
 			State:          raftApp.State,
 			Mode:           AppMode(raftApp.Version.Mode),
@@ -54,14 +54,14 @@ func LoadAppData() (map[string]*App, error) {
 			app.SetSlot(int(slot.Index), slot)
 		}
 
-		apps[app.AppId] = app
+		apps[app.ID] = app
 	}
 
 	return apps, nil
 }
 
 func LoadAppSlots(app *App) ([]*Slot, error) {
-	raftSlots, err := persistentStore.ListSlots(app.AppId)
+	raftSlots, err := persistentStore.ListSlots(app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,8 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 	for _, raftSlot := range raftSlots {
 		slot := SlotFromRaft(raftSlot)
 
-		raftTasks, err := persistentStore.ListTasks(app.AppId, slot.Id)
+		raftTasks, err := persistentStore.ListTasks(app.ID, slot.ID)
+
 		if err != nil {
 			return nil, err
 		}

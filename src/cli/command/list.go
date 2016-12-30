@@ -88,7 +88,7 @@ func printTable(apps []*api.App) {
 			app.Name,
 			fmt.Sprintf("%d", app.Instances),
 			app.RunAs,
-			app.ClusterId,
+			app.ClusterID,
 			app.State,
 			app.Created.Format("2006-01-02 15:04:05"),
 			app.Updated.Format("2006-01-02 15:04:05"),

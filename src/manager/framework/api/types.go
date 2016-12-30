@@ -14,7 +14,7 @@ type App struct {
 	RunningInstances int       `json:"runningInstances"`
 	RunAs            string    `json:"runAs,omitempty"`
 	Priority         int       `json:"priority"`
-	ClusterId        string    `json:"clusterId,omitempty"`
+	ClusterID        string    `json:"clusterId,omitempty"`
 	Status           string    `json:"status,omitempty"`
 	Created          time.Time `json:"created,omitempty"`
 	Updated          time.Time `json:"updated,omitempty"`
@@ -41,13 +41,13 @@ type App struct {
 // and together with task history
 type Task struct {
 	ID        string `json:"id,omitempty"`
-	AppId     string `json:"appId,omitempty"`
-	VersionId string `json:"versionId,omitempty"`
+	AppID     string `json:"appId,omitempty"`
+	VersionID string `json:"versionId,omitempty"`
 
 	Status string `json:"status"`
 
-	OfferId       string `json:"offerId,omitempty"`
-	AgentId       string `json:"agentId,omitempty"`
+	OfferID       string `json:"offerId,omitempty"`
+	AgentID       string `json:"agentId,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
 	Cpu  float64 `json:"cpu,omitempty"`
@@ -66,11 +66,11 @@ type Task struct {
 
 type TaskHistory struct {
 	ID        string `json:"id,omitempty"`
-	AppId     string `json:"appId,omitempty"`
-	VersionId string `json:"versionId,omitempty"`
+	AppID     string `json:"appId,omitempty"`
+	VersionID string `json:"versionId,omitempty"`
 
-	OfferId       string `json:"offerId,omitempty"`
-	AgentId       string `json:"agentId,omitempty"`
+	OfferID       string `json:"offerId,omitempty"`
+	AgentID       string `json:"agentId,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
 	Cpu  float64 `json:"cpu,omitempty"`

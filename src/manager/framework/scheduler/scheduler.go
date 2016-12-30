@@ -76,7 +76,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 		}
 
 		for _, app := range apps {
-			scheduler.AppStorage.Add(app.AppId, app)
+			scheduler.AppStorage.Add(app.ID, app)
 
 			for _, slot := range app.GetSlots() {
 				if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
@@ -148,7 +148,7 @@ func (scheduler *Scheduler) InvalidateApps() {
 	for _, app := range scheduler.AppStorage.Data() {
 		if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
 			app.Remove()
-			appsPendingRemove = append(appsPendingRemove, app.AppId)
+			appsPendingRemove = append(appsPendingRemove, app.ID)
 		}
 	}
 

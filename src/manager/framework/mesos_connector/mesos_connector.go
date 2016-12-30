@@ -27,7 +27,7 @@ var once sync.Once
 
 type MesosConnector struct {
 	// mesos framework related
-	ClusterId        string
+	ClusterID        string
 	master           string
 	client           *MesosHttpClient
 	lastHearBeatTime time.Time
@@ -171,17 +171,17 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 	s.master = state.Leader
 	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
 
-	s.ClusterId = state.Cluster
-	if s.ClusterId == "" {
-		s.ClusterId = "Unnamed"
+	s.ClusterID = state.Cluster
+	if s.ClusterID == "" {
+		s.ClusterID = "Unnamed"
 	}
 
 	r, _ := regexp.Compile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
-	match := r.MatchString(s.ClusterId)
+	match := r.MatchString(s.ClusterID)
 	if match {
 		logrus.Warnf(`Swan do not work with mesos cluster name(%s) with special characters "-.$*+?{}()[]|".`)
-		s.ClusterId = r.ReplaceAllString(s.ClusterId, "")
-		logrus.Infof("Swan acceptable cluster name: %s", s.ClusterId)
+		s.ClusterID = r.ReplaceAllString(s.ClusterID, "")
+		logrus.Infof("Swan acceptable cluster name: %s", s.ClusterID)
 	}
 
 	s.subscribe(ctx, mesosFailureChan)

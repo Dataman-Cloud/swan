@@ -6,7 +6,7 @@ package types
 //              and Id -> ID, Cpus -> CPUs, Uris -> URIs, Ip -> IP.
 type Version struct {
 	ID                string            `json:"id,omitempty"`
-	AppId             string            `json:"appId,omitempty"`
+	AppID             string            `json:"appID,omitempty"`
 	PerviousVersionID string            `json:"perviousVersionId,omitempty"`
 	Command           string            `json:"command,omitempty"`
 	Cpus              float64           `json:"cpus,omitempty"`

@@ -6,8 +6,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func withCreateSlotBucketIfNotExists(tx *bolt.Tx, appId, slotId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeySlots, []byte(slotId))
+func withCreateSlotBucketIfNotExists(tx *bolt.Tx, appID, slotID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID), bucketKeySlots, []byte(slotID))
 	if err != nil {
 		return err
 	}
@@ -15,8 +15,8 @@ func withCreateSlotBucketIfNotExists(tx *bolt.Tx, appId, slotId string, fn func(
 	return fn(bkt)
 }
 
-func WithSlotBucket(tx *bolt.Tx, appId, slotId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt := GetSlotBucket(tx, appId, slotId)
+func WithSlotBucket(tx *bolt.Tx, appID, slotID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt := GetSlotBucket(tx, appID, slotID)
 	if bkt == nil {
 		return ErrSlotUnknown
 	}
@@ -33,7 +33,7 @@ func GetSlotBucket(tx *bolt.Tx, appId, slotId string) *bolt.Bucket {
 }
 
 func createSlot(tx *bolt.Tx, slot *types.Slot) error {
-	return withCreateSlotBucketIfNotExists(tx, slot.AppId, slot.Id, func(bkt *bolt.Bucket) error {
+	return withCreateSlotBucketIfNotExists(tx, slot.AppID, slot.ID, func(bkt *bolt.Bucket) error {
 		p, err := slot.Marshal()
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func createSlot(tx *bolt.Tx, slot *types.Slot) error {
 }
 
 func updateSlot(tx *bolt.Tx, slot *types.Slot) error {
-	return WithSlotBucket(tx, slot.AppId, slot.Id, func(bkt *bolt.Bucket) error {
+	return WithSlotBucket(tx, slot.AppID, slot.ID, func(bkt *bolt.Bucket) error {
 		p, err := slot.Marshal()
 		if err != nil {
 			return err
@@ -54,12 +54,12 @@ func updateSlot(tx *bolt.Tx, slot *types.Slot) error {
 	})
 }
 
-func removeSlot(tx *bolt.Tx, appId, slotId string) error {
-	slotsBkt := GetSlotsBucket(tx, appId)
+func removeSlot(tx *bolt.Tx, appID, slotID string) error {
+	slotsBkt := GetSlotsBucket(tx, appID)
 
 	if slotsBkt == nil {
 		return nil
 	}
 
-	return slotsBkt.DeleteBucket([]byte(slotId))
+	return slotsBkt.DeleteBucket([]byte(slotID))
 }

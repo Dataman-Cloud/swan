@@ -66,8 +66,8 @@ func (s *FrameworkStore) ListSlots(appId string) ([]*types.Slot, error) {
 	return slots, nil
 }
 
-func (s *FrameworkStore) DeleteSlot(ctx context.Context, appId, slotId string, cb func()) error {
-	removeSlot := &types.Slot{AppId: appId, Id: slotId}
+func (s *FrameworkStore) DeleteSlot(ctx context.Context, appID, slotID string, cb func()) error {
+	removeSlot := &types.Slot{AppID: appID, ID: slotID}
 	storeActions := []*types.StoreAction{&types.StoreAction{
 		Action: types.StoreActionKindRemove,
 		Target: &types.StoreAction_Slot{removeSlot},
