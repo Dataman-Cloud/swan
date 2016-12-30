@@ -43,7 +43,7 @@ func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, versio
 }
 
 func (s *FrameworkStore) GetVersion(appId, versionId string) (*types.Version, error) {
-	var version *types.Version
+	version := &types.Version{}
 
 	app, err := s.GetApp(appId)
 	if err != nil {
