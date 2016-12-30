@@ -173,7 +173,7 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 
 	s.ClusterId = state.Cluster
 	if s.ClusterId == "" {
-		s.ClusterId = "unamed"
+		s.ClusterId = "Unnamed"
 	}
 
 	r, _ := regexp.Compile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
