@@ -394,12 +394,12 @@ func (app *App) Reevaluate() {
 			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
 			app.SetState(APP_STATE_NORMAL)
 
+			// special case, invoke low level storage directly to make version persisted
+			WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
+
 			app.CurrentVersion = app.ProposedVersion
 			app.Versions = append(app.Versions, app.CurrentVersion)
 			app.ProposedVersion = nil
-
-			// special case, invoke low level storage directly to make version persisted
-			WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
 
 			for _, slot := range app.slots {
 				slot.SetMarkForRollingUpdate(false)
