@@ -10,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -28,6 +27,7 @@ type Scheduler struct {
 
 	MesosConnector          *mesos_connector.MesosConnector
 	mesosConnectorCancelFun context.CancelFunc
+	UserEventChan           chan *event.UserEvent
 	store                   store.Store
 }
 
@@ -40,17 +40,19 @@ func NewScheduler(store store.Store) *Scheduler {
 		store:      store,
 
 		mesosFailureChan: make(chan error, 1),
+		UserEventChan:    make(chan *event.UserEvent, 1024),
 	}
 
 	RegiserFun := func(m *HandlerManager) {
-		m.Register(sched.Event_SUBSCRIBED, LoggerHandler, SubscribedHandler)
-		m.Register(sched.Event_HEARTBEAT, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
-		m.Register(sched.Event_RESCIND, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
-		m.Register(sched.Event_FAILURE, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_MESSAGE, LoggerHandler, DummyHandler)
-		m.Register(sched.Event_ERROR, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
+		m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_RESCIND, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
+		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
 	}
 
 	scheduler.handlerManager = NewHanlderManager(scheduler, RegiserFun)
@@ -116,7 +118,11 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 		select {
 		case e := <-scheduler.MesosConnector.MesosEventChan:
 			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
-			scheduler.handlerMesosEvent(e)
+			scheduler.handleEvent(e)
+
+		case e := <-scheduler.UserEventChan:
+			logrus.WithFields(logrus.Fields{"user event chan": "yes"}).Debugf("")
+			scheduler.handleEvent(e)
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
@@ -132,8 +138,8 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 	}
 }
 
-func (scheduler *Scheduler) handlerMesosEvent(event *event.MesosEvent) {
-	scheduler.handlerManager.Handle(event)
+func (scheduler *Scheduler) handleEvent(e event.Event) {
+	scheduler.handlerManager.Handle(e)
 }
 
 // reevaluation of apps state, clean up stale apps

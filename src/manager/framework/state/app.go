@@ -10,6 +10,7 @@ import (
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
@@ -66,9 +67,12 @@ type App struct {
 
 	inTransaction bool
 	touched       bool
+
+	UserEventChan chan *event.UserEvent
 }
 
-func NewApp(version *types.Version) (*App, error) {
+func NewApp(version *types.Version,
+	userEventChan chan *event.UserEvent) (*App, error) {
 
 	err := validateAndFormatVersion(version)
 	if err != nil {
@@ -86,6 +90,7 @@ func NewApp(version *types.Version) (*App, error) {
 		Updated:       time.Now(),
 		inTransaction: false,
 		touched:       true,
+		UserEventChan: userEventChan,
 	}
 
 	if version.Mode == "fixed" {
@@ -377,6 +382,12 @@ func (app *App) Reevaluate() {
 	switch app.State {
 	case APP_STATE_NORMAL:
 	case APP_STATE_MARK_FOR_DELETION:
+		if app.CanBeCleanAfterDeletion() {
+			// invalidate apps in case need removal
+			app.UserEventChan <- &event.UserEvent{
+				Type: event.EVENT_TYPE_USER_INVALID_APPS,
+			}
+		}
 	case APP_STATE_MARK_FOR_UPDATING:
 		// when updating done
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&

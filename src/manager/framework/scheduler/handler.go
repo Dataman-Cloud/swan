@@ -8,16 +8,16 @@ import (
 )
 
 type Handler struct {
-	Id         string
-	Manager    *HandlerManager
-	Response   *Response
-	MesosEvent *event.MesosEvent
+	Id       string
+	Manager  *HandlerManager
+	Response *Response
+	Event    event.Event
 }
 
-func NewHandler(id string, manager *HandlerManager, e *event.MesosEvent) *Handler {
+func NewHandler(id string, manager *HandlerManager, e event.Event) *Handler {
 	s := &Handler{
-		Id:         id,
-		MesosEvent: e,
+		Id:    id,
+		Event: e,
 
 		Manager: manager,
 	}
@@ -38,7 +38,7 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 		return
 
 	default:
-		funcs := h.Manager.HandlerFuncs(h.MesosEvent.EventType)
+		funcs := h.Manager.HandlerFuncs(h.Event.GetEventType())
 		for _, fun := range funcs {
 			h, err := fun(h)
 			if err != nil {
