@@ -23,7 +23,7 @@ type App struct {
 
 	// use task for compatability now, should be slot here
 	Tasks          []*Task        `json:"tasks,omitempty"`
-	CurrentVersion *types.Version `json:"current_version"`
+	CurrentVersion *types.Version `json:"currentVersion"`
 	Versions       []string       `json:"versions,omitempty"`
 	IP             []string       `json:"ip,omitempty"`
 
