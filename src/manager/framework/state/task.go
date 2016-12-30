@@ -2,6 +2,7 @@ package state
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -58,6 +59,13 @@ func NewTask(version *types.Version, slot *Slot) *Task {
 }
 
 func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
+	defaultLabels := make(map[string]string)
+	defaultLabels["USER_ID"] = task.Slot.Version.RunAs
+	defaultLabels["CLUSTER_ID"] = task.Slot.App.ClusterId
+	defaultLabels["SLOT_ID"] = strconv.Itoa(task.Slot.Index)
+	defaultLabels["APP_ID"] = task.Slot.App.AppId
+	defaultLabels["TASK_ID"] = task.TaskInfoId
+
 	offer := ow.Offer
 	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.Id, *offer.GetId().Value)
 
@@ -75,7 +83,8 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 		SetContainerDockerForcePullImage(dockerSpec.ForcePullImage).
 		AppendContainerDockerVolumes(containerSpec.Volumes)
 
-	task.taskBuilder.AppendContainerDockerEnvironments(versionSpec.Env).SetURIs(versionSpec.Uris).SetLabels(versionSpec.Labels)
+	task.taskBuilder.AppendContainerDockerEnvironments(versionSpec.Env).SetURIs(versionSpec.Uris).AppendTaskInfoLabels(versionSpec.Labels)
+	task.taskBuilder.AppendTaskInfoLabels(defaultLabels)
 
 	task.taskBuilder.AppendContainerDockerParameters(task.Slot.Version.Container.Docker.Parameters)
 
@@ -85,6 +94,14 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 			Value: task.Slot.Ip,
 		}
 		task.taskBuilder.AppendContainerDockerParameters([]*types.Parameter{&ipParameter})
+	}
+
+	for k, v := range defaultLabels {
+		p := types.Parameter{
+			Key:   "label",
+			Value: fmt.Sprintf("%s=%s", k, v),
+		}
+		task.taskBuilder.AppendContainerDockerParameters([]*types.Parameter{&p})
 	}
 
 	task.taskBuilder.SetNetwork(dockerSpec.Network, ow.PortsRemain()).SetHealthCheck(versionSpec.HealthChecks)

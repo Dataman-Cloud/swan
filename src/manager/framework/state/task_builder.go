@@ -22,6 +22,8 @@ func NewTaskBuilder(task *Task) *TaskBuilder {
 		HostPorts: make([]uint64, 0),
 	}
 
+	builder.taskInfo.Labels = &mesos.Labels{Labels: make([]*mesos.Label, 0)}
+
 	return builder
 }
 
@@ -167,17 +169,12 @@ func (builder *TaskBuilder) SetURIs(uriList []string) *TaskBuilder {
 	return builder
 }
 
-func (builder *TaskBuilder) SetLabels(labelMap map[string]string) *TaskBuilder {
-	labels := make([]*mesos.Label, 0)
+func (builder *TaskBuilder) AppendTaskInfoLabels(labelMap map[string]string) *TaskBuilder {
 	for k, v := range labelMap {
-		labels = append(labels, &mesos.Label{
+		builder.taskInfo.Labels.Labels = append(builder.taskInfo.Labels.Labels, &mesos.Label{
 			Key:   proto.String(k),
 			Value: proto.String(v),
 		})
-	}
-
-	builder.taskInfo.Labels = &mesos.Labels{
-		Labels: labels,
 	}
 
 	return builder
