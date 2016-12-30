@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 )
@@ -46,7 +47,7 @@ func (subscriber *DNSSubscriber) Write(e *Event) error {
 	rgEvent.Type = payload.Type
 	rgEvent.Ip = payload.Ip
 	rgEvent.Port = payload.Port
-	rgEvent.DomainPrefix = payload.TaskId
+	rgEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskId, "-", ".", -1))
 
 	subscriber.Resolver.RecordGeneratorChangeChan() <- rgEvent
 	return nil

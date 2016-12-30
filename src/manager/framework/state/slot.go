@@ -392,7 +392,7 @@ func (slot *Slot) EmitTaskEvent(t string) {
 		e := &swanevent.Event{Type: t}
 		e.Payload = &swanevent.TaskInfo{
 			Ip:     slot.Ip,
-			TaskId: strings.ToLower(strings.Replace(slot.ID, "-", ".", -1)),
+			TaskId: slot.ID,
 			Type:   "a",
 		}
 		slot.App.EmitEvent(e)
@@ -403,7 +403,7 @@ func (slot *Slot) EmitTaskEvent(t string) {
 			e.Payload = &swanevent.TaskInfo{
 				Ip:     slot.AgentHostName,
 				Port:   fmt.Sprintf("%d", port),
-				TaskId: strings.ToLower(strings.Replace(slot.ID, "-", ".", -1)),
+				TaskId: slot.ID,
 				Type:   "srv",
 			}
 			slot.App.EmitEvent(e)
