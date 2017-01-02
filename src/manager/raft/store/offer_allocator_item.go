@@ -35,7 +35,7 @@ func createOfferAllocatorItem(tx *bolt.Tx, item *types.OfferAllocatorItem) error
 			return err
 		}
 
-		return bkt.Put([]byte(item.SlotId), p)
+		return bkt.Put([]byte(item.SlotID), p)
 	})
 }
 
@@ -46,5 +46,5 @@ func removeOfferAllocatorItem(tx *bolt.Tx, item *types.OfferAllocatorItem) error
 		return nil
 	}
 
-	return bkt.Delete([]byte(item.SlotId))
+	return bkt.Delete([]byte(item.SlotID))
 }

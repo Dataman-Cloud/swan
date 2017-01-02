@@ -41,14 +41,14 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		logrus.Errorf("app not found: %s", appId)
 		return h, nil
 	}
-	logrus.Debugf("found app %s", app.AppId)
+	logrus.Debugf("found app %s", app.ID)
 
 	slot, found := app.GetSlot(int(slotIndex))
 	if !found {
 		logrus.Errorf("slot not found: %s", slotIndex)
 		return h, nil
 	}
-	logrus.Debugf("found slot %s", slot.Id)
+	logrus.Debugf("found slot %s", slot.ID)
 
 	slot.SetHealthy(healthy)
 

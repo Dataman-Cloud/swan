@@ -19,7 +19,7 @@ message Application {
     string name = 2;
     Version version = 3;
     Version proposedVersion = 4;
-    string clusterId = 5;
+    string clusterId = 5 [(gogoproto.customname) = "ClusterID"];
     string state = 6;
     int64 createdAt = 7;
     int64 updatedAt = 8;
@@ -44,7 +44,7 @@ message Version {
     repeated string uris = 16;
     repeated string ip = 17;
     string mode = 18;
-    string appId = 19;
+    string appId = 19 [(gogoproto.customname) = "AppID"];
     int32 priority = 20;
 }
 
@@ -112,9 +112,9 @@ message Command {
 
 message Slot {
     int32 index = 1;
-    string id = 2;
-    string appId = 3;
-    string versionId = 4;
+    string id = 2 [(gogoproto.customname) = "ID"];
+    string appId = 3 [(gogoproto.customname) = "AppID"];
+    string versionId = 4 [(gogoproto.customname) = "VersionID"];
     string state = 5;
     bool markForDeletion = 6;
     bool markForRollingUpdate = 7;
@@ -127,17 +127,17 @@ message RestartPolicy {
 }
 
 message Task {
-    string id = 1;
-    string taskInfoId = 2;
-    string appId = 3;
-    string versionId = 4;
-    string slotId = 5;
+    string id = 1 [(gogoproto.customname) = "ID"];
+    string taskInfoId = 2 [(gogoproto.customname) = "TaskInfoID"];
+    string appId = 3 [(gogoproto.customname) = "AppID"];
+    string versionId = 4 [(gogoproto.customname) = "VersionID"];
+    string slotId = 5 [(gogoproto.customname) = "SlotID"];
     string state = 6;
     string stdout = 7;
     string stderr = 8;
     repeated uint64 hostPorts = 9;
-    string offerId = 10;
-    string agentId = 11;
+    string offerId = 10 [(gogoproto.customname) = "OfferID"];
+    string agentId = 11 [(gogoproto.customname) = "AgentID"];
     string ip = 12;
     string agentHostName = 13;
     string reason = 14;
@@ -145,6 +145,6 @@ message Task {
 }
 
 message OfferAllocatorItem {
-    string slot_id = 1;
-    string offer_id = 2;
+    string slotId = 1 [(gogoproto.customname) = "SlotID"];
+    string offerId = 2 [(gogoproto.customname) = "OfferID"];
 }

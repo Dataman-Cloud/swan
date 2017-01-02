@@ -6,8 +6,8 @@ import (
 	"github.com/boltdb/bolt"
 )
 
-func withCreateVersionBucketIfNotExists(tx *bolt.Tx, appId, versionId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions, []byte(versionId))
+func withCreateVersionBucketIfNotExists(tx *bolt.Tx, appID, versionID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID), bucketKeyVersions, []byte(versionID))
 	if err != nil {
 		return err
 	}
@@ -15,8 +15,8 @@ func withCreateVersionBucketIfNotExists(tx *bolt.Tx, appId, versionId string, fn
 	return fn(bkt)
 }
 
-func WithVersionBucket(tx *bolt.Tx, appId, versionId string, fn func(bkt *bolt.Bucket) error) error {
-	bkt := GetVersionBucket(tx, appId, versionId)
+func WithVersionBucket(tx *bolt.Tx, appID, versionID string, fn func(bkt *bolt.Bucket) error) error {
+	bkt := GetVersionBucket(tx, appID, versionID)
 	if bkt == nil {
 		return ErrVersionUnknown
 	}
@@ -24,16 +24,16 @@ func WithVersionBucket(tx *bolt.Tx, appId, versionId string, fn func(bkt *bolt.B
 	return fn(bkt)
 }
 
-func GetVersionsBucket(tx *bolt.Tx, appId string) *bolt.Bucket {
-	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions)
+func GetVersionsBucket(tx *bolt.Tx, appID string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID), bucketKeyVersions)
 }
 
-func GetVersionBucket(tx *bolt.Tx, appId, versionId string) *bolt.Bucket {
-	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appId), bucketKeyVersions, []byte(versionId))
+func GetVersionBucket(tx *bolt.Tx, appID, versionID string) *bolt.Bucket {
+	return getBucket(tx, bucketKeyStorageVersion, bucketKeyApps, []byte(appID), bucketKeyVersions, []byte(versionID))
 }
 
 func createVersion(tx *bolt.Tx, version *types.Version) error {
-	return withCreateVersionBucketIfNotExists(tx, version.AppId, version.ID, func(bkt *bolt.Bucket) error {
+	return withCreateVersionBucketIfNotExists(tx, version.AppID, version.ID, func(bkt *bolt.Bucket) error {
 		p, err := version.Marshal()
 		if err != nil {
 			return err
@@ -44,7 +44,7 @@ func createVersion(tx *bolt.Tx, version *types.Version) error {
 }
 
 func updateVersion(tx *bolt.Tx, version *types.Version) error {
-	return WithVersionBucket(tx, version.AppId, version.ID, func(bkt *bolt.Bucket) error {
+	return WithVersionBucket(tx, version.AppID, version.ID, func(bkt *bolt.Bucket) error {
 		p, err := version.Marshal()
 		if err != nil {
 			return err
@@ -54,11 +54,11 @@ func updateVersion(tx *bolt.Tx, version *types.Version) error {
 	})
 }
 
-func removeVersion(tx *bolt.Tx, appId, versionId string) error {
-	versionsBkt := GetVersionsBucket(tx, appId)
+func removeVersion(tx *bolt.Tx, appID, versionID string) error {
+	versionsBkt := GetVersionsBucket(tx, appID)
 	if versionsBkt == nil {
 		return nil
 	}
 
-	return versionsBkt.DeleteBucket([]byte(versionId))
+	return versionsBkt.DeleteBucket([]byte(versionID))
 }

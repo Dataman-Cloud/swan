@@ -54,7 +54,7 @@ const (
 
 type Slot struct {
 	Index   int
-	Id      string
+	ID      string
 	App     *App
 	Version *types.Version
 	State   string
@@ -62,8 +62,8 @@ type Slot struct {
 	CurrentTask *Task
 	TaskHistory []*Task
 
-	OfferId       string
-	AgentId       string
+	OfferID       string
+	AgentID       string
 	Ip            string
 	AgentHostName string
 
@@ -92,7 +92,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		Id:          fmt.Sprintf("%d-%s-%s-%s", index, version.AppId, version.RunAs, mesos_connector.Instance().ClusterId), // should be app.AppId
+		ID:          fmt.Sprintf("%d-%s-%s-%s", index, app.ID, version.RunAs, mesos_connector.Instance().ClusterID),
 
 		resourceReservationLock: sync.Mutex{},
 
@@ -178,7 +178,7 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 }
 
 func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
-	logrus.Infof("update slot %s with version ID %s", slot.Id, version.ID)
+	logrus.Infof("update slot %s with version ID %s", slot.ID, version.ID)
 
 	slot.BeginTx()
 	defer slot.Commit()
@@ -277,11 +277,11 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 }
 
 func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
-	slot.OfferId = *offer.GetId().Value
-	slot.CurrentTask.OfferId = *offer.GetId().Value
+	slot.OfferID = *offer.GetId().Value
+	slot.CurrentTask.OfferID = *offer.GetId().Value
 
-	slot.AgentId = *offer.GetAgentId().Value
-	slot.CurrentTask.AgentId = *offer.GetAgentId().Value
+	slot.AgentID = *offer.GetAgentId().Value
+	slot.CurrentTask.AgentID = *offer.GetAgentId().Value
 
 	slot.AgentHostName = offer.GetHostname()
 	slot.CurrentTask.AgentHostName = offer.GetHostname()
@@ -324,7 +324,7 @@ func (slot *Slot) StateIs(state string) bool {
 }
 
 func (slot *Slot) SetState(state string) error {
-	logrus.Infof("setting state for slot %s from %s to %s", slot.Id, slot.State, state)
+	logrus.Infof("setting state for slot %s from %s to %s", slot.ID, slot.State, state)
 
 	slot.State = state
 	switch slot.State {
@@ -392,7 +392,7 @@ func (slot *Slot) EmitTaskEvent(t string) {
 		e := &swanevent.Event{Type: t}
 		e.Payload = &swanevent.TaskInfo{
 			Ip:     slot.Ip,
-			TaskId: strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
+			TaskId: strings.ToLower(strings.Replace(slot.ID, "-", ".", -1)),
 			Type:   "a",
 		}
 		slot.App.EmitEvent(e)
@@ -403,7 +403,7 @@ func (slot *Slot) EmitTaskEvent(t string) {
 			e.Payload = &swanevent.TaskInfo{
 				Ip:     slot.AgentHostName,
 				Port:   fmt.Sprintf("%d", port),
-				TaskId: strings.ToLower(strings.Replace(slot.Id, "-", ".", -1)),
+				TaskId: strings.ToLower(strings.Replace(slot.ID, "-", ".", -1)),
 				Type:   "srv",
 			}
 			slot.App.EmitEvent(e)
@@ -471,20 +471,20 @@ func (slot *Slot) Commit() {
 }
 
 func (slot *Slot) update() {
-	logrus.Debugf("update slot %s", slot.Id)
+	logrus.Debugf("update slot %s", slot.ID)
 	WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 	slot.touched = false
 }
 
 func (slot *Slot) create() {
-	logrus.Debugf("create slot %s", slot.Id)
+	logrus.Debugf("create slot %s", slot.ID)
 	WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
 	slot.touched = false
 }
 
 func (slot *Slot) remove() {
-	logrus.Debugf("remove slot %s", slot.Id)
-	persistentStore.DeleteSlot(context.TODO(), slot.App.AppId, slot.Id, nil)
+	logrus.Debugf("remove slot %s", slot.ID)
+	persistentStore.DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
 	slot.touched = false
 }
 

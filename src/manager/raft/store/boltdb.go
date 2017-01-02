@@ -164,7 +164,7 @@ func doSlotStoreAction(tx *bolt.Tx, action types.StoreActionKind, slot *types.Sl
 	case types.StoreActionKindUpdate:
 		return updateSlot(tx, slot)
 	case types.StoreActionKindRemove:
-		return removeSlot(tx, slot.AppId, slot.Id)
+		return removeSlot(tx, slot.AppID, slot.ID)
 	default:
 		return ErrUndefineSlotAction
 	}
@@ -177,7 +177,7 @@ func doTaskStoreAction(tx *bolt.Tx, action types.StoreActionKind, task *types.Ta
 	case types.StoreActionKindUpdate:
 		return updateTask(tx, task)
 	case types.StoreActionKindRemove:
-		return removeTask(tx, task.AppId, task.SlotId, task.Id)
+		return removeTask(tx, task.AppID, task.SlotID, task.ID)
 	default:
 		return ErrUndefineTaskAction
 	}
@@ -190,7 +190,7 @@ func doVersionStoreAction(tx *bolt.Tx, action types.StoreActionKind, version *ty
 	case types.StoreActionKindUpdate:
 		return updateVersion(tx, version)
 	case types.StoreActionKindRemove:
-		return removeVersion(tx, version.AppId, version.ID)
+		return removeVersion(tx, version.AppID, version.ID)
 	default:
 		return ErrUndefineVersionAction
 	}

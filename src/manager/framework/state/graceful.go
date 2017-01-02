@@ -51,7 +51,7 @@ func (rs *RestartPolicy) restartAndSetNextTimer() {
 
 func (rs *RestartPolicy) Stop() {
 	if rs.checkTimer != nil {
-		logrus.Infof("stop RestartPolicy timer for slot %s", rs.slot.Id)
+		logrus.Infof("stop RestartPolicy timer for slot %s", rs.slot.ID)
 		rs.checkTimer.Stop()
 	}
 }

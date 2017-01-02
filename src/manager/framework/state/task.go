@@ -20,8 +20,8 @@ const (
 )
 
 type Task struct {
-	Id         string
-	TaskInfoId string
+	ID         string
+	TaskInfoID string
 	Version    *types.Version
 	Slot       *Slot
 
@@ -30,8 +30,8 @@ type Task struct {
 	Stderr string
 
 	HostPorts     []uint64
-	OfferId       string
-	AgentId       string
+	OfferID       string
+	AgentID       string
 	Ip            string
 	AgentHostName string
 
@@ -45,28 +45,28 @@ type Task struct {
 
 func NewTask(version *types.Version, slot *Slot) *Task {
 	task := &Task{
-		Id:        strings.Replace(uuid.NewV4().String(), "-", "", -1),
+		ID:        strings.Replace(uuid.NewV4().String(), "-", "", -1),
 		Version:   version,
 		Slot:      slot,
 		HostPorts: make([]uint64, 0),
 		Created:   time.Now(),
 	}
 
-	task.TaskInfoId = fmt.Sprintf("%s-%s", task.Slot.Id, task.Id)
+	task.TaskInfoID = fmt.Sprintf("%s-%s", task.Slot.ID, task.ID)
 
 	return task
 }
 
 func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	offer := ow.Offer
-	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.Id, *offer.GetId().Value)
+	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.ID, *offer.GetId().Value)
 
 	versionSpec := task.Slot.Version
 	containerSpec := task.Slot.Version.Container
 	dockerSpec := task.Slot.Version.Container.Docker
 
 	task.taskBuilder = NewTaskBuilder(task)
-	task.taskBuilder.SetName(task.TaskInfoId).SetTaskId(task.TaskInfoId).SetAgentId(*offer.GetAgentId().Value)
+	task.taskBuilder.SetName(task.TaskInfoID).SetTaskId(task.TaskInfoID).SetAgentId(*offer.GetAgentId().Value)
 	task.taskBuilder.SetResources(task.Slot.ResourcesNeeded())
 	task.taskBuilder.SetCommand(false, "")
 
@@ -94,16 +94,16 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 }
 
 func (task *Task) Kill() {
-	logrus.Infof("Kill task %s", task.Slot.Id)
+	logrus.Infof("Kill task %s", task.Slot.ID)
 	call := &sched.Call{
 		FrameworkId: mesos_connector.Instance().Framework.GetId(),
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
-				Value: proto.String(task.TaskInfoId),
+				Value: proto.String(task.TaskInfoID),
 			},
 			AgentId: &mesos.AgentID{
-				Value: &task.AgentId,
+				Value: &task.AgentID,
 			},
 		},
 	}

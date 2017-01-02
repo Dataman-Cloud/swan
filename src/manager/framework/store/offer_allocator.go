@@ -44,8 +44,8 @@ func (s *FrameworkStore) ListOfferallocatorItems() ([]*types.OfferAllocatorItem,
 	return items, nil
 }
 
-func (s *FrameworkStore) DeleteOfferAllocatorItem(ctx context.Context, slotId string, cb func()) error {
-	removeOfferAllocatorItem := &types.OfferAllocatorItem{SlotId: slotId}
+func (s *FrameworkStore) DeleteOfferAllocatorItem(ctx context.Context, slotID string, cb func()) error {
+	removeOfferAllocatorItem := &types.OfferAllocatorItem{SlotID: slotID}
 	storeActions := []*types.StoreAction{&types.StoreAction{
 		Action: types.StoreActionKindRemove,
 		Target: &types.StoreAction_OfferAllocatorItem{removeOfferAllocatorItem},

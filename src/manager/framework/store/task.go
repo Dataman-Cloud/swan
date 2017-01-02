@@ -15,7 +15,7 @@ import (
 // 4. store the new slot info.
 // 5. put all actions in one storeActions tp propose data.
 func (s *FrameworkStore) UpdateTask(ctx context.Context, task *types.Task, cb func()) error {
-	slot, err := s.GetSlot(task.AppId, task.SlotId)
+	slot, err := s.GetSlot(task.AppID, task.SlotID)
 	if err != nil {
 		return err
 	}

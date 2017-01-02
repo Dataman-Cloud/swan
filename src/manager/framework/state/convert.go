@@ -9,7 +9,7 @@ import (
 
 func AppToRaft(app *App) *rafttypes.Application {
 	raftApp := &rafttypes.Application{
-		ID:        app.AppId,
+		ID:        app.ID,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
 		State:     app.State,
@@ -42,7 +42,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 		Uris:        version.Uris,
 		Ip:          version.Ip,
 		Mode:        version.Mode,
-		AppId:       version.AppId,
+		AppID:       version.AppID,
 	}
 
 	if version.Container != nil {
@@ -71,7 +71,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 	version := &types.Version{
 		ID:          raftVersion.ID,
-		AppId:       raftVersion.AppId,
+		AppID:       raftVersion.AppID,
 		Command:     raftVersion.Command,
 		Cpus:        raftVersion.Cpus,
 		Mem:         raftVersion.Mem,
@@ -343,9 +343,9 @@ func CommandFromRaft(raftCommand *rafttypes.Command) *types.Command {
 func SlotToRaft(slot *Slot) *rafttypes.Slot {
 	raftSlot := &rafttypes.Slot{
 		Index:                int32(slot.Index),
-		Id:                   slot.Id,
-		AppId:                slot.App.AppId,
-		VersionId:            slot.Version.ID,
+		ID:                   slot.ID,
+		AppID:                slot.App.ID,
+		VersionID:            slot.Version.ID,
 		State:                slot.State,
 		MarkForDeletion:      slot.MarkForDeletion(),
 		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
@@ -364,11 +364,11 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 	slot := &Slot{
 		Index:                int(raftSlot.Index),
-		Id:                   raftSlot.Id,
+		ID:                   raftSlot.ID,
 		State:                raftSlot.State,
 		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
-		OfferId:              raftSlot.CurrentTask.OfferId,
-		AgentId:              raftSlot.CurrentTask.AgentId,
+		OfferID:              raftSlot.CurrentTask.OfferID,
+		AgentID:              raftSlot.CurrentTask.AgentID,
 		Ip:                   raftSlot.CurrentTask.Ip,
 		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
 		markForDeletion:      raftSlot.MarkForDeletion,
@@ -376,7 +376,7 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 		healthy:              raftSlot.Healthy,
 	}
 
-	raftVersion, err := persistentStore.GetVersion(raftSlot.AppId, raftSlot.VersionId)
+	raftVersion, err := persistentStore.GetVersion(raftSlot.AppID, raftSlot.VersionID)
 	if err == nil {
 		slot.Version = VersionFromRaft(raftVersion)
 	}
@@ -386,17 +386,17 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 
 func TaskToRaft(task *Task) *rafttypes.Task {
 	return &rafttypes.Task{
-		Id:            task.Id,
-		TaskInfoId:    task.TaskInfoId,
-		AppId:         task.Slot.App.AppId,
-		VersionId:     task.Version.ID,
-		SlotId:        task.Slot.Id,
+		ID:            task.ID,
+		TaskInfoID:    task.TaskInfoID,
+		AppID:         task.Slot.App.ID,
+		VersionID:     task.Version.ID,
+		SlotID:        task.Slot.ID,
 		State:         task.State,
 		Stdout:        task.Stdout,
 		Stderr:        task.Stderr,
 		HostPorts:     task.HostPorts,
-		OfferId:       task.OfferId,
-		AgentId:       task.AgentId,
+		OfferID:       task.OfferID,
+		AgentID:       task.AgentID,
 		Ip:            task.Ip,
 		AgentHostName: task.AgentHostName,
 		Reason:        task.Reason,
@@ -406,21 +406,21 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 
 func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 	task := &Task{
-		Id:            raftTask.Id,
-		TaskInfoId:    raftTask.TaskInfoId,
+		ID:            raftTask.ID,
+		TaskInfoID:    raftTask.TaskInfoID,
 		State:         raftTask.State,
 		Stdout:        raftTask.Stdout,
 		Stderr:        raftTask.Stderr,
 		HostPorts:     raftTask.HostPorts,
-		OfferId:       raftTask.OfferId,
-		AgentId:       raftTask.AgentId,
+		OfferID:       raftTask.OfferID,
+		AgentID:       raftTask.AgentID,
 		Ip:            raftTask.Ip,
 		AgentHostName: raftTask.AgentHostName,
 		Reason:        raftTask.Reason,
 		Created:       time.Unix(0, raftTask.CreatedAt),
 	}
 
-	raftVersion, err := persistentStore.GetVersion(raftTask.AppId, raftTask.VersionId)
+	raftVersion, err := persistentStore.GetVersion(raftTask.AppID, raftTask.VersionID)
 	if err == nil {
 		task.Version = VersionFromRaft(raftVersion)
 	}
@@ -428,15 +428,15 @@ func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 	return task
 }
 
-func OfferAllocatorItemToRaft(slotId, offerId string) *rafttypes.OfferAllocatorItem {
+func OfferAllocatorItemToRaft(slotID, offerID string) *rafttypes.OfferAllocatorItem {
 	item := &rafttypes.OfferAllocatorItem{
-		OfferId: offerId,
-		SlotId:  slotId,
+		OfferID: offerID,
+		SlotID:  slotID,
 	}
 
 	return item
 }
 
-func OfferAllocatorItemFromRaft(item *rafttypes.OfferAllocatorItem) (slotId, offerId string) {
-	return item.SlotId, item.OfferId
+func OfferAllocatorItemFromRaft(item *rafttypes.OfferAllocatorItem) (slotID, offerID string) {
+	return item.SlotID, item.OfferID
 }

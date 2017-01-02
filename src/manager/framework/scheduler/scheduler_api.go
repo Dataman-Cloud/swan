@@ -8,7 +8,7 @@ import (
 )
 
 func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
-	existedApp := scheduler.AppStorage.Get(version.AppId)
+	existedApp := scheduler.AppStorage.Get(version.AppID)
 	if existedApp != nil {
 		return nil, errors.New("app already exists")
 	}
@@ -18,7 +18,7 @@ func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error
 		return nil, err
 	}
 
-	scheduler.AppStorage.Add(version.AppId, app)
+	scheduler.AppStorage.Add(version.AppID, app)
 
 	return app, nil
 }

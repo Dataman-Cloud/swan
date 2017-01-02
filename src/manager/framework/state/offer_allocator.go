@@ -59,7 +59,7 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 	slotIndex := -1
 
 	for index, pendingOfferSlot := range allocator.PendingOfferSlots {
-		if pendingOfferSlot.Id == slot.Id {
+		if pendingOfferSlot.ID == slot.ID {
 			slotIndex = index
 			break
 		}
@@ -74,18 +74,18 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots[:slotIndex], allocator.PendingOfferSlots[slotIndex+1:]...)
 }
 
-func (allocator *OfferAllocator) SetOfferSlotMap(offerId *mesos.OfferID, slot *Slot) {
+func (allocator *OfferAllocator) SetOfferSlotMap(offerID *mesos.OfferID, slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
-	allocator.BySlotId[slot.Id] = offerId
-	allocator.create(slot.Id, *offerId.Value)
+	allocator.BySlotId[slot.ID] = offerID
+	allocator.create(slot.ID, *offerID.Value)
 	allocator.allocatedOfferLock.Unlock()
 }
 
 func (allocator *OfferAllocator) RemoveOfferSlotMapBySlot(slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
-	delete(allocator.BySlotId, slot.Id)
+	delete(allocator.BySlotId, slot.ID)
 	allocator.allocatedOfferLock.Unlock()
-	allocator.remove(slot.Id)
+	allocator.remove(slot.ID)
 }
 
 func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId *mesos.OfferID) {
@@ -126,9 +126,9 @@ func (allocator *OfferAllocator) RemoveSlot(slot *Slot) {
 	allocator.RemoveOfferSlotMapBySlot(slot)
 }
 
-func (allocator *OfferAllocator) create(slotId, offerId string) {
-	logrus.Debugf("create offer allocator item %s => %s", slotId, offerId)
-	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{OfferId: offerId, SlotId: slotId}, nil)
+func (allocator *OfferAllocator) create(slotID, offerID string) {
+	logrus.Debugf("create offer allocator item %s => %s", slotID, offerID)
+	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{OfferID: offerID, SlotID: slotID}, nil)
 }
 
 func (allocator *OfferAllocator) remove(slotId string) {
