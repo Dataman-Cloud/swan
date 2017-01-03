@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/Dataman-Cloud/swan/src/types"
+
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
-
-	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 )
 
 // NewListCommand returns the CLI command for "list"
@@ -44,12 +44,12 @@ func listApplications(c *cli.Context) error {
 	}
 	defer resp.Body.Close()
 
-	var apps []*api.App
+	var apps []*types.App
 	if err := json.NewDecoder(resp.Body).Decode(&apps); err != nil {
 		return err
 	}
 
-	listApps := make([]*api.App, 0)
+	listApps := make([]*types.App, 0)
 	if !c.Bool("all") {
 		for _, app := range apps {
 			if app.State == "normal" {
@@ -70,7 +70,7 @@ func listApplications(c *cli.Context) error {
 }
 
 // printTable output apps list as table format.
-func printTable(apps []*api.App) {
+func printTable(apps []*types.App) {
 	tb := tablewriter.NewWriter(os.Stdout)
 	tb.SetHeader([]string{
 		"ID",
@@ -98,7 +98,7 @@ func printTable(apps []*api.App) {
 }
 
 // printJson output apps list as json format.
-func printJson(apps []*api.App) error {
+func printJson(apps []*types.App) error {
 	data, err := json.Marshal(&apps)
 	if err != nil {
 		return err
