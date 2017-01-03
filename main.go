@@ -30,20 +30,12 @@ func setupLogger(logLevel string) {
 	})
 }
 
-// waitForSignals wait for signals and do some clean up job.
-func waitForSignals(unixSock string) {
+func waitForSignals() {
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
 
 	for sig := range signals {
 		logrus.Debugf("Received signal %s , clean up...", sig)
-		if _, err := os.Stat(unixSock); err == nil {
-			logrus.Debugf("Remove %s", unixSock)
-			if err := os.Remove(unixSock); err != nil {
-				logrus.Errorf("Remove %s failed: %s", unixSock, err.Error())
-			}
-		}
-
 		os.Exit(0)
 	}
 }
@@ -64,11 +56,6 @@ func main() {
 			Name:   "cluster",
 			Usage:  "API Server address <ip:port>",
 			EnvVar: "SWAN_CLUSTER",
-		},
-		cli.StringFlag{
-			Name:   "sock",
-			Usage:  "Unix socket for listening",
-			EnvVar: "SWAN_SOCK",
 		},
 		cli.StringFlag{
 			Name:   "mesos-master,m",
@@ -140,7 +127,7 @@ func main() {
 			}
 		}()
 
-		waitForSignals(config.HttpListener.UnixAddr)
+		waitForSignals()
 
 		return nil
 	}

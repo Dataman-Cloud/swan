@@ -16,7 +16,6 @@
     },
     "httpListener": {
 	    "addr": "0.0.0.0:9999" ,
-	    "sock": "./data/swan.sock"
     },
     "raft": {
 	    "cluster": "http://127.0.0.1:2111",
