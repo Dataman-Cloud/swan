@@ -18,9 +18,6 @@
 	    "addr": "0.0.0.0:9999" ,
 	    "sock": "./data/swan.sock"
     },
-    "ipam": {
-	    "store_path": "./data/"
-    },
     "raft": {
 	    "cluster": "http://127.0.0.1:2111",
 	    "raftid": 1,
