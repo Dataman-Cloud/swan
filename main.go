@@ -56,57 +56,63 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "config-file",
+			Name:  "config-file,c",
 			Value: "./config.json",
 			Usage: "specify config file path",
 		},
 		cli.StringFlag{
-			Name:  "cluster",
-			Usage: "API Server address <ip:port>",
+			Name:   "cluster",
+			Usage:  "API Server address <ip:port>",
+			EnvVar: "SWAN_CLUSTER",
 		},
 		cli.StringFlag{
-			Name:  "sock",
-			Usage: "Unix socket for listening",
+			Name:   "sock",
+			Usage:  "Unix socket for listening",
+			EnvVar: "SWAN_SOCK",
 		},
 		cli.StringFlag{
-			Name:  "mesos-master",
-			Usage: "mesos master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
+			Name:   "mesos-master,m",
+			Usage:  "mesos master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
+			EnvVar: "SWAN_MESOS_MASTER",
 		},
 		cli.StringFlag{
-			Name:  "log-level",
+			Name:  "log-level,l",
 			Usage: "customize debug level [debug|info|error]",
 		},
 		cli.IntFlag{
-			Name:  "raftid",
-			Usage: "raft node id",
+			Name:   "raftid",
+			Usage:  "raft node id",
+			EnvVar: "SWAN_RAFT_ID",
 		},
 		cli.StringFlag{
-			Name:  "raft-cluster",
-			Usage: "raft cluster peers addr",
-		},
-		cli.BoolFlag{
-			Name:  "enable-local-healthcheck",
-			Usage: "Enable local health check",
+			Name:   "raft-cluster",
+			Usage:  "raft cluster peers addr",
+			EnvVar: "SWAN_RAFT_CLUSTER",
 		},
 		cli.StringFlag{
-			Name:  "mode",
-			Usage: "Server mode, manager|agent|mixed ",
+			Name:   "mode",
+			Usage:  "Server mode, manager|agent|mixed ",
+			EnvVar: "SWAN_MODE",
 		},
 		cli.StringFlag{
-			Name:  "data-dir",
-			Usage: "swan data store dir",
+			Name:   "data-dir,d",
+			Usage:  "swan data store dir",
+			EnvVar: "SWAN_DATA_DIR",
 		},
 		cli.BoolFlag{
-			Name:  "enable-proxy",
-			Usage: "enable proxy or not",
+			Name:   "enable-proxy",
+			Usage:  "enable proxy or not",
+			EnvVar: "SWAN_ENABLE_PROXY",
 		},
 		cli.BoolFlag{
-			Name:  "enable-dns",
-			Usage: "enable dns resolver or not",
+			Name:   "enable-dns",
+			Usage:  "enable dns resolver or not",
+			EnvVar: "SWAN_ENABLE_DNS",
 		},
 		cli.BoolFlag{
-			Name:  "no-recover",
-			Usage: "do not retry recover from previous crush",
+			Name:   "no-recover",
+			Usage:  "do not retry recover from previous crush",
+			EnvVar: "SWAN_NO_RECOVER",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
