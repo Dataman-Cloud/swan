@@ -51,23 +51,23 @@ func (api *AppService) Register(container *restful.Container) {
 		Operation("listApps").
 		Param(ws.QueryParameter("labels", "app labels, e.g. labels=USER==1,cluster=beijing").DataType("string")).
 		Param(ws.QueryParameter("fields", "app fields, e.g. runAs==xxx").DataType("string")).
-		Returns(200, "OK", []App{}))
+		Returns(200, "OK", []types.App{}))
 	ws.Route(ws.POST("/").To(metrics.InstrumentRouteFunc("POST", "App", api.CreateApp)).
 		// docs
 		Doc("Create App").
 		Operation("createApp").
-		Returns(201, "OK", App{}).
+		Returns(201, "OK", types.App{}).
 		Returns(400, "BadRequest", nil).
 		Reads(types.Version{}).
-		Writes(App{}))
+		Writes(types.App{}))
 	ws.Route(ws.GET("/{app_id}").To(metrics.InstrumentRouteFunc("GET", "App", api.GetApp)).
 		// docs
 		Doc("Get an App").
 		Operation("getApp").
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
-		Returns(200, "OK", App{}).
+		Returns(200, "OK", types.App{}).
 		Returns(404, "NotFound", nil).
-		Writes(App{}))
+		Writes(types.App{}))
 	ws.Route(ws.DELETE("/{app_id}").To(metrics.InstrumentRouteFunc("DELETE", "App", api.DeleteApp)).
 		// docs
 		Doc("Delete App").
@@ -79,7 +79,7 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Scale Up App").
 		Operation("scaleUp").
-		Reads(ScaleUpParam{}).
+		Reads(types.ScaleUpParam{}).
 		Returns(200, "OK", nil).
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
@@ -87,7 +87,7 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Scale Down App").
 		Operation("scaleDown").
-		Reads(ScaleDownParam{}).
+		Reads(types.ScaleDownParam{}).
 		Returns(200, "OK", nil).
 		Returns(400, "BadRequest", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
@@ -95,17 +95,17 @@ func (api *AppService) Register(container *restful.Container) {
 		// docs
 		Doc("Update App").
 		Operation("updateApp").
-		Returns(200, "OK", App{}).
+		Returns(200, "OK", types.App{}).
 		Returns(404, "NotFound", nil).
 		Reads(types.Version{}).
-		Writes(App{}).
+		Writes(types.App{}).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ProceedUpdate)).
 		// docs
 		Doc("Proceed Update App").
 		Operation("proceedUpdateApp").
 		Returns(400, "BadRequest", nil).
-		Reads(ProceedUpdateParam{}).
+		Reads(types.ProceedUpdateParam{}).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/cancel-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.CancelUpdate)).
 		// docs
@@ -121,7 +121,7 @@ func (api *AppService) Register(container *restful.Container) {
 		Operation("getAppTask").
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
 		Param(ws.PathParameter("task_id", "identifier of the task").DataType("int")).
-		Returns(200, "OK", Task{}).
+		Returns(200, "OK", types.Task{}).
 		Returns(404, "NotFound", nil))
 
 	ws.Route(ws.GET("/{app_id}/versions").To(metrics.InstrumentRouteFunc("GET", "AppVersions", api.GetAppVersions)).
@@ -167,7 +167,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		response.WriteError(http.StatusInternalServerError, err)
 		return
 	}
-	appRet := &App{
+	appRet := &types.App{
 		ID:               version.AppID,
 		Name:             version.AppID,
 		Instances:        int(version.Instances),
@@ -217,10 +217,10 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 		}
 	}
 
-	appsRet := make([]*App, 0)
+	appsRet := make([]*types.App, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
 		version := app.CurrentVersion
-		appsRet = append(appsRet, &App{
+		appsRet = append(appsRet, &types.App{
 			ID:               version.AppID,
 			Name:             version.AppID,
 			Instances:        int(version.Instances),
@@ -264,7 +264,7 @@ func (api *AppService) DeleteApp(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ScaleDown(request *restful.Request, response *restful.Response) {
-	var param ScaleDownParam
+	var param types.ScaleDownParam
 
 	err := request.ReadEntity(&param)
 	if err != nil {
@@ -282,7 +282,7 @@ func (api *AppService) ScaleDown(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ScaleUp(request *restful.Request, response *restful.Response) {
-	var param ScaleUpParam
+	var param types.ScaleUpParam
 	err := request.ReadEntity(&param)
 	if err != nil {
 		logrus.Errorf("Scale up app error: %s", err.Error())
@@ -329,7 +329,7 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ProceedUpdate(request *restful.Request, response *restful.Response) {
-	var param ProceedUpdateParam
+	var param types.ProceedUpdateParam
 
 	err := request.ReadEntity(&param)
 	if err != nil {
@@ -410,9 +410,9 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 	response.WriteErrorString(http.StatusNotFound, "No versions found")
 }
 
-func FormAppRet(app *state.App) *App {
+func FormAppRet(app *state.App) *types.App {
 	version := app.CurrentVersion
-	appRet := &App{
+	appRet := &types.App{
 		ID:               version.AppID,
 		Name:             version.AppID,
 		Instances:        int(version.Instances),
@@ -446,10 +446,10 @@ func CheckVersion(version *types.Version) error {
 	return nil
 }
 
-func FilterTasksFromApp(app *state.App) []*Task {
-	tasks := make([]*Task, 0)
+func FilterTasksFromApp(app *state.App) []*types.Task {
+	tasks := make([]*types.Task, 0)
 	for _, slot := range app.GetSlots() {
-		task := &Task{ // aka Slot
+		task := &types.Task{ // aka Slot
 			ID:            slot.ID,
 			AppID:         slot.App.ID, // either Name or ID
 			VersionID:     slot.Version.ID,
@@ -458,7 +458,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 			OfferID:       slot.OfferID,
 			AgentID:       slot.AgentID,
 			AgentHostname: slot.AgentHostName,
-			History:       make([]*TaskHistory, 0), // aka Task
+			History:       make([]*types.TaskHistory, 0), // aka Task
 			Cpu:           slot.Version.Cpus,
 			Mem:           slot.Version.Mem,
 			Disk:          slot.Version.Disk,
@@ -469,7 +469,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 
 		if len(slot.TaskHistory) > 0 {
 			for _, v := range slot.TaskHistory {
-				staleTask := &TaskHistory{
+				staleTask := &types.TaskHistory{
 					ID:            v.ID,
 					State:         v.State,
 					Reason:        v.Reason,
@@ -497,7 +497,7 @@ func FilterTasksFromApp(app *state.App) []*Task {
 	return tasks
 }
 
-func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
+func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 	slots := app.GetSlots()
 	if task_index >= len(slots)-1 || task_index < 0 {
 		logrus.Errorf("slot not found: %s", task_index)
@@ -506,7 +506,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 
 	slot := slots[task_index]
 
-	task := &Task{ // aka Slot
+	task := &types.Task{ // aka Slot
 		ID:            slot.ID,
 		AppID:         slot.App.ID, // either Name or ID
 		VersionID:     slot.Version.ID,
@@ -514,7 +514,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 		OfferID:       slot.OfferID,
 		AgentID:       slot.AgentID,
 		AgentHostname: slot.AgentHostName,
-		History:       make([]*TaskHistory, 0), // aka Task
+		History:       make([]*types.TaskHistory, 0), // aka Task
 		Cpu:           slot.Version.Cpus,
 		Mem:           slot.Version.Mem,
 		Disk:          slot.Version.Disk,
@@ -525,7 +525,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*Task, error) {
 
 	if len(slot.TaskHistory) > 0 {
 		for _, v := range slot.TaskHistory {
-			staleTask := &TaskHistory{
+			staleTask := &types.TaskHistory{
 				ID:            v.ID,
 				State:         v.State,
 				Reason:        v.Reason,

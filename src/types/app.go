@@ -1,9 +1,7 @@
-package api
+package types
 
 import (
 	"time"
-
-	"github.com/Dataman-Cloud/swan/src/types"
 )
 
 type App struct {
@@ -23,7 +21,7 @@ type App struct {
 
 	// use task for compatability now, should be slot here
 	Tasks          []*Task        `json:"tasks,omitempty"`
-	CurrentVersion *types.Version `json:"currentVersion"`
+	CurrentVersion *Version `json:"currentVersion"`
 	Versions       []string       `json:"versions,omitempty"`
 	IP             []string       `json:"ip,omitempty"`
 
