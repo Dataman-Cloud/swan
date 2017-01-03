@@ -3,10 +3,8 @@ package apiserver
 import (
 	"encoding/json"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -37,7 +35,6 @@ type ApiRegister interface {
 
 type ApiServer struct {
 	addr         string
-	sock         string
 	leaderAddr   string
 	apiRegisters []ApiRegister
 }
@@ -46,10 +43,9 @@ func init() {
 	metrics.Register()
 }
 
-func NewApiServer(addr, sock string) *ApiServer {
+func NewApiServer(addr string) *ApiServer {
 	return &ApiServer{
 		addr: addr,
-		sock: sock,
 	}
 }
 
@@ -131,25 +127,6 @@ func (apiServer *ApiServer) Start() error {
 		w.WriteHeader(status)
 		w.Write(output)
 	})
-
-	go func() {
-		if _, err := os.Stat(apiServer.sock); err == nil {
-			// remove the sock file if it's already existed
-			if err := os.Remove(apiServer.sock); err != nil {
-				logrus.Errorf("can't listen on socket %s remove existed file failed. Error: %s", apiServer.sock, err.Error())
-			}
-		}
-		srv := &http.Server{
-			Addr:    apiServer.sock,
-			Handler: wsContainer,
-		}
-		ln, err := net.Listen("unix", apiServer.sock)
-		if err != nil {
-			logrus.Errorf("can't listen on socket %s:%s", apiServer.sock, err.Error())
-		}
-		logrus.Printf("start listening on %s", apiServer.sock)
-		srv.Serve(ln)
-	}()
 
 	logrus.Printf("start listening on %s", apiServer.addr)
 	server := &http.Server{Addr: apiServer.addr, Handler: wsContainer}

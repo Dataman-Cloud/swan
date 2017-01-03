@@ -56,8 +56,7 @@ type DNS struct {
 }
 
 type HttpListener struct {
-	TCPAddr  string `json:"addr"`
-	UnixAddr string `json:"sock"`
+	TCPAddr string `json:"addr"`
 }
 
 type IPAM struct {
@@ -119,9 +118,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	if c.String("cluster") != "" {
 		swanConfig.SwanCluster = strings.Split(c.String("cluster"), ",")
 	}
-	if c.String("sock") != "" {
-		swanConfig.HttpListener.UnixAddr = c.String("sock")
-	}
+
 	if c.String("mesos-master") != "" {
 		swanConfig.Scheduler.MesosMasters = c.String("mesos-master")
 	}
@@ -139,7 +136,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
-	swanConfig.Scheduler.UnixAddr = swanConfig.HttpListener.UnixAddr
 	swanConfig.Scheduler.MesosFrameworkUser = "root"
 	swanConfig.DNS.ExchangeTimeout = time.Second * 3
 
