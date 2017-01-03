@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
+	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/olekukonko/tablewriter"
 	"github.com/urfave/cli"
 )
@@ -49,7 +49,7 @@ func inspectApplication(c *cli.Context) error {
 	}
 	defer resp.Body.Close()
 
-	var app *api.App
+	var app *types.App
 	if err := json.NewDecoder(resp.Body).Decode(&app); err != nil {
 		return err
 	}
@@ -69,7 +69,7 @@ func inspectApplication(c *cli.Context) error {
 }
 
 // printTable output tasks list as table format.
-func printTaskTable(tasks []*api.Task) {
+func printTaskTable(tasks []*types.Task) {
 	tb := tablewriter.NewWriter(os.Stdout)
 	tb.SetHeader([]string{
 		"Name",

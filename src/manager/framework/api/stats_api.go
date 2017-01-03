@@ -4,6 +4,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
+	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/emicklei/go-restful"
 )
@@ -33,13 +34,13 @@ func (api *StatsService) Register(container *restful.Container) {
 		// docs
 		Doc("Get Stats").
 		Operation("getStats").
-		Returns(200, "OK", Stats{}))
+		Returns(200, "OK", types.Stats{}))
 
 	container.Add(ws)
 }
 
 func (api *StatsService) Stats(request *restful.Request, response *restful.Response) {
-	var stats Stats
+	var stats types.Stats
 	stats.AppStats = make(map[string]int)
 
 	appFilterOptions := scheduler.AppFilterOptions{}

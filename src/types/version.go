@@ -1,7 +1,5 @@
 package types
 
-// UNMAINTAINED: DO NOT IMPORT THIS PKG IN NEW FILE
-
 // TODO(xychu): refine struct names, typo: PerviousVersionID -> PreviousVersionID
 //              and Id -> ID, Cpus -> CPUs, Uris -> URIs, Ip -> IP.
 type Version struct {
@@ -87,4 +85,25 @@ type HealthCheck struct {
 
 type Command struct {
 	Value string `json:"value,omitempty"`
+}
+
+// AddLabel adds a label to the application
+//		name:	the name of the label
+//		value: value for this label
+func (v *Version) AddLabel(name, value string) *Version {
+	if v.Labels == nil {
+		v.EmptyLabels()
+	}
+	v.Labels[name] = value
+
+	return v
+}
+
+// EmptyLabels explicitly empties the labels -- use this if you need to empty
+// the labels of an application that already has labels set (setting labels to nil will
+// keep the current value)
+func (v *Version) EmptyLabels() *Version {
+	v.Labels = map[string]string{}
+
+	return v
 }
