@@ -98,7 +98,7 @@ func main() {
 		},
 		cli.BoolFlag{
 			Name:   "no-recover",
-			Usage:  "do not retry recover from previous crush",
+			Usage:  "do not recover from previous crush",
 			EnvVar: "SWAN_NO_RECOVER",
 		},
 	}
