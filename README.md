@@ -50,24 +50,24 @@ chmod +x swan
 ```
 ### Run as standalone mode
 ```
-swan --master=192.168.1.50:5050 --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111 --sock=./data/swam.sock
+swan --mesos-master=192.168.1.50:5050 --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
 
 or 
 
-swan --master=zk://127.0.0.1:2181/mesos --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111 --sock=./data/swam.sock
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
 ```
 
 ### Run as HA mode
 ```
-swan --master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam1.sock --work-dir=./data/
-swan --master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam2.sock --work-dir=./data/
-swan --master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam3.sock --work-dir=./data/
+swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
+swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
+swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
 
 or
 
-swan --master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam1.sock --work-dir=./data/
-swan --master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam2.sock --work-dir=./data/
-swan --master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --sock=./data/swam3.sock --work-dir=./data/
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
 ```
 Use `swan --help` to see usage.
 
