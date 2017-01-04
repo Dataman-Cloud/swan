@@ -392,7 +392,7 @@ func FormAppRet(app *state.App) *types.App {
 		Labels:           version.Labels,
 		Env:              version.Env,
 		Constraints:      version.Constraints,
-		Uris:             version.Uris,
+		URIs:             version.URIs,
 	}
 	return appRet
 }
@@ -432,7 +432,7 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 			AgentID:       slot.AgentID,
 			AgentHostname: slot.AgentHostName,
 			History:       make([]*types.TaskHistory, 0), // aka Task
-			Cpu:           slot.Version.Cpus,
+			CPU:           slot.Version.CPUs,
 			Mem:           slot.Version.Mem,
 			Disk:          slot.Version.Disk,
 			IP:            slot.Ip,
@@ -455,7 +455,7 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 				}
 				if v.Version != nil {
 					staleTask.VersionID = v.Version.ID
-					staleTask.Cpu = v.Version.Cpus
+					staleTask.CPU = v.Version.CPUs
 					staleTask.Mem = v.Version.Mem
 					staleTask.Disk = v.Version.Disk
 				}
@@ -488,7 +488,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 		AgentID:       slot.AgentID,
 		AgentHostname: slot.AgentHostName,
 		History:       make([]*types.TaskHistory, 0), // aka Task
-		Cpu:           slot.Version.Cpus,
+		CPU:           slot.Version.CPUs,
 		Mem:           slot.Version.Mem,
 		Disk:          slot.Version.Disk,
 		IP:            slot.Ip,
@@ -507,7 +507,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 				AgentHostname: v.AgentHostName,
 				VersionID:     v.Version.ID,
 
-				Cpu:  v.Version.Cpus,
+				CPU:  v.Version.CPUs,
 				Mem:  v.Version.Mem,
 				Disk: v.Version.Disk,
 

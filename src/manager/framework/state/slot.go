@@ -104,7 +104,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 	}
 
 	if slot.App.IsFixed() {
-		slot.Ip = app.CurrentVersion.Ip[index]
+		slot.Ip = app.CurrentVersion.IP[index]
 	}
 
 	// initialize restart policy
@@ -209,7 +209,7 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 
 					if name == cons[0] &&
 						strings.Contains(value, cons[2]) &&
-						ow.CpuRemain() > slot.Version.Cpus &&
+						ow.CpuRemain() > slot.Version.CPUs &&
 						ow.MemRemain() > slot.Version.Mem &&
 						ow.DiskRemain() > slot.Version.Disk {
 						return true
@@ -220,7 +220,7 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 		}
 	}
 
-	return ow.CpuRemain() > slot.Version.Cpus &&
+	return ow.CpuRemain() > slot.Version.CPUs &&
 		ow.MemRemain() > slot.Version.Mem &&
 		ow.DiskRemain() > slot.Version.Disk
 }
@@ -259,7 +259,7 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 	slot.resourceReservationLock.Lock()
 	defer slot.resourceReservationLock.Unlock()
 
-	ow.CpusUsed += slot.Version.Cpus
+	ow.CpusUsed += slot.Version.CPUs
 	ow.MemUsed += slot.Version.Mem
 	ow.DiskUsed += slot.Version.Disk
 
@@ -292,12 +292,12 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
 	var resources = []*mesos.Resource{}
 
-	if slot.Version.Cpus > 0 {
-		resources = append(resources, buildScalarResource("cpus", slot.Version.Cpus))
+	if slot.Version.CPUs > 0 {
+		resources = append(resources, buildScalarResource("cpus", slot.Version.CPUs))
 	}
 
 	if slot.Version.Mem > 0 {
-		resources = append(resources, buildScalarResource("mem", slot.Version.Cpus))
+		resources = append(resources, buildScalarResource("mem", slot.Version.CPUs))
 	}
 
 	if slot.Version.Disk > 0 {
@@ -310,7 +310,7 @@ func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
 func (slot *Slot) ResourcesUsed() *SlotResource {
 	var slotResource SlotResource
 	if slot.StateIs(SLOT_STATE_TASK_STAGING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_KILLING) {
-		slotResource.CPU = slot.Version.Cpus
+		slotResource.CPU = slot.Version.CPUs
 		slotResource.Mem = slot.Version.Mem
 		slotResource.Disk = slot.Version.Disk
 

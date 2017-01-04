@@ -12,7 +12,7 @@ type App struct {
 	RunningInstances int       `json:"runningInstances"`
 	RunAs            string    `json:"runAs,omitempty"`
 	Priority         int       `json:"priority"`
-	ClusterID        string    `json:"clusterId,omitempty"`
+	ClusterID        string    `json:"clusterID,omitempty"`
 	Status           string    `json:"status,omitempty"`
 	Created          time.Time `json:"created,omitempty"`
 	Updated          time.Time `json:"updated,omitempty"`
@@ -31,26 +31,23 @@ type App struct {
 	Labels      map[string]string `json:"labels,omitempty"`
 	Env         map[string]string `json:"env,omitempty"`
 	Constraints []string          `json:"constraints,omitempty"`
-	Uris        []string          `json:"uris,omitempty"`
-	//HealthChecks      []*types.HealthCheck
-	//KillPolicy        *types.KillPolicy
-	//UpdatePolicy      *types.UpdatePolicy
+	URIs        []string          `json:"uris,omitempty"`
 }
 
 // use task for compatability now, should be slot here
 // and together with task history
 type Task struct {
 	ID        string `json:"id,omitempty"`
-	AppID     string `json:"appId,omitempty"`
-	VersionID string `json:"versionId,omitempty"`
+	AppID     string `json:"appID,omitempty"`
+	VersionID string `json:"versionID,omitempty"`
 
 	Status string `json:"status"`
 
-	OfferID       string `json:"offerId,omitempty"`
-	AgentID       string `json:"agentId,omitempty"`
+	OfferID       string `json:"offerID,omitempty"`
+	AgentID       string `json:"agentID,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
-	Cpu  float64 `json:"cpu,omitempty"`
+	CPU  float64 `json:"cpu,omitempty"`
 	Mem  float64 `json:"mem,omitempty"`
 	Disk float64 `json:"disk,omitempty"`
 
@@ -66,19 +63,19 @@ type Task struct {
 
 type TaskHistory struct {
 	ID        string `json:"id,omitempty"`
-	AppID     string `json:"appId,omitempty"`
-	VersionID string `json:"versionId,omitempty"`
+	AppID     string `json:"appID,omitempty"`
+	VersionID string `json:"versionID,omitempty"`
 
-	OfferID       string `json:"offerId,omitempty"`
-	AgentID       string `json:"agentId,omitempty"`
+	OfferID       string `json:"offerID,omitempty"`
+	AgentID       string `json:"agentID,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
-	Cpu  float64 `json:"cpu,omitempty"`
+	CPU  float64 `json:"cpu,omitempty"`
 	Mem  float64 `json:"mem,omitempty"`
 	Disk float64 `json:"disk,omitempty"`
 
 	State  string `json:"state,omitempty"`
-	Reason string `json:"Reason,omitempty"`
+	Reason string `json:"reason,omitempty"`
 	Stdout string `json:"stdout,omitempty"`
 	Stderr string `json:"stderr,omitempty"`
 }
