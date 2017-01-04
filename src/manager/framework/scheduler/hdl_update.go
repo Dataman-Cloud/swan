@@ -30,7 +30,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	message := taskStatus.GetMessage()
 	healthy := taskStatus.GetHealthy()
 
-	slotIndex_, appId := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1]
+	slotIndex_, appId := strings.SplitN(slotName, "-", 2)[0], strings.Split(slotName, "-")[1]
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
 	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)

@@ -45,8 +45,8 @@ func SetStore(newStore store.Store) {
 }
 
 type App struct {
-	// app name
 	ID       string           `json:"id"`
+	Name     string           `json:"name"`
 	Versions []*types.Version `json:"versions"`
 
 	slotsLock sync.Mutex
@@ -83,14 +83,14 @@ func NewApp(version *types.Version,
 		Versions:       []*types.Version{},
 		slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		ID:             version.AppID,
+		ID:             fmt.Sprintf("%s-%s-%s", version.AppID, version.RunAs, mesos_connector.Instance().ClusterID),
+		Name:           version.AppID,
 		ClusterID:      mesos_connector.Instance().ClusterID,
-
-		Created:       time.Now(),
-		Updated:       time.Now(),
-		inTransaction: false,
-		touched:       true,
-		UserEventChan: userEventChan,
+		Created:        time.Now(),
+		Updated:        time.Now(),
+		inTransaction:  false,
+		touched:        true,
+		UserEventChan:  userEventChan,
 	}
 
 	if version.Mode == "fixed" {
