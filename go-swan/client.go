@@ -110,12 +110,7 @@ func (r *swanClient) apiCall(method, uri string, body, result interface{}) error
 		}
 		return nil
 	}
-	if response.StatusCode >= 400 {
-		return errors.New(string(response.StatusCode))
-	}
-	return nil
-	// TODO(xychu): better support for API ERROR
-	//return NewAPIError(response.StatusCode, respBody)
+	return NewAPIError(response.StatusCode, respBody)
 }
 
 // apiRequest creates a default API request
