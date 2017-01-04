@@ -7,7 +7,6 @@ import (
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -92,7 +91,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		ID:          fmt.Sprintf("%d-%s-%s-%s", index, app.ID, version.RunAs, mesos_connector.Instance().ClusterID),
+		ID:          fmt.Sprintf("%d-%s", index, app.ID),
 
 		resourceReservationLock: sync.Mutex{},
 

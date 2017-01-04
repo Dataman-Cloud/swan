@@ -6,8 +6,7 @@
   "disk": 0,
   "runAs": "xcm",
   "instances": 3,
-  "constraints": [
-  ], 
+  "constraints": [],
   "container": {
     "docker": {
       "image": "nginx:1.10",
