@@ -59,10 +59,6 @@ type HttpListener struct {
 	TCPAddr string `json:"addr"`
 }
 
-type IPAM struct {
-	StorePath string `json:"store_path"`
-}
-
 type Raft struct {
 	Cluster   string `json:"cluster"`
 	RaftId    int    `json:"raftid"`
