@@ -2,6 +2,7 @@ package event
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
@@ -45,7 +46,7 @@ func (js *JanitorSubscriber) Write(e *Event) error {
 
 	rgevent.TargetIP = payload.Ip
 	rgevent.TargetPort = payload.Port
-	rgevent.TargetName = payload.TaskId
+	rgevent.TargetName = strings.ToLower(strings.Replace(payload.TaskId, "-", ".", -1))
 
 	js.Resolver.SwanEventChan() <- rgevent
 	return nil
