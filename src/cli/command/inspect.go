@@ -86,7 +86,7 @@ func printTaskTable(tasks []*types.Task) {
 		tb.Append([]string{
 			task.ID,
 			task.AppID,
-			fmt.Sprintf("%.2f", task.Cpu),
+			fmt.Sprintf("%.2f", task.CPU),
 			fmt.Sprintf("%.f", task.Mem),
 			fmt.Sprintf("%.f", task.Disk),
 			task.AgentHostname,

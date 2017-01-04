@@ -134,7 +134,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.BeginTx()
 	defer app.Commit()
 
-	app.CurrentVersion.Ip = append(app.CurrentVersion.Ip, newIps...)
+	app.CurrentVersion.IP = append(app.CurrentVersion.IP, newIps...)
 	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
@@ -221,7 +221,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	app.SetState(APP_STATE_MARK_FOR_UPDATING)
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
-	version.PerviousVersionID = app.CurrentVersion.ID
+	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
 	for i := 0; i < 1; i++ { // current we make first slot update
@@ -499,7 +499,7 @@ func validateAndFormatVersion(version *types.Version) error {
 
 	// validation for fixed mode application
 	if version.Mode == string(APP_MODE_FIXED) {
-		if len(version.Ip) != int(version.Instances) {
+		if len(version.IP) != int(version.Instances) {
 			return errors.New(fmt.Sprintf("should provide exactly %d ip for FIXED type app", version.Instances))
 		}
 

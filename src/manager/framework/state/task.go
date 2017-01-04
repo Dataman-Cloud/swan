@@ -83,7 +83,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 		SetContainerDockerForcePullImage(dockerSpec.ForcePullImage).
 		AppendContainerDockerVolumes(containerSpec.Volumes)
 
-	task.taskBuilder.AppendContainerDockerEnvironments(versionSpec.Env).SetURIs(versionSpec.Uris).AppendTaskInfoLabels(versionSpec.Labels)
+	task.taskBuilder.AppendContainerDockerEnvironments(versionSpec.Env).SetURIs(versionSpec.URIs).AppendTaskInfoLabels(versionSpec.Labels)
 	task.taskBuilder.AppendTaskInfoLabels(defaultLabels)
 
 	task.taskBuilder.AppendContainerDockerParameters(task.Slot.Version.Container.Docker.Parameters)

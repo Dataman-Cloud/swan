@@ -30,7 +30,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 	raftVersion := &rafttypes.Version{
 		ID:          version.ID,
 		Command:     version.Command,
-		Cpus:        version.Cpus,
+		Cpus:        version.CPUs,
 		Mem:         version.Mem,
 		Disk:        version.Disk,
 		Instances:   version.Instances,
@@ -39,8 +39,8 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 		Labels:      version.Labels,
 		Env:         version.Env,
 		Constraints: version.Constraints,
-		Uris:        version.Uris,
-		Ip:          version.Ip,
+		Uris:        version.URIs,
+		Ip:          version.IP,
 		Mode:        version.Mode,
 		AppID:       version.AppID,
 	}
@@ -73,7 +73,7 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 		ID:          raftVersion.ID,
 		AppID:       raftVersion.AppID,
 		Command:     raftVersion.Command,
-		Cpus:        raftVersion.Cpus,
+		CPUs:        raftVersion.Cpus,
 		Mem:         raftVersion.Mem,
 		Disk:        raftVersion.Disk,
 		Instances:   raftVersion.Instances,
@@ -82,8 +82,8 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 		Labels:      raftVersion.Labels,
 		Env:         raftVersion.Env,
 		Constraints: raftVersion.Constraints,
-		Uris:        raftVersion.Uris,
-		Ip:          raftVersion.Ip,
+		URIs:        raftVersion.Uris,
+		IP:          raftVersion.Ip,
 		Mode:        raftVersion.Mode,
 	}
 

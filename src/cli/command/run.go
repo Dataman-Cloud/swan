@@ -164,7 +164,7 @@ func runApplication(c *cli.Context) error {
 		if c.IsSet("cpus") {
 			cpus := c.Float64("cpus")
 			if cpus > 0 {
-				version.Cpus = cpus
+				version.CPUs = cpus
 			}
 		}
 
@@ -214,9 +214,9 @@ func runApplication(c *cli.Context) error {
 		}
 		if c.IsSet("uris") {
 			if c.String("uris") == "" {
-				version.Uris = nil
+				version.URIs = nil
 			} else {
-				version.Uris = strings.Split(c.String("uris"), ",")
+				version.URIs = strings.Split(c.String("uris"), ",")
 			}
 		}
 	} else {
@@ -272,7 +272,7 @@ func runApplication(c *cli.Context) error {
 			}
 		}
 
-		version.Cpus = c.Float64("cpus")
+		version.CPUs = c.Float64("cpus")
 		version.Mem = c.Float64("mem")
 		version.Disk = c.Float64("disk")
 		version.Instances = int32(c.Int("instances"))

@@ -1,13 +1,11 @@
 package types
 
-// TODO(xychu): refine struct names, typo: PerviousVersionID -> PreviousVersionID
-//              and Id -> ID, Cpus -> CPUs, Uris -> URIs, Ip -> IP.
 type Version struct {
 	ID                string            `json:"id,omitempty"`
 	AppID             string            `json:"appID,omitempty"`
-	PerviousVersionID string            `json:"perviousVersionId,omitempty"`
+	PreviousVersionID string            `json:"previousVersionId,omitempty"`
 	Command           string            `json:"command,omitempty"`
-	Cpus              float64           `json:"cpus,omitempty"`
+	CPUs              float64           `json:"cpus,omitempty"`
 	Mem               float64           `json:"mem,omitempty"`
 	Disk              float64           `json:"disk,omitempty"`
 	Instances         int32             `json:"instances,omitempty"`
@@ -20,8 +18,8 @@ type Version struct {
 	KillPolicy        *KillPolicy       `json:"killPolicy,omitempty"`
 	UpdatePolicy      *UpdatePolicy     `json:"updatPolicy,omitempty"`
 	Constraints       []string          `json:"constraints,omitempty"`
-	Uris              []string          `json:"uris,omitempty"`
-	Ip                []string          `json:"ip,omitempty"`
+	URIs              []string          `json:"uris,omitempty"`
+	IP                []string          `json:"ip,omitempty"`
 	Mode              string            `json:"mode,omitempty"`
 }
 
