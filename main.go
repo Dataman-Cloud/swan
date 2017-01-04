@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"os/signal"
-	"syscall"
 
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/version"
@@ -28,16 +26,6 @@ func setupLogger(logLevel string) {
 		TimestampFormat: "2006-01-02 15:04:05",
 		FullTimestamp:   true,
 	})
-}
-
-func waitForSignals() {
-	signals := make(chan os.Signal, 1)
-	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
-
-	for sig := range signals {
-		logrus.Debugf("Received signal %s , clean up...", sig)
-		os.Exit(0)
-	}
 }
 
 func main() {
@@ -105,7 +93,8 @@ func main() {
 	app.Action = func(c *cli.Context) error {
 		config, err := config.NewConfig(c)
 		if err != nil {
-			os.Exit(1)
+			logrus.Errorf("load config failed. Error: %s", err)
+			return err
 		}
 
 		setupLogger(config.LogLevel)
@@ -118,16 +107,14 @@ func main() {
 
 		node, err := NewNode(config, db)
 		if err != nil {
-			logrus.Fatal("Node initialization failed")
+			logrus.Error("Node initialization failed")
+			return err
 		}
-		go func() {
-			if err := node.Start(context.Background()); err != nil {
-				logrus.Errorf("strart node got error: %s", err.Error())
-				os.Exit(1)
-			}
-		}()
 
-		waitForSignals()
+		if err := node.Start(context.Background()); err != nil {
+			logrus.Error("start node failed. Error: %s", err.Error())
+			return err
+		}
 
 		return nil
 	}
