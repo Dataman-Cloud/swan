@@ -294,8 +294,22 @@ func (app *App) IsFixed() bool {
 
 func (app *App) SetState(state string) {
 	app.State = state
+	switch app.State {
+	case APP_STATE_MARK_FOR_CREATING:
+		app.EmitAppEvent(swanevent.EventTypeAppAdd)
+	case APP_STATE_MARK_FOR_DELETION:
+		app.EmitAppEvent(swanevent.EventTypeAppRm)
+	default:
+	}
 	app.Touch(false)
 	logrus.Infof("app %s now has state %s", app.ID, app.State)
+}
+
+func (app *App) EmitAppEvent(eventType string) {
+	e := &swanevent.Event{Type: eventType}
+	appRet := app.FormAppRet()
+	e.Payload = appRet
+	app.EmitEvent(e)
 }
 
 func (app *App) StateIs(state string) bool {
@@ -564,6 +578,34 @@ func validateAndFormatVersion(version *types.Version) error {
 	}
 
 	return nil
+}
+
+func (app *App) FormAppRet() *types.App {
+	version := app.CurrentVersion
+	appRet := &types.App{
+		ID:               version.AppID,
+		Name:             version.AppID,
+		Instances:        int(version.Instances),
+		RunningInstances: app.RunningInstances(),
+		RunAs:            version.RunAs,
+		Priority:         int(version.Priority),
+		ClusterID:        app.ClusterID,
+		Created:          app.Created,
+		Updated:          app.Updated,
+		Mode:             string(app.Mode),
+		State:            app.State,
+		CurrentVersion:   app.CurrentVersion,
+		Labels:           version.Labels,
+		Env:              version.Env,
+		Constraints:      version.Constraints,
+		Uris:             version.Uris,
+	}
+
+	appRet.Versions = make([]string, 0)
+	for _, v := range app.Versions {
+		appRet.Versions = append(appRet.Versions, v.ID)
+	}
+	return appRet
 }
 
 // 1, remove app from persisted storage

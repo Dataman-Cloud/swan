@@ -7,6 +7,8 @@ import (
 const (
 	EventTypeTaskAdd = "task_add"
 	EventTypeTaskRm  = "task_rm"
+	EventTypeAppAdd  = "app_add"
+	EventTypeAppRm   = "app_rm"
 )
 
 type Event struct {

@@ -12,9 +12,9 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
+	"github.com/emicklei/go-restful"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/emicklei/go-restful"
 )
 
 const (
@@ -167,30 +167,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		response.WriteError(http.StatusInternalServerError, err)
 		return
 	}
-	appRet := &types.App{
-		ID:               version.AppID,
-		Name:             version.AppID,
-		Instances:        int(version.Instances),
-		RunningInstances: app.RunningInstances(),
-		RunAs:            version.RunAs,
-		Priority:         int(version.Priority),
-		ClusterID:        app.ClusterID,
-		Created:          app.Created,
-		Updated:          app.Updated,
-		Mode:             string(app.Mode),
-		State:            app.State,
-		CurrentVersion:   app.CurrentVersion,
-		Labels:           version.Labels,
-		Env:              version.Env,
-		Constraints:      version.Constraints,
-		Uris:             version.Uris,
-	}
-
-	appRet.Versions = make([]string, 0)
-	for _, v := range app.Versions {
-		appRet.Versions = append(appRet.Versions, v.ID)
-	}
-
+	appRet := app.FormAppRet()
 	appRet.Tasks = FilterTasksFromApp(app)
 	response.WriteHeaderAndEntity(http.StatusCreated, appRet)
 }
@@ -219,25 +196,8 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 
 	appsRet := make([]*types.App, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		version := app.CurrentVersion
-		appsRet = append(appsRet, &types.App{
-			ID:               version.AppID,
-			Name:             version.AppID,
-			Instances:        int(version.Instances),
-			RunningInstances: app.RunningInstances(),
-			RunAs:            version.RunAs,
-			Priority:         int(version.Priority),
-			ClusterID:        app.ClusterID,
-			Created:          app.Created,
-			Updated:          app.Updated,
-			Mode:             string(app.Mode),
-			State:            app.State,
-			CurrentVersion:   app.CurrentVersion,
-			Labels:           version.Labels,
-			Env:              version.Env,
-			Constraints:      version.Constraints,
-			Uris:             version.Uris,
-		})
+		appRet := app.FormAppRet()
+		appsRet = append(appsRet, appRet)
 	}
 
 	response.WriteEntity(appsRet)
@@ -250,7 +210,9 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	response.WriteEntity(FormAppRet(app))
+	appRet := app.FormAppRet()
+	appRet.Tasks = FilterTasksFromApp(app)
+	response.WriteEntity(appRet)
 }
 
 func (api *AppService) DeleteApp(request *restful.Request, response *restful.Response) {
@@ -322,7 +284,9 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 			response.WriteError(http.StatusNotFound, err)
 			return
 		}
-		response.WriteEntity(FormAppRet(app))
+		appRet := app.FormAppRet()
+		appRet.Tasks = FilterTasksFromApp(app)
+		response.WriteEntity(appRet)
 	} else {
 		response.WriteErrorString(http.StatusBadRequest, "Invalid Version.")
 	}
@@ -408,35 +372,6 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 	}
 	logrus.Errorf("No versions found with ID: %s", version_id)
 	response.WriteErrorString(http.StatusNotFound, "No versions found")
-}
-
-func FormAppRet(app *state.App) *types.App {
-	version := app.CurrentVersion
-	appRet := &types.App{
-		ID:               version.AppID,
-		Name:             version.AppID,
-		Instances:        int(version.Instances),
-		RunningInstances: app.RunningInstances(),
-		RunAs:            version.RunAs,
-		ClusterID:        app.ClusterID,
-		Created:          app.Created,
-		Updated:          app.Updated,
-		Mode:             string(app.Mode),
-		State:            app.State,
-		CurrentVersion:   app.CurrentVersion,
-		Labels:           version.Labels,
-		Env:              version.Env,
-		Constraints:      version.Constraints,
-		Uris:             version.Uris,
-	}
-
-	appRet.Versions = make([]string, 0)
-	for _, v := range app.Versions {
-		appRet.Versions = append(appRet.Versions, v.ID)
-	}
-
-	appRet.Tasks = FilterTasksFromApp(app)
-	return appRet
 }
 
 func CheckVersion(version *types.Version) error {

@@ -61,13 +61,5 @@ func (sses *SSESubscriber) Write(e *Event) error {
 }
 
 func (sse *SSESubscriber) InterestIn(e *Event) bool {
-	if e.Type == EventTypeTaskAdd {
-		return true
-	}
-
-	if e.Type == EventTypeTaskRm {
-		return true
-	}
-
-	return false
+	return true
 }
