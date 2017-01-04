@@ -558,8 +558,17 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 	return nil
 }
 
+func (n *Node) loadSnapshot() (*raftpb.Snapshot, error) {
+	snapshot, err := n.snapshotter.Load()
+	if err != nil && err != snap.ErrNoSnapshot {
+		return nil, err
+	}
+
+	return snapshot, nil
+}
+
 // returns a WAL ready for reading
-func (n *Node) openWAL() (*wal.WAL, error) {
+func (n *Node) openWAL(snapshot *raftpb.Snapshot) (*wal.WAL, error) {
 	if !wal.Exist(n.waldir) {
 		if err := os.Mkdir(n.waldir, 0755); err != nil {
 			return nil, err
@@ -573,7 +582,12 @@ func (n *Node) openWAL() (*wal.WAL, error) {
 		w.Close()
 	}
 
-	w, err := wal.Open(n.waldir, walpb.Snapshot{})
+	walSnap := walpb.Snapshot{}
+	if snapshot != nil {
+		walSnap.Index, walSnap.Term = snapshot.Metadata.Index, snapshot.Metadata.Term
+	}
+	log.L.Infof("loading WAL at term %d and index %d", walSnap.Term, walSnap.Index)
+	w, err := wal.Open(n.waldir, walSnap)
 	if err != nil {
 		return nil, err
 	}
@@ -583,7 +597,13 @@ func (n *Node) openWAL() (*wal.WAL, error) {
 
 // replays WAL entries into the raft intance
 func (n *Node) replayWAL() (*wal.WAL, error) {
-	w, err := n.openWAL()
+	log.L.Infof("replaying WAL of member %s", n.id)
+	snapshot, err := n.loadSnapshot()
+	if err != nil {
+		return nil, err
+	}
+
+	w, err := n.openWAL(snapshot)
 	if err != nil {
 		return nil, err
 	}
@@ -593,14 +613,17 @@ func (n *Node) replayWAL() (*wal.WAL, error) {
 		return nil, err
 	}
 
+	if snapshot != nil {
+		n.raftStorage.ApplySnapshot(*snapshot)
+	}
+	n.raftStorage.SetHardState(st)
+
 	// append to storage so raft starts at the right place log
 	n.raftStorage.Append(ents)
 
 	if len(ents) > 0 {
 		n.lastIndex = ents[len(ents)-1].Index
 	}
-
-	n.raftStorage.SetHardState(st)
 
 	return w, nil
 }
