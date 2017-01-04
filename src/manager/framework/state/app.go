@@ -80,7 +80,7 @@ func NewApp(version *types.Version,
 	}
 
 	app := &App{
-		Versions:       []*types.Version{version},
+		Versions:       []*types.Version{},
 		slots:          make(map[int]*Slot),
 		CurrentVersion: version,
 		ID:             version.AppID,
