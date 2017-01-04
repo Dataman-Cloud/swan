@@ -336,6 +336,7 @@ func (api *AppService) GetAppTask(request *restful.Request, response *restful.Re
 		response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
 		return
 	}
+
 	response.WriteEntity(appTaskRet)
 }
 
@@ -472,8 +473,8 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 
 func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 	slots := app.GetSlots()
-	if task_index >= len(slots)-1 || task_index < 0 {
-		logrus.Errorf("slot not found: %s", task_index)
+	if task_index > len(slots)-1 || task_index < 0 {
+		logrus.Errorf("slot not found: %d", task_index)
 		return nil, errors.New("slot task found")
 	}
 
@@ -498,26 +499,37 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 
 	if len(slot.TaskHistory) > 0 {
 		for _, v := range slot.TaskHistory {
-			staleTask := &types.TaskHistory{
-				ID:            v.ID,
-				State:         v.State,
-				Reason:        v.Reason,
-				OfferID:       v.OfferID,
-				AgentID:       v.AgentID,
-				AgentHostname: v.AgentHostName,
-				VersionID:     v.Version.ID,
-
-				CPU:  v.Version.CPUs,
-				Mem:  v.Version.Mem,
-				Disk: v.Version.Disk,
-
-				Stderr: v.Stderr,
-				Stdout: v.Stdout,
+			if v == nil {
+				continue
 			}
 
-			task.History = append(task.History, staleTask)
+			task.History = append(task.History, FormTaskRet(v))
 		}
 	}
 
+	if slot.CurrentTask != nil {
+		task.CurrentTask = FormTaskRet(slot.CurrentTask)
+	}
+
 	return task, nil
+}
+
+func FormTaskRet(v *state.Task) *types.TaskHistory {
+	return &types.TaskHistory{
+		ID:            v.ID,
+		State:         v.State,
+		Reason:        v.Reason,
+		OfferID:       v.OfferID,
+		AgentID:       v.AgentID,
+		AgentHostname: v.AgentHostName,
+		VersionID:     v.Version.ID,
+
+		CPU:  v.Version.CPUs,
+		Mem:  v.Version.Mem,
+		Disk: v.Version.Disk,
+
+		Stderr: v.Stderr,
+		Stdout: v.Stdout,
+	}
+
 }

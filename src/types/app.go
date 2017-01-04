@@ -24,8 +24,8 @@ type App struct {
 	CurrentVersion *Version `json:"currentVersion"`
 	// use when app updated, ProposedVersion can either be commit or revert
 	ProposedVersion *Version `json:"proposedVersion,omitempty"`
-	Versions       []string `json:"versions,omitempty"`
-	IP             []string `json:"ip,omitempty"`
+	Versions        []string `json:"versions,omitempty"`
+	IP              []string `json:"ip,omitempty"`
 
 	// current version related info
 	Labels      map[string]string `json:"labels,omitempty"`
@@ -37,9 +37,10 @@ type App struct {
 // use task for compatability now, should be slot here
 // and together with task history
 type Task struct {
-	ID        string `json:"id,omitempty"`
-	AppID     string `json:"appID,omitempty"`
-	VersionID string `json:"versionID,omitempty"`
+	ID          string       `json:"id,omitempty"`
+	AppID       string       `json:"appId,omitempty"`
+	VersionID   string       `json:"versionId,omitempty"`
+	CurrentTask *TaskHistory `json:"currentTask,omitempty"`
 
 	Status string `json:"status"`
 
