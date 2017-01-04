@@ -20,10 +20,12 @@ type App struct {
 	State            string    `json:"state"`
 
 	// use task for compatability now, should be slot here
-	Tasks          []*Task        `json:"tasks,omitempty"`
+	Tasks          []*Task  `json:"tasks,omitempty"`
 	CurrentVersion *Version `json:"currentVersion"`
-	Versions       []string       `json:"versions,omitempty"`
-	IP             []string       `json:"ip,omitempty"`
+	// use when app updated, ProposedVersion can either be commit or revert
+	ProposedVersion *Version `json:"proposedVersion,omitempty"`
+	Versions       []string `json:"versions,omitempty"`
+	IP             []string `json:"ip,omitempty"`
 
 	// current version related info
 	Labels      map[string]string `json:"labels,omitempty"`

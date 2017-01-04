@@ -167,32 +167,8 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		response.WriteError(http.StatusInternalServerError, err)
 		return
 	}
-	appRet := &types.App{
-		ID:               version.AppID,
-		Name:             version.AppID,
-		Instances:        int(version.Instances),
-		RunningInstances: app.RunningInstances(),
-		RunAs:            version.RunAs,
-		Priority:         int(version.Priority),
-		ClusterID:        app.ClusterID,
-		Created:          app.Created,
-		Updated:          app.Updated,
-		Mode:             string(app.Mode),
-		State:            app.State,
-		CurrentVersion:   app.CurrentVersion,
-		Labels:           version.Labels,
-		Env:              version.Env,
-		Constraints:      version.Constraints,
-		Uris:             version.Uris,
-	}
 
-	appRet.Versions = make([]string, 0)
-	for _, v := range app.Versions {
-		appRet.Versions = append(appRet.Versions, v.ID)
-	}
-
-	appRet.Tasks = FilterTasksFromApp(app)
-	response.WriteHeaderAndEntity(http.StatusCreated, appRet)
+	response.WriteHeaderAndEntity(http.StatusCreated, FormAppRetWithVersionsAndTasks(app))
 }
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
@@ -219,25 +195,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 
 	appsRet := make([]*types.App, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		version := app.CurrentVersion
-		appsRet = append(appsRet, &types.App{
-			ID:               version.AppID,
-			Name:             version.AppID,
-			Instances:        int(version.Instances),
-			RunningInstances: app.RunningInstances(),
-			RunAs:            version.RunAs,
-			Priority:         int(version.Priority),
-			ClusterID:        app.ClusterID,
-			Created:          app.Created,
-			Updated:          app.Updated,
-			Mode:             string(app.Mode),
-			State:            app.State,
-			CurrentVersion:   app.CurrentVersion,
-			Labels:           version.Labels,
-			Env:              version.Env,
-			Constraints:      version.Constraints,
-			Uris:             version.Uris,
-		})
+		appsRet = append(appsRet, FormAppRet(app))
 	}
 
 	response.WriteEntity(appsRet)
@@ -250,7 +208,7 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	response.WriteEntity(FormAppRet(app))
+	response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
 }
 
 func (api *AppService) DeleteApp(request *restful.Request, response *restful.Response) {
@@ -322,7 +280,7 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 			response.WriteError(http.StatusNotFound, err)
 			return
 		}
-		response.WriteEntity(FormAppRet(app))
+		response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
 	} else {
 		response.WriteErrorString(http.StatusBadRequest, "Invalid Version.")
 	}
@@ -418,23 +376,33 @@ func FormAppRet(app *state.App) *types.App {
 		Instances:        int(version.Instances),
 		RunningInstances: app.RunningInstances(),
 		RunAs:            version.RunAs,
+		Priority:         int(version.Priority),
 		ClusterID:        app.ClusterID,
 		Created:          app.Created,
 		Updated:          app.Updated,
 		Mode:             string(app.Mode),
 		State:            app.State,
 		CurrentVersion:   app.CurrentVersion,
+		ProposedVersion:  app.ProposedVersion,
 		Labels:           version.Labels,
 		Env:              version.Env,
 		Constraints:      version.Constraints,
 		Uris:             version.Uris,
 	}
+	return appRet
+}
 
+func FormAppRetWithVersions(app *state.App) *types.App {
+	appRet := FormAppRet(app)
 	appRet.Versions = make([]string, 0)
 	for _, v := range app.Versions {
 		appRet.Versions = append(appRet.Versions, v.ID)
 	}
+	return appRet
+}
 
+func FormAppRetWithVersionsAndTasks(app *state.App) *types.App {
+	appRet := FormAppRetWithVersions(app)
 	appRet.Tasks = FilterTasksFromApp(app)
 	return appRet
 }
