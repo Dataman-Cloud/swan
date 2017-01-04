@@ -10,6 +10,7 @@ import (
 func AppToRaft(app *App) *rafttypes.Application {
 	raftApp := &rafttypes.Application{
 		ID:        app.ID,
+		Name:      app.Name,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
 		State:     app.State,

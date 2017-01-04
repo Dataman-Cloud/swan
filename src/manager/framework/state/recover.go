@@ -21,6 +21,7 @@ func LoadAppData() (map[string]*App, error) {
 	for _, raftApp := range raftApps {
 		app := &App{
 			ID:             raftApp.ID,
+			Name:           raftApp.Name,
 			CurrentVersion: VersionFromRaft(raftApp.Version),
 			State:          raftApp.State,
 			Mode:           AppMode(raftApp.Version.Mode),
