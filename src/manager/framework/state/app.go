@@ -485,6 +485,10 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New(fmt.Sprintf("invalid runAs [%s]: %s", version.RunAs, errMsg))
 	}
 
+	if len(version.RunAs) == 0 {
+		return errors.New("runAs should not empty")
+	}
+
 	if len(version.Mode) == 0 {
 		version.Mode = string(APP_MODE_REPLICATES)
 	}
