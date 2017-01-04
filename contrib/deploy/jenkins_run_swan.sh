@@ -24,7 +24,7 @@ fi
 rm -rf ./data/*
 
 # build new docker image
-docker build -f dockerfiles/Dockerfile_runtime -t swan:v1.0 .
+docker build -f contrib/dockerfiles/Dockerfile_runtime -t swan:v1.0 .
 
 docker run -v $(pwd)/config.json:/go-swan/config.json -v $(pwd)/data:/go-swan/data --net host --name=swan -d swan:v1.0
 
