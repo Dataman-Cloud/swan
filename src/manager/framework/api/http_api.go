@@ -356,15 +356,20 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	version_id := request.PathParameter("version_id")
+	versionID := request.PathParameter("version_id")
+
+	if versionID == app.CurrentVersion.ID {
+		response.WriteEntity(app.CurrentVersion)
+		return
+	}
 
 	for _, v := range app.Versions {
-		if v.ID == version_id {
+		if v.ID == versionID {
 			response.WriteEntity(v)
 			return
 		}
 	}
-	logrus.Errorf("No versions found with ID: %s", version_id)
+	logrus.Errorf("No versions found with ID: %s", versionID)
 	response.WriteErrorString(http.StatusNotFound, "No versions found")
 }
 
