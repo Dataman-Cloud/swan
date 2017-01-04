@@ -5,7 +5,7 @@ MAINTAINER Zheng Liu zliu@dataman-inc.com
 RUN mkdir /go-swan
 
 ADD bin/swan /go-swan/swan
-ADD swagger-ui-2.2.8 /go-swan/swagger-ui-2.2.8
+ADD third_party/swagger-ui-2.2.8 /go-swan/third_party/swagger-ui-2.2.8
 
 WORKDIR /go-swan
 
