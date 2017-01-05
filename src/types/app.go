@@ -82,16 +82,18 @@ type TaskHistory struct {
 }
 
 type Stats struct {
-	AppCount  int `json:"appCount,omitempty"`
-	TaskCount int `json:"taskCount,omitempty"`
+	ClusterID string `json:"clusterID"`
 
-	CpuTotalOffered  float64 `json:"cpuTotalOffered,omitempty"`
-	MemTotalOffered  float64 `json:"memTotalOffered,omitempty"`
-	DiskTotalOffered float64 `json:"diskTotalOffered,omitempty"`
+	AppCount  int `json:"appCount"`
+	TaskCount int `json:"taskCount"`
 
-	CpuTotalUsed  float64 `json:"cpuTotalUsed,omitempty"`
-	MemTotalUsed  float64 `json:"memTotalUsed,omitempty"`
-	DiskTotalUsed float64 `json:"diskTotalUsed,omitempty"`
+	CpuTotalOffered  float64 `json:"cpuTotalOffered"`
+	MemTotalOffered  float64 `json:"memTotalOffered"`
+	DiskTotalOffered float64 `json:"diskTotalOffered"`
+
+	CpuTotalUsed  float64 `json:"cpuTotalUsed"`
+	MemTotalUsed  float64 `json:"memTotalUsed"`
+	DiskTotalUsed float64 `json:"diskTotalUsed"`
 
 	AppStats map[string]int `json:"appStats,omitempty"`
 }
