@@ -4,6 +4,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager"
+	"github.com/Dataman-Cloud/swan/src/manager/event"
+	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
 	"github.com/boltdb/bolt"
 	"golang.org/x/net/context"
@@ -23,12 +25,13 @@ type Node struct {
 }
 
 func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
-	m, err := manager.New(config, db)
+	swanContext := swancontext.NewSwanContext(config, event.New())
+	m, err := manager.New(*swanContext, db)
 	if err != nil {
 		return nil, err
 	}
 
-	a, err := agent.New(config)
+	a, err := agent.New(*swanContext)
 	if err != nil {
 		return nil, err
 	}
@@ -43,23 +46,34 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 }
 
 func (n *Node) Start(ctx context.Context) error {
+	errChan := make(chan error, 1)
 	if n.config.Mode == MODE_MANAGER || n.config.Mode == MODE_MIXED {
-		if err := n.runManager(ctx); err != nil {
-			return err
-		}
+		go func() {
+			errChan <- n.runManager(ctx)
+		}()
 	}
 
 	if n.config.Mode == MODE_AGENT || n.config.Mode == MODE_MIXED {
-		if err := n.runAgent(ctx); err != nil {
+		go func() {
+			errChan <- n.runAgent(ctx)
+		}()
+	}
+
+	for {
+		select {
+		case err := <-errChan:
 			return err
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 
-	return nil
 }
 
 func (n *Node) runAgent(ctx context.Context) error {
-	return n.agent.Start()
+	agentCtx, cancel := context.WithCancel(ctx)
+	n.agent.CancelFunc = cancel
+	return n.agent.Start(agentCtx)
 }
 
 func (n *Node) runManager(ctx context.Context) error {
@@ -69,5 +83,6 @@ func (n *Node) runManager(ctx context.Context) error {
 }
 
 func (n *Node) stopManager() {
+	n.agent.Stop(n.agent.CancelFunc)
 	n.manager.Stop(n.manager.CancelFunc)
 }
