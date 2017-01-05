@@ -32,7 +32,7 @@ func (subscriber *DNSSubscriber) Unsubscribe(bus *EventBus) error {
 }
 
 func (subscriber *DNSSubscriber) Write(e *Event) error {
-	payload, ok := e.Payload.(*TaskInfo)
+	payload, ok := e.Payload.(*TaskInfoEvent)
 	if !ok {
 		return errors.New("payload type error")
 	}
@@ -44,7 +44,7 @@ func (subscriber *DNSSubscriber) Write(e *Event) error {
 		rgEvent.Change = "del"
 	}
 
-	rgEvent.Type = payload.Type
+	rgEvent.Type = "srv"
 	rgEvent.Ip = payload.Ip
 	rgEvent.Port = payload.Port
 	rgEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskId, "-", ".", -1))

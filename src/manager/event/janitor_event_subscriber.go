@@ -32,7 +32,7 @@ func (js *JanitorSubscriber) Unsubscribe(bus *EventBus) error {
 }
 
 func (js *JanitorSubscriber) Write(e *Event) error {
-	payload, ok := e.Payload.(*TaskInfo)
+	payload, ok := e.Payload.(*TaskInfoEvent)
 	if !ok {
 		return errors.New("payload type error")
 	}

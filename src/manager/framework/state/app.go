@@ -290,8 +290,36 @@ func (app *App) IsFixed() bool {
 
 func (app *App) SetState(state string) {
 	app.State = state
+	switch app.State {
+	case APP_STATE_MARK_FOR_CREATING:
+		app.EmitAppEvent(swanevent.EventTypeAppStateCreating)
+	case APP_STATE_MARK_FOR_DELETION:
+		app.EmitAppEvent(swanevent.EventTypeAppStateDeletion)
+	case APP_STATE_NORMAL:
+		app.EmitAppEvent(swanevent.EventTypeAppStateNormal)
+	case APP_STATE_MARK_FOR_UPDATING:
+		app.EmitAppEvent(swanevent.EventTypeAppStateUpdating)
+	case APP_STATE_MARK_FOR_CANCEL_UPDATE:
+		app.EmitAppEvent(swanevent.EventTypeAppStateCancelUpdate)
+	case APP_STATE_MARK_FOR_SCALE_UP:
+		app.EmitAppEvent(swanevent.EventTypeAppStateScaleUp)
+	case APP_STATE_MARK_FOR_SCALE_DOWN:
+		app.EmitAppEvent(swanevent.EventTypeAppStateScaleDown)
+	default:
+	}
 	app.Touch(false)
 	logrus.Infof("app %s now has state %s", app.ID, app.State)
+}
+
+func (app *App) EmitAppEvent(eventType string) {
+	e := &swanevent.Event{Type: eventType}
+	e.AppId = app.ID
+	e.Payload = &swanevent.AppInfoEvent{
+		AppId: app.ID,
+		Name:  app.Name,
+		State: app.State,
+	}
+	app.EmitEvent(e)
 }
 
 func (app *App) StateIs(state string) bool {

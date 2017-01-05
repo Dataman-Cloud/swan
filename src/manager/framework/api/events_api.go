@@ -39,13 +39,15 @@ func (api *EventsService) Register(container *restful.Container) {
 		// docs
 		Doc("Get Events").
 		Operation("getEvents").
+		Param(ws.QueryParameter("appId", "appId, e.g. appId=nginx0051").DataType("string")).
 		Returns(200, "OK", ""))
 
 	container.Add(ws)
 }
 
 func (api *EventsService) Events(request *restful.Request, response *restful.Response) {
-	subscriber, doneChan := event.NewSSESubscriber(uuid.NewV4().String(), http.ResponseWriter(response))
+	appId := request.QueryParameter("appId")
+	subscriber, doneChan := event.NewSSESubscriber(uuid.NewV4().String(), appId, http.ResponseWriter(response))
 	subscriber.Subscribe(swancontext.Instance().EventBus)
 	<-doneChan
 }

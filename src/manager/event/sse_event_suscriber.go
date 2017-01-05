@@ -8,13 +8,15 @@ import (
 
 type SSESubscriber struct {
 	Key    string
+	appId  string
 	rw     http.ResponseWriter
 	doneCh chan struct{}
 }
 
-func NewSSESubscriber(key string, rw http.ResponseWriter) (*SSESubscriber, chan struct{}) {
+func NewSSESubscriber(key string, appId string, rw http.ResponseWriter) (*SSESubscriber, chan struct{}) {
 	sseSubscriber := &SSESubscriber{
 		Key:    key,
+		appId:  appId,
 		rw:     rw,
 		doneCh: make(chan struct{}),
 	}
@@ -61,13 +63,13 @@ func (sses *SSESubscriber) Write(e *Event) error {
 }
 
 func (sse *SSESubscriber) InterestIn(e *Event) bool {
-	if e.Type == EventTypeTaskAdd {
+	if sse.appId != "" {
+		if sse.appId == e.AppId {
+			return true
+		} else {
+			return false
+		}
+	} else {
 		return true
 	}
-
-	if e.Type == EventTypeTaskRm {
-		return true
-	}
-
-	return false
 }
