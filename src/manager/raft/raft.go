@@ -128,8 +128,8 @@ func NewNode(config config.Raft, db *bolt.DB) (*Node, error) {
 	n := Node{
 		id:          config.RaftId,
 		peers:       strings.Split(config.Cluster, ","),
-		waldir:      fmt.Sprintf(config.StorePath+"node-%d", config.RaftId),
-		snapdir:     fmt.Sprintf(config.StorePath+"node-%d-snap", config.RaftId),
+		waldir:      config.StorePath + "/wal",
+		snapdir:     config.StorePath + "/snap",
 		raftStorage: raft.NewMemoryStorage(),
 		snapCount:   defaultSnapshotCount,
 		stopC:       make(chan struct{}),
