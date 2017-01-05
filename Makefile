@@ -60,4 +60,9 @@ docker-build:
 	docker build --tag swan --rm .
 
 docker-run:
-	docker run --interactive --tty --env-file Envfile --net host --name swan-node-1 --publish 8080:80 --publish 9999:9999  swan ls
+	docker rm -f swan-node-1 2>&1 || echo 0
+	docker run --interactive --tty --env-file Envfile --name swan-node-1  --rm  -p 9999:9999 -p 2111:2111 -p 1053:53 swan ls
+
+docker-run-detached:
+	docker rm -f swan-node-1 2>&1 || echo 0
+	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 1053:53 --detach swan ls
