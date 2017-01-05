@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"io/ioutil"
 	"os"
@@ -104,7 +105,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		if !strings.HasSuffix(swanConfig.DataDir, "/") {
 			swanConfig.DataDir = swanConfig.DataDir + "/"
 		}
-		os.MkdirAll(swanConfig.DataDir, 0644)
 	}
 
 	if c.String("no-recover") != "" {
@@ -129,11 +129,13 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.Janitor.EnableProxy = c.Bool("enable-proxy")
 	swanConfig.DNS.EnableDns = c.Bool("enable-dns")
 
-	swanConfig.Raft.StorePath = swanConfig.DataDir
-
 	swanConfig.HttpListener.TCPAddr = swanConfig.SwanCluster[swanConfig.Raft.RaftId-1]
 	swanConfig.Scheduler.MesosFrameworkUser = "root"
 	swanConfig.DNS.ExchangeTimeout = time.Second * 3
+
+	// ugly code maybe we should use raft id as node id and merge raft.StorePath to DataDir
+	swanConfig.DataDir = fmt.Sprintf(swanConfig.DataDir+"%d/", swanConfig.Raft.RaftId)
+	swanConfig.Raft.StorePath = swanConfig.DataDir
 
 	return validateAndFormatConfig(swanConfig)
 }

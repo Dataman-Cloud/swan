@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"os"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -99,7 +98,9 @@ func main() {
 
 		setupLogger(config.LogLevel)
 
-		db, err := bolt.Open(fmt.Sprintf(config.DataDir+"bolt.db.%d", config.Raft.RaftId), 0600, nil)
+		os.MkdirAll(config.DataDir, 0700)
+
+		db, err := bolt.Open(config.DataDir+"swan.db", 0600, nil)
 		if err != nil {
 			logrus.Errorf("Init store engine failed:%s", err)
 			return err
