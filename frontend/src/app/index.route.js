@@ -20,19 +20,19 @@
         controllerAs: 'vm'
       })
       .state('home.user', {
-        url: '/user?fields',
+        url: '/user?user',
         templateUrl: 'app/main/user/user.html',
         controller: 'UserController',
         controllerAs: 'vm'
       })
       .state('home.app', {
-        url: '/app?appId',
+        url: '/app?appId&user',
         templateUrl: 'app/main/app/app.html',
         controller: 'AppController',
         controllerAs: 'vm'
       })
       .state('home.task', {
-        url: '/task?appId&taskIndex',
+        url: '/task?appId&user&taskIndex',
         templateUrl: 'app/main/task/task.html',
         controller: 'TaskController',
         controllerAs: 'vm'

@@ -12,7 +12,7 @@
     function apps(data) {
       var paramObj = data || {};
       return $resource(BACKEND_URL_BASE.defaultBase + '/v_beta/apps', {
-        fields: paramObj.fields
+        fields: 'runAs=' + paramObj.user
       });
     }
   }

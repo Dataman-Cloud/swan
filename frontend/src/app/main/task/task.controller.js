@@ -6,7 +6,7 @@
     .controller('TaskController', TaskController);
 
   /** @ngInject */
-  function TaskController(taskBackend, $stateParams) {
+  function TaskController(taskBackend, $stateParams, moment) {
     var params = {
       appId: $stateParams.appId,
       taskIndex: $stateParams.taskIndex
@@ -14,6 +14,8 @@
 
     var vm = this;
     vm.task = {};
+    vm.to = moment().unix() * 1000;
+    vm.from = moment().subtract(120, 'minutes').unix() * 1000;
 
     activate();
 

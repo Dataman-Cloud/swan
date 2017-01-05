@@ -69,7 +69,7 @@
       </thead>
       <tbody md-body>
       <tr md-row ng-repeat="(user, appNum) in vm.cluster.appStats track by $index">
-        <td md-cell><a ui-sref="home.user({fields: 'runAs==' + user})">{/user/}</a></td>
+        <td md-cell><a ui-sref="home.user({user: user})">{/user/}</a></td>
         <td md-cell><a href="#">{/appNum/}</a></td>
         <td md-cell><a href="#">资源详情</a></td>
       </tr>
