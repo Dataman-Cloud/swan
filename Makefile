@@ -54,3 +54,10 @@ release: list-authors
 
 list-authors:
 	./contrib/list-authors.sh
+
+
+docker-build:
+	docker build --tag swan --rm .
+
+docker-run:
+	docker run --interactive --tty --env-file Envfile --net host --name swan-node-1 --publish 8080:80 --publish 9999:9999  swan ls

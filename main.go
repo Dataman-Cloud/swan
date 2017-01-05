@@ -50,8 +50,9 @@ func main() {
 			EnvVar: "SWAN_MESOS_MASTER",
 		},
 		cli.StringFlag{
-			Name:  "log-level,l",
-			Usage: "customize debug level [debug|info|error]",
+			Name:   "log-level,l",
+			Usage:  "customize debug level [debug|info|error]",
+			EnvVar: "SWAN_LOG_LEVEL",
 		},
 		cli.IntFlag{
 			Name:   "raftid",
