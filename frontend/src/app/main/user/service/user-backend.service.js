@@ -11,7 +11,7 @@
 
     function apps(data) {
       var paramObj = data || {};
-      return $resource(BACKEND_URL_BASE.defaultBase + '/v_beta/apps', {
+      return $resource(BACKEND_URL_BASE.defaultBase + '/v1/apps', {
         fields: paramObj.fields
       });
     }

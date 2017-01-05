@@ -11,7 +11,7 @@
 
     function app(data) {
       var paramObj = data || {};
-      return $resource(BACKEND_URL_BASE.defaultBase + '/v_beta/apps/:appId', {
+      return $resource(BACKEND_URL_BASE.defaultBase + '/v1/apps/:appId', {
         appId: paramObj.appId
       });
     }

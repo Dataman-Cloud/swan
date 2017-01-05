@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	API_PREFIX = "v_beta"
+	API_PREFIX = "v1"
 )
 
 type AppService struct {

@@ -76,39 +76,39 @@ Use `swan --help` to see usage.
 
 + applicaiton deloyment
 ```
-curl -X POST -H "Content-Type: application/json" -d@example/template-replicates.json http://localhost:9999/v_beta/apps
+curl -X POST -H "Content-Type: application/json" -d@example/template-replicates.json http://localhost:9999/v1/apps
 ```
 + application delete
 ```
-curl -X DELETE http://localhost:9999/v_beta/apps/nginx0003
+curl -X DELETE http://localhost:9999/v1/apps/nginx0003
 ```
 + application show
 ```
-curl http://localhost:9999/v_beta/apps/nginx0003
+curl http://localhost:9999/v1/apps/nginx0003
 ```
 + applications list
 ```
-curl http://localhost:9999/v_beta/apps
+curl http://localhost:9999/v1/apps
 ```
 + application scale up
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-up -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v1/apps/nginx0003/scale-up -d@example/scale.json
 ```
 
 + application scale down
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-down -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v1/apps/nginx0003/scale-down -d@example/scale.json
 ```
   
 + application rolling update
 ```
-curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003/update\?instances\=-1
+curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v1/apps/nginx0003/update\?instances\=-1
 ```  
 `instances` -1 means updating all instances. other value means updating the specified instances at one time.
   
 + application versions
 ```
-curl http://localhost:9999/v_beta/apps/nginx0003/versions
+curl http://localhost:9999/v1/apps/nginx0003/versions
 ```
 
 ### Use command line client `swancfg`

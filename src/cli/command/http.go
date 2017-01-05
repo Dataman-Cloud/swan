@@ -12,7 +12,7 @@ type Client struct {
 	client *http.Client
 }
 
-const APIVERSION = "/v_beta"
+const APIVERSION = "/v1"
 
 func UnixDialer(proto, sock string) (net.Conn, error) {
 	return net.Dial("unix", "/var/run/swan.sock")

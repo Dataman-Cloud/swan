@@ -2,6 +2,6 @@ package swan
 
 const (
 	/* --- api related constants --- */
-	APIVersion = "v_beta"
+	APIVersion = "v1"
 	APIApps    = APIVersion + "/apps"
 )
