@@ -4,6 +4,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/emicklei/go-restful"
@@ -42,6 +43,8 @@ func (api *StatsService) Register(container *restful.Container) {
 func (api *StatsService) Stats(request *restful.Request, response *restful.Response) {
 	var stats types.Stats
 	stats.AppStats = make(map[string]int)
+
+	stats.ClusterID = mesos_connector.Instance().ClusterID
 
 	appFilterOptions := scheduler.AppFilterOptions{}
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
