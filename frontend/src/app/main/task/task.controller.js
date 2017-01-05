@@ -8,8 +8,8 @@
   /** @ngInject */
   function TaskController(taskBackend, $stateParams, moment) {
     var params = {
-      appId: $stateParams.appId,
-      taskIndex: $stateParams.taskIndex
+      appId: $stateParams.app,
+      taskIndex: $stateParams.task
     };
 
     var vm = this;

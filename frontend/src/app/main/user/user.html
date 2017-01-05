@@ -62,7 +62,7 @@
       </thead>
       <tbody md-body>
       <tr md-row ng-repeat="app in vm.apps track by $index">
-        <td md-cell><a ui-sref="home.app({appId: app.id, user: $stateParams.user})">{/app.name/}</a></td>
+        <td md-cell><a ui-sref="home.app({app: app.id, user: $stateParams.user})">{/app.name/}</a></td>
         <td md-cell>{/app.state/}</td>
         <td md-cell>{/app.instances/}</td>
         <td md-cell>3/0/0</td>

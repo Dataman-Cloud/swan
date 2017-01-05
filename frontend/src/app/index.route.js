@@ -26,13 +26,13 @@
         controllerAs: 'vm'
       })
       .state('home.app', {
-        url: '/app?appId&user',
+        url: '/app?app&user',
         templateUrl: 'app/main/app/app.html',
         controller: 'AppController',
         controllerAs: 'vm'
       })
       .state('home.task', {
-        url: '/task?appId&user&taskIndex',
+        url: '/task?app&user&task',
         templateUrl: 'app/main/task/task.html',
         controller: 'TaskController',
         controllerAs: 'vm'
