@@ -32,7 +32,8 @@ func (api *EventsService) Register(container *restful.Container) {
 		ApiVersion(API_PREFIX).
 		Path("/events").
 		Doc("events API").
-		Produces(restful.MIME_JSON)
+		Produces(restful.MIME_JSON).
+		Produces("*/*")
 
 	ws.Route(ws.GET("/").To(metrics.InstrumentRouteFunc("GET", "Events", api.Events)).
 		// docs
