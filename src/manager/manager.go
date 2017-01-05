@@ -3,18 +3,14 @@ package manager
 import (
 	"fmt"
 
-	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 
-	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
-	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	events "github.com/docker/go-events"
@@ -22,12 +18,6 @@ import (
 )
 
 type Manager struct {
-	resolver           *nameserver.Resolver
-	resolverSubscriber *event.DNSSubscriber
-
-	janitorServer     *janitor.JanitorServer
-	janitorSubscriber *event.JanitorSubscriber
-
 	raftNode   *raft.Node
 	CancelFunc context.CancelFunc
 
@@ -40,56 +30,22 @@ type Manager struct {
 	criticalErrorChan chan error
 }
 
-func New(config config.SwanConfig, db *bolt.DB) (*Manager, error) {
+func New(swanContext swancontext.SwanContext, db *bolt.DB) (*Manager, error) {
 	manager := &Manager{
-		config:            config,
+		config:            swanContext.Config,
 		criticalErrorChan: make(chan error, 1),
 	}
 
-	manager.apiserver = apiserver.NewApiServer(config.HttpListener.TCPAddr)
+	manager.apiserver = apiserver.NewApiServer(manager.config.HttpListener.TCPAddr)
 
-	raftNode, err := raft.NewNode(config.Raft, db)
+	raftNode, err := raft.NewNode(manager.config.Raft, db)
 	if err != nil {
 		logrus.Errorf("init raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
 	manager.raftNode = raftNode
 
-	swancontext.NewSwanContext(config, event.New())
-
 	manager.cluster = manager.config.SwanCluster
-
-	if manager.config.DNS.EnableDns {
-		dnsConfig := &nameserver.Config{
-			Domain:   manager.config.DNS.Domain,
-			Listener: manager.config.DNS.Listener,
-			Port:     manager.config.DNS.Port,
-
-			Resolvers:       manager.config.DNS.Resolvers,
-			ExchangeTimeout: manager.config.DNS.ExchangeTimeout,
-			SOARname:        manager.config.DNS.SOARname,
-			SOAMname:        manager.config.DNS.SOAMname,
-			SOASerial:       manager.config.DNS.SOASerial,
-			SOARefresh:      manager.config.DNS.SOARefresh,
-			SOARetry:        manager.config.DNS.SOARetry,
-			SOAExpire:       manager.config.DNS.SOAExpire,
-			RecurseOn:       manager.config.DNS.RecurseOn,
-			TTL:             manager.config.DNS.TTL,
-		}
-
-		manager.resolver = nameserver.NewResolver(dnsConfig)
-		manager.resolverSubscriber = event.NewDNSSubscriber(manager.resolver)
-	}
-
-	if manager.config.Janitor.EnableProxy {
-		jConfig := jconfig.DefaultConfig()
-		jConfig.Listener.Mode = manager.config.Janitor.ListenerMode
-		jConfig.Listener.IP = manager.config.Janitor.IP
-		jConfig.Listener.DefaultPort = manager.config.Janitor.Port
-		jConfig.HttpHandler.Domain = manager.config.Janitor.Domain
-		manager.janitorServer = janitor.NewJanitorServer(jConfig)
-		manager.janitorSubscriber = event.NewJanitorSubscriber(manager.janitorServer)
-	}
 
 	frameworkStore := fstore.NewStore(db, raftNode)
 	manager.framework, err = framework.New(frameworkStore, manager.apiserver)
@@ -126,28 +82,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 
 	if err := manager.raftNode.WaitForLeader(ctx); err != nil {
 		return err
-	}
-
-	if manager.config.DNS.EnableDns {
-		go func() {
-			resolverCtx, _ := context.WithCancel(ctx)
-			manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
-			manager.criticalErrorChan <- manager.resolver.Start(resolverCtx)
-		}()
-	}
-
-	if manager.config.Janitor.EnableProxy {
-		manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
-		go manager.janitorServer.Init().Run()
-		// send proxy info to dns proxy listener
-		if manager.config.DNS.EnableDns {
-			rgEvent := &nameserver.RecordGeneratorChangeEvent{}
-			rgEvent.Change = "add"
-			rgEvent.Type = "a"
-			rgEvent.Ip = manager.config.Janitor.IP
-			rgEvent.DomainPrefix = ""
-			manager.resolver.RecordGeneratorChangeChan() <- rgEvent
-		}
 	}
 
 	go manager.apiserver.Start()
