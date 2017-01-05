@@ -1,6 +1,7 @@
 package scheduler
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -30,8 +31,12 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	message := taskStatus.GetMessage()
 	healthy := taskStatus.GetHealthy()
 
-	slotIndex_, appId := strings.SplitN(slotName, "-", 2)[0], strings.Split(slotName, "-")[1]
+	slotIndex_, appId_, userName_, clusterName_ := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1], strings.Split(slotName, "-")[2], strings.Split(slotName, "-")[3]
+	logrus.Debugf("got user name %s", userName_)
+	logrus.Debugf("got cluster name %s", clusterName_)
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
+
+	appId := fmt.Sprintf("%s-%s-%s", appId_, userName_, clusterName_)
 
 	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)
 	logrus.Debugf("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)

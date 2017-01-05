@@ -377,8 +377,8 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 func FormAppRet(app *state.App) *types.App {
 	version := app.CurrentVersion
 	appRet := &types.App{
-		ID:               version.AppID,
-		Name:             version.AppID,
+		ID:               app.ID,
+		Name:             app.Name,
 		Instances:        int(version.Instances),
 		RunningInstances: app.RunningInstances(),
 		RunAs:            version.RunAs,
