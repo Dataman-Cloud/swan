@@ -100,10 +100,6 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	if err := WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp); err != nil {
-		return nil, err
-	}
-
 	for i := 0; i < int(version.Instances); i++ {
 		slot := NewSlot(app, version, i)
 		app.SetSlot(i, slot)
