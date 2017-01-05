@@ -90,11 +90,15 @@ curl http://localhost:9999/v_beta/apps/nginx0003
 ```
 curl http://localhost:9999/v_beta/apps
 ```
-+ application scaling
++ application scale up
 ```
-curl -X POST http://localhost:9999/v_beta/apps/nginx0003/scale?instances=10
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-up -d@example/scale.json
 ```
-`instances` is used to specified the instances count you wanna scale to.
+
++ application scale down
+```
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-down -d@example/scale.json
+```
   
 + application rolling update
 ```
