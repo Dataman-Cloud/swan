@@ -29,7 +29,7 @@ type SwanConfig struct {
 }
 
 type Scheduler struct {
-	MesosMasters       string `json:"mesos-masters"`
+	ZkUrl              string `json:"zkurl"`
 	MesosFrameworkUser string `json:"mesos-framwork-user"`
 	Hostname           string `json:"hostname"`
 	UnixAddr           string
@@ -115,8 +115,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.SwanCluster = strings.Split(c.String("cluster"), ",")
 	}
 
-	if c.String("mesos-master") != "" {
-		swanConfig.Scheduler.MesosMasters = c.String("mesos-master")
+	if c.String("zk") != "" {
+		swanConfig.Scheduler.ZkUrl = c.String("zk")
 	}
 
 	if c.String("raft-cluster") != "" {
