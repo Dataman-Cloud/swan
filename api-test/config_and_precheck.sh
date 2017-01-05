@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SERVER_PATH=localhost:9999
-PATH_PREFIX=v_beta
+PATH_PREFIX=v1
 APP_NAME=nginx0051-xcm-Unnamed
 WAIT_SECOND=10
 

@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	API_VERSION = "v_beta"
+	API_VERSION = "v1"
 )
 
 // RootPaths lists the paths available at root.
