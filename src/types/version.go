@@ -4,7 +4,8 @@ type Version struct {
 	ID                string            `json:"id,omitempty"`
 	AppID             string            `json:"appID,omitempty"`
 	PreviousVersionID string            `json:"previousVersionId,omitempty"`
-	Command           string            `json:"command,omitempty"`
+	Command           string            `json:"cmd,omitempty"`
+	Args              []string          `json:"args,omitempty"`
 	CPUs              float64           `json:"cpus,omitempty"`
 	Mem               float64           `json:"mem,omitempty"`
 	Disk              float64           `json:"disk,omitempty"`
