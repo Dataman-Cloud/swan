@@ -22,11 +22,17 @@ func NewDNSSubscriber(resolver *nameserver.Resolver) *DNSSubscriber {
 }
 
 func (subscriber *DNSSubscriber) Subscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	bus.Subscribers[subscriber.Key] = subscriber
 	return nil
 }
 
 func (subscriber *DNSSubscriber) Unsubscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	delete(bus.Subscribers, subscriber.Key)
 	return nil
 }

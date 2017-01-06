@@ -1,6 +1,8 @@
 package event
 
 import (
+	"sync"
+
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
 )
@@ -11,6 +13,7 @@ type EventBus struct {
 	EventChan chan *Event
 
 	stopC chan struct{}
+	Lock  sync.Mutex
 }
 
 func New() *EventBus {
@@ -18,6 +21,7 @@ func New() *EventBus {
 		Subscribers: make(map[string]EventSubscriber),
 		EventChan:   make(chan *Event, 1024),
 		stopC:       make(chan struct{}, 1),
+		Lock:        sync.Mutex{},
 	}
 
 	return bus

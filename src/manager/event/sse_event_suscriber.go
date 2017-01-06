@@ -36,11 +36,17 @@ func NewSSESubscriber(key string, rw http.ResponseWriter) (*SSESubscriber, chan 
 }
 
 func (sse *SSESubscriber) Subscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	bus.Subscribers[sse.Key] = sse
 	return nil
 }
 
 func (sse *SSESubscriber) Unsubscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	delete(bus.Subscribers, sse.Key)
 	return nil
 }
