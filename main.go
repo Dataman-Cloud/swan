@@ -45,9 +45,9 @@ func main() {
 			EnvVar: "SWAN_CLUSTER",
 		},
 		cli.StringFlag{
-			Name:   "mesos-master,m",
-			Usage:  "mesos master address host1:port1,host2:port2,... or zk://host1:port1,host2:port2,.../path",
-			EnvVar: "SWAN_MESOS_MASTER",
+			Name:   "zk",
+			Usage:  "Zookeeper URL. eg.zk://host1:port1,host2:port2,.../path",
+			EnvVar: "SWAN_ZKURL",
 		},
 		cli.StringFlag{
 			Name:   "log-level,l",

@@ -19,6 +19,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
 	"github.com/golang/protobuf/proto"
+	"github.com/samuel/go-zookeeper/zk"
 	"golang.org/x/net/context"
 )
 
@@ -136,6 +137,42 @@ func CreateFrameworkInfo() *mesos.FrameworkInfo {
 	return fw
 }
 
+func getMastersFromZK(zkUrl string) ([]string, error) {
+	masterInfo := new(mesos.MasterInfo)
+
+	url, err := url.Parse(zkUrl)
+	if err != nil {
+		return nil, err
+	}
+
+	conn, _, err := zk.Connect(strings.Split(url.Host, ","), time.Second)
+	defer conn.Close()
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+	}
+
+	// find mesos master
+	children, _, err := conn.Children(url.Path)
+	if err != nil {
+		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+	}
+
+	masters := make([]string, 0)
+	for _, node := range children {
+		if strings.HasPrefix(node, "json.info") {
+			data, _, _ := conn.Get(url.Path + "/" + node)
+			err := json.Unmarshal(data, masterInfo)
+			if err != nil {
+				return nil, fmt.Errorf("Unmarshal error: %s", err.Error())
+			}
+			masters = append(masters, fmt.Sprintf("%s:%d", *masterInfo.GetAddress().Ip, *masterInfo.GetAddress().Port))
+		}
+	}
+
+	logrus.Info("Find mesos masters: ", masters)
+	return masters, nil
+}
+
 func stateFromMasters(masters []string) (*megos.State, error) {
 	masterUrls := make([]*url.URL, 0)
 	for _, master := range masters {
@@ -161,7 +198,12 @@ func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 
 func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
 	var err error
-	state, err := stateFromMasters(strings.Split(swancontext.Instance().Config.Scheduler.MesosMasters, ","))
+	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkUrl)
+	if err != nil {
+		logrus.Error(err)
+		return
+	}
+	state, err := stateFromMasters(masters)
 	if err != nil {
 		logrus.Errorf("%s Check your mesos master configuration", err)
 		mesosFailureChan <- err
