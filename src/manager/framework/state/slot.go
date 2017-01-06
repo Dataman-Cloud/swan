@@ -327,23 +327,47 @@ func (slot *Slot) SetState(state string) error {
 
 	slot.State = state
 	switch slot.State {
-	case SLOT_STATE_REAP:
-
+	case SLOT_STATE_PENDING_OFFER:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingOffer)
 	case SLOT_STATE_PENDING_KILL:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
-
-	case SLOT_STATE_TASK_KILLED:
-		slot.StopRestartPolicy()
-	case SLOT_STATE_TASK_FINISHED:
-		slot.StopRestartPolicy()
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingKill)
+	case SLOT_STATE_REAP:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateReap)
+	case SLOT_STATE_TASK_STAGING:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStaging)
+	case SLOT_STATE_TASK_STARTING:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStarting)
 	case SLOT_STATE_TASK_RUNNING:
 		if len(slot.Version.HealthChecks) == 0 {
 			slot.SetHealthy(true)
 		}
-	case SLOT_STATE_TASK_LOST:
-
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateRunning)
+	case SLOT_STATE_TASK_KILLING:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilling)
+	case SLOT_STATE_TASK_FINISHED:
+		slot.StopRestartPolicy()
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFailed)
 		slot.EmitTaskEvent(swanevent.EventTypeTaskRm)
+	case SLOT_STATE_TASK_KILLED:
+		slot.StopRestartPolicy()
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilled)
+	case SLOT_STATE_TASK_ERROR:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateError)
+	case SLOT_STATE_TASK_LOST:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateLost)
+	case SLOT_STATE_TASK_DROPPED:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateDropped)
+	case SLOT_STATE_TASK_UNREACHABLE:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnreachable)
+	case SLOT_STATE_TASK_GONE:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGone)
+	case SLOT_STATE_TASK_GONE_BY_OPERATOR:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGoneByOperator)
+	case SLOT_STATE_TASK_UNKNOWN:
+		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnknown)
 	default:
 	}
 
@@ -392,21 +416,28 @@ func (slot *Slot) Normal() bool {
 func (slot *Slot) EmitTaskEvent(t string) {
 	if slot.App.IsFixed() {
 		e := &swanevent.Event{Type: t}
-		e.Payload = &swanevent.TaskInfo{
-			Ip:     slot.Ip,
-			TaskId: slot.ID,
-			Type:   "a",
+		e.AppId = slot.App.ID
+		e.Payload = &swanevent.TaskInfoEvent{
+			Ip: slot.Ip,
+			//TODO(zliu): get port in fixed mode
+			TaskId:  slot.ID,
+			AppId:   slot.App.ID,
+			State:   slot.State,
+			Healthy: slot.healthy,
 		}
 		slot.App.EmitEvent(e)
 
 	} else {
 		for _, port := range slot.CurrentTask.HostPorts {
 			e := &swanevent.Event{Type: t}
-			e.Payload = &swanevent.TaskInfo{
-				Ip:     slot.AgentHostName,
-				Port:   fmt.Sprintf("%d", port),
-				TaskId: slot.ID,
-				Type:   "srv",
+			e.AppId = slot.App.ID
+			e.Payload = &swanevent.TaskInfoEvent{
+				Ip:      slot.AgentHostName,
+				Port:    fmt.Sprintf("%d", port),
+				TaskId:  slot.ID,
+				AppId:   slot.App.ID,
+				State:   slot.State,
+				Healthy: slot.healthy,
 			}
 			slot.App.EmitEvent(e)
 		}
