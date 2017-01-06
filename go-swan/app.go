@@ -18,7 +18,7 @@ type Swan interface {
 	// get an applications from swan
 	GetApplication(appID string) (*types.App, error)
 	// update an application in swan
-	UpdateApplication(version *types.Version) (*types.App, error)
+	UpdateApplication(appID string, version *types.Version) (*types.App, error)
 	// proceed the rolling update
 	ProceedUpdate(appID string, param *types.ProceedUpdateParam) error
 	// cancel the rolling update
@@ -76,9 +76,9 @@ func (r *swanClient) GetApplication(appID string) (*types.App, error) {
 
 // UpdateApplication updates an application in Swan
 // 		version:		the structure holding the application configuration
-func (r *swanClient) UpdateApplication(version *types.Version) (*types.App, error) {
+func (r *swanClient) UpdateApplication(appID string, version *types.Version) (*types.App, error) {
 	result := new(types.App)
-	if err := r.apiPut(APIApps+"/"+version.AppID, &version, result); err != nil {
+	if err := r.apiPut(APIApps+"/"+appID, &version, result); err != nil {
 		return nil, err
 	}
 

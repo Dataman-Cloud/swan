@@ -268,15 +268,16 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 	}
 
 	if CheckVersion(&version) == nil {
-		err := api.Scheduler.UpdateApp(request.PathParameter("app_id"), &version)
+		appID := request.PathParameter("app_id")
+		err := api.Scheduler.UpdateApp(appID, &version)
 		if err != nil {
-			logrus.Errorf("Update app error: %s", err.Error())
+			logrus.Errorf("Update app[%s] error: %s", appID, err.Error())
 			response.WriteError(http.StatusBadRequest, err)
 			return
 		}
-		app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+		app, err := api.Scheduler.InspectApp(appID)
 		if err != nil {
-			logrus.Errorf("Update app error: %s", err.Error())
+			logrus.Errorf("Inspect app[%s] error: %s", appID, err.Error())
 			response.WriteError(http.StatusNotFound, err)
 			return
 		}
