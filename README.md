@@ -26,7 +26,7 @@
 + The instance name is fixed during the application lifecycle. 
 + The instance index is continuously incremented from zero.
 
-## Installation 
+## Installation
 ### Use Docker Compose(all-in-one, include mesos)
 ```
 docker-compose up -d
@@ -52,7 +52,7 @@ chmod +x swan
 ```
 swan --mesos-master=192.168.1.50:5050 --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
 
-or 
+or
 
 swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
 ```
@@ -78,37 +78,48 @@ Use `swan --help` to see usage.
 ```
 curl -X POST -H "Content-Type: application/json" -d@example/template-replicates.json http://localhost:9999/v_beta/apps
 ```
-+ application delete
-```
-curl -X DELETE http://localhost:9999/v_beta/apps/nginx0003
-```
-+ application show
-```
-curl http://localhost:9999/v_beta/apps/nginx0003
-```
+
 + applications list
 ```
 curl http://localhost:9999/v_beta/apps
 ```
+
++ application show
+```
+curl http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
+```
+
++ application delete
+```
+curl -X DELETE http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
+```
+
 + application scale up
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-up -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d@example/scale.json
 ```
 
 + application scale down
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003/scale-down -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d@example/scale.json
 ```
-  
+
 + application rolling update
 ```
-curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003/update\?instances\=-1
-```  
-`instances` -1 means updating all instances. other value means updating the specified instances at one time.
-  
-+ application versions
+curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
 ```
-curl http://localhost:9999/v_beta/apps/nginx0003/versions
+
+`instances` -1 means updating all instances. other value means updating the specified instances at one time.
+
++ list application versions
+```
+curl http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/versions
+```
+
++ get application version
+```
+curl
+http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/versions/14012934223
 ```
 
 ### Use command line client `swancfg`
