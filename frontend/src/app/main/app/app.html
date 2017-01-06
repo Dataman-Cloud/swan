@@ -34,6 +34,11 @@
         <small>Allocated / Used</small>
       </dt>
       <dd>??? / ???</dd>
+      <dd>
+        <a
+          ng-href="{/monitorBase/}{/'?clusterid=' + $stateParams.cluster + '&userid=' + $stateParams.user + '&appid=' + $stateParams.app + '&start=' + vm.start + '&end=' + vm.end + '&metric=cpu'/}"
+          target="_blank">监控</a>
+      </dd>
     </dl>
 
     <dl layout="row">
@@ -41,6 +46,11 @@
         <small>Allocated / Used</small>
       </dt>
       <dd>??? / ???</dd>
+      <dd>
+        <a
+          ng-href="{/monitorBase/}/monitor/chart{/'?clusterid=' + $stateParams.cluster + '&userid=' + $stateParams.user + '&appid=' + $stateParams.app + '&start=' + vm.start + '&end=' + vm.end + '&metric=memory'/}"
+          target="_blank">监控</a>
+      </dd>
     </dl>
 
     <dl layout="row">
@@ -120,7 +130,8 @@
       <tbody md-body>
       <tr md-row ng-repeat="task in vm.app.tasks track by $index">
         <td md-cell>
-          <a ui-sref="home.task({app: $stateParams.app, user: $stateParams.user, task: $index, cluster: $stateParams.cluster})">{/task.id/}</a>
+          <a
+            ui-sref="home.task({app: $stateParams.app, user: $stateParams.user, task: $index, cluster: $stateParams.cluster})">{/task.id/}</a>
         </td>
         <td md-cell>
           {/task.agentHostname/}:<a href="#">端口</a> - <a href="#">端口</a> - <a href="#">端口</a></td>
