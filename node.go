@@ -3,9 +3,9 @@ package main
 import (
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager"
-	"github.com/Dataman-Cloud/swan/src/manager/event"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/boltdb/bolt"
 	"golang.org/x/net/context"
@@ -18,26 +18,25 @@ const (
 )
 
 type Node struct {
-	agent   *agent.Agent      // hold reference to agent, take function when in agent mode
-	manager *manager.Manager  // hold a instance of manager, make logic taking place
-	config  config.SwanConfig // swan config
+	agent   *agent.Agent     // hold reference to agent, take function when in agent mode
+	manager *manager.Manager // hold a instance of manager, make logic taking place
 	ctx     context.Context
 }
 
 func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
-	swanContext := swancontext.NewSwanContext(config, event.New())
-	m, err := manager.New(*swanContext, db)
+	// init swanconfig instance
+	_ = swancontext.NewSwanContext(config, event.New())
+	m, err := manager.New(db)
 	if err != nil {
 		return nil, err
 	}
 
-	a, err := agent.New(*swanContext)
+	a, err := agent.New()
 	if err != nil {
 		return nil, err
 	}
 
 	node := &Node{
-		config:  config,
 		manager: m,
 		agent:   a,
 	}
@@ -47,17 +46,21 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 
 func (n *Node) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-	if n.config.Mode == MODE_MANAGER || n.config.Mode == MODE_MIXED {
+	if swancontext.Instance().Config.Mode == MODE_MANAGER || swancontext.Instance().Config.Mode == MODE_MIXED {
 		go func() {
 			errChan <- n.runManager(ctx)
 		}()
 	}
 
-	if n.config.Mode == MODE_AGENT || n.config.Mode == MODE_MIXED {
+	if swancontext.Instance().Config.Mode == MODE_AGENT || swancontext.Instance().Config.Mode == MODE_MIXED {
 		go func() {
 			errChan <- n.runAgent(ctx)
 		}()
 	}
+
+	go func() {
+		errChan <- swancontext.Instance().ApiServer.Start()
+	}()
 
 	for {
 		select {

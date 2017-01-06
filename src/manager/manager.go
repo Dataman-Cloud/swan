@@ -3,13 +3,11 @@ package manager
 import (
 	"fmt"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
@@ -23,32 +21,27 @@ type Manager struct {
 
 	framework *framework.Framework
 
-	config    config.SwanConfig
-	cluster   []string
-	apiserver *apiserver.ApiServer
+	cluster []string
 
 	criticalErrorChan chan error
 }
 
-func New(swanContext swancontext.SwanContext, db *bolt.DB) (*Manager, error) {
+func New(db *bolt.DB) (*Manager, error) {
 	manager := &Manager{
-		config:            swanContext.Config,
 		criticalErrorChan: make(chan error, 1),
 	}
 
-	manager.apiserver = apiserver.NewApiServer(manager.config.HttpListener.TCPAddr)
-
-	raftNode, err := raft.NewNode(manager.config.Raft, db)
+	raftNode, err := raft.NewNode(swancontext.Instance().Config.Raft, db)
 	if err != nil {
 		logrus.Errorf("init raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
 	manager.raftNode = raftNode
 
-	manager.cluster = manager.config.SwanCluster
+	manager.cluster = swancontext.Instance().Config.SwanCluster
 
 	frameworkStore := fstore.NewStore(db, raftNode)
-	manager.framework, err = framework.New(frameworkStore, manager.apiserver)
+	manager.framework, err = framework.New(frameworkStore, swancontext.Instance().ApiServer)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
@@ -84,8 +77,6 @@ func (manager *Manager) Start(ctx context.Context) error {
 		return err
 	}
 
-	go manager.apiserver.Start()
-
 	for {
 		select {
 		case err := <-manager.criticalErrorChan:
@@ -104,7 +95,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			// TODO lock it and if manager stop return
 			newState := leadershipEvent.(raft.LeadershipState)
 
-			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.config.Raft.RaftId)))
+			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", swancontext.Instance().Config.Raft.RaftId)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
 
@@ -157,7 +148,7 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 				leaderAddr = manager.cluster[int(leader)-1]
 			}
 
-			manager.apiserver.UpdateLeaderAddr(leaderAddr)
+			swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
 			log.G(ctx).Info("Now leader is change to ", leaderAddr)
 
 		case <-ctx.Done():

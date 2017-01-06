@@ -9,11 +9,11 @@ import (
 	"sync"
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
+	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils"
 

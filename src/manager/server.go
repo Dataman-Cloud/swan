@@ -3,6 +3,8 @@ package manager
 import (
 	"encoding/json"
 	"net/http"
+
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 )
 
 type Router struct {
@@ -26,8 +28,8 @@ type ManagerState struct {
 
 func (r *Router) State(w http.ResponseWriter, req *http.Request) error {
 	managerState := &ManagerState{
-		RaftId:  r.manager.config.Raft.RaftId,
-		Cluster: r.manager.config.Raft.Cluster,
+		RaftId:  swancontext.Instance().Config.Raft.RaftId,
+		Cluster: swancontext.Instance().Config.Raft.Cluster,
 	}
 
 	//frameworkId, err := r.manager.swanContext.Store.FetchFrameworkID()
