@@ -6,10 +6,12 @@
     .controller('AppController', AppController);
 
   /** @ngInject */
-  function AppController(appBackend, $stateParams) {
+  function AppController(appBackend, $stateParams, moment) {
     var params = {appId: $stateParams.app};
 
     var vm = this;
+    vm.end = moment().unix();
+    vm.start = moment().subtract(120, 'minutes').unix();
     vm.app = {};
 
     activate();

@@ -1,4 +1,4 @@
-(function() {
+(function () {
   'use strict';
 
   angular
@@ -7,7 +7,8 @@
 
   /** @ngInject */
   function runBlock($rootScope, $stateParams, $state) {
-    $rootScope.logProxyBase = BACKEND_URL_BASE.logProxyBase;
+    $rootScope.logBase = BACKEND_URL_BASE.logBase;
+    $rootScope.monitorBase = BACKEND_URL_BASE.monitorBase;
 
     $rootScope.$state = $state;
     $rootScope.$stateParams = $stateParams;
