@@ -3,13 +3,13 @@ package scheduler
 import (
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
+	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"

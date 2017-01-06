@@ -3,9 +3,8 @@ package agent
 import (
 	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
-	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/manager/event"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
+	"github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
 	"golang.org/x/net/context"
@@ -18,43 +17,40 @@ type Agent struct {
 	janitorServer     *janitor.JanitorServer
 	janitorSubscriber *event.JanitorSubscriber
 
-	Config     config.SwanConfig
 	CancelFunc context.CancelFunc
 }
 
-func New(swanContext swancontext.SwanContext) (*Agent, error) {
-	agent := &Agent{
-		Config: swanContext.Config,
-	}
+func New() (*Agent, error) {
+	agent := &Agent{}
 
-	if agent.Config.DNS.EnableDns {
+	if swancontext.Instance().Config.DNS.EnableDns {
 		dnsConfig := &nameserver.Config{
-			Domain:   agent.Config.DNS.Domain,
-			Listener: agent.Config.DNS.Listener,
-			Port:     agent.Config.DNS.Port,
+			Domain:   swancontext.Instance().Config.DNS.Domain,
+			Listener: swancontext.Instance().Config.DNS.Listener,
+			Port:     swancontext.Instance().Config.DNS.Port,
 
-			Resolvers:       agent.Config.DNS.Resolvers,
-			ExchangeTimeout: agent.Config.DNS.ExchangeTimeout,
-			SOARname:        agent.Config.DNS.SOARname,
-			SOAMname:        agent.Config.DNS.SOAMname,
-			SOASerial:       agent.Config.DNS.SOASerial,
-			SOARefresh:      agent.Config.DNS.SOARefresh,
-			SOARetry:        agent.Config.DNS.SOARetry,
-			SOAExpire:       agent.Config.DNS.SOAExpire,
-			RecurseOn:       agent.Config.DNS.RecurseOn,
-			TTL:             agent.Config.DNS.TTL,
+			Resolvers:       swancontext.Instance().Config.DNS.Resolvers,
+			ExchangeTimeout: swancontext.Instance().Config.DNS.ExchangeTimeout,
+			SOARname:        swancontext.Instance().Config.DNS.SOARname,
+			SOAMname:        swancontext.Instance().Config.DNS.SOAMname,
+			SOASerial:       swancontext.Instance().Config.DNS.SOASerial,
+			SOARefresh:      swancontext.Instance().Config.DNS.SOARefresh,
+			SOARetry:        swancontext.Instance().Config.DNS.SOARetry,
+			SOAExpire:       swancontext.Instance().Config.DNS.SOAExpire,
+			RecurseOn:       swancontext.Instance().Config.DNS.RecurseOn,
+			TTL:             swancontext.Instance().Config.DNS.TTL,
 		}
 
 		agent.resolver = nameserver.NewResolver(dnsConfig)
 		agent.resolverSubscriber = event.NewDNSSubscriber(agent.resolver)
 	}
 
-	if agent.Config.Janitor.EnableProxy {
+	if swancontext.Instance().Config.Janitor.EnableProxy {
 		jConfig := jconfig.DefaultConfig()
-		jConfig.Listener.Mode = agent.Config.Janitor.ListenerMode
-		jConfig.Listener.IP = agent.Config.Janitor.IP
-		jConfig.Listener.DefaultPort = agent.Config.Janitor.Port
-		jConfig.HttpHandler.Domain = agent.Config.Janitor.Domain
+		jConfig.Listener.Mode = swancontext.Instance().Config.Janitor.ListenerMode
+		jConfig.Listener.IP = swancontext.Instance().Config.Janitor.IP
+		jConfig.Listener.DefaultPort = swancontext.Instance().Config.Janitor.Port
+		jConfig.HttpHandler.Domain = swancontext.Instance().Config.Janitor.Domain
 		agent.janitorServer = janitor.NewJanitorServer(jConfig)
 		agent.janitorSubscriber = event.NewJanitorSubscriber(agent.janitorServer)
 	}
@@ -64,7 +60,7 @@ func New(swanContext swancontext.SwanContext) (*Agent, error) {
 
 func (agent *Agent) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-	if agent.Config.DNS.EnableDns {
+	if swancontext.Instance().Config.DNS.EnableDns {
 		go func() {
 			resolverCtx, _ := context.WithCancel(ctx)
 			agent.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
@@ -72,15 +68,15 @@ func (agent *Agent) Start(ctx context.Context) error {
 		}()
 	}
 
-	if agent.Config.Janitor.EnableProxy {
+	if swancontext.Instance().Config.Janitor.EnableProxy {
 		agent.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 		go agent.janitorServer.Init().Run()
 		// send proxy info to dns proxy listener
-		if agent.Config.DNS.EnableDns {
+		if swancontext.Instance().Config.DNS.EnableDns {
 			rgEvent := &nameserver.RecordGeneratorChangeEvent{}
 			rgEvent.Change = "add"
 			rgEvent.Type = "a"
-			rgEvent.Ip = agent.Config.Janitor.IP
+			rgEvent.Ip = swancontext.Instance().Config.Janitor.IP
 			rgEvent.DomainPrefix = ""
 			agent.resolver.RecordGeneratorChangeChan() <- rgEvent
 		}

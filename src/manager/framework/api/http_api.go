@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
+	"github.com/Dataman-Cloud/swan/src/apiserver"
+	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"

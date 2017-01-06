@@ -12,9 +12,9 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/manager/swancontext"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"

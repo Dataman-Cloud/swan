@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/manager/event"
+	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
