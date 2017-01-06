@@ -48,4 +48,5 @@ func (api *EventsService) Events(request *restful.Request, response *restful.Res
 	subscriber, doneChan := event.NewSSESubscriber(uuid.NewV4().String(), http.ResponseWriter(response))
 	subscriber.Subscribe(swancontext.Instance().EventBus)
 	<-doneChan
+	subscriber.Unsubscribe(swancontext.Instance().EventBus)
 }

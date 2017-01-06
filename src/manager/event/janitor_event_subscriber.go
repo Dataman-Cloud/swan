@@ -22,11 +22,17 @@ func NewJanitorSubscriber(resolver *janitor.JanitorServer) *JanitorSubscriber {
 }
 
 func (js *JanitorSubscriber) Subscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	bus.Subscribers[js.Key] = js
 	return nil
 }
 
 func (js *JanitorSubscriber) Unsubscribe(bus *EventBus) error {
+	bus.Lock.Lock()
+	defer bus.Lock.Unlock()
+
 	delete(bus.Subscribers, js.Key)
 	return nil
 }
