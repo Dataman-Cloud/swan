@@ -32,16 +32,26 @@ type swanClient struct {
 	httpClient *http.Client
 	// a custom logger for debug log messages
 	debugLog *log.Logger
+	hosts    *cluster
 }
 
 // NewClient creates a new swan client
-func NewClient(swanAddr string) (Swan, error) {
+func NewClient(swanURL string) (Swan, error) {
 	debugLogOutput := ioutil.Discard
+	httpClient := http.DefaultClient
+	hosts, err := newCluster(httpClient, swanURL)
+	if err != nil {
+		return nil, err
+	}
 	return &swanClient{
-		swanAddr:   swanAddr,
 		httpClient: http.DefaultClient,
+		hosts:      hosts,
 		debugLog:   log.New(debugLogOutput, "", 0),
 	}, nil
+}
+
+func (r *swanClient) apiPatch(uri string, post, result interface{}) error {
+	return r.apiCall("PATCH", uri, post, result)
 }
 
 func (r *swanClient) apiGet(uri string, post, result interface{}) error {
@@ -50,10 +60,6 @@ func (r *swanClient) apiGet(uri string, post, result interface{}) error {
 
 func (r *swanClient) apiPut(uri string, post, result interface{}) error {
 	return r.apiCall("PUT", uri, post, result)
-}
-
-func (r *swanClient) apiPatch(uri string, post, result interface{}) error {
-	return r.apiCall("PATCH", uri, post, result)
 }
 
 func (r *swanClient) apiPost(uri string, post, result interface{}) error {
@@ -65,57 +71,70 @@ func (r *swanClient) apiDelete(uri string, post, result interface{}) error {
 }
 
 func (r *swanClient) apiCall(method, uri string, body, result interface{}) error {
-	var url string
+	for {
+		var url string
+		var err error
 
-	url = fmt.Sprintf("%s/%s", r.swanAddr, uri)
+		// step: grab a member from the cluster and attempt to perform the request
+		member, err := r.hosts.getMember()
+		if err != nil {
+			return ErrSwanDown
+		}
 
-	var jsonBody []byte
-	var err error
-	if body != nil {
-		jsonBody, err = json.Marshal(body)
+		url = fmt.Sprintf("%s/%s", member, uri)
+
+		var jsonBody []byte
+		if body != nil {
+			jsonBody, err = json.Marshal(body)
+			if err != nil {
+				return err
+			}
+		}
+
+		// step: create an API request
+		request, err := r.apiRequest(method, url, bytes.NewReader(jsonBody))
 		if err != nil {
 			return err
 		}
-	}
 
-	// step: create an API request
-	request, err := r.apiRequest(method, url, bytes.NewReader(jsonBody))
-	if err != nil {
-		return err
-	}
-
-	response, err := r.httpClient.Do(request)
-	if err != nil {
-		return err
-	}
-	defer response.Body.Close()
-
-	respBody, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-
-	if len(jsonBody) > 0 {
-		r.debugLog.Printf("apiCall(): %v %v %s returned %v %s\n", request.Method, request.URL.String(), jsonBody, response.Status, oneLogLine(respBody))
-	} else {
-		r.debugLog.Printf("apiCall(): %v %v returned %v %s\n", request.Method, request.URL.String(), response.Status, oneLogLine(respBody))
-	}
-
-	if response.StatusCode >= 200 && response.StatusCode <= 299 {
-		if result != nil {
-			if err := json.Unmarshal(respBody, result); err != nil {
-				r.debugLog.Printf("apiCall(): failed to unmarshall the response from marathon, error: %s\n", err)
-				return ErrInvalidResponse
-			}
+		response, err := r.httpClient.Do(request)
+		if err != nil {
+			return err
+			r.hosts.markDown(member)
+			// step: attempt the request on another member
+			r.debugLog.Printf("apiCall(): request failed on host: %s, error: %s, trying another\n", member, err)
+			continue
 		}
-		return nil
+		defer response.Body.Close()
+
+		respBody, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			return err
+		}
+
+		if len(jsonBody) > 0 {
+			r.debugLog.Printf("apiCall(): %v %v %s returned %v %s\n", request.Method, request.URL.String(), jsonBody, response.Status, oneLogLine(respBody))
+		} else {
+			r.debugLog.Printf("apiCall(): %v %v returned %v %s\n", request.Method, request.URL.String(), response.Status, oneLogLine(respBody))
+		}
+
+		if response.StatusCode >= 200 && response.StatusCode <= 299 {
+			if result != nil {
+				if err := json.Unmarshal(respBody, result); err != nil {
+					//r.debugLog.Printf("apiCall(): failed to unmarshall the response from marathon, error: %s\n", err)
+					fmt.Printf("apiCall(): failed to unmarshall the response from marathon, error: %s\n", err)
+					return ErrInvalidResponse
+				}
+			}
+			return nil
+		}
+		return NewAPIError(response.StatusCode, respBody)
 	}
-	return NewAPIError(response.StatusCode, respBody)
 }
 
 // apiRequest creates a default API request
 func (r *swanClient) apiRequest(method, url string, reader io.Reader) (*http.Request, error) {
-	// Make the http request to Marathon
+	// Make the http request to Swan
 	request, err := http.NewRequest(method, url, reader)
 	if err != nil {
 		return nil, err

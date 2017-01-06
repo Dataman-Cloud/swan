@@ -31,10 +31,13 @@ type Swan interface {
 	GetAppVersions(appID string) ([]*types.Version, error)
 	// get the app version
 	GetAppVersion(appID, versionID string) (*types.Version, error)
+
+	//-- SUBSCRIPTIONS--
+	AddEventsListener() (EventsChannel, error)
 }
 
 // CreateApplication creates a new application in Swan
-// 		version:		the structure holding the application configuration
+// version:the structure holding the application configuration
 func (r *swanClient) CreateApplication(version *types.Version) (*types.App, error) {
 	result := new(types.App)
 	if err := r.apiPost(APIApps, &version, result); err != nil {
