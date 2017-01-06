@@ -20,19 +20,19 @@
         controllerAs: 'vm'
       })
       .state('home.user', {
-        url: '/user?fields',
+        url: '/user?cluster&user',
         templateUrl: 'app/main/user/user.html',
         controller: 'UserController',
         controllerAs: 'vm'
       })
       .state('home.app', {
-        url: '/app?appId',
+        url: '/app?cluster&user&app',
         templateUrl: 'app/main/app/app.html',
         controller: 'AppController',
         controllerAs: 'vm'
       })
       .state('home.task', {
-        url: '/task?appId&taskIndex',
+        url: '/task?cluster&user&app&task',
         templateUrl: 'app/main/task/task.html',
         controller: 'TaskController',
         controllerAs: 'vm'
