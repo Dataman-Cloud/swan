@@ -35,19 +35,14 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:  "config-file,c",
-			Value: "./config.json",
-			Usage: "specify config file path",
+			Name:   "cluster-addrs",
+			Usage:  "address api server listen on, eg. 192.168.1.1:9999,192.168.1.2:9999",
+			EnvVar: "SWAN_CLUSTER_ADDRS",
 		},
 		cli.StringFlag{
-			Name:   "cluster",
-			Usage:  "API Server address <ip:port>",
-			EnvVar: "SWAN_CLUSTER",
-		},
-		cli.StringFlag{
-			Name:   "zk",
-			Usage:  "Zookeeper URL. eg.zk://host1:port1,host2:port2,.../path",
-			EnvVar: "SWAN_ZKURL",
+			Name:   "zk-path",
+			Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
+			EnvVar: "SWAN_MESOS_ZKPATH",
 		},
 		cli.StringFlag{
 			Name:   "log-level,l",
@@ -56,17 +51,17 @@ func main() {
 		},
 		cli.IntFlag{
 			Name:   "raftid",
-			Usage:  "raft node id",
+			Usage:  "unique raft node id within the cluster. should be 1,2 or 3 within a 3-managers cluster",
 			EnvVar: "SWAN_RAFT_ID",
 		},
 		cli.StringFlag{
 			Name:   "raft-cluster",
-			Usage:  "raft cluster peers addr",
+			Usage:  "raft cluster peers. eg. 192.168.1.1:1211,192.168.1.2.1211",
 			EnvVar: "SWAN_RAFT_CLUSTER",
 		},
 		cli.StringFlag{
 			Name:   "mode",
-			Usage:  "Server mode, manager|agent|mixed ",
+			Usage:  "server mode, manager|agent|mixed ",
 			EnvVar: "SWAN_MODE",
 		},
 		cli.StringFlag{
@@ -74,20 +69,10 @@ func main() {
 			Usage:  "swan data store dir",
 			EnvVar: "SWAN_DATA_DIR",
 		},
-		cli.BoolFlag{
-			Name:   "enable-proxy",
-			Usage:  "enable proxy or not",
-			EnvVar: "SWAN_ENABLE_PROXY",
-		},
-		cli.BoolFlag{
-			Name:   "enable-dns",
-			Usage:  "enable dns resolver or not",
-			EnvVar: "SWAN_ENABLE_DNS",
-		},
-		cli.BoolFlag{
-			Name:   "no-recover",
-			Usage:  "do not recover from previous crush",
-			EnvVar: "SWAN_NO_RECOVER",
+		cli.StringFlag{
+			Name:   "domain",
+			Usage:  "domain which resolve to proxies. eg. access a slot by 0.appname.runas.clustername.domain",
+			EnvVar: "SWAN_DOMAIN",
 		},
 	}
 	app.Action = func(c *cli.Context) error {

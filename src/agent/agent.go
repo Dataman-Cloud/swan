@@ -1,6 +1,8 @@
 package agent
 
 import (
+	"strconv"
+
 	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/event"
@@ -23,10 +25,10 @@ type Agent struct {
 func New() (*Agent, error) {
 	agent := &Agent{}
 
-	if swancontext.Instance().Config.DNS.EnableDns {
+	if swancontext.Instance().Config.EnableDns {
 		dnsConfig := &nameserver.Config{
 			Domain:   swancontext.Instance().Config.DNS.Domain,
-			Listener: swancontext.Instance().Config.DNS.Listener,
+			Listener: swancontext.Instance().Config.DNS.IP,
 			Port:     swancontext.Instance().Config.DNS.Port,
 
 			Resolvers:       swancontext.Instance().Config.DNS.Resolvers,
@@ -45,11 +47,11 @@ func New() (*Agent, error) {
 		agent.resolverSubscriber = event.NewDNSSubscriber(agent.resolver)
 	}
 
-	if swancontext.Instance().Config.Janitor.EnableProxy {
+	if swancontext.Instance().Config.EnableProxy {
 		jConfig := jconfig.DefaultConfig()
 		jConfig.Listener.Mode = swancontext.Instance().Config.Janitor.ListenerMode
 		jConfig.Listener.IP = swancontext.Instance().Config.Janitor.IP
-		jConfig.Listener.DefaultPort = swancontext.Instance().Config.Janitor.Port
+		jConfig.Listener.DefaultPort = strconv.Itoa(swancontext.Instance().Config.Janitor.Port)
 		jConfig.HttpHandler.Domain = swancontext.Instance().Config.Janitor.Domain
 		agent.janitorServer = janitor.NewJanitorServer(jConfig)
 		agent.janitorSubscriber = event.NewJanitorSubscriber(agent.janitorServer)
@@ -60,7 +62,7 @@ func New() (*Agent, error) {
 
 func (agent *Agent) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-	if swancontext.Instance().Config.DNS.EnableDns {
+	if swancontext.Instance().Config.EnableDns {
 		go func() {
 			resolverCtx, _ := context.WithCancel(ctx)
 			agent.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
@@ -68,11 +70,11 @@ func (agent *Agent) Start(ctx context.Context) error {
 		}()
 	}
 
-	if swancontext.Instance().Config.Janitor.EnableProxy {
+	if swancontext.Instance().Config.EnableProxy {
 		agent.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 		go agent.janitorServer.Init().Run()
 		// send proxy info to dns proxy listener
-		if swancontext.Instance().Config.DNS.EnableDns {
+		if swancontext.Instance().Config.EnableDns {
 			rgEvent := &nameserver.RecordGeneratorChangeEvent{}
 			rgEvent.Change = "add"
 			rgEvent.Type = "a"

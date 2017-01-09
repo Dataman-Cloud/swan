@@ -25,7 +25,7 @@ type Manager struct {
 
 	framework *framework.Framework
 
-	cluster []string
+	clusterAddrs []string
 
 	criticalErrorChan chan error
 
@@ -45,7 +45,7 @@ func New(db *bolt.DB) (*Manager, error) {
 	}
 	manager.raftNode = raftNode
 
-	manager.cluster = swancontext.Instance().Config.SwanCluster
+	manager.clusterAddrs = swancontext.Instance().Config.SwanClusterAddrs
 
 	frameworkStore := fstore.NewStore(db, raftNode)
 	manager.framework, err = framework.New(frameworkStore, swancontext.Instance().ApiServer)
@@ -159,7 +159,7 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 			if int(leader) == 0 {
 				leaderAddr = ""
 			} else {
-				leaderAddr = manager.cluster[int(leader)-1]
+				leaderAddr = manager.clusterAddrs[int(leader)-1]
 			}
 
 			swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
