@@ -126,7 +126,7 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
-			scheduler.mesosConnectorCancelFun()
+			scheduler.MesosConnector.Start(ctx, scheduler.mesosFailureChan)
 			return e
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now

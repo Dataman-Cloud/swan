@@ -196,16 +196,30 @@ func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
-	var err error
-	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
+func (s *MesosConnector) connect() (*megos.State, error) {
+	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkUrl)
 	if err != nil {
 		logrus.Error(err)
-		return
+		return nil, err
 	}
+
 	state, err := stateFromMasters(masters)
 	if err != nil {
-		logrus.Errorf("%s Check your mesos master configuration", err)
+		if strings.Contains(err.Error(), "No master online") {
+			logrus.Errorf("No master online. try to connect after 5 seconds...")
+			time.Sleep(5 * time.Second)
+			return s.connect()
+		}
+
+		return nil, err
+	}
+
+	return state, nil
+}
+
+func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
+	state, err := s.connect()
+	if err != nil {
 		mesosFailureChan <- err
 		return
 	}
