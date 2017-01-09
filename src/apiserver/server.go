@@ -11,15 +11,12 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
+	"github.com/Dataman-Cloud/swan/src/config"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-)
-
-const (
-	API_VERSION = "v_beta"
 )
 
 // RootPaths lists the paths available at root.
@@ -90,7 +87,7 @@ func (apiServer *ApiServer) Start() error {
 	config := swagger.Config{
 		WebServices: wsContainer.RegisteredWebServices(), // you control what services are visible
 		// WebServicesUrl: "",
-		ApiVersion: API_VERSION,
+		ApiVersion: config.API_PREFIX,
 		ApiPath:    "/apidocs.json",
 
 		// Optionally, specifiy where the UI is located
@@ -114,6 +111,7 @@ func (apiServer *ApiServer) Start() error {
 		for _, ws := range wsContainer.RegisteredWebServices() {
 			handledPaths = append(handledPaths, ws.RootPath())
 		}
+
 		// Extract the paths handled using mux handler.
 		handledPaths = append(handledPaths, "/metrics", "/apidocs/")
 		sort.Strings(handledPaths)
