@@ -420,10 +420,11 @@ func (slot *Slot) EmitTaskEvent(t string) {
 		e.Payload = &swanevent.TaskInfoEvent{
 			Ip: slot.Ip,
 			//TODO(zliu): get port in fixed mode
-			TaskId:  slot.ID,
-			AppId:   slot.App.ID,
-			State:   slot.State,
-			Healthy: slot.healthy,
+			TaskId:    slot.ID,
+			AppId:     slot.App.ID,
+			State:     slot.State,
+			Healthy:   slot.healthy,
+			ClusterID: slot.App.ClusterID,
 		}
 		slot.App.EmitEvent(e)
 
@@ -431,21 +432,23 @@ func (slot *Slot) EmitTaskEvent(t string) {
 		if len(slot.CurrentTask.HostPorts) > 0 {
 			for _, port := range slot.CurrentTask.HostPorts {
 				e.Payload = &swanevent.TaskInfoEvent{
-					Ip:      slot.AgentHostName,
-					Port:    fmt.Sprintf("%d", port),
-					TaskId:  slot.ID,
-					AppId:   slot.App.ID,
-					State:   slot.State,
-					Healthy: slot.healthy,
+					Ip:        slot.AgentHostName,
+					Port:      fmt.Sprintf("%d", port),
+					TaskId:    slot.ID,
+					AppId:     slot.App.ID,
+					State:     slot.State,
+					Healthy:   slot.healthy,
+					ClusterID: slot.App.ClusterID,
 				}
 				slot.App.EmitEvent(e)
 			}
 		} else {
 			e.Payload = &swanevent.TaskInfoEvent{
-				TaskId:  slot.ID,
-				AppId:   slot.App.ID,
-				State:   slot.State,
-				Healthy: slot.healthy,
+				TaskId:    slot.ID,
+				AppId:     slot.App.ID,
+				State:     slot.State,
+				Healthy:   slot.healthy,
+				ClusterID: slot.App.ClusterID,
 			}
 			slot.App.EmitEvent(e)
 		}

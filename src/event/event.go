@@ -52,16 +52,18 @@ func NewEvent(t string, payload interface{}) *Event {
 }
 
 type TaskInfoEvent struct {
-	Ip      string
-	TaskId  string
-	AppId   string
-	Port    string
-	State   string
-	Healthy bool
+	Ip        string
+	TaskId    string
+	AppId     string
+	Port      string
+	State     string
+	Healthy   bool
+	ClusterID string
 }
 
 type AppInfoEvent struct {
-	AppId string
-	Name  string
-	State string
+	AppId     string
+	Name      string
+	State     string
+	ClusterID string
 }
