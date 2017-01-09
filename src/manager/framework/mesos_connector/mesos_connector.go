@@ -198,7 +198,7 @@ func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 
 func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
 	var err error
-	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkUrl)
+	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
 	if err != nil {
 		logrus.Error(err)
 		return

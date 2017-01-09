@@ -6,4 +6,4 @@ data/
 bin/*
 .idea/
 Procfile
-config.json
+Procfile-cluster
