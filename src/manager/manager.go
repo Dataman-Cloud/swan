@@ -9,6 +9,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
+	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -65,8 +66,9 @@ func (manager *Manager) Stop(cancel context.CancelFunc) {
 }
 
 func (manager *Manager) Start(ctx context.Context) error {
-	//TODO load from persistent data
-	manager.agents = make(map[string]types.Agent)
+	if err := manager.LoadAgentData(); err != nil {
+		return err
+	}
 
 	leadershipCh, QueueCancel := manager.raftNode.SubscribeLeadership()
 	defer QueueCancel()
@@ -169,8 +171,44 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 	}
 }
 
+func (manager *Manager) LoadAgentData() error {
+	agents, err := manager.raftNode.GetAgents()
+	if err != nil {
+		return err
+	}
+
+	manager.agents = make(map[string]types.Agent)
+	for _, agentMetadata := range agents {
+		agent := types.Agent{
+			ID:         agentMetadata.ID,
+			RemoteAddr: agentMetadata.RemoteAddr,
+			Status:     agentMetadata.Status,
+			Labels:     agentMetadata.Labels,
+		}
+
+		manager.agents[agent.ID] = agent
+	}
+
+	return nil
+}
+
 func (manager *Manager) AddAgent(agent types.Agent) error {
-	//TODO persist data by raft
+	agentMetadata := &rafttypes.Agent{
+		ID:         agent.ID,
+		RemoteAddr: agent.RemoteAddr,
+		Status:     agent.Status,
+		Labels:     agent.Labels,
+	}
+
+	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
+		Action: rafttypes.StoreActionKindCreate,
+		Target: &rafttypes.StoreAction_Agent{agentMetadata},
+	}}
+
+	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
+		return err
+	}
+
 	manager.agentLock.Lock()
 	manager.agents[agent.ID] = agent
 	manager.agentLock.Unlock()
@@ -192,6 +230,19 @@ func (manager *Manager) GetAgent(agentID string) types.Agent {
 }
 
 func (manager *Manager) DeleteAgent(agentID string) error {
+	agentMetadata := &rafttypes.Agent{
+		ID: agentID,
+	}
+
+	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
+		Action: rafttypes.StoreActionKindRemove,
+		Target: &rafttypes.StoreAction_Agent{agentMetadata},
+	}}
+
+	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
+		return err
+	}
+
 	manager.agentLock.Lock()
 	delete(manager.agents, agentID)
 	manager.agentLock.Unlock()

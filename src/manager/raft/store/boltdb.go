@@ -21,6 +21,7 @@ var (
 	bucketKeyVersions       = []byte("versions")
 	bucketKeySlots          = []byte("slots")
 	bucketKeyOfferAllocator = []byte("offer_allocator")
+	bucketKeyAgents         = []byte("agents")
 	BucketKeyRaftState      = []byte("raft_hard_state")
 
 	BucketKeyData = []byte("data")
@@ -31,6 +32,7 @@ var (
 	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrVersionUnknown          = errors.New("boltdb: version unknown")
 	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
+	ErrAgentUnknown            = errors.New("boltdb: agent unknow")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefined app store action")
@@ -38,6 +40,7 @@ var (
 	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
 	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
+	ErrUndefineAgentAction     = errors.New("boltdb: undefined agent store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -47,6 +50,10 @@ func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 		}
 
 		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework); err != nil {
+			return err
+		}
+
+		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyAgents); err != nil {
 			return err
 		}
 
@@ -128,6 +135,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doSlotStoreAction(tx, action.Action, action.GetSlot())
 	case *types.StoreAction_OfferAllocatorItem:
 		return doOfferAllocatorItemStoreAction(tx, action.Action, action.GetOfferAllocatorItem())
+	case *types.StoreAction_Agent:
+		return doAgentStoreAction(tx, action.Action, action.GetAgent())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -207,6 +216,19 @@ func doOfferAllocatorItemStoreAction(tx *bolt.Tx, action types.StoreActionKind, 
 	}
 }
 
+func doAgentStoreAction(tx *bolt.Tx, action types.StoreActionKind, agent *types.Agent) error {
+	switch action {
+	case types.StoreActionKindCreate:
+		return createAgent(tx, agent)
+	case types.StoreActionKindUpdate:
+		return updateAgent(tx, agent)
+	case types.StoreActionKindRemove:
+		return removeAgent(tx, agent.ID)
+	default:
+		return ErrUndefineAgentAction
+	}
+}
+
 func (db *BoltbDb) SaveRaftState(state raftpb.HardState) error {
 	return db.Update(func(tx *bolt.Tx) error {
 		return putRaftState(tx, state)
@@ -226,4 +248,37 @@ func (db *BoltbDb) GetRaftState() (raftpb.HardState, error) {
 	}
 
 	return state, nil
+}
+
+func (db *BoltbDb) GetAgents() ([]*types.Agent, error) {
+	var agents []*types.Agent
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		agentsBkt := getAgentsBucket(tx)
+		if agentsBkt == nil {
+			agents = []*types.Agent{}
+			return nil
+		}
+
+		return agentsBkt.ForEach(func(k, v []byte) error {
+			agentBkt := getAgentBucket(tx, string(k))
+			if agentBkt == nil {
+				return nil
+			}
+
+			agent := &types.Agent{}
+			p := agentBkt.Get(BucketKeyData)
+			if err := agent.Unmarshal(p); err != nil {
+				return err
+			}
+
+			agents = append(agents, agent)
+			return nil
+		})
+
+	}); err != nil {
+		return nil, err
+	}
+
+	return agents, nil
 }
