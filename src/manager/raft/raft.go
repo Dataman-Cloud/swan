@@ -772,6 +772,10 @@ func (n *Node) maybeTriggerSnapshot() {
 	n.snapshotIndex = n.appliedIndex
 }
 
+func (n *Node) GetAgents() ([]*swan.Agent, error) {
+	return n.store.GetAgents()
+}
+
 func (n *Node) Process(ctx context.Context, m raftpb.Message) error {
 	return n.raftNode.Step(ctx, m)
 }

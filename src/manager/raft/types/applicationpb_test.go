@@ -28,6 +28,7 @@ It has these top-level messages:
 	InternalRaftRequest
 	StoreAction
 	Framework
+	Agent
 */
 package types
 
