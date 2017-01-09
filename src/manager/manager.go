@@ -2,12 +2,15 @@ package manager
 
 import (
 	"fmt"
+	"sync"
 
+	"github.com/Dataman-Cloud/swan/src/apiserver"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
+	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
@@ -24,6 +27,9 @@ type Manager struct {
 	cluster []string
 
 	criticalErrorChan chan error
+
+	agents    map[string]types.Agent
+	agentLock sync.RWMutex
 }
 
 func New(db *bolt.DB) (*Manager, error) {
@@ -47,6 +53,9 @@ func New(db *bolt.DB) (*Manager, error) {
 		return nil, err
 	}
 
+	managerApi := &ManagerApi{manager}
+	apiserver.Install(swancontext.Instance().ApiServer, managerApi)
+
 	return manager, nil
 }
 
@@ -56,6 +65,9 @@ func (manager *Manager) Stop(cancel context.CancelFunc) {
 }
 
 func (manager *Manager) Start(ctx context.Context) error {
+	//TODO load from persistent data
+	manager.agents = make(map[string]types.Agent)
+
 	leadershipCh, QueueCancel := manager.raftNode.SubscribeLeadership()
 	defer QueueCancel()
 
@@ -155,4 +167,33 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 			return
 		}
 	}
+}
+
+func (manager *Manager) AddAgent(agent types.Agent) error {
+	//TODO persist data by raft
+	manager.agentLock.Lock()
+	manager.agents[agent.ID] = agent
+	manager.agentLock.Unlock()
+	return nil
+}
+
+func (manager *Manager) GetAgents() map[string]types.Agent {
+	return manager.agents
+}
+
+func (manager *Manager) UpdateAgent(agent types.Agent) error {
+	return nil
+}
+
+func (manager *Manager) GetAgent(agentID string) types.Agent {
+	manager.agentLock.RLock()
+	defer manager.agentLock.RUnlock()
+	return manager.agents[agentID]
+}
+
+func (manager *Manager) DeleteAgent(agentID string) error {
+	manager.agentLock.Lock()
+	delete(manager.agents, agentID)
+	manager.agentLock.Unlock()
+	return nil
 }
