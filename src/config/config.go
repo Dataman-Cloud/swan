@@ -13,7 +13,7 @@ import (
 
 type SwanConfig struct {
 	LogLevel         string   `json:"log-level"`
-	Mode             string   `json:"mode"` // manager, agent, mixed
+	Mode             SwanMode `json:"mode"` // manager, agent, mixed
 	DataDir          string   `json:"data-dir"`
 	NoRecover        bool     `json:"no-recover"`
 	EnableDns        bool     `json:"enable-dns"`
@@ -21,12 +21,12 @@ type SwanConfig struct {
 	Domain           string   `json:"domain"`
 	SwanClusterAddrs []string `json:swan-cluster-addrs`
 
-	Scheduler    Scheduler    `json:"scheduler"`
-	HttpListener HttpListener `json:"http-listener"`
-	Raft         Raft         `json:"raft"`
+	Scheduler Scheduler `json:"scheduler"`
+	Raft      Raft      `json:"raft"`
 
-	DNS     DNS     `json:"dns"`
-	Janitor Janitor `json:"janitor"`
+	DNS        DNS     `json:"dns"`
+	Janitor    Janitor `json:"janitor"`
+	ListenAddr string  `json:"listen-addr"`
 }
 
 type Scheduler struct {
@@ -54,10 +54,6 @@ type DNS struct {
 	ExchangeTimeout time.Duration `json:"exchange_timeout"`
 }
 
-type HttpListener struct {
-	TCPAddr string `json:"addr"`
-}
-
 type Raft struct {
 	Cluster   string `json:"cluster"`
 	RaftId    int    `json:"raftid"`
@@ -73,14 +69,15 @@ type Janitor struct {
 
 func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig := SwanConfig{
-		LogLevel:         "debug",
-		Mode:             "mixed",
-		DataDir:          "./data/1",
+		LogLevel:         "info",
+		Mode:             Mixed,
+		DataDir:          "./data/",
 		NoRecover:        false,
 		EnableProxy:      true,
 		EnableDns:        true,
 		Domain:           "swan.com",
 		SwanClusterAddrs: []string{"0.0.0.0:9999"},
+		ListenAddr:       "0.0.0.0:9999",
 
 		Scheduler: Scheduler{
 			ZkPath:             "0.0.0.0:2181",
@@ -99,14 +96,10 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			ExchangeTimeout: time.Second * 3,
 		},
 
-		HttpListener: HttpListener{
-			TCPAddr: "0.0.0.0:9999",
-		},
-
 		Raft: Raft{
 			Cluster:   "0.0.0.0:1121",
 			RaftId:    1,
-			StorePath: "./data/1",
+			StorePath: "./data/",
 		},
 
 		Janitor: Janitor{
@@ -123,7 +116,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 
 	if c.String("mode") != "" {
 		if utils.SliceContains([]string{"mixed", "manager", "agent"}, c.String("mode")) {
-			swanConfig.Mode = c.String("mode")
+			swanConfig.Mode = SwanMode(c.String("mode"))
 		} else {
 			return swanConfig, errors.New("mode should be one of mixed, manager or agent")
 		}
@@ -152,13 +145,20 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 
 	if c.String("cluster-addrs") != "" {
 		swanConfig.SwanClusterAddrs = strings.Split(c.String("cluster-addrs"), ",")
-		swanConfig.HttpListener.TCPAddr = swanConfig.SwanClusterAddrs[swanConfig.Raft.RaftId-1]
+		swanConfig.ListenAddr = swanConfig.SwanClusterAddrs[swanConfig.Raft.RaftId-1]
 	}
 
 	if c.String("domain") != "" {
 		swanConfig.Domain = c.String("domain")
 		swanConfig.DNS.Domain = c.String("domain")
 		swanConfig.Janitor.Domain = c.String("domain")
+	}
+
+	// TODO(upccup): this is not the optimal solution. Maybe we can use listen-addr replace --swan-cluster
+	// if swan mode is mixed agent listen addr use the same with manager. But if the mode is agent we need
+	// a listen-addr just for agent
+	if swanConfig.Mode == Agent {
+		swanConfig.ListenAddr = c.String("listen-addr")
 	}
 
 	return swanConfig, nil
