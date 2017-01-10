@@ -16,8 +16,6 @@ type SwanConfig struct {
 	Mode             SwanMode `json:"mode"` // manager, agent, mixed
 	DataDir          string   `json:"data-dir"`
 	NoRecover        bool     `json:"no-recover"`
-	EnableDns        bool     `json:"enable-dns"`
-	EnableProxy      bool     `json:"enableProxy"`
 	Domain           string   `json:"domain"`
 	SwanClusterAddrs []string `json:swan-cluster-addrs`
 
@@ -73,8 +71,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		Mode:             Mixed,
 		DataDir:          "./data/",
 		NoRecover:        false,
-		EnableProxy:      true,
-		EnableDns:        true,
 		Domain:           "swan.com",
 		SwanClusterAddrs: []string{"0.0.0.0:9999"},
 		ListenAddr:       "0.0.0.0:9999",

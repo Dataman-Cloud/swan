@@ -5,7 +5,9 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
+	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
+	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
@@ -31,6 +33,9 @@ type Manager struct {
 
 	agents    map[string]types.Agent
 	agentLock sync.RWMutex
+
+	janitorSubscriber  *event.JanitorSubscriber
+	resolverSubscriber *event.DNSSubscriber
 }
 
 func New(db *bolt.DB) (*Manager, error) {
@@ -56,6 +61,9 @@ func New(db *bolt.DB) (*Manager, error) {
 
 	managerApi := &ManagerApi{manager}
 	apiserver.Install(swancontext.Instance().ApiServer, managerApi)
+
+	manager.resolverSubscriber = event.NewDNSSubscriber()
+	manager.janitorSubscriber = event.NewJanitorSubscriber()
 
 	return manager, nil
 }
@@ -186,7 +194,11 @@ func (manager *Manager) LoadAgentData() error {
 			Labels:     agentMetadata.Labels,
 		}
 
+		manager.AddAgentAcceptor(agent)
+
+		manager.agentLock.Lock()
 		manager.agents[agent.ID] = agent
+		manager.agentLock.Unlock()
 	}
 
 	return nil
@@ -208,6 +220,8 @@ func (manager *Manager) AddAgent(agent types.Agent) error {
 	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
 		return err
 	}
+
+	manager.AddAgentAcceptor(agent)
 
 	manager.agentLock.Lock()
 	manager.agents[agent.ID] = agent
@@ -247,4 +261,20 @@ func (manager *Manager) DeleteAgent(agentID string) error {
 	delete(manager.agents, agentID)
 	manager.agentLock.Unlock()
 	return nil
+}
+
+func (manager *Manager) AddAgentAcceptor(agent types.Agent) {
+	resolverAcceptor := types.ResolverAcceptor{
+		ID:         agent.ID,
+		RemoteAddr: "http://" + agent.RemoteAddr + config.API_PREFIX + "/agent/resolver/event",
+		Status:     agent.Status,
+	}
+	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
+
+	janitorAcceptor := types.JanitorAcceptor{
+		ID:         agent.ID,
+		RemoteAddr: "http://" + agent.RemoteAddr + config.API_PREFIX + "/agent/janitor/event",
+		Status:     agent.Status,
+	}
+	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
 }

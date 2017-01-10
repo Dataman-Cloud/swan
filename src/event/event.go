@@ -1,6 +1,9 @@
 package event
 
 import (
+	"bytes"
+	"net/http"
+
 	"github.com/satori/go.uuid"
 )
 
@@ -64,4 +67,21 @@ type AppInfoEvent struct {
 	AppId string
 	Name  string
 	State string
+}
+
+func sendEventByHttp(addr, method string, data []byte) error {
+	request, err := http.NewRequest(method, addr, bytes.NewReader(data))
+	if err != nil {
+		return err
+	}
+
+	request.Header.Add("Content-Type", "application/json")
+	request.Header.Add("Accept", "application/json")
+
+	_, err = http.DefaultClient.Do(request)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
