@@ -318,7 +318,8 @@ func (app *App) EmitAppEvent(eventType string) {
 		AppId:     app.ID,
 		Name:      app.Name,
 		State:     app.State,
-		ClusterID: app.ClusterID,
+		ClusterId: app.ClusterID,
+		RunAs:     app.CurrentVersion.RunAs,
 	}
 	app.EmitEvent(e)
 }

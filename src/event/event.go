@@ -58,12 +58,14 @@ type TaskInfoEvent struct {
 	Port      string
 	State     string
 	Healthy   bool
-	ClusterID string
+	ClusterId string
+	RunAs     string
 }
 
 type AppInfoEvent struct {
 	AppId     string
 	Name      string
 	State     string
-	ClusterID string
+	ClusterId string
+	RunAs     string
 }

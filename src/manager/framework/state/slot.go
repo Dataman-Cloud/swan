@@ -424,7 +424,8 @@ func (slot *Slot) EmitTaskEvent(t string) {
 			AppId:     slot.App.ID,
 			State:     slot.State,
 			Healthy:   slot.healthy,
-			ClusterID: slot.App.ClusterID,
+			ClusterId: slot.App.ClusterID,
+			RunAs:     slot.Version.RunAs,
 		}
 		slot.App.EmitEvent(e)
 
@@ -438,7 +439,8 @@ func (slot *Slot) EmitTaskEvent(t string) {
 					AppId:     slot.App.ID,
 					State:     slot.State,
 					Healthy:   slot.healthy,
-					ClusterID: slot.App.ClusterID,
+					ClusterId: slot.App.ClusterID,
+					RunAs:     slot.Version.RunAs,
 				}
 				slot.App.EmitEvent(e)
 			}
@@ -448,7 +450,8 @@ func (slot *Slot) EmitTaskEvent(t string) {
 				AppId:     slot.App.ID,
 				State:     slot.State,
 				Healthy:   slot.healthy,
-				ClusterID: slot.App.ClusterID,
+				ClusterId: slot.App.ClusterID,
+				RunAs:     slot.Version.RunAs,
 			}
 			slot.App.EmitEvent(e)
 		}
