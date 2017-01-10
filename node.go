@@ -40,13 +40,13 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 
 func (n *Node) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-	if swancontext.IsManager() {
+	if n.IsManager() || n.IsMixed() {
 		go func() {
 			errChan <- n.runManager(ctx)
 		}()
 	}
 
-	if swancontext.IsAgent() {
+	if n.IsAgent() || n.IsMixed() {
 		go func() {
 			errChan <- n.runAgent(ctx)
 		}()
@@ -82,4 +82,16 @@ func (n *Node) runManager(ctx context.Context) error {
 func (n *Node) stopManager() {
 	n.agent.Stop(n.agent.CancelFunc)
 	n.manager.Stop(n.manager.CancelFunc)
+}
+
+func (n *Node) IsManager() bool {
+	return swancontext.Instance().Config.Mode == config.Manager
+}
+
+func (n *Node) IsAgent() bool {
+	return swancontext.Instance().Config.Mode == config.Agent
+}
+
+func (n *Node) IsMixed() bool {
+	return swancontext.Instance().Config.Mode == config.Mixed
 }
