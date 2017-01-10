@@ -70,7 +70,7 @@ func (scheduler *Scheduler) Stop() {
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
 	if !swancontext.Instance().Config.NoRecover {
-		apps, err := state.LoadAppData()
+		apps, err := state.LoadAppData(scheduler.UserEventChan)
 		if err != nil {
 			return err
 		}

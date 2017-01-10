@@ -3,6 +3,7 @@ package state
 import (
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -10,7 +11,7 @@ import (
 )
 
 // load app data frm persistent data
-func LoadAppData() (map[string]*App, error) {
+func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 	raftApps, err := persistentStore.ListApps()
 	if err != nil {
 		return nil, err
@@ -29,6 +30,8 @@ func LoadAppData() (map[string]*App, error) {
 			Updated:        time.Unix(0, raftApp.UpdatedAt),
 			slots:          make(map[int]*Slot),
 		}
+
+		app.UserEventChan = userEventChan
 
 		if raftApp.ProposedVersion != nil {
 			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
