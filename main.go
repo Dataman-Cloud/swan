@@ -99,7 +99,7 @@ func main() {
 		}
 
 		if err := node.Start(context.Background()); err != nil {
-			logrus.Error("start node failed. Error: %s", err.Error())
+			logrus.Errorf("start node failed. Error: %s", err.Error())
 			return err
 		}
 

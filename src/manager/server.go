@@ -19,7 +19,7 @@ func (api *ManagerApi) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
 		ApiVersion(config.API_PREFIX).
-		Path(config.API_PREFIX + "/agents").
+		Path(config.API_PREFIX + "/manager/agents").
 		Doc("manager server api").
 		Consumes(restful.MIME_JSON).
 		Produces("*/*")

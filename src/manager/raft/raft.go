@@ -597,7 +597,7 @@ func (n *Node) openWAL(snapshot *raftpb.Snapshot) (*wal.WAL, error) {
 
 // replays WAL entries into the raft intance
 func (n *Node) replayWAL() (*wal.WAL, error) {
-	log.L.Infof("replaying WAL of member %s", n.id)
+	log.L.Infof("replaying WAL of member %d", n.id)
 	snapshot, err := n.loadSnapshot()
 	if err != nil {
 		return nil, err
