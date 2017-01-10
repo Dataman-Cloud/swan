@@ -61,8 +61,8 @@ docker-build:
 
 docker-run:
 	docker rm -f swan-node-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file Envfile --name swan-node-1  --rm  -p 9999:9999 -p 2111:2111 -p 1053:53/udp swan ls
+	docker run --interactive --tty --env-file Envfile --name swan-node-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
 
 docker-run-detached:
 	docker rm -f swan-node-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 1053:53/udp --detach swan ls
+	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v /var/lib/swan:/go/src/github.com/Dataman-Cloud/swan/data --detach swan
