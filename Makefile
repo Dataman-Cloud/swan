@@ -20,9 +20,6 @@ build-swan:
 build-swancfg:
 	go build -v -o bin/swancfg src/cli/cli.go
 
-build-goswan:
-	go build -v github.com/Dataman-Cloud/swan/go-swan
-
 install:
 	install -v bin/swan /usr/local/bin
 	install -v bin/swancfg /usr/local/bin

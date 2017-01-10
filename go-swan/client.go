@@ -19,7 +19,7 @@ var (
 	// ErrInvalidResponse is thrown when swan responds with invalid or error response
 	ErrInvalidResponse = errors.New("invalid response from Swan")
 	// ErrSwanDown is thrown when all the swan endpoints are down
-	ErrSwanDown = errors.New("all the Swan hosts are presently down")
+	ErrSwanDown = errors.New("all the Swan managers are presently down")
 	// ErrTimeoutError is thrown when the operation has timed out
 	ErrTimeoutError = errors.New("the operation has timed out")
 )
@@ -32,20 +32,20 @@ type swanClient struct {
 	httpClient *http.Client
 	// a custom logger for debug log messages
 	debugLog *log.Logger
-	hosts    *cluster
+	managers *swanCluster
 }
 
 // NewClient creates a new swan client
-func NewClient(swanURL string) (Swan, error) {
+func NewClient(swanURL string, clusterName string) (Swan, error) {
 	debugLogOutput := ioutil.Discard
 	httpClient := http.DefaultClient
-	hosts, err := newCluster(httpClient, swanURL)
+	managers, err := newSwanCluster(httpClient, swanURL, clusterName)
 	if err != nil {
 		return nil, err
 	}
 	return &swanClient{
 		httpClient: http.DefaultClient,
-		hosts:      hosts,
+		managers:   managers,
 		debugLog:   log.New(debugLogOutput, "", 0),
 	}, nil
 }
@@ -71,17 +71,18 @@ func (r *swanClient) apiDelete(uri string, post, result interface{}) error {
 }
 
 func (r *swanClient) apiCall(method, uri string, body, result interface{}) error {
+	r.managers.resetManagerIndex()
 	for {
 		var url string
 		var err error
 
-		// step: grab a member from the cluster and attempt to perform the request
-		member, err := r.hosts.getMember()
+		// step: grab a manager from the swanCluster and attempt to perform the request
+		manager, err := r.managers.getNextManager()
 		if err != nil {
-			return ErrSwanDown
+			return err
 		}
 
-		url = fmt.Sprintf("%s/%s", member, uri)
+		url = fmt.Sprintf("%s/%s", manager.endpoint, uri)
 
 		var jsonBody []byte
 		if body != nil {
@@ -100,9 +101,8 @@ func (r *swanClient) apiCall(method, uri string, body, result interface{}) error
 		response, err := r.httpClient.Do(request)
 		if err != nil {
 			return err
-			r.hosts.markDown(member)
-			// step: attempt the request on another member
-			r.debugLog.Printf("apiCall(): request failed on host: %s, error: %s, trying another\n", member, err)
+			// step: attempt the request on another manager
+			r.debugLog.Printf("apiCall(): request failed on manager: %s, error: %s, trying another\n", manager.endpoint, err)
 			continue
 		}
 		defer response.Body.Close()

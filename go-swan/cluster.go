@@ -7,38 +7,29 @@ import (
 	"net/url"
 	"strings"
 	"sync"
-	"time"
 )
 
-const (
-	memberStatusUp   = 0
-	memberStatusDown = 1
-)
-
-// the status of a member node
-type memberStatus int
-
-// cluster is a collection of swan nodes
-type cluster struct {
+// swanCluster is a collection of swan nodes
+type swanCluster struct {
 	sync.RWMutex
-	// a collection of nodes
-	members []*member
+	name string
+	// a collection of managers
+	managers []*manager
 	// the http client
-	client *http.Client
+	client       *http.Client
+	managerIndex int
 }
 
-// member represents an individual endpoint
-type member struct {
+// manager represents an individual endpoint
+type manager struct {
 	// the name / ip address of the host
 	endpoint string
-	// the status of the host
-	status memberStatus
 }
 
-// newCluster returns a new swan cluster
-func newCluster(client *http.Client, swanURL string) (*cluster, error) {
+// newSwanCluster returns a new swanCluster
+func newSwanCluster(client *http.Client, swanURL string, name string) (*swanCluster, error) {
 	// step: extract and basic validate the endpoints
-	var members []*member
+	var managers []*manager
 	var defaultProto string
 
 	for _, endpoint := range strings.Split(swanURL, ",") {
@@ -72,94 +63,54 @@ func newCluster(client *http.Client, swanURL string) (*cluster, error) {
 		}
 
 		// step: create a new node for this endpoint
-		members = append(members, &member{endpoint: u.String()})
+		managers = append(managers, &manager{endpoint: u.String()})
 	}
 
-	return &cluster{
-		client:  client,
-		members: members,
+	return &swanCluster{
+		name:         name,
+		client:       client,
+		managers:     managers,
+		managerIndex: 0,
 	}, nil
 }
 
-// retrieve the current member, i.e. the current endpoint in use
-func (c *cluster) getMember() (string, error) {
+// retrieve the next manager
+func (c *swanCluster) getNextManager() (*manager, error) {
 	c.RLock()
 	defer c.RUnlock()
-	for _, n := range c.members {
-		if n.status == memberStatusUp {
-			return n.endpoint, nil
-		}
-	}
-
-	return "", ErrSwanDown
-}
-
-// markDown marks down the current endpoint
-func (c *cluster) markDown(endpoint string) {
-	c.Lock()
-	defer c.Unlock()
-	for _, n := range c.members {
-		// step: check if this is the node and it's marked as up - The double  checking on the
-		// nodes status ensures the multiple calls don't create multiple checks
-		if n.status == memberStatusUp && n.endpoint == endpoint {
-			n.status = memberStatusDown
-			go c.healthCheckNode(n)
-			break
-		}
+	if c.managerIndex >= c.size() {
+		return nil, ErrSwanDown
+	} else {
+		manager := c.managers[c.managerIndex]
+		c.managerIndex = c.managerIndex + 1
+		return manager, nil
 	}
 }
 
-// healthCheckNode performs a health check on the node and when active updates the status
-func (c *cluster) healthCheckNode(node *member) {
-	// step: wait for the node to become active ... we are assuming a /ping is enough here
-	for {
-		res, err := c.client.Get(fmt.Sprintf("%s/%s", node.endpoint, APIPing))
-		if err == nil && res.StatusCode == 200 {
-			break
-		}
-		<-time.After(time.Duration(5 * time.Second))
-	}
-	// step: mark the node as active again
-	c.Lock()
-	defer c.Unlock()
-	node.status = memberStatusUp
+func (c *swanCluster) resetManagerIndex() {
+	c.RLock()
+	defer c.RUnlock()
+	c.managerIndex = 0
+	return
 }
 
-// activeMembers returns a list of active members
-func (c *cluster) activeMembers() []string {
-	return c.membersList(memberStatusUp)
-}
-
-// nonActiveMembers returns a list of non-active members in the cluster
-func (c *cluster) nonActiveMembers() []string {
-	return c.membersList(memberStatusDown)
-}
-
-// memberList returns a list of members of a specified status
-func (c *cluster) membersList(status memberStatus) []string {
+// managerList returns a list of managers
+func (c *swanCluster) managersList() []string {
 	c.RLock()
 	defer c.RUnlock()
 	var list []string
-	for _, m := range c.members {
-		if m.status == status {
-			list = append(list, m.endpoint)
-		}
+	for _, m := range c.managers {
+		list = append(list, m.endpoint)
 	}
-
 	return list
 }
 
-// size returns the size of the cluster
-func (c *cluster) size() int {
-	return len(c.members)
+// size returns the size of the swanCluster
+func (c *swanCluster) size() int {
+	return len(c.managers)
 }
 
-// String returns a string representation
-func (m member) String() string {
-	status := "UP"
-	if m.status == memberStatusDown {
-		status = "DOWN"
-	}
-
-	return fmt.Sprintf("member: %s:%s", m.endpoint, status)
+// Name returns the cluster name
+func (c *swanCluster) Name() string {
+	return c.name
 }
