@@ -512,6 +512,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/twinj/uuid",
+			"repository": "https://github.com/twinj/uuid",
+			"vcs": "git",
+			"revision": "7bbe408d339787c56ec15568c947c0959db1b275",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/urfave/cli",
 			"repository": "https://github.com/urfave/cli",
 			"vcs": "git",
