@@ -137,10 +137,14 @@ func CreateFrameworkInfo() *mesos.FrameworkInfo {
 	return fw
 }
 
-func getMastersFromZK(zkUrl string) ([]string, error) {
+func getMastersFromZK(zkPath string) ([]string, error) {
 	masterInfo := new(mesos.MasterInfo)
 
-	url, err := url.Parse(zkUrl)
+	connUrl := zkPath
+	if !strings.HasPrefix(connUrl, "zk://") {
+		connUrl = fmt.Sprintf("zk://%s", zkPath)
+	}
+	url, err := url.Parse(connUrl)
 	if err != nil {
 		return nil, err
 	}
