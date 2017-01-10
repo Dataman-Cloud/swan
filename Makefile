@@ -65,4 +65,4 @@ docker-run:
 
 docker-run-detached:
 	docker rm -f swan-node-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 1053:53/upd --detach swan ls
+	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 1053:53/udp --detach swan ls
