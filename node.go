@@ -11,12 +11,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	MODE_MANAGER = "manager"
-	MODE_AGENT   = "agent"
-	MODE_MIXED   = "mixed"
-)
-
 type Node struct {
 	agent   *agent.Agent     // hold reference to agent, take function when in agent mode
 	manager *manager.Manager // hold a instance of manager, make logic taking place
@@ -46,13 +40,13 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 
 func (n *Node) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
-	if swancontext.Instance().Config.Mode == MODE_MANAGER || swancontext.Instance().Config.Mode == MODE_MIXED {
+	if swancontext.IsManager() {
 		go func() {
 			errChan <- n.runManager(ctx)
 		}()
 	}
 
-	if swancontext.Instance().Config.Mode == MODE_AGENT || swancontext.Instance().Config.Mode == MODE_MIXED {
+	if swancontext.IsAgent() {
 		go func() {
 			errChan <- n.runAgent(ctx)
 		}()

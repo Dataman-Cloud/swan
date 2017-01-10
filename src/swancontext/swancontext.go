@@ -22,7 +22,7 @@ func NewSwanContext(c config.SwanConfig, eventBus *event.EventBus) *SwanContext 
 		EventBus: eventBus,
 	}
 
-	instance.ApiServer = apiserver.NewApiServer(c.HttpListener.TCPAddr)
+	instance.ApiServer = apiserver.NewApiServer(c.ListenAddr)
 
 	return instance
 }
@@ -34,4 +34,12 @@ func Instance() *SwanContext {
 	} else {
 		return instance
 	}
+}
+
+func IsManager() bool {
+	return instance.Config.Mode == config.Manager || instance.Config.Mode == config.Mixed
+}
+
+func IsAgent() bool {
+	return instance.Config.Mode == config.Agent || instance.Config.Mode == config.Mixed
 }
