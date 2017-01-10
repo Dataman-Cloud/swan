@@ -99,7 +99,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		},
 
 		Janitor: Janitor{
-			ListenerMode: "single",
+			ListenerMode: "single_port",
 			IP:           "0.0.0.0",
 			Port:         80,
 			Domain:       "swan.com",
