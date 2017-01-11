@@ -22,9 +22,10 @@ type SwanConfig struct {
 	Scheduler Scheduler `json:"scheduler"`
 	Raft      Raft      `json:"raft"`
 
-	DNS        DNS     `json:"dns"`
-	Janitor    Janitor `json:"janitor"`
-	ListenAddr string  `json:"listen-addr"`
+	DNS           DNS     `json:"dns"`
+	Janitor       Janitor `json:"janitor"`
+	ListenAddr    string  `json:"listen-addr"`
+	AdvertiseAddr string  `json:"advertise-addr"`
 }
 
 type Scheduler struct {
@@ -155,6 +156,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	// a listen-addr just for agent
 	if swanConfig.Mode == Agent {
 		swanConfig.ListenAddr = c.String("listen-addr")
+		swanConfig.AdvertiseAddr = c.String("advertise-addr")
 	}
 
 	return swanConfig, nil

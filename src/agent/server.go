@@ -65,6 +65,7 @@ func (api *AgentApi) ResolverEventHandler(request *restful.Request, response *re
 		return
 	}
 
+	logrus.Infof("agent got resolver event %+v", resolverEvent)
 	api.agent.resolver.RecordGeneratorChangeChan() <- &resolverEvent
 
 	response.WriteHeaderAndEntity(http.StatusCreated, nil)
@@ -79,6 +80,7 @@ func (api *AgentApi) JanitorEventHandler(request *restful.Request, response *res
 		return
 	}
 
+	logrus.Infof("agent got janitor event %+v", janitorEvent)
 	api.agent.janitorServer.SwanEventChan() <- &janitorEvent
 
 	response.WriteHeaderAndEntity(http.StatusCreated, nil)

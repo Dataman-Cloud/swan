@@ -3,6 +3,7 @@ package event
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"sync"
 
@@ -49,13 +50,15 @@ func (js *JanitorSubscriber) AddAcceptor(acceptor types.JanitorAcceptor) {
 }
 
 func (js *JanitorSubscriber) Write(e *Event) error {
+	fmt.Println("xxxxxxxxxxxxxwwwwwwwwwwwwwwwww")
+	fmt.Println(e)
 	payload, ok := e.Payload.(*TaskInfoEvent)
 	if !ok {
 		return errors.New("payload type error")
 	}
 
 	rgevent := &upstream.TargetChangeEvent{}
-	if e.Type == EventTypeTaskAdd {
+	if e.Type == EventTypeTaskHealthy {
 		rgevent.Change = "add"
 	} else {
 		rgevent.Change = "del"
@@ -71,11 +74,17 @@ func (js *JanitorSubscriber) Write(e *Event) error {
 }
 
 func (js *JanitorSubscriber) InterestIn(e *Event) bool {
-	if e.Type == EventTypeTaskAdd {
+	fmt.Println("xxxxxxxxxxxxx")
+	fmt.Println(e)
+	if e.AppMode != "replicates" {
+		return false
+	}
+
+	if e.Type == EventTypeTaskHealthy {
 		return true
 	}
 
-	if e.Type == EventTypeTaskRm {
+	if e.Type == EventTypeTaskUnhealthy {
 		return true
 	}
 
@@ -91,6 +100,8 @@ func (js *JanitorSubscriber) pushJanitorEvent(event *upstream.TargetChangeEvent)
 
 	js.acceptorLock.RLock()
 	for _, acceptor := range js.acceptors {
+		logrus.Infof("write to xefwefe ||||||||||||||||||||||||||||| %s", acceptor.RemoteAddr)
+
 		if err := sendEventByHttp(acceptor.RemoteAddr, "POST", data); err != nil {
 			logrus.Infof("send janitor event by http to %s got error: %s", acceptor.RemoteAddr, err.Error())
 		}

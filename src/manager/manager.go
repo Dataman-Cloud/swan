@@ -125,7 +125,10 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				go func() {
 					eventBusStarted = true
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
+					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
+					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 					swancontext.Instance().EventBus.Start(ctx)
+
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
@@ -139,6 +142,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a follower !!!")
 
 				if eventBusStarted {
+					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
+					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 					swancontext.Instance().EventBus.Stop()
 					log.G(ctx).Info("eventBus has been stopped")
 					eventBusStarted = false
@@ -185,8 +190,12 @@ func (manager *Manager) LoadAgentData() error {
 		return err
 	}
 
+	fmt.Println("sfefwefwefe  -----------------------")
+
 	manager.agents = make(map[string]types.Agent)
 	for _, agentMetadata := range agents {
+		fmt.Println("sfefwefwefe  -----------------------==================")
+		fmt.Println(agentMetadata)
 		agent := types.Agent{
 			ID:         agentMetadata.ID,
 			RemoteAddr: agentMetadata.RemoteAddr,
