@@ -21,16 +21,15 @@
 + Version rollback
 + Health check
 + Auto failover
++ High Availability with Raft baked
++ Build in HTTP Proxy, Load Balance
++ Build in DNS
 
 ## Special features
-+ The instance name is fixed during the application lifecycle. 
++ The instance name is fixed during the application lifecycle.
 + The instance index is continuously incremented from zero.
 
 ## Installation
-### Use Docker Compose(all-in-one, include mesos)
-```
-docker-compose up -d
-```
 ### From Source(swan only)
 First get the swan:
 ```
@@ -50,24 +49,18 @@ chmod +x swan
 ```
 ### Run as standalone mode
 ```
-swan --mesos-master=192.168.1.50:5050 --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
+goreman start
 
-or
+or 
 
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=0.0.0.0:9999 --raftid=1 --raft-cluster=http://127.0.0.1:2111
+make docker-run
 ```
 
-### Run as HA mode
+### Run in HA mode
 ```
-swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
-swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
-swan --mesos-master=192.168.59.104:5050 --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
-
-or
-
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
+swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
 ```
 Use `swan --help` to see usage.
 
