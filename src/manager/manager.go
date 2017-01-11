@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"sync"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
+	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
@@ -15,6 +17,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
+	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
+	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
 	events "github.com/docker/go-events"
@@ -231,6 +235,9 @@ func (manager *Manager) AddAgent(agent types.Agent) error {
 	manager.agentLock.Lock()
 	manager.agents[agent.ID] = agent
 	manager.agentLock.Unlock()
+
+	go manager.SendAgentInitData(agent)
+
 	return nil
 }
 
@@ -282,4 +289,46 @@ func (manager *Manager) AddAgentAcceptor(agent types.Agent) {
 		Status:     agent.Status,
 	}
 	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
+}
+
+func (manager *Manager) SendAgentInitData(agent types.Agent) {
+	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
+	var janitorEvents []*upstream.TargetChangeEvent
+
+	taskEvents := manager.framework.Scheduler.BuildHealthyTaskEvent()
+
+	for _, taskEvent := range taskEvents {
+		resolverEvent, err := swanevent.BuildResolverEvent(taskEvent)
+		if err == nil {
+			resolverEvents = append(resolverEvents, resolverEvent)
+		} else {
+			logrus.Errorf("Build resolver event got error: %s", err.Error())
+		}
+
+		janitorEvent, err := swanevent.BuildJanitorEvent(taskEvent)
+		if err == nil {
+			janitorEvents = append(janitorEvents, janitorEvent)
+		} else {
+			logrus.Errorf("Build janitor event got error: %s", err.Error())
+		}
+	}
+
+	resolverData, err := json.Marshal(resolverEvents)
+	if err == nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.RemoteAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
+			logrus.Errorf("send resolver init data got error: %s", err.Error())
+		}
+
+	} else {
+		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
+	}
+
+	janitorData, err := json.Marshal(janitorEvents)
+	if err == nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.RemoteAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
+			logrus.Errorf("send janitor init data got error: %s", err.Error())
+		}
+	} else {
+		logrus.Errorf("marshal janitor init data got error: %s", err.Error())
+	}
 }

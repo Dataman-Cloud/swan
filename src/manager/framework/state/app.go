@@ -312,6 +312,10 @@ func (app *App) SetState(state string) {
 }
 
 func (app *App) EmitAppEvent(eventType string) {
+	app.EmitEvent(app.BuildAppEvent(eventType))
+}
+
+func (app *App) BuildAppEvent(eventType string) *swanevent.Event {
 	e := &swanevent.Event{Type: eventType}
 	e.AppId = app.ID
 	e.Payload = &swanevent.AppInfoEvent{
@@ -321,7 +325,8 @@ func (app *App) EmitAppEvent(eventType string) {
 		ClusterId: app.ClusterID,
 		RunAs:     app.CurrentVersion.RunAs,
 	}
-	app.EmitEvent(e)
+
+	return e
 }
 
 func (app *App) StateIs(state string) bool {
@@ -398,9 +403,9 @@ func (app *App) GetSlots() []*Slot {
 
 func (app *App) SetSlot(index int, slot *Slot) {
 	app.slotsLock.Lock()
-	defer app.slotsLock.Unlock()
-
 	app.slots[index] = slot
+	app.slotsLock.Unlock()
+
 	app.Touch(false)
 }
 

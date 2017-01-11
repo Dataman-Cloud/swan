@@ -8,7 +8,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
-	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Sirupsen/logrus"
 
 	restful "github.com/emicklei/go-restful"
@@ -27,13 +26,13 @@ func (api *AgentApi) Register(container *restful.Container) {
 		Consumes(restful.MIME_JSON).
 		Produces("*/*")
 
-	ws.Route(ws.POST("/init").To(metrics.InstrumentRouteFunc("POST", "Agent Init", api.InitAgent)).
+	ws.Route(ws.POST("/resolver/init").To(metrics.InstrumentRouteFunc("POST", "Agent Init", api.InitResolver)).
 		Doc("Init Agent").
 		Operation("InitAgent").
-		Returns(201, "OK", types.Agent{}).
+		Returns(201, "OK", nil).
 		Returns(400, "BadRequest", nil).
-		Reads([]types.App{}).
-		Writes(types.Agent{}))
+		Reads([]nameserver.RecordGeneratorChangeEvent{}).
+		Writes(nil))
 
 	ws.Route(ws.POST("/resolver/event").To(metrics.InstrumentRouteFunc("POST", "Resolver Event", api.ResolverEventHandler)).
 		Doc("Resolver Event Handler").
@@ -41,6 +40,14 @@ func (api *AgentApi) Register(container *restful.Container) {
 		Returns(201, "OK", nil).
 		Returns(400, "BadRequest", nil).
 		Reads(event.Event{}).
+		Writes(nil))
+
+	ws.Route(ws.POST("/janitor/init").To(metrics.InstrumentRouteFunc("POST", "Agent Init", api.InitJanitor)).
+		Doc("Init Agent").
+		Operation("InitAgent").
+		Returns(201, "OK", nil).
+		Returns(400, "BadRequest", nil).
+		Reads([]upstream.TargetChangeEvent{}).
 		Writes(nil))
 
 	ws.Route(ws.POST("/janitor/event").To(metrics.InstrumentRouteFunc("POST", "Janitor Event", api.JanitorEventHandler)).
@@ -54,7 +61,23 @@ func (api *AgentApi) Register(container *restful.Container) {
 	container.Add(ws)
 }
 
-func (api *AgentApi) InitAgent(request *restful.Request, response *restful.Response) {
+func (api *AgentApi) InitResolver(request *restful.Request, response *restful.Response) {
+	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
+	if err := request.ReadEntity(&resolverEvents); err != nil {
+		logrus.Errorf("init resolver failed. Error: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
+	}
+
+	go func() {
+		for _, resolverEvent := range resolverEvents {
+			logrus.Infof("init resolver data with resolver event %+v", *resolverEvent)
+			api.agent.resolver.RecordGeneratorChangeChan() <- resolverEvent
+		}
+	}()
+
+	response.WriteHeaderAndEntity(http.StatusCreated, nil)
+	return
 }
 
 func (api *AgentApi) ResolverEventHandler(request *restful.Request, response *restful.Response) {
@@ -70,6 +93,26 @@ func (api *AgentApi) ResolverEventHandler(request *restful.Request, response *re
 
 	response.WriteHeaderAndEntity(http.StatusCreated, nil)
 	return
+}
+
+func (api *AgentApi) InitJanitor(request *restful.Request, response *restful.Response) {
+	var janitorEvents []*upstream.TargetChangeEvent
+	if err := request.ReadEntity(&janitorEvents); err != nil {
+		logrus.Errorf("init janitor data failed. Error: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
+	}
+
+	go func() {
+		for _, janitorEvent := range janitorEvents {
+			logrus.Infof("janitor init with janitor event %+v", *janitorEvent)
+			api.agent.janitorServer.SwanEventChan() <- janitorEvent
+		}
+	}()
+
+	response.WriteHeaderAndEntity(http.StatusCreated, nil)
+	return
+
 }
 
 func (api *AgentApi) JanitorEventHandler(request *restful.Request, response *restful.Response) {
