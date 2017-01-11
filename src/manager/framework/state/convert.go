@@ -205,7 +205,7 @@ func DockerFromRaft(raftDocker *rafttypes.Docker) *types.Docker {
 		docker.Parameters = parameters
 	}
 
-	if docker.PortMappings != nil {
+	if raftDocker.PortMappings != nil {
 		var portMappings []*types.PortMapping
 		for _, portMapping := range raftDocker.PortMappings {
 			portMappings = append(portMappings, PortMappingFromRaft(portMapping))
