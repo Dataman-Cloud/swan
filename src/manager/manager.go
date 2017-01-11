@@ -142,8 +142,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a follower !!!")
 
 				if eventBusStarted {
-					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
-					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
+					manager.resolverSubscriber.Unsubscribe(swancontext.Instance().EventBus)
+					manager.janitorSubscriber.Unsubscribe(swancontext.Instance().EventBus)
 					swancontext.Instance().EventBus.Stop()
 					log.G(ctx).Info("eventBus has been stopped")
 					eventBusStarted = false
