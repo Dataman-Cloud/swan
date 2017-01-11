@@ -1,5 +1,5 @@
 {
-  "appID": "0092",
+  "appID": "0091",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
@@ -12,7 +12,7 @@
   ],
   "container": {
     "docker": {
-      "image": "2048",
+      "image": "nginx:1.10",
       "network": "BRIDGE",
       "forcePullImage": false,
       "privileged": true,
@@ -51,6 +51,16 @@
     "duration": 5
   },
   "healthChecks": [
+    {
+      "protocol": "HTTP",
+      "path": "/",
+      "delaySeconds": 15,
+      "portName": "web",
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 3,
+      "timeoutSeconds": 3,
+      "consecutiveFailures": 500
+    }
  ],
   "updatePolicy": {
 	  "updateDelay": 5,

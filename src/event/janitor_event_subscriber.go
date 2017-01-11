@@ -3,7 +3,6 @@ package event
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 
@@ -50,8 +49,6 @@ func (js *JanitorSubscriber) AddAcceptor(acceptor types.JanitorAcceptor) {
 }
 
 func (js *JanitorSubscriber) Write(e *Event) error {
-	fmt.Println("xxxxxxxxxxxxxwwwwwwwwwwwwwwwww")
-	fmt.Println(e)
 	payload, ok := e.Payload.(*TaskInfoEvent)
 	if !ok {
 		return errors.New("payload type error")
@@ -74,8 +71,6 @@ func (js *JanitorSubscriber) Write(e *Event) error {
 }
 
 func (js *JanitorSubscriber) InterestIn(e *Event) bool {
-	fmt.Println("xxxxxxxxxxxxx")
-	fmt.Println(e)
 	if e.AppMode != "replicates" {
 		return false
 	}

@@ -52,14 +52,14 @@ listen on port UDP 53
 ``` bash
 
 # on host 1
-sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=1 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2112,http://192.168.1.3:2113 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9998,192.168.1.3:9997 --mode=manager --domain=foobar.com
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=1 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9999,192.168.1.3:9999 --mode=manager --domain=foobar.com
 
 # on host 2
-sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=2 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2112,http://192.168.1.3:2113 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9998,192.168.1.3:9997 --mode=manager --domain=foobar.com
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=2 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.1:9998,192.168.1.1:9997 --mode=manager --domain=foobar.com
 
 # on host 3
 
-sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=3 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2112,http://192.168.1.3:2113 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9998,192.168.1.3:9997 --mode=manager --domain=foobar.com
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=3 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9999,192.168.1.3:9999 --mode=manager --domain=foobar.com
 
 
 ```
