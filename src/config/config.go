@@ -156,8 +156,9 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	// a listen-addr just for agent
 	if swanConfig.Mode == Agent {
 		swanConfig.ListenAddr = c.String("listen-addr")
-		swanConfig.AdvertiseAddr = c.String("advertise-addr")
 	}
+
+	swanConfig.AdvertiseAddr = c.String("advertise-addr")
 
 	return swanConfig, nil
 }
