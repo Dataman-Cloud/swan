@@ -1,17 +1,22 @@
-package event
+package swan
 
 import (
-	"bytes"
-	"net/http"
+	"errors"
+	"fmt"
 
-	"github.com/satori/go.uuid"
+	swanevent "github.com/Dataman-Cloud/swan/src/event"
 )
 
-const (
-	//task_add and task_rm is used for dns/proxy service
-	EventTypeTaskAdd = "task_add"
-	EventTypeTaskRm  = "task_rm"
+// EventsChannel is a channel to receive events upon
+type EventsChannel chan *Event
 
+type Event struct {
+	ID    string
+	Event string
+	Data  interface{}
+}
+
+const (
 	EventTypeTaskStatePendingOffer   = "task_state_pending_offer"
 	EventTypeTaskStatePendingKill    = "task_state_pending_killed"
 	EventTypeTaskStateReap           = "task_state_pending_reap"
@@ -39,53 +44,37 @@ const (
 	EventTypeAppStateScaleDown    = "app_state_scale_down"
 )
 
-type Event struct {
-	Id      string
-	Type    string
-	AppId   string
-	Payload interface{}
-}
-
-func NewEvent(t string, payload interface{}) *Event {
-	return &Event{
-		Id:      uuid.NewV4().String(),
-		Type:    t,
-		Payload: payload,
+func GetEvent(eventType string) (*Event, error) {
+	event := new(Event)
+	switch eventType {
+	case EventTypeTaskStatePendingOffer,
+		EventTypeTaskStatePendingKill,
+		EventTypeTaskStateReap,
+		EventTypeTaskStateStaging,
+		EventTypeTaskStateStarting,
+		EventTypeTaskStateRunning,
+		EventTypeTaskStateKilling,
+		EventTypeTaskStateFinished,
+		EventTypeTaskStateFailed,
+		EventTypeTaskStateKilled,
+		EventTypeTaskStateError,
+		EventTypeTaskStateLost,
+		EventTypeTaskStateDropped,
+		EventTypeTaskStateUnreachable,
+		EventTypeTaskStateGone,
+		EventTypeTaskStateGoneByOperator,
+		EventTypeTaskStateUnknown:
+		event.Data = new(swanevent.TaskInfoEvent)
+	case EventTypeAppStateCreating,
+		EventTypeAppStateDeletion,
+		EventTypeAppStateNormal,
+		EventTypeAppStateUpdating,
+		EventTypeAppStateCancelUpdate,
+		EventTypeAppStateScaleUp,
+		EventTypeAppStateScaleDown:
+		event.Data = new(swanevent.AppInfoEvent)
+	default:
+		return nil, errors.New(fmt.Sprintf("The event type %s was not found or supported", eventType))
 	}
-}
-
-type TaskInfoEvent struct {
-	Ip        string
-	TaskId    string
-	AppId     string
-	Port      string
-	State     string
-	Healthy   bool
-	ClusterId string
-	RunAs     string
-}
-
-type AppInfoEvent struct {
-	AppId     string
-	Name      string
-	State     string
-	ClusterId string
-	RunAs     string
-}
-
-func sendEventByHttp(addr, method string, data []byte) error {
-	request, err := http.NewRequest(method, addr, bytes.NewReader(data))
-	if err != nil {
-		return err
-	}
-
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("Accept", "application/json")
-
-	_, err = http.DefaultClient.Do(request)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return event, nil
 }

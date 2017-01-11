@@ -272,6 +272,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/donovanhide/eventsource",
+			"repository": "https://github.com/donovanhide/eventsource",
+			"vcs": "git",
+			"revision": "fd1de70867126402be23c306e1ce32828455d85b",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/dustin/go-broadcast",
 			"repository": "https://github.com/dustin/go-broadcast",
 			"vcs": "git",

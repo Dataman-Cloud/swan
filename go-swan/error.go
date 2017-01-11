@@ -4,7 +4,6 @@ import (
 	"fmt"
 )
 
-
 // APIError represents a generic API error.
 type APIError struct {
 	// ErrCode specifies the nature of the error.
