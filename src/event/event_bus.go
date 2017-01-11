@@ -35,6 +35,8 @@ func (bus *EventBus) Start(ctx context.Context) error {
 				if subscriber.InterestIn(e) {
 					subscriber.Write(e)
 					logrus.Debugf("write event e %s to %s", e, subscriber)
+				} else {
+					logrus.Debugf("subscriber %s have no interest in %s", subscriber, e)
 				}
 			}
 

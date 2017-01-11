@@ -14,6 +14,7 @@ setup mesos cluster](http://mesos.apache.org/documentation/latest/getting-starte
 
   cd $GOPATH/src && git clone https://github.com/Dataman-Cloud/swan github.com/Dataman-Cloud/swan
 
+
 ```
 
 ### 2, build Golang source code
@@ -22,13 +23,24 @@ setup mesos cluster](http://mesos.apache.org/documentation/latest/getting-starte
 
   cd $GOPATH/src/github.com/Dataman-Cloud/swan/ && make
 
+  or
+
+  make docker-build
+
 ```
 
 ### 3, start Swan with standalone mode
 
 ``` bash
+  sudo bin/swan --zk-path=zk://192.168.1.1:2181/mesos --log-level=debug --raftid=1 --raft-cluster=127.0.0.1:2111 --data-dir=./data --cluster-addrs=0.0.0.0:9999 --mode=mixed --domain=foobar.com
 
-  sudo bin/swan --mesos-master=$MESOS_MASTER_PATH --log-level=debug --raftid=1 --raft-cluster=http://127.0.0.1:2111 --data-dir=./data --enable-dns --enable-proxy --cluster=0.0.0.0:9999
+  or
+
+  goreman start
+
+  or
+
+  make docker-run
 
 ```
 
@@ -39,9 +51,16 @@ listen on port UDP 53
 
 ``` bash
 
-sudo bin/swan --mesos-master=$MESOS_MASTER_PATH --log-level=debug --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --data-dir=./data --enable-dns --cluster=0.0.0.0:9999,0.0.0.0:9998,0.0.0.0:9997
-sudo bin/swan --mesos-master=$MESOS_MASTER_PATH --log-level=debug --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --data-dir=./data --enable-dns --cluster=0.0.0.0:9999,0.0.0.0:9998,0.0.0.0:9997
-sudo bin/swan --mesos-master=$MESOS_MASTER_PATH --log-level=debug --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --data-dir=./data --enable-dns --cluster=0.0.0.0:9999,0.0.0.0:9998,0.0.0.0:9997
+# on host 1
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=1 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9999,192.168.1.3:9999 --mode=manager --domain=foobar.com
+
+# on host 2
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=2 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.1:9998,192.168.1.1:9997 --mode=manager --domain=foobar.com
+
+# on host 3
+
+sudo bin/swan --zk-path=zk://192.168.1.175:2181/mesos --log-level=debug --raftid=3 --raft-cluster=http://192.168.1.1:2111,http://192.168.1.2:2111,http://192.168.1.3:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999,192.168.1.2:9999,192.168.1.3:9999 --mode=manager --domain=foobar.com
+
 
 ```
 

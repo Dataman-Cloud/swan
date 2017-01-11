@@ -55,7 +55,7 @@ func (js *JanitorSubscriber) Write(e *Event) error {
 	}
 
 	rgevent := &upstream.TargetChangeEvent{}
-	if e.Type == EventTypeTaskAdd {
+	if e.Type == EventTypeTaskHealthy {
 		rgevent.Change = "add"
 	} else {
 		rgevent.Change = "del"
@@ -71,11 +71,15 @@ func (js *JanitorSubscriber) Write(e *Event) error {
 }
 
 func (js *JanitorSubscriber) InterestIn(e *Event) bool {
-	if e.Type == EventTypeTaskAdd {
+	if e.AppMode != "replicates" {
+		return false
+	}
+
+	if e.Type == EventTypeTaskHealthy {
 		return true
 	}
 
-	if e.Type == EventTypeTaskRm {
+	if e.Type == EventTypeTaskUnhealthy {
 		return true
 	}
 

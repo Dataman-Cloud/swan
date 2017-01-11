@@ -111,7 +111,7 @@ func (agent *Agent) RegisterToManager() error {
 	swanConfig := swancontext.Instance().Config
 	agentInfo := types.Agent{
 		ID:         uuid.NewV4().String(),
-		RemoteAddr: swanConfig.ListenAddr,
+		RemoteAddr: swanConfig.AdvertiseAddr,
 	}
 
 	data, err := json.Marshal(agentInfo)

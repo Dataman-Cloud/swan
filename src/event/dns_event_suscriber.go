@@ -55,7 +55,7 @@ func (subscriber *DNSSubscriber) Write(e *Event) error {
 	}
 
 	rgEvent := &nameserver.RecordGeneratorChangeEvent{}
-	if e.Type == EventTypeTaskAdd {
+	if e.Type == EventTypeTaskHealthy {
 		rgEvent.Change = "add"
 	} else {
 		rgEvent.Change = "del"
@@ -71,11 +71,11 @@ func (subscriber *DNSSubscriber) Write(e *Event) error {
 }
 
 func (subscriber *DNSSubscriber) InterestIn(e *Event) bool {
-	if e.Type == EventTypeTaskAdd {
+	if e.Type == EventTypeTaskHealthy {
 		return true
 	}
 
-	if e.Type == EventTypeTaskRm {
+	if e.Type == EventTypeTaskUnhealthy {
 		return true
 	}
 

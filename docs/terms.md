@@ -43,6 +43,17 @@ driver，这里我们推荐使用macvlan的driver，后面会有详细介绍如�
 * replicates 此类应用对弹性依赖较大，偏七层应用，不用一容器一IP， Docker
   Bridge Driver，DNS有对应的人SRV记录。
 
+### Manager
+
+主要作用为维护分布式状态机，比如应用状态和Slot状态。多Manager之间通过Raft协议做Log
+Replication和Leader
+Election。对状态机的修改只会发生在Manager中的Leader上，再同步到Follower上。 推荐生产环境部署为3个Manager。
+
+### Agent
+
+做Proxy和DNS Proxy之用。
+
+
 
 
 

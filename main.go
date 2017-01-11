@@ -74,6 +74,17 @@ func main() {
 			Usage:  "domain which resolve to proxies. eg. access a slot by 0.appname.runas.clustername.domain",
 			EnvVar: "SWAN_DOMAIN",
 		},
+		cli.StringFlag{
+			Name:   "listen-addr",
+			Usage:  "listener address for agent",
+			EnvVar: "SWAN_AGENT_LISTEN_ADDR",
+		},
+
+		cli.StringFlag{
+			Name:   "advertise-addr",
+			Usage:  "advertise address for agent",
+			EnvVar: "SWAN_AGENT_ADVERTISE_ADDR",
+		},
 	}
 	app.Action = func(c *cli.Context) error {
 		config, err := config.NewConfig(c)

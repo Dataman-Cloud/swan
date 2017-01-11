@@ -59,10 +59,22 @@ list-authors:
 docker-build:
 	docker build --tag swan --rm .
 
-docker-run:
+docker-run-mixed:
 	docker rm -f swan-node-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file Envfile --name swan-node-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
 
-docker-run-detached:
+docker-run-manager:
+	docker rm -f swan-manager-1 2>&1 || echo 0
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager-1  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+
+docker-run-agent:
+	docker rm -f swan-agent-1 2>&1 || echo 0
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent-1  --rm  -p 9998:9998 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+
+docker-run-mixed-detached:
 	docker rm -f swan-node-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file Envfile --name swan-node-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v /var/lib/swan:/go/src/github.com/Dataman-Cloud/swan/data --detach swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-mixed-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v /var/lib/swan:/go/src/github.com/Dataman-Cloud/swan/data --detach swan
+
+docker-run-mixed-cluster:
+	docker rm -f swan-node-1 2>&1 || echo 0
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan

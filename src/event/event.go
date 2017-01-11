@@ -9,8 +9,8 @@ import (
 
 const (
 	//task_add and task_rm is used for dns/proxy service
-	EventTypeTaskAdd = "task_add"
-	EventTypeTaskRm  = "task_rm"
+	EventTypeTaskHealthy   = "task_healthy"
+	EventTypeTaskUnhealthy = "task_unhealthy"
 
 	EventTypeTaskStatePendingOffer   = "task_state_pending_offer"
 	EventTypeTaskStatePendingKill    = "task_state_pending_killed"
@@ -43,6 +43,7 @@ type Event struct {
 	Id      string
 	Type    string
 	AppId   string
+	AppMode string
 	Payload interface{}
 }
 
