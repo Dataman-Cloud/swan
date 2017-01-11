@@ -95,8 +95,6 @@ func (js *JanitorSubscriber) pushJanitorEvent(event *upstream.TargetChangeEvent)
 
 	js.acceptorLock.RLock()
 	for _, acceptor := range js.acceptors {
-		logrus.Infof("write to xefwefe ||||||||||||||||||||||||||||| %s", acceptor.RemoteAddr)
-
 		if err := sendEventByHttp(acceptor.RemoteAddr, "POST", data); err != nil {
 			logrus.Infof("send janitor event by http to %s got error: %s", acceptor.RemoteAddr, err.Error())
 		}
