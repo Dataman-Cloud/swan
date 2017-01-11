@@ -1,7 +1,6 @@
 package event
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -32,9 +31,6 @@ func (bus *EventBus) Start(ctx context.Context) error {
 	for {
 		select {
 		case e := <-bus.EventChan:
-			fmt.Println("fwhifewhfewfhwefhew00000000000000000000000000000000000000")
-			fmt.Println(e)
-			fmt.Println(bus.Subscribers)
 			for _, subscriber := range bus.Subscribers {
 				if subscriber.InterestIn(e) {
 					subscriber.Write(e)

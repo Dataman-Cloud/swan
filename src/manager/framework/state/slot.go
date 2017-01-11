@@ -340,10 +340,7 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_TASK_STARTING:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStarting)
 	case SLOT_STATE_TASK_RUNNING:
-		fmt.Println("fffffffffffffffff runnnnnnnnnnnnnnnnnnnn")
-		fmt.Println(len(slot.Version.HealthChecks))
 		if len(slot.Version.HealthChecks) == 0 {
-			fmt.Println("fffffffffffffffff runnnnnnnnnnnnnnnnnnnnxxxxxxxxxxxx")
 			slot.SetHealthy(true)
 		}
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateRunning)

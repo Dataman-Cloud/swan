@@ -157,7 +157,7 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 
 func (apiServer *ApiServer) proxy() restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		if apiServer.leaderAddr == apiServer.addr {
+		if apiServer.leaderAddr == apiServer.addr || apiServer.leaderAddr == "" {
 			chain.ProcessFilter(req, resp)
 			return
 		}

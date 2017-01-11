@@ -190,12 +190,8 @@ func (manager *Manager) LoadAgentData() error {
 		return err
 	}
 
-	fmt.Println("sfefwefwefe  -----------------------")
-
 	manager.agents = make(map[string]types.Agent)
 	for _, agentMetadata := range agents {
-		fmt.Println("sfefwefwefe  -----------------------==================")
-		fmt.Println(agentMetadata)
 		agent := types.Agent{
 			ID:         agentMetadata.ID,
 			RemoteAddr: agentMetadata.RemoteAddr,
