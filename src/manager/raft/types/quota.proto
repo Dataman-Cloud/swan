@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+package types;
+
+import weak "gogoproto/gogo.proto";
+
+option (gogoproto.populate_all) = true;
+option (gogoproto.testgen_all) = true;
+option (gogoproto.gostring_all) = true;
+option (gogoproto.equal_all) = true;
+option (gogoproto.verbose_equal_all) = true;
+option (gogoproto.marshaler_all) = true;
+option (gogoproto.sizer_all) = true;
+option (gogoproto.unmarshaler_all) = true;
+option (gogoproto.goproto_getters_all) = false;
+
+// v1
+//
+//message ResourceList {
+//    map<string,int64> resourceList = 1;
+//}
+//
+//message ResourceQuotaSpec {
+//    ResourceList limit = 1;
+//}
+//
+//message ResourceQuotaStatus {
+//    ResourceList limit = 1;
+//    ResourceList offered = 2;
+//}
+//
+//message TierResourceQuota {
+//    string tierType = 1;
+//    ResourceQuotaSpec quotaSpec = 2;
+//    ResourceQuotaStatus quotaStatus = 3;
+//}
+//
+//message ResourceQuota {
+//    string quotaGroup = 1;
+//    map<string,TierResourceQuota> quotas = 2;
+//}
+
+// v2
+// map<string,int64> resourceList
+message ResourceQuotaSpec {
+    map<string,int64> limit = 1;
+}
+
+message ResourceQuotaStatus {
+//    map<string,int64> limit = 1;
+    map<string,int64> offered = 2;
+}
+
+message TierResourceQuota {
+    ResourceQuotaSpec quotaSpec = 1;
+    ResourceQuotaStatus quotaStatus = 2;
+}
+
+message ResourceQuota {
+    string quotaGroup = 1;
+    map<string,TierResourceQuota> quotas = 2; // hardLimit, overCapacity, freeOfCharge
+}
