@@ -160,3 +160,17 @@ func (scheduler *Scheduler) InvalidateApps() {
 func (scheduler *Scheduler) EmitEvent(swanEvent *swanevent.Event) {
 	swancontext.Instance().EventBus.EventChan <- swanEvent
 }
+
+func (scheduler *Scheduler) BuildHealthyTaskEvent() []*swanevent.Event {
+	var healthyEvents []*swanevent.Event
+
+	for _, app := range scheduler.AppStorage.Data() {
+		for _, slot := range app.GetSlots() {
+			if slot.Healthy() {
+				healthyEvents = append(healthyEvents, slot.BuildTaskEvent(swanevent.EventTypeTaskHealthy))
+			}
+		}
+	}
+
+	return healthyEvents
+}

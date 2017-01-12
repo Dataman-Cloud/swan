@@ -414,9 +414,13 @@ func (slot *Slot) Normal() bool {
 	return slot.StateIs(SLOT_STATE_PENDING_OFFER) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_STAGING)
 }
 
-func (slot *Slot) EmitTaskEvent(ttype string) {
+func (slot *Slot) EmitTaskEvent(eventType string) {
+	slot.App.EmitEvent(slot.BuildTaskEvent(eventType))
+}
+
+func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 	e := &swanevent.Event{
-		Type:    ttype,
+		Type:    eventType,
 		AppId:   slot.App.ID,
 		AppMode: string(slot.App.Mode),
 	}
@@ -439,7 +443,8 @@ func (slot *Slot) EmitTaskEvent(ttype string) {
 		}
 		e.Payload = payload
 	}
-	slot.App.EmitEvent(e)
+
+	return e
 }
 
 func (slot *Slot) MarkForRollingUpdate() bool {
