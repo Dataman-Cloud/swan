@@ -30,4 +30,10 @@ type Store interface {
 	CreateOfferAllocatorItem(context.Context, *types.OfferAllocatorItem, func()) error
 	DeleteOfferAllocatorItem(context.Context, string, func()) error
 	ListOfferallocatorItems() ([]*types.OfferAllocatorItem, error)
+
+	CreateQuota(ctx context.Context, resourceQuota *types.ResourceQuota, cb func()) error
+	UpdateQuota(ctx context.Context, resourceQuota *types.ResourceQuota, cb func()) error
+	GetQuota(quotaGroup string) (*types.ResourceQuota, error)
+	ListQuotas() ([]*types.ResourceQuota, error)
+	DeleteQuota(ctx context.Context, quotaGroup string, cb func()) error
 }
