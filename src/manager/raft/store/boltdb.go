@@ -20,6 +20,7 @@ var (
 	bucketKeyTasks          = []byte("tasks")
 	bucketKeyVersions       = []byte("versions")
 	bucketKeySlots          = []byte("slots")
+	bucketKeyQuotas         = []byte("quotas")
 	bucketKeyOfferAllocator = []byte("offer_allocator")
 	bucketKeyAgents         = []byte("agents")
 	BucketKeyRaftState      = []byte("raft_hard_state")
@@ -32,6 +33,7 @@ var (
 	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrVersionUnknown          = errors.New("boltdb: version unknown")
 	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
+	ErrQuotaUnknown            = errors.New("boltdb: quota group unknown")
 	ErrAgentUnknown            = errors.New("boltdb: agent unknow")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
@@ -41,6 +43,7 @@ var (
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
 	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
 	ErrUndefineAgentAction     = errors.New("boltdb: undefined agent store action")
+	ErrUndefineQuotaAction     = errors.New("boltdb: undefined quota store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -54,6 +57,10 @@ func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 		}
 
 		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyAgents); err != nil {
+			return err
+		}
+
+		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyQuotas); err != nil {
 			return err
 		}
 
@@ -137,6 +144,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doOfferAllocatorItemStoreAction(tx, action.Action, action.GetOfferAllocatorItem())
 	case *types.StoreAction_Agent:
 		return doAgentStoreAction(tx, action.Action, action.GetAgent())
+	case *types.StoreAction_ResoureQuota:
+		return doQuotaStoreAction(tx, action.Action, action.GetResoureQuota())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -226,6 +235,19 @@ func doAgentStoreAction(tx *bolt.Tx, action types.StoreActionKind, agent *types.
 		return removeAgent(tx, agent.ID)
 	default:
 		return ErrUndefineAgentAction
+	}
+}
+
+func doQuotaStoreAction(tx *bolt.Tx, action types.StoreActionKind, quota *types.ResourceQuota) error {
+	switch action {
+	case types.StoreActionKindCreate:
+		return createQuota(tx, quota)
+	case types.StoreActionKindUpdate:
+		return updateQuota(tx, quota)
+	case types.StoreActionKindRemove:
+		return removeQuota(tx, quota.QuotaGroup)
+	default:
+		return ErrUndefineQuotaAction
 	}
 }
 
