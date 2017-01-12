@@ -174,3 +174,8 @@ func (scheduler *Scheduler) BuildHealthyTaskEvent() []*swanevent.Event {
 
 	return healthyEvents
 }
+
+// Store returns the store in scheduler
+func (scheduler *Scheduler) Store() store.Store {
+	return scheduler.store
+}

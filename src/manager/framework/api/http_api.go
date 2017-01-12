@@ -7,6 +7,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
+	"github.com/Dataman-Cloud/swan/src/apiserver/plugins"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
@@ -50,6 +51,7 @@ func (api *AppService) Register(container *restful.Container) {
 		Param(ws.QueryParameter("fields", "app fields, e.g. runAs==xxx").DataType("string")).
 		Returns(200, "OK", []types.App{}))
 	ws.Route(ws.POST("/").To(metrics.InstrumentRouteFunc("POST", "App", api.CreateApp)).
+		Filter(plugins.QuotaControl(api.Scheduler.Store())).
 		// docs
 		Doc("Create App").
 		Operation("createApp").
@@ -73,6 +75,7 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(404, "NotFound", nil).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/scale-up").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ScaleUp)).
+		//Filter(plugins.QuotaControl).
 		// docs
 		Doc("Scale Up App").
 		Operation("scaleUp").
