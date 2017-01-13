@@ -7,7 +7,7 @@
   "disk": 0,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 1,
+  "instances": 5,
   "constraints": [
   ],
   "container": {
@@ -54,19 +54,13 @@
     {
       "protocol": "HTTP",
       "path": "/",
-      "delaySeconds": 15,
+      "delaySeconds": 1,
       "portName": "web",
-      "gracePeriodSeconds": 5,
-      "intervalSeconds": 3,
+      "gracePeriodSeconds": 1,
+      "intervalSeconds": 1,
       "timeoutSeconds": 3,
       "consecutiveFailures": 500
     }
  ],
-  "updatePolicy": {
-	  "updateDelay": 5,
-	  "maxRetries": 3,
-	  "maxFailovers": 3,
-	  "action": "rollback"
-  },
   "mode": "replicates"
 }

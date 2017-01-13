@@ -159,6 +159,9 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 
 	swanConfig.AdvertiseAddr = c.String("advertise-addr")
+	if swanConfig.AdvertiseAddr == "" {
+		swanConfig.AdvertiseAddr = swanConfig.ListenAddr
+	}
 
 	return swanConfig, nil
 }

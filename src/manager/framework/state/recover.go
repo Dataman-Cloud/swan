@@ -25,7 +25,6 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 			ID:      raftApp.ID,
 			Name:    raftApp.Name,
 			State:   raftApp.State,
-			Mode:    AppMode(raftApp.Version.Mode),
 			Created: time.Unix(0, raftApp.CreatedAt),
 			Updated: time.Unix(0, raftApp.UpdatedAt),
 			slots:   make(map[int]*Slot),
@@ -35,6 +34,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 
 		if raftApp.Version != nil {
 			app.CurrentVersion = VersionFromRaft(raftApp.Version)
+			app.Mode = AppMode(raftApp.Version.Mode)
 		} else {
 			// TODO raftApp.Version should not be nil but we need more infomation to
 			// find the reason cause the raftApp.Version nil
