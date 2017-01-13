@@ -60,7 +60,7 @@ docker-build:
 	docker build --tag swan --rm .
 
 docker-run-mixed:
-	docker rm -f swan-node-1 2>&1 || echo 0
+	docker rm -f swan-mixed-1 2>&1 || echo 0
 	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
 
 docker-run-manager:
