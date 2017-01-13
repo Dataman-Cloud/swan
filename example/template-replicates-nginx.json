@@ -1,5 +1,5 @@
 {
-  "appID": "2048",
+  "appID": "nginx",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
@@ -12,14 +12,14 @@
   ],
   "container": {
     "docker": {
-      "image": "2048",
+      "image": "nginx:1.10",
       "network": "BRIDGE",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
         {
             "key": "label",
-	    "value": "APP_ID=wordpress"
+	    "value": "APP_ID=nginx"
         }
       ],
       "portMappings": [
@@ -40,8 +40,6 @@
     ]
   },
   "env": {
-    "WORDPRESS_DB_HOST": "192.168.1.210",
-    "WORDPRESS_DB_PASSWORD": "root"
   },
   "uris": [
   ],
@@ -52,16 +50,6 @@
     "duration": 5
   },
   "healthChecks": [
-    {
-      "protocol": "HTTP",
-      "path": "/",
-      "delaySeconds": 1,
-      "portName": "web",
-      "gracePeriodSeconds": 2,
-      "intervalSeconds": 1,
-      "timeoutSeconds": 1,
-      "consecutiveFailures": 500
-    }
  ],
   "mode": "replicates"
 }

@@ -195,6 +195,7 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 		for _, constraint := range constraints {
 			cons := strings.Split(constraint, ":")
 			if cons[1] == "LIKE" {
+				logrus.Debugf("attributes for offer is %s", ow.Offer.Attributes)
 				for _, attr := range ow.Offer.Attributes {
 					var value string
 					name := attr.GetName()

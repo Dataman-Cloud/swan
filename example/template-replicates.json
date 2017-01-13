@@ -9,7 +9,7 @@
   "priority": 100,
   "instances": 3,
   "constraints": [
-    "ip:LIKE:192.168.1.105"
+    "ip:LIKE:192.168.1.160"
   ],
   "container": {
     "docker": {
@@ -53,16 +53,6 @@
     "duration": 5
   },
   "healthChecks": [
-    {
-      "protocol": "HTTP",
-      "path": "/",
-      "delaySeconds": 1,
-      "portName": "web",
-      "gracePeriodSeconds": 2,
-      "intervalSeconds": 1,
-      "timeoutSeconds": 1,
-      "consecutiveFailures": 500
-    }
  ],
   "mode": "replicates"
 }

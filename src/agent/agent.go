@@ -79,7 +79,7 @@ func (agent *Agent) Start(ctx context.Context) error {
 	rgEvent := &nameserver.RecordGeneratorChangeEvent{}
 	rgEvent.Change = "add"
 	rgEvent.Type = "a"
-	rgEvent.Ip = swancontext.Instance().Config.Janitor.IP
+	rgEvent.Ip = swancontext.Instance().Config.Janitor.AdvertiseIP
 	rgEvent.DomainPrefix = ""
 	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
 
