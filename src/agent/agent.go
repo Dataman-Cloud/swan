@@ -3,6 +3,7 @@ package agent
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"time"
@@ -129,9 +130,13 @@ func (agent *Agent) RegisterToManager() error {
 		request.Header.Add("Content-Type", "application/json")
 		request.Header.Add("Accept", "application/json")
 
-		_, err = http.DefaultClient.Do(request)
+		resp, err := http.DefaultClient.Do(request)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+		}
+
+		if resp == nil || resp.StatusCode != http.StatusOK || resp.StatusCode != http.StatusCreated {
+			err = errors.New("status code not 200")
 		}
 
 		if err == nil {
