@@ -17,17 +17,17 @@ func AppToRaft(app *App) *rafttypes.Application {
 	}
 
 	if app.CurrentVersion != nil {
-		raftApp.Version = VersionToRaft(app.CurrentVersion)
+		raftApp.Version = VersionToRaft(app.CurrentVersion, app.ID)
 	}
 
 	if app.ProposedVersion != nil {
-		raftApp.ProposedVersion = VersionToRaft(app.ProposedVersion)
+		raftApp.ProposedVersion = VersionToRaft(app.ProposedVersion, app.ID)
 	}
 
 	return raftApp
 }
 
-func VersionToRaft(version *types.Version) *rafttypes.Version {
+func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 	raftVersion := &rafttypes.Version{
 		ID:          version.ID,
 		Command:     version.Command,
@@ -44,7 +44,7 @@ func VersionToRaft(version *types.Version) *rafttypes.Version {
 		Uris:        version.URIs,
 		Ip:          version.IP,
 		Mode:        version.Mode,
-		AppID:       version.AppID,
+		AppID:       appID,
 	}
 
 	if version.Container != nil {
