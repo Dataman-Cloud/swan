@@ -64,6 +64,7 @@ type Janitor struct {
 	IP           string `json:"ip"`
 	Port         int    `json:"port"`
 	Domain       string `json:"domain"`
+	AdvertiseIP  string `json:"advertiseIp"`
 }
 
 func NewConfig(c *cli.Context) (SwanConfig, error) {
@@ -103,6 +104,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			ListenerMode: "single_port",
 			IP:           "0.0.0.0",
 			Port:         80,
+			AdvertiseIP:  "0.0.0.0",
 			Domain:       "swan.com",
 		},
 	}
@@ -161,6 +163,10 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.AdvertiseAddr = c.String("advertise-addr")
 	if swanConfig.AdvertiseAddr == "" {
 		swanConfig.AdvertiseAddr = swanConfig.ListenAddr
+	}
+
+	if len(c.String("janitor-advertise-ip")) > 0 {
+		swanConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
 	}
 
 	return swanConfig, nil

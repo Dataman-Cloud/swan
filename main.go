@@ -85,6 +85,24 @@ func main() {
 			Usage:  "advertise address for agent",
 			EnvVar: "SWAN_AGENT_ADVERTISE_ADDR",
 		},
+
+		cli.StringFlag{
+			Name:   "janitor-advertise-ip",
+			Usage:  "janitor proxy advertise ip",
+			EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
+		},
+
+		//cli.StringFlag{
+		//Name:   "janitor-listen-ip",
+		//Usage:  "janitor proxy listener ip",
+		//EnvVar: "SWAN_JANITOR_LISTEN_IP",
+		//},
+
+		//cli.StringFlag{
+		//Name:   "dns-listen-addr",
+		//Usage:  "dns proxy listener address",
+		//EnvVar: "SWAN_DNS_LISTEN_ADDR",
+		//},
 	}
 	app.Action = func(c *cli.Context) error {
 		config, err := config.NewConfig(c)
