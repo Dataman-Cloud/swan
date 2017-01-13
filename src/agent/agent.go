@@ -135,7 +135,7 @@ func (agent *Agent) RegisterToManager() error {
 		}
 
 		if err == nil {
-			logrus.Infof("agent register to manager success bu managerAddr: %s", managerAddr)
+			logrus.Infof("agent register to manager success with managerAddr: %s", managerAddr)
 			return nil
 		}
 	}
