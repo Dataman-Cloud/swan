@@ -1,10 +1,6 @@
 package agent
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"net/http"
 	"strconv"
 	"time"
 
@@ -14,6 +10,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 	"github.com/Sirupsen/logrus"
 	"github.com/twinj/uuid"
 
@@ -115,28 +112,11 @@ func (agent *Agent) RegisterToManager() error {
 		RemoteAddr: swanConfig.AdvertiseAddr,
 	}
 
-	data, err := json.Marshal(agentInfo)
-	if err != nil {
-		return err
-	}
-
 	for _, managerAddr := range swanConfig.SwanClusterAddrs {
 		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/manager/agents"
-		request, err := http.NewRequest("POST", registerAddr, bytes.NewReader(data))
+		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agentInfo, nil)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
-		}
-
-		request.Header.Add("Content-Type", "application/json")
-		request.Header.Add("Accept", "application/json")
-
-		resp, err := http.DefaultClient.Do(request)
-		if err != nil {
-			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
-		}
-
-		if resp == nil || resp.StatusCode != http.StatusOK || resp.StatusCode != http.StatusCreated {
-			err = errors.New("status code not 200")
 		}
 
 		if err == nil {
