@@ -1,35 +1,32 @@
 {
-  "appID": "nginx0055",
+  "appID": "mysql",
   "cmd": null,
-  "cpus": 0.01,
-  "mem": 5,
+  "cpus": 0.4,
+  "mem": 500,
   "disk": 0,
-  "instances": 2,
+  "runAs": "xcm",
+  "priority": 100,
+  "instances": 1,
   "container": {
     "docker": {
-      "image": "nginx",
+      "image": "mysql",
       "network": "swan",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
         {
             "key": "label",
-	    "value": "APP_ID=nginx"
+	    "value": "APP_ID=mysql"
         }
       ],
-      "portMappings": []
+      "portMappings": [ ]
     },
     "type": "DOCKER",
     "volumes": [
-      {
-        "hostPath": "/home",
-        "containerPath": "/data",
-        "mode": "RW"
-      }
     ]
   },
   "env": {
-    "DB": "mysql"
+    "MYSQL_ROOT_PASSWORD": "root"
   },
   "labels": {
     "USER_ID": "1"
@@ -38,7 +35,6 @@
     "duration": 5
   },
   "healthChecks": [ ],
-
   "mode": "fixed",
-  "ip": ["192.168.1.210","192.168.1.211"]
+  "ip": ["192.168.1.210"]
 }

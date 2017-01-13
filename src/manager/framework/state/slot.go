@@ -297,7 +297,7 @@ func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
 	}
 
 	if slot.Version.Mem > 0 {
-		resources = append(resources, buildScalarResource("mem", slot.Version.CPUs))
+		resources = append(resources, buildScalarResource("mem", slot.Version.Mem))
 	}
 
 	if slot.Version.Disk > 0 {
