@@ -37,17 +37,15 @@ go get github.com/Dataman-Cloud/swan
 ```
 Then you can compile `swan` with:
 ```
-go install github.com/Dataman-Cloud/swan
+make
+
+or 
+
+make docker-build
 ```
 `swan` will be installed at $GOPATH/bin/swan, If `$GOPATH/bin` is in your `PATH`, you can invoke `swan` from the CLI.
 
-### Latest Release(swan only)
-To get started with the latest release, run the following commands:
-```
-wget https://github.com/Dataman-Cloud/swan/releases/download/v0.1/swan
-chmod +x swan
-```
-### Run as standalone mode
+## Run as standalone mode
 ```
 goreman start
 
