@@ -25,29 +25,29 @@ curl -X DELETE http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
 
 + application scale up
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d '{"instances": 1}'
 ```
 
 + application scale down
 ```
-curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d@example/scale.json
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d '{"instances": 1}'
 ```
 
 + application rolling update
 ```
-curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
+curl -X PUT -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed @example/template-replicates.json
 ```
 
 + application rolling update - proceed
 ```
-curl -X PATCH -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed -d '{"instances"=1}'
+curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d '{"instances":1}'
 ```
 
 `instances` -1 means updating all instances left. other value means updating the specified instances at one time.
 
 + application rolling update - cancel
 ```
-curl -X PATCH -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/cancel
+curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/cancel-update
 ```
 
 + list application versions
