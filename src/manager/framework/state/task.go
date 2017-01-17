@@ -64,6 +64,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	defaultLabels["CLUSTER_ID"] = task.Slot.App.ClusterID
 	defaultLabels["SLOT_ID"] = strconv.Itoa(task.Slot.Index)
 	defaultLabels["APP_ID"] = task.Slot.App.ID
+	defaultLabels["APP_NAME"] = task.Slot.App.Name
 	defaultLabels["TASK_ID"] = task.TaskInfoID
 
 	offer := ow.Offer
