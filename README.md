@@ -17,11 +17,11 @@
 ## Features
 + Application deployment
 + Application scaling
-+ Rolling update
++ Rolling upgrade
 + Version rollback
 + Health check
 + Auto failover
-+ High Availability with Raft baked
++ High Availability with Raft backend
 + Build in HTTP Proxy, Load Balance
 + Build in DNS
 
