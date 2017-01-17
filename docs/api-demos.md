@@ -35,7 +35,7 @@ curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/a
 
 + application rolling update
 ```
-curl -X PUT -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed @example/template-replicates.json
+curl -X PUT -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed -d @example/template-replicates.json
 ```
 
 + application rolling update - proceed
