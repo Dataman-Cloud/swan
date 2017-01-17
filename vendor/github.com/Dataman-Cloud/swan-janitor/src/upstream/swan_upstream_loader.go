@@ -46,7 +46,7 @@ func InitSwanUpstreamLoader(defaultUpstreamIp string, defaultPort string, defaul
 }
 
 func (swanUpstreamLoader *SwanUpstreamLoader) Poll() {
-	log.Debug("SwanUpstreamLoader starts listening app event...")
+	log.Infof("SwanUpstreamLoader starts listening app event...")
 	defer func() {
 		if err := recover(); err != nil {
 			log.Errorf("SwanUpstreamLoader poll got error: %s", err)
@@ -56,66 +56,85 @@ func (swanUpstreamLoader *SwanUpstreamLoader) Poll() {
 
 	for {
 		targetChangeEvent := <-swanUpstreamLoader.swanEventChan
-		log.Debugf("SwanUpstreamLoader receive one app event:%s", targetChangeEvent)
+		log.Infof("SwanUpstreamLoader receive one app event:%s", targetChangeEvent)
+
+		swanUpstreamLoader.Lock()
 		switch strings.ToLower(targetChangeEvent.Change) {
 		case "add":
 			upstream := buildSwanUpstream(targetChangeEvent, swanUpstreamLoader.DefaultUpstreamIp, swanUpstreamLoader.Port, swanUpstreamLoader.Proto)
 			target := buildSwanTarget(targetChangeEvent)
-			upstreamDuplicated := false
-			for _, u := range swanUpstreamLoader.Upstreams {
+			u := swanUpstreamLoader.Get(upstream.ServiceName)
+			if u != nil {
 				if u.FieldsEqual(upstream) {
-					upstreamDuplicated = true
-					targetDuplicated := false
-					for _, t := range u.Targets {
-						if t.Equal(target) {
-							targetDuplicated = true
-							break
-						} else if t.ServiceID == target.ServiceID {
+					//case 2: upstream exists, add target
+					t := u.GetTarget(target.ServiceID)
+					if t != nil {
+						//case 3: target exists, update target
+						if !t.Equal(target) {
 							target.Upstream = u
 							u.Remove(t)
 							u.Targets = append(u.Targets, target)
-							log.Debugf("Target [%s] updated in upstream [%s]", target.ServiceID, u.ServiceName)
-							break
+							log.Infof("Target [%s] updated in upstream [%s]", target.ServiceID, u.ServiceName)
 						}
-					}
-					if !targetDuplicated {
+					} else {
+						//case 4: add new target
 						target.Upstream = u
 						u.Targets = append(u.Targets, target)
-						log.Debugf("Target [%s] added in upstream [%s]", target.ServiceID, u.ServiceName)
+						log.Infof("Target [%s] added in upstream [%s]", target.ServiceID, u.ServiceName)
 					}
+				} else {
+					//case 5: update upstream
+					//update target
+					target.Upstream = upstream
+					u.Remove(target)
+					upstream.Targets = u.Targets
+					upstream.Targets = append(upstream.Targets, target)
+					log.Infof("Target [%s] added in upstream [%s]", target.ServiceID, upstream.ServiceName)
 
+					//add loadbalance when upstream created
+					loadBalance := loadbalance.NewRoundRobinLoadBalancer()
+					loadBalance.Seed()
+					upstream.LoadBalance = loadBalance
+
+					//update upstream
+					swanUpstreamLoader.Remove(u)
+					swanUpstreamLoader.Upstreams = append(swanUpstreamLoader.Upstreams, upstream)
+					log.Infof("Upstream [%s] updated in swanUpstreamLoader", upstream.ServiceName)
 				}
-			}
-			if !upstreamDuplicated {
+			} else {
+				//case 1: add new upstream
 				//set state
 				upstream.SetState(STATE_NEW)
 				//add target
 				target.Upstream = upstream
 				upstream.Targets = append(upstream.Targets, target)
-				log.Debugf("Target [%s] added in upstream [%s]", target.ServiceID, upstream.ServiceName)
+				log.Infof("Target [%s] added in upstream [%s]", target.ServiceID, upstream.ServiceName)
 				//add loadbalance when upstream created
 				loadBalance := loadbalance.NewRoundRobinLoadBalancer()
 				loadBalance.Seed()
 				upstream.LoadBalance = loadBalance
 				swanUpstreamLoader.Upstreams = append(swanUpstreamLoader.Upstreams, upstream)
-				log.Debugf("Upstream [%s] created", upstream.ServiceName)
+				log.Infof("Upstream [%s] created", upstream.ServiceName)
 			}
 		case "del":
 			upstream := buildSwanUpstream(targetChangeEvent, swanUpstreamLoader.DefaultUpstreamIp, swanUpstreamLoader.Port, swanUpstreamLoader.Proto)
 			target := buildSwanTarget(targetChangeEvent)
-			for _, u := range swanUpstreamLoader.Upstreams {
-				if u.FieldsEqual(upstream) {
+			u := swanUpstreamLoader.Get(upstream.ServiceName)
+			if u != nil {
+				t := u.GetTarget(target.ServiceID)
+				if t != nil {
 					u.Remove(target)
-					log.Debugf("Target %s removed from upstream [%s]", target.ServiceID, upstream.ServiceName)
+					log.Infof("Target [%s] removed from upstream [%s]", target.ServiceID, upstream.ServiceName)
 					if len(u.Targets) == 0 {
 						u.StaleMark = true
 						swanUpstreamLoader.Remove(u)
-						log.Debugf("Upstream [%s] removed", u.ServiceName)
+						log.Infof("Upstream [%s] removed", u.ServiceName)
 					}
 				}
 			}
 		}
 		swanUpstreamLoader.changeNotify <- true
+		swanUpstreamLoader.Unlock()
 	}
 }
 
