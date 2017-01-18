@@ -129,20 +129,19 @@ message RestartPolicy {
 
 message Task {
     string id = 1 [(gogoproto.customname) = "ID"];
-    string taskInfoId = 2 [(gogoproto.customname) = "TaskInfoID"];
-    string appId = 3 [(gogoproto.customname) = "AppID"];
-    string versionId = 4 [(gogoproto.customname) = "VersionID"];
-    string slotId = 5 [(gogoproto.customname) = "SlotID"];
-    string state = 6;
-    string stdout = 7;
-    string stderr = 8;
-    repeated uint64 hostPorts = 9;
-    string offerId = 10 [(gogoproto.customname) = "OfferID"];
-    string agentId = 11 [(gogoproto.customname) = "AgentID"];
-    string ip = 12;
-    string agentHostName = 13;
-    string reason = 14;
-    int64 createdAt = 15;
+    string appId = 2 [(gogoproto.customname) = "AppID"];
+    string versionId = 3 [(gogoproto.customname) = "VersionID"];
+    string slotId = 4 [(gogoproto.customname) = "SlotID"];
+    string state = 5;
+    string stdout = 6;
+    string stderr = 7;
+    repeated uint64 hostPorts = 8;
+    string offerId = 9 [(gogoproto.customname) = "OfferID"];
+    string agentId = 10 [(gogoproto.customname) = "AgentID"];
+    string ip = 11;
+    string agentHostName = 12;
+    string reason = 13;
+    int64 createdAt = 14;
 }
 
 message OfferAllocatorItem {
