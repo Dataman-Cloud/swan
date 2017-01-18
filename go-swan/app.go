@@ -31,6 +31,8 @@ type Swan interface {
 	GetAppVersions(appID string) ([]*types.Version, error)
 	// get the app version
 	GetAppVersion(appID, versionID string) (*types.Version, error)
+	// get the app task
+	GetAppTask(appID, taskIndex string) (*types.Task, error)
 
 	//-- SUBSCRIPTIONS--
 	AddEventsListener() (EventsChannel, error)
@@ -138,6 +140,16 @@ func (r *swanClient) GetAppVersions(appID string) ([]*types.Version, error) {
 func (r *swanClient) GetAppVersion(appID, versionID string) (*types.Version, error) {
 	result := new(types.Version)
 	if err := r.apiGet(APIApps+"/"+appID+"/versions/"+versionID, nil, result); err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// GetAppTask get the given task of the given application
+func (r *swanClient) GetAppTask(appID, taskIndex string) (*types.Task, error) {
+	result := new(types.Task)
+	if err := r.apiGet(APIApps+"/"+appID+"/tasks/"+taskIndex, nil, result); err != nil {
 		return nil, err
 	}
 
