@@ -14,6 +14,9 @@
 
 #### swan is maintained by [dataman-cloud](https://github.com/Dataman-Cloud), and licensed under the Apache License, Version 2.0. 
 
+#### for more documentation about Swan please refer to [swan-docs](https://github.com/Dataman-Cloud/swan/docs/)
+
+
 ## Features
 + Application deployment
 + Application scaling
@@ -97,10 +100,20 @@ curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/a
 
 + application rolling upgrade
 ```
-curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
+curl -X PUT -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
+```
+
++ proceed upgrade process
+```
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d'{"instances": $NUM}'
 ```
 
 `instances` -1 means upgrading all instances at once. Any other value specifies the number of instances to be updated at the same time.
+
++ cancel upgrade process
+```
+curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/cancel-update
+```
 
 + list application versions
 ```
@@ -113,12 +126,6 @@ curl
 http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/versions/14012934223
 ```
 
-### Use command line client `swancfg`
-```
-cd cli
-make && make install
-```
-`swancfg --help` for usage.
 
 ## Roadmap
 See [ROADMAP](https://github.com/Dataman-Cloud/swan/blob/master/ROADMAP.md) for the full roadmap.
