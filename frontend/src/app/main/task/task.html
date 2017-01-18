@@ -53,13 +53,13 @@
       <dt>Logs</dt>
       <dd>???
         <a
-          ng-href="{/logBase/}{/'?clusterid=' + $stateParams.cluster + '&userid=' + $stateParams.user + '&appid=' + $stateParams.app + '&taskid=' + $stateParams.task +  '&from=' + vm.from + '&to=' + vm.to + '&path=stdout'/}"
+          ng-href="{/logBase/}{/'?cluster=' + $stateParams.cluster + '&user=' + $stateParams.user + '&app=' + $stateParams.app + '&task=' + $stateParams.task +  '&from=' + vm.from + '&to=' + vm.to + '&path=stdout'/}"
           target="_blank">STDOUT</a>
         <a
-          ng-href="{/logBase/}{/'?clusterid=' + $stateParams.cluster + '&userid=' + $stateParams.user + '&appid=' + $stateParams.app + '&taskid=' + $stateParams.task + '&from=' + vm.from + '&to=' + vm.to + '&path=stderr'/}"
+          ng-href="{/logBase/}{/'?cluster=' + $stateParams.cluster + '&user=' + $stateParams.user + '&app=' + $stateParams.app + '&task=' + $stateParams.task + '&from=' + vm.from + '&to=' + vm.to + '&path=stderr'/}"
           target="_blank">STDERR</a>
         <!--<a-->
-        <!--ng-href="{/logBase/}{/'?clusterid=' + $stateParams.cluster + '&userid=' + $stateParams.user + '&appid=' + $stateParams.app + '&taskid=' + $stateParams.task + '&from=' + vm.from + '&to=' + vm.to/}"-->
+        <!--ng-href="{/logBase/}{/'?cluster=' + $stateParams.cluster + '&user=' + $stateParams.user + '&app=' + $stateParams.app + '&task=' + $stateParams.task + '&from=' + vm.from + '&to=' + vm.to/}"--
         <!--target="_blank">/var/log/access.log</a>-->
       </dd>
     </dl>
