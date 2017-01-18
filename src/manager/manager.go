@@ -295,7 +295,7 @@ func (manager *Manager) SendAgentInitData(agent types.Agent) {
 	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
 	var janitorEvents []*upstream.TargetChangeEvent
 
-	taskEvents := manager.framework.Scheduler.BuildHealthyTaskEvent()
+	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
 
 	for _, taskEvent := range taskEvents {
 		resolverEvent, err := swanevent.BuildResolverEvent(taskEvent)
