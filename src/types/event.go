@@ -1,7 +1,20 @@
 package types
 
-type Event struct {
-	ID      string `json:"ID"`
-	Message string `json:"message"`
-	Status  string `json:"status"`
+type TaskInfoEvent struct {
+	Ip        string
+	TaskId    string
+	AppId     string
+	Port      string
+	State     string
+	Healthy   bool
+	ClusterId string
+	RunAs     string
+}
+
+type AppInfoEvent struct {
+	AppId     string
+	Name      string
+	State     string
+	ClusterId string
+	RunAs     string
 }

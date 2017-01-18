@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Dataman-Cloud/swan/src/types"
+
 	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/satori/go.uuid"
@@ -59,25 +61,6 @@ func NewEvent(t string, payload interface{}) *Event {
 	}
 }
 
-type TaskInfoEvent struct {
-	Ip        string
-	TaskId    string
-	AppId     string
-	Port      string
-	State     string
-	Healthy   bool
-	ClusterId string
-	RunAs     string
-}
-
-type AppInfoEvent struct {
-	AppId     string
-	Name      string
-	State     string
-	ClusterId string
-	RunAs     string
-}
-
 func SendEventByHttp(addr, method string, data []byte) error {
 	request, err := http.NewRequest(method, addr, bytes.NewReader(data))
 	if err != nil {
@@ -96,7 +79,7 @@ func SendEventByHttp(addr, method string, data []byte) error {
 }
 
 func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error) {
-	payload, ok := e.Payload.(*TaskInfoEvent)
+	payload, ok := e.Payload.(*types.TaskInfoEvent)
 	if !ok {
 		return nil, errors.New("payload type error")
 	}
@@ -117,7 +100,7 @@ func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error
 }
 
 func BuildJanitorEvent(e *Event) (*upstream.TargetChangeEvent, error) {
-	payload, ok := e.Payload.(*TaskInfoEvent)
+	payload, ok := e.Payload.(*types.TaskInfoEvent)
 	if !ok {
 		return nil, errors.New("payload type error")
 	}

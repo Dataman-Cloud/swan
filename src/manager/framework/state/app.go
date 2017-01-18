@@ -318,7 +318,7 @@ func (app *App) EmitAppEvent(eventType string) {
 func (app *App) BuildAppEvent(eventType string) *swanevent.Event {
 	e := &swanevent.Event{Type: eventType}
 	e.AppId = app.ID
-	e.Payload = &swanevent.AppInfoEvent{
+	e.Payload = &types.AppInfoEvent{
 		AppId:     app.ID,
 		Name:      app.Name,
 		State:     app.State,
