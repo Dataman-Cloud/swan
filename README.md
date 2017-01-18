@@ -10,9 +10,9 @@
 
 #### swan is a mesos scheduling framework written in golang based on mesos new HTTP API.
 
-#### you can use swan to deployment application on mesos cluster, and manage the entire lifecycle of the application. you can do rolling-update with new version, you can scale application, and you can do health check for your applications and auto failover when applications or services are not available.
+#### you can use swan to deployment application on mesos cluster, and manage the entire lifecycle of the application. You can do rolling-update with new versions, you can scale applications, and you can do health checks for your applications and auto failover when applications or services are not available.
 
-#### swan is maintained by [dataman-cloud](https://github.com/Dataman-Cloud), and  licensed under the Apache License, Version 2.0. 
+#### swan is maintained by [dataman-cloud](https://github.com/Dataman-Cloud), and licensed under the Apache License, Version 2.0. 
 
 ## Features
 + Application deployment
@@ -65,7 +65,7 @@ Use `swan --help` to see usage.
 ## Getting Started
 ### Use `curl` 
 
-+ applicaiton deloyment
++ application deployment
 ```
 curl -X POST -H "Content-Type: application/json" -d@example/template-replicates.json http://localhost:9999/v_beta/apps
 ```
@@ -95,12 +95,12 @@ curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/a
 curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d@example/scale.json
 ```
 
-+ application rolling update
++ application rolling upgrade
 ```
 curl -X POST -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
 ```
 
-`instances` -1 means updating all instances. other value means updating the specified instances at one time.
+`instances` -1 means upgrading all instances at once. Any other value specifies the number of instances to be updated at the same time.
 
 + list application versions
 ```
