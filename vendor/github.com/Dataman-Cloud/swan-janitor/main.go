@@ -65,14 +65,14 @@ func main() {
 		time.Sleep(time.Second * 10)
 		targetChangeEvents = []*upstream.TargetChangeEvent{
 			{
-				Change:     "delete",
+				Change:     "del",
 				TargetName: "0.nginx0051-01.defaultGroup.dataman-mesos",
 				TargetIP:   "192.168.1.162",
 				TargetPort: "80",
 				//FrontendPort: "8081",
 			},
 			{
-				Change:     "delete",
+				Change:     "del",
 				TargetName: "1.nginx0051-01.defaultGroup.dataman-mesos",
 				TargetIP:   "192.168.1.163",
 				TargetPort: "80",
