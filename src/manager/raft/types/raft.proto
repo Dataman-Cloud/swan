@@ -4,6 +4,7 @@ package types;
 
 import weak "gogoproto/gogo.proto";
 import "application.proto";
+import "quota.proto";
 
 option (gogoproto.populate_all) = true;
 option (gogoproto.testgen_all) = true;
@@ -46,6 +47,7 @@ message StoreAction {
         Task task = 6;
         OfferAllocatorItem offerAllocatorItem = 7;
         Agent agent = 8;
+        ResourceQuota resoureQuota = 9;
 	}
 }
 
