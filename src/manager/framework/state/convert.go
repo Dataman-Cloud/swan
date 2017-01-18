@@ -390,7 +390,6 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 func TaskToRaft(task *Task) *rafttypes.Task {
 	return &rafttypes.Task{
 		ID:            task.ID,
-		TaskInfoID:    task.TaskInfoID,
 		AppID:         task.Slot.App.ID,
 		VersionID:     task.Version.ID,
 		SlotID:        task.Slot.ID,
@@ -410,7 +409,6 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 	task := &Task{
 		ID:            raftTask.ID,
-		TaskInfoID:    raftTask.TaskInfoID,
 		State:         raftTask.State,
 		Stdout:        raftTask.Stdout,
 		Stderr:        raftTask.Stderr,

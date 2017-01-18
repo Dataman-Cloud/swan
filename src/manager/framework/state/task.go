@@ -21,10 +21,9 @@ const (
 )
 
 type Task struct {
-	ID         string
-	TaskInfoID string
-	Version    *types.Version
-	Slot       *Slot
+	ID      string
+	Version *types.Version
+	Slot    *Slot
 
 	State  string
 	Stdout string
@@ -36,9 +35,9 @@ type Task struct {
 	Ip            string
 	AgentHostName string
 
-	Reason  string
-	Message string
-	Source  string
+	Reason  string // mesos updateStatus field
+	Message string // mesos updateStatus field
+	Source  string // mesos updateStatus field
 
 	Created     time.Time
 	taskBuilder *TaskBuilder
@@ -46,14 +45,12 @@ type Task struct {
 
 func NewTask(version *types.Version, slot *Slot) *Task {
 	task := &Task{
-		ID:        strings.Replace(uuid.NewV4().String(), "-", "", -1),
+		ID:        fmt.Sprintf("%s-%s", slot.ID, strings.Replace(uuid.NewV4().String(), "-", "", -1)),
 		Version:   version,
 		Slot:      slot,
 		HostPorts: make([]uint64, 0),
 		Created:   time.Now(),
 	}
-
-	task.TaskInfoID = fmt.Sprintf("%s-%s", task.Slot.ID, task.ID)
 
 	return task
 }
@@ -73,7 +70,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	dockerSpec := task.Slot.Version.Container.Docker
 
 	task.taskBuilder = NewTaskBuilder(task)
-	task.taskBuilder.SetName(task.TaskInfoID).SetTaskId(task.TaskInfoID).SetAgentId(*offer.GetAgentId().Value)
+	task.taskBuilder.SetName(task.ID).SetTaskId(task.ID).SetAgentId(*offer.GetAgentId().Value)
 	task.taskBuilder.SetResources(task.Slot.ResourcesNeeded())
 	task.taskBuilder.SetCommand(false, task.Slot.Version.Command, task.Slot.Version.Args)
 
@@ -116,7 +113,7 @@ func (task *Task) Kill() {
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
-				Value: proto.String(task.TaskInfoID),
+				Value: proto.String(task.ID),
 			},
 			AgentId: &mesos.AgentID{
 				Value: &task.AgentID,

@@ -1241,32 +1241,32 @@ func extensionToGoStringRaft(m github_com_gogo_protobuf_proto.Message) string {
 	s += strings.Join(ss, ",") + "})"
 	return s
 }
-func (m *InternalRaftRequest) Marshal() (data []byte, err error) {
+func (m *InternalRaftRequest) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *InternalRaftRequest) MarshalTo(data []byte) (int, error) {
+func (m *InternalRaftRequest) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.ID != 0 {
-		data[i] = 0x8
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.ID))
+		i = encodeVarintRaft(dAtA, i, uint64(m.ID))
 	}
 	if len(m.Action) > 0 {
 		for _, msg := range m.Action {
-			data[i] = 0x12
+			dAtA[i] = 0x12
 			i++
-			i = encodeVarintRaft(data, i, uint64(msg.Size()))
-			n, err := msg.MarshalTo(data[i:])
+			i = encodeVarintRaft(dAtA, i, uint64(msg.Size()))
+			n, err := msg.MarshalTo(dAtA[i:])
 			if err != nil {
 				return 0, err
 			}
@@ -1276,28 +1276,28 @@ func (m *InternalRaftRequest) MarshalTo(data []byte) (int, error) {
 	return i, nil
 }
 
-func (m *StoreAction) Marshal() (data []byte, err error) {
+func (m *StoreAction) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *StoreAction) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.Action != 0 {
-		data[i] = 0x8
+		dAtA[i] = 0x8
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Action))
+		i = encodeVarintRaft(dAtA, i, uint64(m.Action))
 	}
 	if m.Target != nil {
-		nn1, err := m.Target.MarshalTo(data[i:])
+		nn1, err := m.Target.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1306,13 +1306,13 @@ func (m *StoreAction) MarshalTo(data []byte) (int, error) {
 	return i, nil
 }
 
-func (m *StoreAction_Application) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Application) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Application != nil {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Application.Size()))
-		n2, err := m.Application.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Application.Size()))
+		n2, err := m.Application.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1320,13 +1320,13 @@ func (m *StoreAction_Application) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Framework) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Framework) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Framework != nil {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Framework.Size()))
-		n3, err := m.Framework.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Framework.Size()))
+		n3, err := m.Framework.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1334,13 +1334,13 @@ func (m *StoreAction_Framework) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Version) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Version) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Version != nil {
-		data[i] = 0x22
+		dAtA[i] = 0x22
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Version.Size()))
-		n4, err := m.Version.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Version.Size()))
+		n4, err := m.Version.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1348,13 +1348,13 @@ func (m *StoreAction_Version) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Slot) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Slot) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Slot != nil {
-		data[i] = 0x2a
+		dAtA[i] = 0x2a
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Slot.Size()))
-		n5, err := m.Slot.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Slot.Size()))
+		n5, err := m.Slot.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1362,13 +1362,13 @@ func (m *StoreAction_Slot) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Task) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Task) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Task != nil {
-		data[i] = 0x32
+		dAtA[i] = 0x32
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Task.Size()))
-		n6, err := m.Task.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Task.Size()))
+		n6, err := m.Task.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1376,13 +1376,13 @@ func (m *StoreAction_Task) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_OfferAllocatorItem) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_OfferAllocatorItem) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.OfferAllocatorItem != nil {
-		data[i] = 0x3a
+		dAtA[i] = 0x3a
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.OfferAllocatorItem.Size()))
-		n7, err := m.OfferAllocatorItem.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.OfferAllocatorItem.Size()))
+		n7, err := m.OfferAllocatorItem.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1390,13 +1390,13 @@ func (m *StoreAction_OfferAllocatorItem) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Agent) MarshalTo(data []byte) (int, error) {
+func (m *StoreAction_Agent) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Agent != nil {
-		data[i] = 0x42
+		dAtA[i] = 0x42
 		i++
-		i = encodeVarintRaft(data, i, uint64(m.Agent.Size()))
-		n8, err := m.Agent.MarshalTo(data[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Agent.Size()))
+		n8, err := m.Agent.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1404,108 +1404,108 @@ func (m *StoreAction_Agent) MarshalTo(data []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Framework) Marshal() (data []byte, err error) {
+func (m *Framework) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Framework) MarshalTo(data []byte) (int, error) {
+func (m *Framework) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.ID) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintRaft(data, i, uint64(len(m.ID)))
-		i += copy(data[i:], m.ID)
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.ID)))
+		i += copy(dAtA[i:], m.ID)
 	}
 	return i, nil
 }
 
-func (m *Agent) Marshal() (data []byte, err error) {
+func (m *Agent) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
-	data = make([]byte, size)
-	n, err := m.MarshalTo(data)
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
 	if err != nil {
 		return nil, err
 	}
-	return data[:n], nil
+	return dAtA[:n], nil
 }
 
-func (m *Agent) MarshalTo(data []byte) (int, error) {
+func (m *Agent) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if len(m.ID) > 0 {
-		data[i] = 0xa
+		dAtA[i] = 0xa
 		i++
-		i = encodeVarintRaft(data, i, uint64(len(m.ID)))
-		i += copy(data[i:], m.ID)
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.ID)))
+		i += copy(dAtA[i:], m.ID)
 	}
 	if len(m.RemoteAddr) > 0 {
-		data[i] = 0x12
+		dAtA[i] = 0x12
 		i++
-		i = encodeVarintRaft(data, i, uint64(len(m.RemoteAddr)))
-		i += copy(data[i:], m.RemoteAddr)
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.RemoteAddr)))
+		i += copy(dAtA[i:], m.RemoteAddr)
 	}
 	if len(m.Status) > 0 {
-		data[i] = 0x1a
+		dAtA[i] = 0x1a
 		i++
-		i = encodeVarintRaft(data, i, uint64(len(m.Status)))
-		i += copy(data[i:], m.Status)
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.Status)))
+		i += copy(dAtA[i:], m.Status)
 	}
 	if len(m.Labels) > 0 {
 		for k, _ := range m.Labels {
-			data[i] = 0x22
+			dAtA[i] = 0x22
 			i++
 			v := m.Labels[k]
 			mapSize := 1 + len(k) + sovRaft(uint64(len(k))) + 1 + len(v) + sovRaft(uint64(len(v)))
-			i = encodeVarintRaft(data, i, uint64(mapSize))
-			data[i] = 0xa
+			i = encodeVarintRaft(dAtA, i, uint64(mapSize))
+			dAtA[i] = 0xa
 			i++
-			i = encodeVarintRaft(data, i, uint64(len(k)))
-			i += copy(data[i:], k)
-			data[i] = 0x12
+			i = encodeVarintRaft(dAtA, i, uint64(len(k)))
+			i += copy(dAtA[i:], k)
+			dAtA[i] = 0x12
 			i++
-			i = encodeVarintRaft(data, i, uint64(len(v)))
-			i += copy(data[i:], v)
+			i = encodeVarintRaft(dAtA, i, uint64(len(v)))
+			i += copy(dAtA[i:], v)
 		}
 	}
 	return i, nil
 }
 
-func encodeFixed64Raft(data []byte, offset int, v uint64) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
-	data[offset+4] = uint8(v >> 32)
-	data[offset+5] = uint8(v >> 40)
-	data[offset+6] = uint8(v >> 48)
-	data[offset+7] = uint8(v >> 56)
+func encodeFixed64Raft(dAtA []byte, offset int, v uint64) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
+	dAtA[offset+4] = uint8(v >> 32)
+	dAtA[offset+5] = uint8(v >> 40)
+	dAtA[offset+6] = uint8(v >> 48)
+	dAtA[offset+7] = uint8(v >> 56)
 	return offset + 8
 }
-func encodeFixed32Raft(data []byte, offset int, v uint32) int {
-	data[offset] = uint8(v)
-	data[offset+1] = uint8(v >> 8)
-	data[offset+2] = uint8(v >> 16)
-	data[offset+3] = uint8(v >> 24)
+func encodeFixed32Raft(dAtA []byte, offset int, v uint32) int {
+	dAtA[offset] = uint8(v)
+	dAtA[offset+1] = uint8(v >> 8)
+	dAtA[offset+2] = uint8(v >> 16)
+	dAtA[offset+3] = uint8(v >> 24)
 	return offset + 4
 }
-func encodeVarintRaft(data []byte, offset int, v uint64) int {
+func encodeVarintRaft(dAtA []byte, offset int, v uint64) int {
 	for v >= 1<<7 {
-		data[offset] = uint8(v&0x7f | 0x80)
+		dAtA[offset] = uint8(v&0x7f | 0x80)
 		v >>= 7
 		offset++
 	}
-	data[offset] = uint8(v)
+	dAtA[offset] = uint8(v)
 	return offset + 1
 }
 func NewPopulatedInternalRaftRequest(r randyRaft, easy bool) *InternalRaftRequest {
@@ -1585,7 +1585,7 @@ func NewPopulatedStoreAction_Agent(r randyRaft, easy bool) *StoreAction_Agent {
 }
 func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
 	this := &Framework{}
-	this.ID = randStringRaft(r)
+	this.ID = string(randStringRaft(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1593,9 +1593,9 @@ func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
 
 func NewPopulatedAgent(r randyRaft, easy bool) *Agent {
 	this := &Agent{}
-	this.ID = randStringRaft(r)
-	this.RemoteAddr = randStringRaft(r)
-	this.Status = randStringRaft(r)
+	this.ID = string(randStringRaft(r))
+	this.RemoteAddr = string(randStringRaft(r))
+	this.Status = string(randStringRaft(r))
 	if r.Intn(10) != 0 {
 		v2 := r.Intn(10)
 		this.Labels = make(map[string]string)
@@ -1634,7 +1634,7 @@ func randStringRaft(r randyRaft) string {
 	}
 	return string(tmps)
 }
-func randUnrecognizedRaft(r randyRaft, maxFieldNumber int) (data []byte) {
+func randUnrecognizedRaft(r randyRaft, maxFieldNumber int) (dAtA []byte) {
 	l := r.Intn(5)
 	for i := 0; i < l; i++ {
 		wire := r.Intn(4)
@@ -1642,43 +1642,43 @@ func randUnrecognizedRaft(r randyRaft, maxFieldNumber int) (data []byte) {
 			wire = 5
 		}
 		fieldNumber := maxFieldNumber + r.Intn(100)
-		data = randFieldRaft(data, r, fieldNumber, wire)
+		dAtA = randFieldRaft(dAtA, r, fieldNumber, wire)
 	}
-	return data
+	return dAtA
 }
-func randFieldRaft(data []byte, r randyRaft, fieldNumber int, wire int) []byte {
+func randFieldRaft(dAtA []byte, r randyRaft, fieldNumber int, wire int) []byte {
 	key := uint32(fieldNumber)<<3 | uint32(wire)
 	switch wire {
 	case 0:
-		data = encodeVarintPopulateRaft(data, uint64(key))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(key))
 		v4 := r.Int63()
 		if r.Intn(2) == 0 {
 			v4 *= -1
 		}
-		data = encodeVarintPopulateRaft(data, uint64(v4))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(v4))
 	case 1:
-		data = encodeVarintPopulateRaft(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	case 2:
-		data = encodeVarintPopulateRaft(data, uint64(key))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(key))
 		ll := r.Intn(100)
-		data = encodeVarintPopulateRaft(data, uint64(ll))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(ll))
 		for j := 0; j < ll; j++ {
-			data = append(data, byte(r.Intn(256)))
+			dAtA = append(dAtA, byte(r.Intn(256)))
 		}
 	default:
-		data = encodeVarintPopulateRaft(data, uint64(key))
-		data = append(data, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
+		dAtA = encodeVarintPopulateRaft(dAtA, uint64(key))
+		dAtA = append(dAtA, byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)), byte(r.Intn(256)))
 	}
-	return data
+	return dAtA
 }
-func encodeVarintPopulateRaft(data []byte, v uint64) []byte {
+func encodeVarintPopulateRaft(dAtA []byte, v uint64) []byte {
 	for v >= 1<<7 {
-		data = append(data, uint8(uint64(v)&0x7f|0x80))
+		dAtA = append(dAtA, uint8(uint64(v)&0x7f|0x80))
 		v >>= 7
 	}
-	data = append(data, uint8(v))
-	return data
+	dAtA = append(dAtA, uint8(v))
+	return dAtA
 }
 func (m *InternalRaftRequest) Size() (n int) {
 	var l int
@@ -1819,8 +1819,8 @@ func sovRaft(x uint64) (n int) {
 func sozRaft(x uint64) (n int) {
 	return sovRaft(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (m *InternalRaftRequest) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *InternalRaftRequest) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -1832,7 +1832,7 @@ func (m *InternalRaftRequest) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -1860,7 +1860,7 @@ func (m *InternalRaftRequest) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.ID |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1879,7 +1879,7 @@ func (m *InternalRaftRequest) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1894,13 +1894,13 @@ func (m *InternalRaftRequest) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Action = append(m.Action, &StoreAction{})
-			if err := m.Action[len(m.Action)-1].Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := m.Action[len(m.Action)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipRaft(data[iNdEx:])
+			skippy, err := skipRaft(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -1919,8 +1919,8 @@ func (m *InternalRaftRequest) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *StoreAction) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *StoreAction) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -1932,7 +1932,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -1960,7 +1960,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				m.Action |= (StoreActionKind(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1979,7 +1979,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -1994,7 +1994,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Application{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Application{v}
@@ -2011,7 +2011,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2026,7 +2026,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Framework{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Framework{v}
@@ -2043,7 +2043,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2058,7 +2058,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Version{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Version{v}
@@ -2075,7 +2075,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2090,7 +2090,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Slot{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Slot{v}
@@ -2107,7 +2107,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2122,7 +2122,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Task{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Task{v}
@@ -2139,7 +2139,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2154,7 +2154,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &OfferAllocatorItem{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_OfferAllocatorItem{v}
@@ -2171,7 +2171,7 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2186,14 +2186,14 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			v := &Agent{}
-			if err := v.Unmarshal(data[iNdEx:postIndex]); err != nil {
+			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			m.Target = &StoreAction_Agent{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipRaft(data[iNdEx:])
+			skippy, err := skipRaft(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2212,8 +2212,8 @@ func (m *StoreAction) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Framework) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Framework) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -2225,7 +2225,7 @@ func (m *Framework) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2253,7 +2253,7 @@ func (m *Framework) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2268,11 +2268,11 @@ func (m *Framework) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ID = string(data[iNdEx:postIndex])
+			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipRaft(data[iNdEx:])
+			skippy, err := skipRaft(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2291,8 +2291,8 @@ func (m *Framework) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func (m *Agent) Unmarshal(data []byte) error {
-	l := len(data)
+func (m *Agent) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		preIndex := iNdEx
@@ -2304,7 +2304,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			if iNdEx >= l {
 				return io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2332,7 +2332,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2347,7 +2347,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.ID = string(data[iNdEx:postIndex])
+			m.ID = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
@@ -2361,7 +2361,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2376,7 +2376,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.RemoteAddr = string(data[iNdEx:postIndex])
+			m.RemoteAddr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
@@ -2390,7 +2390,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLen |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2405,7 +2405,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Status = string(data[iNdEx:postIndex])
+			m.Status = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 4:
 			if wireType != 2 {
@@ -2419,7 +2419,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				msglen |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2441,7 +2441,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				keykey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2456,7 +2456,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if iNdEx >= l {
 					return io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				stringLenmapkey |= (uint64(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2471,7 +2471,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			if postStringIndexmapkey > l {
 				return io.ErrUnexpectedEOF
 			}
-			mapkey := string(data[iNdEx:postStringIndexmapkey])
+			mapkey := string(dAtA[iNdEx:postStringIndexmapkey])
 			iNdEx = postStringIndexmapkey
 			if m.Labels == nil {
 				m.Labels = make(map[string]string)
@@ -2485,7 +2485,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					valuekey |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2500,7 +2500,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 					if iNdEx >= l {
 						return io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					stringLenmapvalue |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2515,7 +2515,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 				if postStringIndexmapvalue > l {
 					return io.ErrUnexpectedEOF
 				}
-				mapvalue := string(data[iNdEx:postStringIndexmapvalue])
+				mapvalue := string(dAtA[iNdEx:postStringIndexmapvalue])
 				iNdEx = postStringIndexmapvalue
 				m.Labels[mapkey] = mapvalue
 			} else {
@@ -2525,7 +2525,7 @@ func (m *Agent) Unmarshal(data []byte) error {
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
-			skippy, err := skipRaft(data[iNdEx:])
+			skippy, err := skipRaft(dAtA[iNdEx:])
 			if err != nil {
 				return err
 			}
@@ -2544,8 +2544,8 @@ func (m *Agent) Unmarshal(data []byte) error {
 	}
 	return nil
 }
-func skipRaft(data []byte) (n int, err error) {
-	l := len(data)
+func skipRaft(dAtA []byte) (n int, err error) {
+	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
 		var wire uint64
@@ -2556,7 +2556,7 @@ func skipRaft(data []byte) (n int, err error) {
 			if iNdEx >= l {
 				return 0, io.ErrUnexpectedEOF
 			}
-			b := data[iNdEx]
+			b := dAtA[iNdEx]
 			iNdEx++
 			wire |= (uint64(b) & 0x7F) << shift
 			if b < 0x80 {
@@ -2574,7 +2574,7 @@ func skipRaft(data []byte) (n int, err error) {
 					return 0, io.ErrUnexpectedEOF
 				}
 				iNdEx++
-				if data[iNdEx-1] < 0x80 {
+				if dAtA[iNdEx-1] < 0x80 {
 					break
 				}
 			}
@@ -2591,7 +2591,7 @@ func skipRaft(data []byte) (n int, err error) {
 				if iNdEx >= l {
 					return 0, io.ErrUnexpectedEOF
 				}
-				b := data[iNdEx]
+				b := dAtA[iNdEx]
 				iNdEx++
 				length |= (int(b) & 0x7F) << shift
 				if b < 0x80 {
@@ -2614,7 +2614,7 @@ func skipRaft(data []byte) (n int, err error) {
 					if iNdEx >= l {
 						return 0, io.ErrUnexpectedEOF
 					}
-					b := data[iNdEx]
+					b := dAtA[iNdEx]
 					iNdEx++
 					innerWire |= (uint64(b) & 0x7F) << shift
 					if b < 0x80 {
@@ -2625,7 +2625,7 @@ func skipRaft(data []byte) (n int, err error) {
 				if innerWireType == 4 {
 					break
 				}
-				next, err := skipRaft(data[start:])
+				next, err := skipRaft(dAtA[start:])
 				if err != nil {
 					return 0, err
 				}
