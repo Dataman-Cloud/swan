@@ -36,10 +36,10 @@ type swanClient struct {
 }
 
 // NewClient creates a new swan client
-func NewClient(swanURL string, clusterName string) (Swan, error) {
+func NewClient(swanURL string) (Swan, error) {
 	debugLogOutput := ioutil.Discard
 	httpClient := http.DefaultClient
-	managers, err := newSwanCluster(httpClient, swanURL, clusterName)
+	managers, err := newSwanCluster(httpClient, swanURL)
 	if err != nil {
 		return nil, err
 	}

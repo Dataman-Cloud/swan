@@ -12,7 +12,6 @@ import (
 // swanCluster is a collection of swan nodes
 type swanCluster struct {
 	sync.RWMutex
-	name string
 	// a collection of managers
 	managers []*manager
 	// the http client
@@ -27,7 +26,7 @@ type manager struct {
 }
 
 // newSwanCluster returns a new swanCluster
-func newSwanCluster(client *http.Client, swanURL string, name string) (*swanCluster, error) {
+func newSwanCluster(client *http.Client, swanURL string) (*swanCluster, error) {
 	// step: extract and basic validate the endpoints
 	var managers []*manager
 	var defaultProto string
@@ -67,7 +66,6 @@ func newSwanCluster(client *http.Client, swanURL string, name string) (*swanClus
 	}
 
 	return &swanCluster{
-		name:         name,
 		client:       client,
 		managers:     managers,
 		managerIndex: 0,
@@ -108,9 +106,4 @@ func (c *swanCluster) managersList() []string {
 // size returns the size of the swanCluster
 func (c *swanCluster) size() int {
 	return len(c.managers)
-}
-
-// Name returns the cluster name
-func (c *swanCluster) Name() string {
-	return c.name
 }
