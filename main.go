@@ -4,10 +4,11 @@ import (
 	"os"
 
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/node"
 	"github.com/Dataman-Cloud/swan/src/version"
-	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/boltdb/bolt"
 	"github.com/urfave/cli"
 	"golang.org/x/net/context"
 )
@@ -121,7 +122,7 @@ func main() {
 			return err
 		}
 
-		node, err := NewNode(config, db)
+		node, err := node.NewNode(config, db)
 		if err != nil {
 			logrus.Error("Node initialization failed")
 			return err
