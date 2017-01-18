@@ -150,8 +150,12 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return errors.New("app not in normal state")
 	}
 
+	if removeInstances <= 0 {
+		return errors.New("please specify atleast 1 task to scale-down")
+	}
+
 	if removeInstances >= int(app.CurrentVersion.Instances) {
-		return errors.New(fmt.Sprintf("no more than %d instances can be shutdown", app.CurrentVersion.Instances))
+		return errors.New(fmt.Sprintf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances))
 	}
 
 	app.BeginTx()
