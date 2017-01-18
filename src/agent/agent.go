@@ -2,17 +2,11 @@ package agent
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
-	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
-	"github.com/Sirupsen/logrus"
-	"github.com/twinj/uuid"
 
 	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
 	"golang.org/x/net/context"
@@ -24,14 +18,10 @@ type Agent struct {
 	janitorServer *janitor.JanitorServer
 
 	CancelFunc context.CancelFunc
-
-	registerRetryInterval time.Duration
 }
 
 func New() (*Agent, error) {
-	agent := &Agent{
-		registerRetryInterval: time.Second * 5,
-	}
+	agent := &Agent{}
 
 	dnsConfig := &nameserver.Config{
 		Domain:   swancontext.Instance().Config.DNS.Domain,
@@ -83,10 +73,6 @@ func (agent *Agent) Start(ctx context.Context) error {
 	rgEvent.DomainPrefix = ""
 	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
 
-	if err := agent.RegisterToManager(); err != nil {
-		return err
-	}
-
 	for {
 		select {
 		case err := <-errChan:
@@ -103,29 +89,4 @@ func (agent *Agent) Stop(cancel context.CancelFunc) {
 	//agent.janitorServer.Stop()
 	cancel()
 	return
-}
-
-func (agent *Agent) RegisterToManager() error {
-	swanConfig := swancontext.Instance().Config
-	agentInfo := types.Agent{
-		ID:         uuid.NewV4().String(),
-		RemoteAddr: swanConfig.AdvertiseAddr,
-	}
-
-	for _, managerAddr := range swanConfig.SwanClusterAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/manager/agents"
-		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agentInfo, nil)
-		if err != nil {
-			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
-		}
-
-		if err == nil {
-			logrus.Infof("agent register to manager success with managerAddr: %s", managerAddr)
-			return nil
-		}
-	}
-
-	time.Sleep(agent.registerRetryInterval)
-	agent.RegisterToManager()
-	return nil
 }
