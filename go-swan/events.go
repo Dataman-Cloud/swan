@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/types"
 )
 
 // EventsChannel is a channel to receive events upon
@@ -64,7 +64,7 @@ func GetEvent(eventType string) (*Event, error) {
 		EventTypeTaskStateGone,
 		EventTypeTaskStateGoneByOperator,
 		EventTypeTaskStateUnknown:
-		event.Data = new(swanevent.TaskInfoEvent)
+		event.Data = new(types.TaskInfoEvent)
 	case EventTypeAppStateCreating,
 		EventTypeAppStateDeletion,
 		EventTypeAppStateNormal,
@@ -72,7 +72,7 @@ func GetEvent(eventType string) (*Event, error) {
 		EventTypeAppStateCancelUpdate,
 		EventTypeAppStateScaleUp,
 		EventTypeAppStateScaleDown:
-		event.Data = new(swanevent.AppInfoEvent)
+		event.Data = new(types.AppInfoEvent)
 	default:
 		return nil, errors.New(fmt.Sprintf("The event type %s was not found or supported", eventType))
 	}

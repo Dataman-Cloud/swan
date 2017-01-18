@@ -426,7 +426,7 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 		AppMode: string(slot.App.Mode),
 	}
 
-	payload := &swanevent.TaskInfoEvent{
+	payload := &types.TaskInfoEvent{
 		TaskId:    slot.ID,
 		AppId:     slot.App.ID,
 		State:     slot.State,
