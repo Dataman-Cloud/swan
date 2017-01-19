@@ -7,12 +7,10 @@ import (
 	"net/url"
 	"os"
 	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/manager/raft/types"
@@ -68,11 +66,10 @@ var (
 )
 
 type Node struct {
-	id        int      // client id for raft session
-	peers     []string // raft peers URLS
-	waldir    string   // path to WAL directory
-	snapdir   string   // path to  sanpshot directory
-	lastIndex uint64   // index fo log at start
+	opts      NodeOptions
+	waldir    string // path to WAL directory
+	snapdir   string // path to  sanpshot directory
+	lastIndex uint64 // index fo log at start
 
 	confState     raftpb.ConfState
 	snapshotIndex uint64
@@ -114,6 +111,15 @@ type Node struct {
 	waitProp sync.WaitGroup
 }
 
+type NodeOptions struct {
+	RaftID        uint64
+	SwanNodeID    string
+	ListenAddr    string
+	AdvertiseAddr string
+	DataDir       string
+	Peers         []string
+}
+
 var (
 	defaultSnapshotCount   uint64 = 10000
 	snapshotCatchUpEntrisN uint64 = 10000
@@ -124,12 +130,11 @@ type applyResult struct {
 	err  error
 }
 
-func NewNode(config config.Raft, db *bolt.DB) (*Node, error) {
+func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 	n := Node{
-		id:          config.RaftId,
-		peers:       strings.Split(config.Cluster, ","),
-		waldir:      config.StorePath + "/wal",
-		snapdir:     config.StorePath + "/snap",
+		opts:        opts,
+		waldir:      opts.DataDir + "/wal",
+		snapdir:     opts.DataDir + "/snap",
 		raftStorage: raft.NewMemoryStorage(),
 		snapCount:   defaultSnapshotCount,
 		stopC:       make(chan struct{}),
@@ -138,10 +143,18 @@ func NewNode(config config.Raft, db *bolt.DB) (*Node, error) {
 		stoppedC:    make(chan struct{}),
 	}
 
+	n.Config = &raft.Config{
+		ID:              opts.RaftID,
+		ElectionTick:    3,
+		HeartbeatTick:   1,
+		Storage:         n.raftStorage,
+		MaxSizePerMsg:   1024 * 1024,
+		MaxInflightMsgs: 256,
+	}
+
 	n.leadershipBroadcast = watch.NewQueue()
 	n.leaderChangeBroadcast = watch.NewQueue()
 	n.ticker = clock.NewClock().NewTicker(time.Second)
-	n.reqIDGen = idutil.NewGenerator(uint16(n.id), time.Now())
 	n.wait = newWait()
 
 	boltDbStore, err := store.NewBoltbdStore(db)
@@ -172,11 +185,6 @@ func (n *Node) StartRaft(ctx context.Context) error {
 
 	n.wal = wal
 
-	startPeers := make([]raft.Peer, len(n.peers))
-	for i := range startPeers {
-		startPeers[i] = raft.Peer{ID: uint64(i + 1)}
-	}
-
 	appliedState, err := n.store.GetRaftState()
 	if err != nil {
 		log.L.Errorf("recover raft hardState fron boltdb failed. Err: %v", err)
@@ -184,40 +192,26 @@ func (n *Node) StartRaft(ctx context.Context) error {
 		n.appliedState = appliedState
 	}
 
-	n.Config = &raft.Config{
-		ID:              uint64(n.id),
-		ElectionTick:    3,
-		HeartbeatTick:   1,
-		Storage:         n.raftStorage,
-		MaxSizePerMsg:   1024 * 1024,
-		MaxInflightMsgs: 256,
-	}
-
 	if oldwal {
 		n.raftNode = raft.RestartNode(n.Config)
 	} else {
-		n.raftNode = raft.StartNode(n.Config, startPeers)
+		n.raftNode = raft.StartNode(n.Config, []raft.Peer{raft.Peer{ID: n.Config.ID}})
 	}
 
+	n.reqIDGen = idutil.NewGenerator(uint16(n.Config.ID), time.Now())
 	ss := &stats.ServerStats{}
 	ss.Initialize()
 
 	n.transport = &rafthttp.Transport{
-		ID:          types.ID(n.id),
+		ID:          types.ID(n.Config.ID),
 		ClusterID:   0x1000,
 		Raft:        n,
 		ServerStats: ss,
-		LeaderStats: stats.NewLeaderStats(strconv.Itoa(n.id)),
+		LeaderStats: stats.NewLeaderStats(strconv.Itoa(int(n.Config.ID))),
 		ErrorC:      make(chan error),
 	}
 
 	n.transport.Start()
-
-	for i := range n.peers {
-		if i+1 != n.id {
-			n.transport.AddPeer(types.ID(i+1), []string{n.peers[i]})
-		}
-	}
 
 	if err := n.serveRaft(); err != nil {
 		return nil
@@ -244,7 +238,7 @@ func (n *Node) StartRaft(ctx context.Context) error {
 }
 
 func (n *Node) serveRaft() error {
-	url, err := url.Parse(n.peers[n.id-1])
+	url, err := url.Parse(n.opts.ListenAddr)
 	if err != nil {
 		return err
 	}
@@ -273,7 +267,7 @@ func (n *Node) serveRaft() error {
 // Before running the main loop it first starts the raft node based on saved
 // cluster state. If no saved stater exists. It start a single-node cluster
 func (n *Node) Run(ctx context.Context) error {
-	ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", n.id)))
+	ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", n.Config.ID)))
 
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -543,7 +537,7 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 				}
 
 			case raftpb.ConfChangeRemoveNode:
-				if cc.NodeID == uint64(n.id) {
+				if cc.NodeID == n.Config.ID {
 					log.L.Println("I've been removed from the cluster! Shutting down")
 				}
 
@@ -597,7 +591,7 @@ func (n *Node) openWAL(snapshot *raftpb.Snapshot) (*wal.WAL, error) {
 
 // replays WAL entries into the raft intance
 func (n *Node) replayWAL() (*wal.WAL, error) {
-	log.L.Infof("replaying WAL of member %d", n.id)
+	log.L.Infof("replaying WAL of member %d", n.Config.ID)
 	snapshot, err := n.loadSnapshot()
 	if err != nil {
 		return nil, err

@@ -2,6 +2,8 @@ package node
 
 import (
 	"errors"
+	"io/ioutil"
+	"os"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/agent"
@@ -14,8 +16,13 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
+	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/twinj/uuid"
 	"golang.org/x/net/context"
+)
+
+const (
+	NodeIDFileName = "/ID"
 )
 
 type Node struct {
@@ -26,8 +33,14 @@ type Node struct {
 	joinRetryInterval time.Duration
 }
 
-func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
+func NewNode(config config.SwanConfig) (*Node, error) {
+	nodeID, err := loadOrCreateNodeID(config)
+	if err != nil {
+		return nil, err
+	}
+
 	// init swanconfig instance
+	config.NodeID = nodeID
 	_ = swancontext.NewSwanContext(config, event.New())
 
 	if !swancontext.IsManager() && !swancontext.IsAgent() {
@@ -35,9 +48,16 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 	}
 
 	node := &Node{
-		ID: uuid.NewV4().String(),
-
+		ID:                nodeID,
 		joinRetryInterval: time.Second * 5,
+	}
+
+	os.MkdirAll(config.DataDir+"/"+nodeID, 0700)
+
+	db, err := bolt.Open(config.DataDir+"/"+nodeID+"/swan.db", 0600, nil)
+	if err != nil {
+		logrus.Errorf("Init store engine failed:%s", err)
+		return nil, err
 	}
 
 	if swancontext.IsManager() {
@@ -57,6 +77,39 @@ func NewNode(config config.SwanConfig, db *bolt.DB) (*Node, error) {
 	}
 
 	return node, nil
+}
+
+func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
+	nodeIDFile := swanConfig.DataDir + NodeIDFileName
+	if !fileutil.Exist(nodeIDFile) {
+		os.MkdirAll(swanConfig.DataDir, 0700)
+		nodeID := uuid.NewV4().String()
+		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+		if err != nil {
+			return "", err
+		}
+
+		if _, err = idFile.WriteString(nodeID); err != nil {
+			return "", err
+		}
+
+		logrus.Infof("starting swan node, ID file was not found started with  new ID: %s", nodeID)
+		return nodeID, nil
+
+	} else {
+		idFile, err := os.Open(nodeIDFile)
+		if err != nil {
+			return "", err
+		}
+
+		nodeID, err := ioutil.ReadAll(idFile)
+		if err != nil {
+			return "", err
+		}
+
+		logrus.Infof("starting swan node, ID file was found started with ID: %s", string(nodeID))
+		return string(nodeID), nil
+	}
 }
 
 func (n *Node) Start(ctx context.Context) error {
@@ -111,12 +164,12 @@ func (n *Node) stopManager() {
 
 func (n *Node) JoinAsAgent() error {
 	swanConfig := swancontext.Instance().Config
-	agentInfo := types.Node{
-		ID:            n.ID,
-		AdvertiseAddr: swanConfig.AdvertiseAddr,
+	agentInfo := types.Agent{
+		ID:         n.ID,
+		RemoteAddr: swanConfig.AdvertiseAddr,
 	}
 
-	for _, managerAddr := range swanConfig.SwanClusterAddrs {
+	for _, managerAddr := range swanConfig.JoinAddrs {
 		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/manager/agents"
 		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agentInfo, nil)
 		if err != nil {

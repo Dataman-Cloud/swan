@@ -1,1 +1,1 @@
-swan: sudo bin/swan --zk-path=zk://192.168.1.1:2181/mesos --log-level=debug --raftid=1 --raft-cluster=192.168.1.1:2111 --data-dir=./data --cluster-addrs=192.168.1.1:9999 --mode=mixed --domain=foobar.com --advertise-addr=192.168.1.1:9999
+swan: sudo bin/swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 --data-dir=./data/  --join-addrs=0.0.0.0:9999
