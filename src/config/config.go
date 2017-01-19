@@ -2,7 +2,6 @@ package config
 
 import (
 	"errors"
-	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -12,20 +11,22 @@ import (
 )
 
 type SwanConfig struct {
-	LogLevel         string   `json:"log-level"`
-	Mode             SwanMode `json:"mode"` // manager, agent, mixed
-	DataDir          string   `json:"data-dir"`
-	NoRecover        bool     `json:"no-recover"`
-	Domain           string   `json:"domain"`
-	SwanClusterAddrs []string `json:swan-cluster-addrs`
+	NodeID            string   `json:"nodeID"`
+	LogLevel          string   `json:"logLevel"`
+	Mode              SwanMode `json:"mode"` // manager, agent, mixed
+	DataDir           string   `json:"dataDir"`
+	NoRecover         bool     `json:"noRecover"`
+	Domain            string   `json:"domain"`
+	RaftAdvertiseAddr string   `json:"raftAdvertiseAddr"`
+	RaftListenAddr    string   `json:"raftListenAddr"`
+	ListenAddr        string   `json:"listenAddr"`
+	AdvertiseAddr     string   `json:"advertiseAddr"`
+	JoinAddrs         []string `json:"joinAddrs"`
 
 	Scheduler Scheduler `json:"scheduler"`
-	Raft      Raft      `json:"raft"`
 
-	DNS           DNS     `json:"dns"`
-	Janitor       Janitor `json:"janitor"`
-	ListenAddr    string  `json:"listen-addr"`
-	AdvertiseAddr string  `json:"advertise-addr"`
+	DNS     DNS     `json:"dns"`
+	Janitor Janitor `json:"janitor"`
 }
 
 type Scheduler struct {
@@ -53,12 +54,6 @@ type DNS struct {
 	ExchangeTimeout time.Duration `json:"exchange_timeout"`
 }
 
-type Raft struct {
-	Cluster   string `json:"cluster"`
-	RaftId    int    `json:"raftid"`
-	StorePath string `json:"store_path"`
-}
-
 type Janitor struct {
 	ListenerMode string `json:"listenerMode"`
 	IP           string `json:"ip"`
@@ -69,13 +64,14 @@ type Janitor struct {
 
 func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig := SwanConfig{
-		LogLevel:         "info",
-		Mode:             Mixed,
-		DataDir:          "./data/",
-		NoRecover:        false,
-		Domain:           "swan.com",
-		SwanClusterAddrs: []string{"0.0.0.0:9999"},
-		ListenAddr:       "0.0.0.0:9999",
+		LogLevel:       "info",
+		Mode:           Mixed,
+		DataDir:        "./data/",
+		NoRecover:      false,
+		Domain:         "swan.com",
+		ListenAddr:     "0.0.0.0:9999",
+		RaftListenAddr: "0.0.0.0:2111",
+		JoinAddrs:      []string{"0.0.0.0:9999"},
 
 		Scheduler: Scheduler{
 			ZkPath:             "0.0.0.0:2181",
@@ -92,12 +88,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 			TTL:             3,
 			Resolvers:       []string{"114.114.114.114"},
 			ExchangeTimeout: time.Second * 3,
-		},
-
-		Raft: Raft{
-			Cluster:   "0.0.0.0:1121",
-			RaftId:    1,
-			StorePath: "./data/",
 		},
 
 		Janitor: Janitor{
@@ -132,21 +122,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Scheduler.ZkPath = c.String("zk-path")
 	}
 
-	if c.String("raft-cluster") != "" {
-		swanConfig.Raft.Cluster = c.String("raft-cluster")
-	}
-
-	if c.Int("raftid") != 0 {
-		swanConfig.Raft.RaftId = c.Int("raftid")
-		swanConfig.DataDir = fmt.Sprintf(swanConfig.DataDir+"%d", swanConfig.Raft.RaftId)
-		swanConfig.Raft.StorePath = swanConfig.DataDir
-	}
-
-	if c.String("cluster-addrs") != "" {
-		swanConfig.SwanClusterAddrs = strings.Split(c.String("cluster-addrs"), ",")
-		swanConfig.ListenAddr = swanConfig.SwanClusterAddrs[swanConfig.Raft.RaftId-1]
-	}
-
 	if c.String("domain") != "" {
 		swanConfig.Domain = c.String("domain")
 		swanConfig.DNS.Domain = c.String("domain")
@@ -160,13 +135,33 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.ListenAddr = c.String("listen-addr")
 	}
 
+	if c.String("listen-addr") != "" {
+		swanConfig.ListenAddr = c.String("listen-addr")
+	}
+
 	swanConfig.AdvertiseAddr = c.String("advertise-addr")
 	if swanConfig.AdvertiseAddr == "" {
 		swanConfig.AdvertiseAddr = swanConfig.ListenAddr
 	}
 
-	if len(c.String("janitor-advertise-ip")) > 0 {
+	if c.String("janitor-advertise-ip") != "" {
 		swanConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
+	}
+
+	if c.String("raft-advertise-addr") != "" {
+		swanConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
+	}
+
+	if c.String("raft-listen-addr") != "" {
+		swanConfig.RaftListenAddr = c.String("raft-listen-addr")
+	}
+
+	if swanConfig.RaftAdvertiseAddr == "" {
+		swanConfig.RaftAdvertiseAddr = swanConfig.RaftListenAddr
+	}
+
+	if c.String("join-addrs") != "" {
+		swanConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
 	}
 
 	return swanConfig, nil

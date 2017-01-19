@@ -3,6 +3,8 @@ package manager
 import (
 	"encoding/json"
 	"fmt"
+	"math/rand"
+	"strconv"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
@@ -47,14 +49,25 @@ func New(db *bolt.DB) (*Manager, error) {
 		criticalErrorChan: make(chan error, 1),
 	}
 
-	raftNode, err := raft.NewNode(swancontext.Instance().Config.Raft, db)
+	raftID, err := loadOrCreateRaftID(db)
+	if err != nil {
+		return nil, err
+	}
+
+	swanConfig := swancontext.Instance().Config
+	raftNodeOpts := raft.NodeOptions{
+		SwanNodeID:    swanConfig.NodeID,
+		DataDir:       swanConfig.DataDir + "/" + swanConfig.NodeID,
+		RaftID:        raftID,
+		ListenAddr:    swanConfig.RaftListenAddr,
+		AdvertiseAddr: swanConfig.AdvertiseAddr,
+	}
+	raftNode, err := raft.NewNode(raftNodeOpts, db)
 	if err != nil {
 		logrus.Errorf("init raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
 	manager.raftNode = raftNode
-
-	manager.clusterAddrs = swancontext.Instance().Config.SwanClusterAddrs
 
 	frameworkStore := fstore.NewStore(db, raftNode)
 	manager.framework, err = framework.New(frameworkStore, swancontext.Instance().ApiServer)
@@ -70,6 +83,42 @@ func New(db *bolt.DB) (*Manager, error) {
 	manager.janitorSubscriber = event.NewJanitorSubscriber()
 
 	return manager, nil
+}
+
+func loadOrCreateRaftID(db *bolt.DB) (uint64, error) {
+	var raftID uint64
+	tx, err := db.Begin(true)
+	if err != nil {
+		return raftID, err
+	}
+	defer tx.Commit()
+
+	var (
+		raftIDBukctName = []byte("raftnode")
+		raftIDDataKey   = []byte("raftid")
+	)
+	raftIDBkt := tx.Bucket(raftIDBukctName)
+	if raftIDBkt == nil {
+		raftIDBkt, err = tx.CreateBucketIfNotExists(raftIDBukctName)
+		if err != nil {
+			return raftID, err
+		}
+
+		raftID = uint64(rand.Int63()) + 1
+		if err := raftIDBkt.Put(raftIDDataKey, []byte(strconv.FormatUint(raftID, 10))); err != nil {
+			return raftID, err
+		}
+		logrus.Infof("raft ID was not found create a new raftID %d", raftID)
+		return raftID, nil
+	} else {
+		raftID_ := raftIDBkt.Get(raftIDDataKey)
+		raftID, err = strconv.ParseUint(string(raftID_), 10, 64)
+		if err != nil {
+			return raftID, err
+		}
+
+		return raftID, nil
+	}
 }
 
 func (manager *Manager) Stop(cancel context.CancelFunc) {
@@ -121,7 +170,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			// TODO lock it and if manager stop return
 			newState := leadershipEvent.(raft.LeadershipState)
 
-			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", swancontext.Instance().Config.Raft.RaftId)))
+			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.raftNode.Config.ID)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
 
@@ -168,19 +217,20 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChangeCh chan events.Event) {
 	for {
 		select {
-		case leaderChangeEvent := <-leaderChangeCh:
-			var leaderAddr string
-			leader := leaderChangeEvent.(uint64)
+		case <-leaderChangeCh:
+			//case leaderChangeEvent := <-leaderChangeCh:
+			//var leaderAddr string
+			//leader := leaderChangeEvent.(uint64)
 
-			// If leader was losted, this value is 0
-			if int(leader) == 0 {
-				leaderAddr = ""
-			} else {
-				leaderAddr = manager.clusterAddrs[int(leader)-1]
-			}
+			//// If leader was losted, this value is 0
+			//if int(leader) == 0 {
+			//	leaderAddr = ""
+			//} else {
+			//	leaderAddr = manager.clusterAddrs[int(leader)-1]
+			//}
 
-			swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
-			log.G(ctx).Info("Now leader is change to ", leaderAddr)
+			//swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
+			log.G(ctx).Info("Now leader is change to ", manager.raftNode.Config.ID)
 
 		case <-ctx.Done():
 			return
