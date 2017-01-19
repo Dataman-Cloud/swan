@@ -258,6 +258,15 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 			}
 		}
 
+		if protocol == "cmd" {
+			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
+				Type: mesos.HealthCheck_COMMAND.Enum(),
+				Command: &mesos.CommandInfo{
+					Value: &healthCheck.Value,
+				},
+			}
+		}
+
 		builder.taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
 		builder.taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
 		builder.taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)

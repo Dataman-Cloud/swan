@@ -8,7 +8,6 @@
   "priority": 100,
   "instances": 1,
   "constraints": [
-    "ip:LIKE:192.168.1.162"
   ],
   "container": {
     "docker": {
@@ -37,7 +36,18 @@
   "killPolicy": {
     "duration": 5
   },
-  "healthChecks": [ ],
+  "healthChecks": [
+    {
+      "protocol": "CMD",
+      "value": "ls",
+      "delaySeconds": 2,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 1,
+      "portName": "web",
+      "timeoutSeconds": 1,
+      "consecutiveFailures": 500
+    }
+ ],
   "mode": "fixed",
   "ip": ["192.168.1.210"]
 }

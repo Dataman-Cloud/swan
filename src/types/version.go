@@ -68,41 +68,16 @@ type UpdatePolicy struct {
 }
 
 type HealthCheck struct {
-	ID                  string   `json:"id,omitempty"`
-	Address             string   `json:"address,omitempty"`
-	TaskID              string   `json:"taskID,omitempty"`
-	AppID               string   `json:"appID,omitempty"`
-	Protocol            string   `json:"protocol,omitempty"`
-	PortName            string   `json:"portName,omitempty"`
-	Command             *Command `json:"command,omitempty"`
-	Path                string   `json:"path,omitempty"`
-	ConsecutiveFailures uint32   `json:"consecutiveFailures,omitempty"`
-	GracePeriodSeconds  float64  `json:"gracePeriodSeconds,omitempty"`
-	IntervalSeconds     float64  `json:"intervalSeconds,omitempty"`
-	TimeoutSeconds      float64  `json:"timeoutSeconds,omitempty"`
-}
-
-type Command struct {
-	Value string `json:"value,omitempty"`
-}
-
-// AddLabel adds a label to the application
-//		name:	the name of the label
-//		value: value for this label
-func (v *Version) AddLabel(name, value string) *Version {
-	if v.Labels == nil {
-		v.EmptyLabels()
-	}
-	v.Labels[name] = value
-
-	return v
-}
-
-// EmptyLabels explicitly empties the labels -- use this if you need to empty
-// the labels of an application that already has labels set (setting labels to nil will
-// keep the current value)
-func (v *Version) EmptyLabels() *Version {
-	v.Labels = map[string]string{}
-
-	return v
+	ID                  string  `json:"id,omitempty"`
+	Address             string  `json:"address,omitempty"`
+	TaskID              string  `json:"taskID,omitempty"`
+	AppID               string  `json:"appID,omitempty"`
+	Protocol            string  `json:"protocol,omitempty"`
+	PortName            string  `json:"portName,omitempty"`
+	Value               string  `json:"value,omitempty"`
+	Path                string  `json:"path,omitempty"`
+	ConsecutiveFailures uint32  `json:"consecutiveFailures,omitempty"`
+	GracePeriodSeconds  float64 `json:"gracePeriodSeconds,omitempty"`
+	IntervalSeconds     float64 `json:"intervalSeconds,omitempty"`
+	TimeoutSeconds      float64 `json:"timeoutSeconds,omitempty"`
 }
