@@ -284,6 +284,13 @@ func (app *App) CancelUpdate() error {
 	return nil
 }
 
+func (app *App) ServiceDiscoveryURL() string {
+	domain := swancontext.Instance().Config.Janitor.Domain
+	url := strings.ToLower(strings.Replace(app.ID, "-", ".", -1))
+	s := []string{url, domain}
+	return strings.Join(s, ".")
+}
+
 func (app *App) IsReplicates() bool {
 	return app.Mode == APP_MODE_REPLICATES
 }
