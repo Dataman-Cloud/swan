@@ -81,3 +81,24 @@ type HealthCheck struct {
 	IntervalSeconds     float64 `json:"intervalSeconds,omitempty"`
 	TimeoutSeconds      float64 `json:"timeoutSeconds,omitempty"`
 }
+
+// AddLabel adds a label to the application
+//		name:	the name of the label
+//		value: value for this label
+func (v *Version) AddLabel(name, value string) *Version {
+	if v.Labels == nil {
+		v.EmptyLabels()
+	}
+	v.Labels[name] = value
+
+	return v
+}
+
+// EmptyLabels explicitly empties the labels -- use this if you need to empty
+// the labels of an application that already has labels set (setting labels to nil will
+// keep the current value)
+func (v *Version) EmptyLabels() *Version {
+	v.Labels = map[string]string{}
+
+	return v
+}
