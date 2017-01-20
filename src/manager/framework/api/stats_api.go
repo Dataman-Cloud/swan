@@ -47,7 +47,7 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 
 	stats.ClusterID = mesos_connector.Instance().ClusterID
 
-	appFilterOptions := scheduler.AppFilterOptions{}
+	appFilterOptions := types.AppFilterOptions{}
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
 		version := app.CurrentVersion
 		stats.AppCount += 1

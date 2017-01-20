@@ -1,6 +1,9 @@
 package api
 
 import (
+	"crypto/md5"
+	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -138,6 +141,36 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", types.Version{}).
 		Returns(404, "NotFound", nil))
 
+	ws.Route(ws.GET("/{app_id}/service-discoveries").To(metrics.InstrumentRouteFunc("GET", "AppServiceDiscoveries", api.GetAppServiceDiscoveries)).
+		// docs
+		Doc("Get an app's service discoveries").
+		Operation("getAppServiceDiscoveries").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Returns(200, "OK", []types.ServiceDiscovery{}).
+		Returns(404, "NotFound", nil))
+
+	ws.Route(ws.GET("/{app_id}/service-discoveries/md5").To(metrics.InstrumentRouteFunc("GET", "AppServiceDiscoveries", api.GetAppServiceDiscoveriesMD5)).
+		// docs
+		Doc("Get service discoveries' md5").
+		Operation("getAppServiceDiscoveriesMD5").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Returns(200, "OK", "").
+		Returns(404, "NotFound", nil))
+
+	ws.Route(ws.GET("/service-discoveries").To(metrics.InstrumentRouteFunc("GET", "AppServiceDiscoveriesMD5", api.GetAllServiceDiscoveries)).
+		// docs
+		Doc("Get all apps' service discoveries").
+		Operation("getAllServiceDiscoveries").
+		Returns(200, "OK", []types.ServiceDiscovery{}).
+		Returns(404, "NotFound", nil))
+
+	ws.Route(ws.GET("/service-discoveries/md5").To(metrics.InstrumentRouteFunc("GET", "ServiceDiscoveriesMD5", api.GetAllServiceDiscoveriesMD5)).
+		// docs
+		Doc("Get all apps' service discoveries' md5").
+		Operation("getAllServiceDiscoveriesMD5").
+		Returns(200, "OK", "").
+		Returns(404, "NotFound", nil))
+
 	container.Add(ws)
 }
 
@@ -169,7 +202,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 }
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
-	appFilterOptions := scheduler.AppFilterOptions{}
+	appFilterOptions := types.AppFilterOptions{}
 	labelsFilter := request.QueryParameter("labels")
 	if labelsFilter != "" {
 		labelsSelector, err := labels.Parse(labelsFilter)
@@ -370,6 +403,109 @@ func (api *AppService) GetAppVersion(request *restful.Request, response *restful
 	}
 	logrus.Errorf("No versions found with ID: %s", versionID)
 	response.WriteErrorString(http.StatusNotFound, "No versions found")
+}
+
+func (api *AppService) GetAppServiceDiscoveries(request *restful.Request, response *restful.Response) {
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app versions error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	serviceDiscoveries := getServiceDiscoveris(app)
+	response.WriteEntity(serviceDiscoveries)
+}
+
+func (api *AppService) GetAppServiceDiscoveriesMD5(request *restful.Request, response *restful.Response) {
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app versions error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	serviceDiscoveries := getServiceDiscoveris(app)
+	sd, err := json.Marshal(serviceDiscoveries)
+	if err != nil {
+		logrus.Errorf("Fails to Marshal serviceDiscoveries: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
+	}
+	sdMD5 := md5.Sum(sd)
+	response.WriteEntity(hex.EncodeToString(sdMD5[:]))
+}
+
+func (api *AppService) GetAllServiceDiscoveries(request *restful.Request, response *restful.Response) {
+	appFilterOptions := types.AppFilterOptions{}
+	allServiceDiscoveries := make([]types.ServiceDiscovery, 0)
+	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
+		serviceDiscoveries := getServiceDiscoveris(app)
+		allServiceDiscoveries = append(allServiceDiscoveries, serviceDiscoveries...)
+	}
+	response.WriteEntity(allServiceDiscoveries)
+}
+
+func (api *AppService) GetAllServiceDiscoveriesMD5(request *restful.Request, response *restful.Response) {
+	appFilterOptions := types.AppFilterOptions{}
+	allServiceDiscoveries := make([]types.ServiceDiscovery, 0)
+	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
+		serviceDiscoveries := getServiceDiscoveris(app)
+		allServiceDiscoveries = append(allServiceDiscoveries, serviceDiscoveries...)
+	}
+	sd, err := json.Marshal(allServiceDiscoveries)
+	if err != nil {
+		logrus.Errorf("Fails to Marshal serviceDiscoveries: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
+	}
+	sdMD5 := md5.Sum(sd)
+	response.WriteEntity(hex.EncodeToString(sdMD5[:]))
+}
+
+func getServiceDiscoveris(app *state.App) []types.ServiceDiscovery {
+	slots := app.GetSlots()
+	serviceDiscoveries := make([]types.ServiceDiscovery, 0)
+	if app.Mode == state.APP_MODE_FIXED {
+		for _, slot := range slots {
+			if slot.State == state.SLOT_STATE_TASK_RUNNING && slot.Healthy() {
+				serviceDiscovery := types.ServiceDiscovery{
+					TaskID:  slot.ID,
+					AppID:   slot.App.ID,
+					AppMode: string(slot.App.Mode),
+					IP:      slot.Ip,
+				}
+				serviceDiscoveries = append(serviceDiscoveries, serviceDiscovery)
+			}
+		}
+	} else {
+		for _, slot := range slots {
+			if slot.State == state.SLOT_STATE_TASK_RUNNING && slot.Healthy() {
+				serviceDiscovery := types.ServiceDiscovery{
+					TaskID:  slot.ID,
+					AppID:   slot.App.ID,
+					AppMode: string(slot.App.Mode),
+					IP:      slot.AgentHostName,
+					URL:     slot.ServiceDiscoveryURL(),
+				}
+				var taskPortMappings []*types.TaskPortMapping
+				for i, hostPort := range slot.CurrentTask.HostPorts {
+					taskPortMapping := &types.TaskPortMapping{
+						HostPort: int32(hostPort),
+					}
+					appPortMapping := slot.App.CurrentVersion.Container.Docker.PortMappings[i]
+					if appPortMapping != nil {
+						taskPortMapping.ContainerPort = appPortMapping.ContainerPort
+						taskPortMapping.Name = appPortMapping.Name
+						taskPortMapping.Protocol = appPortMapping.Protocol
+					}
+					taskPortMappings = append(taskPortMappings, taskPortMapping)
+				}
+				serviceDiscovery.TaskPortMappings = taskPortMappings
+				serviceDiscoveries = append(serviceDiscoveries, serviceDiscovery)
+			}
+		}
+	}
+
+	return serviceDiscoveries
 }
 
 func FormAppRet(app *state.App) *types.App {

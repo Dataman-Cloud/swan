@@ -2,6 +2,9 @@ package types
 
 import (
 	"time"
+
+	"github.com/Dataman-Cloud/swan/src/utils/fields"
+	"github.com/Dataman-Cloud/swan/src/utils/labels"
 )
 
 type App struct {
@@ -32,6 +35,11 @@ type App struct {
 	Env         map[string]string `json:"env,omitempty"`
 	Constraints []string          `json:"constraints,omitempty"`
 	URIs        []string          `json:"uris,omitempty"`
+}
+
+type AppFilterOptions struct {
+	LabelsSelector labels.Selector
+	FieldsSelector fields.Selector
 }
 
 // use task for compatability now, should be slot here
