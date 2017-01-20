@@ -1,13 +1,15 @@
 {
-  "appID": "nginx0051",
+  "appID": "nginx",
   "cmd": null,
+  "args": null,
   "cpus": 0.01,
-  "mem": 6,
+  "mem": 5,
   "disk": 0,
   "runAs": "xcm",
+  "priority": 100,
   "instances": 3,
   "constraints": [
-  ], 
+  ],
   "container": {
     "docker": {
       "image": "nginx:1.10",
@@ -38,8 +40,9 @@
     ]
   },
   "env": {
-    "DB": "mysql"
   },
+  "uris": [
+  ],
   "label": {
     "USER_ID": "1"
   },
@@ -47,12 +50,19 @@
     "duration": 5
   },
   "healthChecks": [
+    {
+      "protocol": "CMD",
+      "value": "echo 'sssssssssssssssssss' && exit 1",
+      "path": "/",
+      "delaySeconds": 2,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 1,
+      "portName": "web",
+      "timeoutSeconds": 1,
+      "consecutiveFailures": 500
+    }
  ],
-  "updatePolicy": {
-	  "updateDelay": 5,
-	  "maxRetries": 3,
-	  "maxFailovers": 3,
-	  "action": "rollback"
-  },
   "mode": "replicates"
 }
+
+
