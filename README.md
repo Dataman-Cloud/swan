@@ -28,45 +28,35 @@
 + Build in HTTP Proxy, Load Balance
 + Build in DNS
 
-## Special features
-+ The instance name is fixed during the application lifecycle.
-+ The instance index is continuously incremented from zero.
-
 ## Installation
-### From Source(swan only)
-First get the swan:
+
+### From Source
+
+clone `Swan` source code from github.com:
 ```
-go get github.com/Dataman-Cloud/swan
+git clone git@github.com:Dataman-Cloud/swan.git
 ```
-Then you can compile `swan` with:
+Then you can compile `Wwan` with:
 ```
 make
 
-or 
+# or build within docker
 
 make docker-build
-```
-`swan` will be installed at $GOPATH/bin/swan, If `$GOPATH/bin` is in your `PATH`, you can invoke `swan` from the CLI.
 
 ## Run as standalone mode
 ```
 goreman start
 
-or 
+or run swan in docker
 
-make docker-run
+make docker-run-mixed
 ```
 
-### Run in HA mode
-```
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=1 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=2 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
-swan --mesos-master=zk://127.0.0.1:2181/mesos --cluster=127.0.0.1:9999,127.0.0.1:9998,127.0.0.1:9997 --raftid=3 --raft-cluster=http://127.0.0.1:2111,http://127.0.0.1:2112,http://127.0.0.1:2113 --work-dir=./data/ --mode=mixed
-```
 Use `swan --help` to see usage.
 
 ## Getting Started
-### Use `curl` 
+### Use `curl`
 
 + application deployment
 ```
