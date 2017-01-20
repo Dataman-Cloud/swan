@@ -99,16 +99,12 @@ message HealthCheck {
     int32 port = 4;
     int32 portIndex = 5;
     string portName = 6;
-    Command command = 7;
+    string value = 7;
     string path = 8;
     uint32 consecutiveFailures = 9;
     double gracePeriodSeconds = 10;
     double intervalSeconds = 11;
     double timeoutSeconds = 12;
-}
-
-message Command {
-    string value = 1;
 }
 
 message Slot {

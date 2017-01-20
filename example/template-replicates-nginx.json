@@ -50,6 +50,17 @@
     "duration": 5
   },
   "healthChecks": [
+    {
+      "protocol": "CMD",
+      "value": "echo 'sssssssssssssssssss' && exit 1",
+      "path": "/",
+      "delaySeconds": 2,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 1,
+      "portName": "web",
+      "timeoutSeconds": 1,
+      "consecutiveFailures": 500
+    }
  ],
   "mode": "replicates"
 }

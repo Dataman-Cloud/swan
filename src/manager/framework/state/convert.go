@@ -300,14 +300,11 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 		Protocol:            healthCheck.Protocol,
 		PortName:            healthCheck.PortName,
 		Path:                healthCheck.Path,
+		Value:               healthCheck.Value,
 		ConsecutiveFailures: healthCheck.ConsecutiveFailures,
 		GracePeriodSeconds:  healthCheck.GracePeriodSeconds,
 		IntervalSeconds:     healthCheck.IntervalSeconds,
 		TimeoutSeconds:      healthCheck.TimeoutSeconds,
-	}
-
-	if healthCheck.Command != nil {
-		raftHealthCheck.Command = CommandToRaft(healthCheck.Command)
 	}
 
 	return raftHealthCheck
@@ -320,27 +317,14 @@ func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCh
 		Protocol:            raftHealthCheck.Protocol,
 		PortName:            raftHealthCheck.PortName,
 		Path:                raftHealthCheck.Path,
+		Value:               raftHealthCheck.Value,
 		ConsecutiveFailures: raftHealthCheck.ConsecutiveFailures,
 		GracePeriodSeconds:  raftHealthCheck.GracePeriodSeconds,
 		IntervalSeconds:     raftHealthCheck.IntervalSeconds,
 		TimeoutSeconds:      raftHealthCheck.TimeoutSeconds,
 	}
 
-	if raftHealthCheck.Command != nil {
-		healthCheck.Command = CommandFromRaft(raftHealthCheck.Command)
-	}
-
 	return healthCheck
-}
-
-func CommandToRaft(command *types.Command) *rafttypes.Command {
-	return &rafttypes.Command{command.Value}
-}
-
-func CommandFromRaft(raftCommand *rafttypes.Command) *types.Command {
-	return &types.Command{
-		Value: raftCommand.Value,
-	}
 }
 
 func SlotToRaft(slot *Slot) *rafttypes.Slot {
