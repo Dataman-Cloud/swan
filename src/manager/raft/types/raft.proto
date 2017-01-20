@@ -45,7 +45,7 @@ message StoreAction {
         Slot slot = 5;
         Task task = 6;
         OfferAllocatorItem offerAllocatorItem = 7;
-        Agent agent = 8;
+        Node node = 8;
 	}
 }
 
@@ -53,9 +53,11 @@ message Framework {
     string id = 1 [(gogoproto.customname) = "ID"];
 }
 
-message Agent {
+message Node {
     string id = 1 [(gogoproto.customname) = "ID"];
-    string remoteAddr = 2;
-    string status = 3;
-    map<string, string> labels = 4;
+    string advertiseAddr = 2;
+    string listenAddr = 3;
+    string status = 4;
+    map<string, string> labels = 5;
+    string role = 6;
 }

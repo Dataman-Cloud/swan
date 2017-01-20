@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/agent"
+	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager"
@@ -76,6 +77,9 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		node.agent = a
 	}
 
+	nodeApi := &NodeApi{node}
+	apiserver.Install(swancontext.Instance().ApiServer, nodeApi)
+
 	return node, nil
 }
 
@@ -126,7 +130,10 @@ func (n *Node) Start(ctx context.Context) error {
 		}()
 
 		go func() {
-			n.JoinAsAgent()
+			err := n.JoinAsAgent()
+			if err != nil {
+				errChan <- err
+			}
 		}()
 	}
 
@@ -142,7 +149,6 @@ func (n *Node) Start(ctx context.Context) error {
 			return ctx.Err()
 		}
 	}
-
 }
 
 func (n *Node) runAgent(ctx context.Context) error {
@@ -164,13 +170,19 @@ func (n *Node) stopManager() {
 
 func (n *Node) JoinAsAgent() error {
 	swanConfig := swancontext.Instance().Config
-	agentInfo := types.Agent{
-		ID:         n.ID,
-		RemoteAddr: swanConfig.AdvertiseAddr,
+	if len(swanConfig.JoinAddrs) == 0 {
+		return errors.New("start agent failed. Error: joinAddrs must be no empty")
+	}
+
+	agentInfo := types.Node{
+		ID:            n.ID,
+		AdvertiseAddr: swanConfig.AdvertiseAddr,
+		ListenAddr:    swanConfig.ListenAddr,
+		Role:          types.NodeRole(swanConfig.Mode),
 	}
 
 	for _, managerAddr := range swanConfig.JoinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/manager/agents"
+		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
 		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agentInfo, nil)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())

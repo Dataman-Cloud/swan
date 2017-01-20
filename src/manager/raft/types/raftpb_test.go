@@ -207,15 +207,15 @@ func TestFrameworkMarshalTo(t *testing.T) {
 	}
 }
 
-func TestAgentProto(t *testing.T) {
+func TestNodeProto(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, false)
+	p := NewPopulatedNode(popr, false)
 	dAtA, err := github_com_gogo_protobuf_proto.Marshal(p)
 	if err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
-	msg := &Agent{}
+	msg := &Node{}
 	if err := github_com_gogo_protobuf_proto.Unmarshal(dAtA, msg); err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
@@ -241,10 +241,10 @@ func TestAgentProto(t *testing.T) {
 	}
 }
 
-func TestAgentMarshalTo(t *testing.T) {
+func TestNodeMarshalTo(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, false)
+	p := NewPopulatedNode(popr, false)
 	size := p.Size()
 	dAtA := make([]byte, size)
 	for i := range dAtA {
@@ -254,7 +254,7 @@ func TestAgentMarshalTo(t *testing.T) {
 	if err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
-	msg := &Agent{}
+	msg := &Node{}
 	if err := github_com_gogo_protobuf_proto.Unmarshal(dAtA, msg); err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
@@ -332,16 +332,16 @@ func TestFrameworkJSON(t *testing.T) {
 		t.Fatalf("seed = %d, %#v !Json Equal %#v", seed, msg, p)
 	}
 }
-func TestAgentJSON(t *testing.T) {
+func TestNodeJSON(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, true)
+	p := NewPopulatedNode(popr, true)
 	marshaler := github_com_gogo_protobuf_jsonpb.Marshaler{}
 	jsondata, err := marshaler.MarshalToString(p)
 	if err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
-	msg := &Agent{}
+	msg := &Node{}
 	err = github_com_gogo_protobuf_jsonpb.UnmarshalString(jsondata, msg)
 	if err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
@@ -455,12 +455,12 @@ func TestFrameworkProtoCompactText(t *testing.T) {
 	}
 }
 
-func TestAgentProtoText(t *testing.T) {
+func TestNodeProtoText(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, true)
+	p := NewPopulatedNode(popr, true)
 	dAtA := github_com_gogo_protobuf_proto.MarshalTextString(p)
-	msg := &Agent{}
+	msg := &Node{}
 	if err := github_com_gogo_protobuf_proto.UnmarshalText(dAtA, msg); err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
@@ -472,12 +472,12 @@ func TestAgentProtoText(t *testing.T) {
 	}
 }
 
-func TestAgentProtoCompactText(t *testing.T) {
+func TestNodeProtoCompactText(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, true)
+	p := NewPopulatedNode(popr, true)
 	dAtA := github_com_gogo_protobuf_proto.CompactTextString(p)
-	msg := &Agent{}
+	msg := &Node{}
 	if err := github_com_gogo_protobuf_proto.UnmarshalText(dAtA, msg); err != nil {
 		t.Fatalf("seed = %d, err = %v", seed, err)
 	}
@@ -534,14 +534,14 @@ func TestFrameworkVerboseEqual(t *testing.T) {
 		t.Fatalf("%#v !VerboseEqual %#v, since %v", msg, p, err)
 	}
 }
-func TestAgentVerboseEqual(t *testing.T) {
+func TestNodeVerboseEqual(t *testing.T) {
 	popr := math_rand.New(math_rand.NewSource(time.Now().UnixNano()))
-	p := NewPopulatedAgent(popr, false)
+	p := NewPopulatedNode(popr, false)
 	dAtA, err := github_com_gogo_protobuf_proto.Marshal(p)
 	if err != nil {
 		panic(err)
 	}
-	msg := &Agent{}
+	msg := &Node{}
 	if err := github_com_gogo_protobuf_proto.Unmarshal(dAtA, msg); err != nil {
 		panic(err)
 	}
@@ -588,9 +588,9 @@ func TestFrameworkGoString(t *testing.T) {
 		panic(err)
 	}
 }
-func TestAgentGoString(t *testing.T) {
+func TestNodeGoString(t *testing.T) {
 	popr := math_rand.New(math_rand.NewSource(time.Now().UnixNano()))
-	p := NewPopulatedAgent(popr, false)
+	p := NewPopulatedNode(popr, false)
 	s1 := p.GoString()
 	s2 := fmt.Sprintf("%#v", p)
 	if s1 != s2 {
@@ -667,10 +667,10 @@ func TestFrameworkSize(t *testing.T) {
 	}
 }
 
-func TestAgentSize(t *testing.T) {
+func TestNodeSize(t *testing.T) {
 	seed := time.Now().UnixNano()
 	popr := math_rand.New(math_rand.NewSource(seed))
-	p := NewPopulatedAgent(popr, true)
+	p := NewPopulatedNode(popr, true)
 	size2 := github_com_gogo_protobuf_proto.Size(p)
 	dAtA, err := github_com_gogo_protobuf_proto.Marshal(p)
 	if err != nil {

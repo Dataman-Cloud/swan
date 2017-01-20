@@ -2,12 +2,12 @@ package manager
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
 
-	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
@@ -37,8 +37,10 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	agents    map[string]types.Agent
-	agentLock sync.RWMutex
+	agents      map[string]types.Node
+	managers    map[string]types.Node
+	agentLock   sync.RWMutex
+	managerLock sync.RWMutex
 
 	janitorSubscriber  *event.JanitorSubscriber
 	resolverSubscriber *event.DNSSubscriber
@@ -75,9 +77,6 @@ func New(db *bolt.DB) (*Manager, error) {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
 	}
-
-	managerApi := &ManagerApi{manager}
-	apiserver.Install(swancontext.Instance().ApiServer, managerApi)
 
 	manager.resolverSubscriber = event.NewDNSSubscriber()
 	manager.janitorSubscriber = event.NewJanitorSubscriber()
@@ -127,7 +126,7 @@ func (manager *Manager) Stop(cancel context.CancelFunc) {
 }
 
 func (manager *Manager) Start(ctx context.Context) error {
-	if err := manager.LoadAgentData(); err != nil {
+	if err := manager.LoadNodeData(); err != nil {
 		return err
 	}
 
@@ -238,42 +237,48 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 	}
 }
 
-func (manager *Manager) LoadAgentData() error {
-	agents, err := manager.raftNode.GetAgents()
+func (manager *Manager) LoadNodeData() error {
+	nodes, err := manager.raftNode.GetNodes()
 	if err != nil {
 		return err
 	}
 
-	manager.agents = make(map[string]types.Agent)
-	for _, agentMetadata := range agents {
-		agent := types.Agent{
-			ID:         agentMetadata.ID,
-			RemoteAddr: agentMetadata.RemoteAddr,
-			Status:     agentMetadata.Status,
-			Labels:     agentMetadata.Labels,
+	manager.agents = make(map[string]types.Node)
+	for _, nodeMetadata := range nodes {
+		node := types.Node{
+			ID:            nodeMetadata.ID,
+			AdvertiseAddr: nodeMetadata.AdvertiseAddr,
+			ListenAddr:    nodeMetadata.ListenAddr,
+			Role:          types.NodeRole(nodeMetadata.Role),
+			Status:        nodeMetadata.Status,
+			Labels:        nodeMetadata.Labels,
 		}
 
-		manager.AddAgentAcceptor(agent)
+		if node.IsAgent() {
+			manager.AddAgentAcceptor(node)
 
-		manager.agentLock.Lock()
-		manager.agents[agent.ID] = agent
-		manager.agentLock.Unlock()
+			manager.agentLock.Lock()
+			manager.agents[node.ID] = node
+			manager.agentLock.Unlock()
+		}
 	}
 
 	return nil
 }
 
-func (manager *Manager) AddAgent(agent types.Agent) error {
-	agentMetadata := &rafttypes.Agent{
-		ID:         agent.ID,
-		RemoteAddr: agent.RemoteAddr,
-		Status:     agent.Status,
-		Labels:     agent.Labels,
+func (manager *Manager) AddAgent(agent types.Node) error {
+	agentMetadata := &rafttypes.Node{
+		ID:            agent.ID,
+		AdvertiseAddr: agent.AdvertiseAddr,
+		ListenAddr:    agent.ListenAddr,
+		Status:        agent.Status,
+		Labels:        agent.Labels,
+		Role:          string(agent.Role),
 	}
 
 	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
 		Action: rafttypes.StoreActionKindCreate,
-		Target: &rafttypes.StoreAction_Agent{agentMetadata},
+		Target: &rafttypes.StoreAction_Node{agentMetadata},
 	}}
 
 	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
@@ -291,57 +296,58 @@ func (manager *Manager) AddAgent(agent types.Agent) error {
 	return nil
 }
 
-func (manager *Manager) GetAgents() map[string]types.Agent {
-	return manager.agents
-}
-
-func (manager *Manager) UpdateAgent(agent types.Agent) error {
-	return nil
-}
-
-func (manager *Manager) GetAgent(agentID string) types.Agent {
+func (manager *Manager) GetNodes() []types.Node {
+	var nodes []types.Node
 	manager.agentLock.RLock()
-	defer manager.agentLock.RUnlock()
-	return manager.agents[agentID]
+	for _, agent := range manager.agents {
+		nodes = append(nodes, agent)
+	}
+	manager.agentLock.RUnlock()
+
+	manager.managerLock.RLock()
+	for _, m := range manager.managers {
+		nodes = append(nodes, m)
+	}
+	manager.managerLock.RUnlock()
+
+	return nodes
 }
 
-func (manager *Manager) DeleteAgent(agentID string) error {
-	agentMetadata := &rafttypes.Agent{
-		ID: agentID,
+func (manager *Manager) GetNode(nodeID string) (types.Node, error) {
+	manager.agentLock.RLock()
+	node, ok := manager.agents[nodeID]
+	manager.agentLock.RUnlock()
+	if ok {
+		return node, nil
 	}
 
-	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
-		Action: rafttypes.StoreActionKindRemove,
-		Target: &rafttypes.StoreAction_Agent{agentMetadata},
-	}}
-
-	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
-		return err
+	manager.managerLock.RLock()
+	node, ok = manager.managers[nodeID]
+	manager.managerLock.RUnlock()
+	if ok {
+		return node, nil
 	}
 
-	manager.agentLock.Lock()
-	delete(manager.agents, agentID)
-	manager.agentLock.Unlock()
-	return nil
+	return types.Node{}, errors.New("node not found")
 }
 
-func (manager *Manager) AddAgentAcceptor(agent types.Agent) {
+func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 	resolverAcceptor := types.ResolverAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.RemoteAddr + config.API_PREFIX + "/agent/resolver/event",
+		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
 		Status:     agent.Status,
 	}
 	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
 
 	janitorAcceptor := types.JanitorAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.RemoteAddr + config.API_PREFIX + "/agent/janitor/event",
+		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
 		Status:     agent.Status,
 	}
 	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
 }
 
-func (manager *Manager) SendAgentInitData(agent types.Agent) {
+func (manager *Manager) SendAgentInitData(agent types.Node) {
 	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
 	var janitorEvents []*upstream.TargetChangeEvent
 
@@ -365,7 +371,7 @@ func (manager *Manager) SendAgentInitData(agent types.Agent) {
 
 	resolverData, err := json.Marshal(resolverEvents)
 	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.RemoteAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
 			logrus.Errorf("send resolver init data got error: %s", err.Error())
 		}
 
@@ -375,7 +381,7 @@ func (manager *Manager) SendAgentInitData(agent types.Agent) {
 
 	janitorData, err := json.Marshal(janitorEvents)
 	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.RemoteAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
 			logrus.Errorf("send janitor init data got error: %s", err.Error())
 		}
 	} else {

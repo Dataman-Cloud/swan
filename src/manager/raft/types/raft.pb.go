@@ -76,7 +76,7 @@ type StoreAction struct {
 	//	*StoreAction_Slot
 	//	*StoreAction_Task
 	//	*StoreAction_OfferAllocatorItem
-	//	*StoreAction_Agent
+	//	*StoreAction_Node
 	Target isStoreAction_Target `protobuf_oneof:"target"`
 }
 
@@ -111,8 +111,8 @@ type StoreAction_Task struct {
 type StoreAction_OfferAllocatorItem struct {
 	OfferAllocatorItem *OfferAllocatorItem `protobuf:"bytes,7,opt,name=offerAllocatorItem,oneof"`
 }
-type StoreAction_Agent struct {
-	Agent *Agent `protobuf:"bytes,8,opt,name=agent,oneof"`
+type StoreAction_Node struct {
+	Node *Node `protobuf:"bytes,8,opt,name=node,oneof"`
 }
 
 func (*StoreAction_Application) isStoreAction_Target()        {}
@@ -121,7 +121,7 @@ func (*StoreAction_Version) isStoreAction_Target()            {}
 func (*StoreAction_Slot) isStoreAction_Target()               {}
 func (*StoreAction_Task) isStoreAction_Target()               {}
 func (*StoreAction_OfferAllocatorItem) isStoreAction_Target() {}
-func (*StoreAction_Agent) isStoreAction_Target()              {}
+func (*StoreAction_Node) isStoreAction_Target()               {}
 
 func (m *StoreAction) GetTarget() isStoreAction_Target {
 	if m != nil {
@@ -172,9 +172,9 @@ func (m *StoreAction) GetOfferAllocatorItem() *OfferAllocatorItem {
 	return nil
 }
 
-func (m *StoreAction) GetAgent() *Agent {
-	if x, ok := m.GetTarget().(*StoreAction_Agent); ok {
-		return x.Agent
+func (m *StoreAction) GetNode() *Node {
+	if x, ok := m.GetTarget().(*StoreAction_Node); ok {
+		return x.Node
 	}
 	return nil
 }
@@ -188,7 +188,7 @@ func (*StoreAction) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) e
 		(*StoreAction_Slot)(nil),
 		(*StoreAction_Task)(nil),
 		(*StoreAction_OfferAllocatorItem)(nil),
-		(*StoreAction_Agent)(nil),
+		(*StoreAction_Node)(nil),
 	}
 }
 
@@ -226,9 +226,9 @@ func _StoreAction_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.OfferAllocatorItem); err != nil {
 			return err
 		}
-	case *StoreAction_Agent:
+	case *StoreAction_Node:
 		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Agent); err != nil {
+		if err := b.EncodeMessage(x.Node); err != nil {
 			return err
 		}
 	case nil:
@@ -289,13 +289,13 @@ func _StoreAction_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Bu
 		err := b.DecodeMessage(msg)
 		m.Target = &StoreAction_OfferAllocatorItem{msg}
 		return true, err
-	case 8: // target.agent
+	case 8: // target.node
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(Agent)
+		msg := new(Node)
 		err := b.DecodeMessage(msg)
-		m.Target = &StoreAction_Agent{msg}
+		m.Target = &StoreAction_Node{msg}
 		return true, err
 	default:
 		return false, nil
@@ -336,8 +336,8 @@ func _StoreAction_OneofSizer(msg proto.Message) (n int) {
 		n += proto.SizeVarint(7<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *StoreAction_Agent:
-		s := proto.Size(x.Agent)
+	case *StoreAction_Node:
+		s := proto.Size(x.Node)
 		n += proto.SizeVarint(8<<3 | proto.WireBytes)
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -357,23 +357,25 @@ func (m *Framework) String() string            { return proto.CompactTextString(
 func (*Framework) ProtoMessage()               {}
 func (*Framework) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{2} }
 
-type Agent struct {
-	ID         string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	RemoteAddr string            `protobuf:"bytes,2,opt,name=remoteAddr,proto3" json:"remoteAddr,omitempty"`
-	Status     string            `protobuf:"bytes,3,opt,name=status,proto3" json:"status,omitempty"`
-	Labels     map[string]string `protobuf:"bytes,4,rep,name=labels" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+type Node struct {
+	ID            string            `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	AdvertiseAddr string            `protobuf:"bytes,2,opt,name=advertiseAddr,proto3" json:"advertiseAddr,omitempty"`
+	ListenAddr    string            `protobuf:"bytes,3,opt,name=listenAddr,proto3" json:"listenAddr,omitempty"`
+	Status        string            `protobuf:"bytes,4,opt,name=status,proto3" json:"status,omitempty"`
+	Labels        map[string]string `protobuf:"bytes,5,rep,name=labels" json:"labels,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"bytes,2,opt,name=value,proto3"`
+	Role          string            `protobuf:"bytes,6,opt,name=role,proto3" json:"role,omitempty"`
 }
 
-func (m *Agent) Reset()                    { *m = Agent{} }
-func (m *Agent) String() string            { return proto.CompactTextString(m) }
-func (*Agent) ProtoMessage()               {}
-func (*Agent) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{3} }
+func (m *Node) Reset()                    { *m = Node{} }
+func (m *Node) String() string            { return proto.CompactTextString(m) }
+func (*Node) ProtoMessage()               {}
+func (*Node) Descriptor() ([]byte, []int) { return fileDescriptorRaft, []int{3} }
 
 func init() {
 	proto.RegisterType((*InternalRaftRequest)(nil), "types.InternalRaftRequest")
 	proto.RegisterType((*StoreAction)(nil), "types.StoreAction")
 	proto.RegisterType((*Framework)(nil), "types.Framework")
-	proto.RegisterType((*Agent)(nil), "types.Agent")
+	proto.RegisterType((*Node)(nil), "types.Node")
 	proto.RegisterEnum("types.StoreActionKind", StoreActionKind_name, StoreActionKind_value)
 }
 func (this *InternalRaftRequest) VerboseEqual(that interface{}) error {
@@ -671,7 +673,7 @@ func (this *StoreAction_OfferAllocatorItem) VerboseEqual(that interface{}) error
 	}
 	return nil
 }
-func (this *StoreAction_Agent) VerboseEqual(that interface{}) error {
+func (this *StoreAction_Node) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -679,25 +681,25 @@ func (this *StoreAction_Agent) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*StoreAction_Agent)
+	that1, ok := that.(*StoreAction_Node)
 	if !ok {
-		that2, ok := that.(StoreAction_Agent)
+		that2, ok := that.(StoreAction_Node)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *StoreAction_Agent")
+			return fmt.Errorf("that is not of type *StoreAction_Node")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *StoreAction_Agent but is nil && this != nil")
+		return fmt.Errorf("that is type *StoreAction_Node but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *StoreAction_Agent but is not nil && this == nil")
+		return fmt.Errorf("that is type *StoreAction_Node but is not nil && this == nil")
 	}
-	if !this.Agent.Equal(that1.Agent) {
-		return fmt.Errorf("Agent this(%v) Not Equal that(%v)", this.Agent, that1.Agent)
+	if !this.Node.Equal(that1.Node) {
+		return fmt.Errorf("Node this(%v) Not Equal that(%v)", this.Node, that1.Node)
 	}
 	return nil
 }
@@ -920,7 +922,7 @@ func (this *StoreAction_OfferAllocatorItem) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *StoreAction_Agent) Equal(that interface{}) bool {
+func (this *StoreAction_Node) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
 			return true
@@ -928,9 +930,9 @@ func (this *StoreAction_Agent) Equal(that interface{}) bool {
 		return false
 	}
 
-	that1, ok := that.(*StoreAction_Agent)
+	that1, ok := that.(*StoreAction_Node)
 	if !ok {
-		that2, ok := that.(StoreAction_Agent)
+		that2, ok := that.(StoreAction_Node)
 		if ok {
 			that1 = &that2
 		} else {
@@ -945,7 +947,7 @@ func (this *StoreAction_Agent) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Agent.Equal(that1.Agent) {
+	if !this.Node.Equal(that1.Node) {
 		return false
 	}
 	return true
@@ -1010,7 +1012,7 @@ func (this *Framework) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Agent) VerboseEqual(that interface{}) error {
+func (this *Node) VerboseEqual(that interface{}) error {
 	if that == nil {
 		if this == nil {
 			return nil
@@ -1018,28 +1020,31 @@ func (this *Agent) VerboseEqual(that interface{}) error {
 		return fmt.Errorf("that == nil && this != nil")
 	}
 
-	that1, ok := that.(*Agent)
+	that1, ok := that.(*Node)
 	if !ok {
-		that2, ok := that.(Agent)
+		that2, ok := that.(Node)
 		if ok {
 			that1 = &that2
 		} else {
-			return fmt.Errorf("that is not of type *Agent")
+			return fmt.Errorf("that is not of type *Node")
 		}
 	}
 	if that1 == nil {
 		if this == nil {
 			return nil
 		}
-		return fmt.Errorf("that is type *Agent but is nil && this != nil")
+		return fmt.Errorf("that is type *Node but is nil && this != nil")
 	} else if this == nil {
-		return fmt.Errorf("that is type *Agent but is not nil && this == nil")
+		return fmt.Errorf("that is type *Node but is not nil && this == nil")
 	}
 	if this.ID != that1.ID {
 		return fmt.Errorf("ID this(%v) Not Equal that(%v)", this.ID, that1.ID)
 	}
-	if this.RemoteAddr != that1.RemoteAddr {
-		return fmt.Errorf("RemoteAddr this(%v) Not Equal that(%v)", this.RemoteAddr, that1.RemoteAddr)
+	if this.AdvertiseAddr != that1.AdvertiseAddr {
+		return fmt.Errorf("AdvertiseAddr this(%v) Not Equal that(%v)", this.AdvertiseAddr, that1.AdvertiseAddr)
+	}
+	if this.ListenAddr != that1.ListenAddr {
+		return fmt.Errorf("ListenAddr this(%v) Not Equal that(%v)", this.ListenAddr, that1.ListenAddr)
 	}
 	if this.Status != that1.Status {
 		return fmt.Errorf("Status this(%v) Not Equal that(%v)", this.Status, that1.Status)
@@ -1052,9 +1057,12 @@ func (this *Agent) VerboseEqual(that interface{}) error {
 			return fmt.Errorf("Labels this[%v](%v) Not Equal that[%v](%v)", i, this.Labels[i], i, that1.Labels[i])
 		}
 	}
+	if this.Role != that1.Role {
+		return fmt.Errorf("Role this(%v) Not Equal that(%v)", this.Role, that1.Role)
+	}
 	return nil
 }
-func (this *Agent) Equal(that interface{}) bool {
+func (this *Node) Equal(that interface{}) bool {
 	if that == nil {
 		if this == nil {
 			return true
@@ -1062,9 +1070,9 @@ func (this *Agent) Equal(that interface{}) bool {
 		return false
 	}
 
-	that1, ok := that.(*Agent)
+	that1, ok := that.(*Node)
 	if !ok {
-		that2, ok := that.(Agent)
+		that2, ok := that.(Node)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1082,7 +1090,10 @@ func (this *Agent) Equal(that interface{}) bool {
 	if this.ID != that1.ID {
 		return false
 	}
-	if this.RemoteAddr != that1.RemoteAddr {
+	if this.AdvertiseAddr != that1.AdvertiseAddr {
+		return false
+	}
+	if this.ListenAddr != that1.ListenAddr {
 		return false
 	}
 	if this.Status != that1.Status {
@@ -1095,6 +1106,9 @@ func (this *Agent) Equal(that interface{}) bool {
 		if this.Labels[i] != that1.Labels[i] {
 			return false
 		}
+	}
+	if this.Role != that1.Role {
+		return false
 	}
 	return true
 }
@@ -1172,12 +1186,12 @@ func (this *StoreAction_OfferAllocatorItem) GoString() string {
 		`OfferAllocatorItem:` + fmt.Sprintf("%#v", this.OfferAllocatorItem) + `}`}, ", ")
 	return s
 }
-func (this *StoreAction_Agent) GoString() string {
+func (this *StoreAction_Node) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&types.StoreAction_Agent{` +
-		`Agent:` + fmt.Sprintf("%#v", this.Agent) + `}`}, ", ")
+	s := strings.Join([]string{`&types.StoreAction_Node{` +
+		`Node:` + fmt.Sprintf("%#v", this.Node) + `}`}, ", ")
 	return s
 }
 func (this *Framework) GoString() string {
@@ -1190,14 +1204,15 @@ func (this *Framework) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Agent) GoString() string {
+func (this *Node) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
-	s = append(s, "&types.Agent{")
+	s := make([]string, 0, 10)
+	s = append(s, "&types.Node{")
 	s = append(s, "ID: "+fmt.Sprintf("%#v", this.ID)+",\n")
-	s = append(s, "RemoteAddr: "+fmt.Sprintf("%#v", this.RemoteAddr)+",\n")
+	s = append(s, "AdvertiseAddr: "+fmt.Sprintf("%#v", this.AdvertiseAddr)+",\n")
+	s = append(s, "ListenAddr: "+fmt.Sprintf("%#v", this.ListenAddr)+",\n")
 	s = append(s, "Status: "+fmt.Sprintf("%#v", this.Status)+",\n")
 	keysForLabels := make([]string, 0, len(this.Labels))
 	for k, _ := range this.Labels {
@@ -1212,6 +1227,7 @@ func (this *Agent) GoString() string {
 	if this.Labels != nil {
 		s = append(s, "Labels: "+mapStringForLabels+",\n")
 	}
+	s = append(s, "Role: "+fmt.Sprintf("%#v", this.Role)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -1390,13 +1406,13 @@ func (m *StoreAction_OfferAllocatorItem) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *StoreAction_Agent) MarshalTo(dAtA []byte) (int, error) {
+func (m *StoreAction_Node) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Agent != nil {
+	if m.Node != nil {
 		dAtA[i] = 0x42
 		i++
-		i = encodeVarintRaft(dAtA, i, uint64(m.Agent.Size()))
-		n8, err := m.Agent.MarshalTo(dAtA[i:])
+		i = encodeVarintRaft(dAtA, i, uint64(m.Node.Size()))
+		n8, err := m.Node.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -1428,7 +1444,7 @@ func (m *Framework) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Agent) Marshal() (dAtA []byte, err error) {
+func (m *Node) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -1438,7 +1454,7 @@ func (m *Agent) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Agent) MarshalTo(dAtA []byte) (int, error) {
+func (m *Node) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -1449,21 +1465,27 @@ func (m *Agent) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRaft(dAtA, i, uint64(len(m.ID)))
 		i += copy(dAtA[i:], m.ID)
 	}
-	if len(m.RemoteAddr) > 0 {
+	if len(m.AdvertiseAddr) > 0 {
 		dAtA[i] = 0x12
 		i++
-		i = encodeVarintRaft(dAtA, i, uint64(len(m.RemoteAddr)))
-		i += copy(dAtA[i:], m.RemoteAddr)
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.AdvertiseAddr)))
+		i += copy(dAtA[i:], m.AdvertiseAddr)
+	}
+	if len(m.ListenAddr) > 0 {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.ListenAddr)))
+		i += copy(dAtA[i:], m.ListenAddr)
 	}
 	if len(m.Status) > 0 {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0x22
 		i++
 		i = encodeVarintRaft(dAtA, i, uint64(len(m.Status)))
 		i += copy(dAtA[i:], m.Status)
 	}
 	if len(m.Labels) > 0 {
 		for k, _ := range m.Labels {
-			dAtA[i] = 0x22
+			dAtA[i] = 0x2a
 			i++
 			v := m.Labels[k]
 			mapSize := 1 + len(k) + sovRaft(uint64(len(k))) + 1 + len(v) + sovRaft(uint64(len(v)))
@@ -1477,6 +1499,12 @@ func (m *Agent) MarshalTo(dAtA []byte) (int, error) {
 			i = encodeVarintRaft(dAtA, i, uint64(len(v)))
 			i += copy(dAtA[i:], v)
 		}
+	}
+	if len(m.Role) > 0 {
+		dAtA[i] = 0x32
+		i++
+		i = encodeVarintRaft(dAtA, i, uint64(len(m.Role)))
+		i += copy(dAtA[i:], m.Role)
 	}
 	return i, nil
 }
@@ -1541,7 +1569,7 @@ func NewPopulatedStoreAction(r randyRaft, easy bool) *StoreAction {
 	case 7:
 		this.Target = NewPopulatedStoreAction_OfferAllocatorItem(r, easy)
 	case 8:
-		this.Target = NewPopulatedStoreAction_Agent(r, easy)
+		this.Target = NewPopulatedStoreAction_Node(r, easy)
 	}
 	if !easy && r.Intn(10) != 0 {
 	}
@@ -1578,9 +1606,9 @@ func NewPopulatedStoreAction_OfferAllocatorItem(r randyRaft, easy bool) *StoreAc
 	this.OfferAllocatorItem = NewPopulatedOfferAllocatorItem(r, easy)
 	return this
 }
-func NewPopulatedStoreAction_Agent(r randyRaft, easy bool) *StoreAction_Agent {
-	this := &StoreAction_Agent{}
-	this.Agent = NewPopulatedAgent(r, easy)
+func NewPopulatedStoreAction_Node(r randyRaft, easy bool) *StoreAction_Node {
+	this := &StoreAction_Node{}
+	this.Node = NewPopulatedNode(r, easy)
 	return this
 }
 func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
@@ -1591,10 +1619,11 @@ func NewPopulatedFramework(r randyRaft, easy bool) *Framework {
 	return this
 }
 
-func NewPopulatedAgent(r randyRaft, easy bool) *Agent {
-	this := &Agent{}
+func NewPopulatedNode(r randyRaft, easy bool) *Node {
+	this := &Node{}
 	this.ID = string(randStringRaft(r))
-	this.RemoteAddr = string(randStringRaft(r))
+	this.AdvertiseAddr = string(randStringRaft(r))
+	this.ListenAddr = string(randStringRaft(r))
 	this.Status = string(randStringRaft(r))
 	if r.Intn(10) != 0 {
 		v2 := r.Intn(10)
@@ -1603,6 +1632,7 @@ func NewPopulatedAgent(r randyRaft, easy bool) *Agent {
 			this.Labels[randStringRaft(r)] = randStringRaft(r)
 		}
 	}
+	this.Role = string(randStringRaft(r))
 	if !easy && r.Intn(10) != 0 {
 	}
 	return this
@@ -1761,11 +1791,11 @@ func (m *StoreAction_OfferAllocatorItem) Size() (n int) {
 	}
 	return n
 }
-func (m *StoreAction_Agent) Size() (n int) {
+func (m *StoreAction_Node) Size() (n int) {
 	var l int
 	_ = l
-	if m.Agent != nil {
-		l = m.Agent.Size()
+	if m.Node != nil {
+		l = m.Node.Size()
 		n += 1 + l + sovRaft(uint64(l))
 	}
 	return n
@@ -1780,14 +1810,18 @@ func (m *Framework) Size() (n int) {
 	return n
 }
 
-func (m *Agent) Size() (n int) {
+func (m *Node) Size() (n int) {
 	var l int
 	_ = l
 	l = len(m.ID)
 	if l > 0 {
 		n += 1 + l + sovRaft(uint64(l))
 	}
-	l = len(m.RemoteAddr)
+	l = len(m.AdvertiseAddr)
+	if l > 0 {
+		n += 1 + l + sovRaft(uint64(l))
+	}
+	l = len(m.ListenAddr)
 	if l > 0 {
 		n += 1 + l + sovRaft(uint64(l))
 	}
@@ -1802,6 +1836,10 @@ func (m *Agent) Size() (n int) {
 			mapEntrySize := 1 + len(k) + sovRaft(uint64(len(k))) + 1 + len(v) + sovRaft(uint64(len(v)))
 			n += mapEntrySize + 1 + sovRaft(uint64(mapEntrySize))
 		}
+	}
+	l = len(m.Role)
+	if l > 0 {
+		n += 1 + l + sovRaft(uint64(l))
 	}
 	return n
 }
@@ -2161,7 +2199,7 @@ func (m *StoreAction) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 8:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Agent", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Node", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -2185,11 +2223,11 @@ func (m *StoreAction) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &Agent{}
+			v := &Node{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Target = &StoreAction_Agent{v}
+			m.Target = &StoreAction_Node{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2291,7 +2329,7 @@ func (m *Framework) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Agent) Unmarshal(dAtA []byte) error {
+func (m *Node) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -2314,10 +2352,10 @@ func (m *Agent) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Agent: wiretype end group for non-group")
+			return fmt.Errorf("proto: Node: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Agent: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Node: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -2351,7 +2389,7 @@ func (m *Agent) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 2:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field RemoteAddr", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field AdvertiseAddr", wireType)
 			}
 			var stringLen uint64
 			for shift := uint(0); ; shift += 7 {
@@ -2376,9 +2414,38 @@ func (m *Agent) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.RemoteAddr = string(dAtA[iNdEx:postIndex])
+			m.AdvertiseAddr = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		case 3:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ListenAddr", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRaft
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRaft
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.ListenAddr = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 4:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Status", wireType)
 			}
@@ -2407,7 +2474,7 @@ func (m *Agent) Unmarshal(dAtA []byte) error {
 			}
 			m.Status = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
-		case 4:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Labels", wireType)
 			}
@@ -2522,6 +2589,35 @@ func (m *Agent) Unmarshal(dAtA []byte) error {
 				var mapvalue string
 				m.Labels[mapkey] = mapvalue
 			}
+			iNdEx = postIndex
+		case 6:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Role", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRaft
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= (uint64(b) & 0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRaft
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Role = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -2652,43 +2748,44 @@ var (
 func init() { proto.RegisterFile("raft.proto", fileDescriptorRaft) }
 
 var fileDescriptorRaft = []byte{
-	// 597 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x94, 0x41, 0x6f, 0x12, 0x4d,
-	0x18, 0xc7, 0x59, 0x28, 0xdb, 0x32, 0xbc, 0xe9, 0x8b, 0xd3, 0x8a, 0xdb, 0x3d, 0xac, 0x88, 0x4d,
-	0x6c, 0x7a, 0x40, 0x83, 0x89, 0x51, 0x6f, 0x0b, 0x5d, 0x23, 0x41, 0xc1, 0x4c, 0xa1, 0xea, 0xa9,
-	0x99, 0x96, 0x81, 0x10, 0x96, 0x1d, 0x9c, 0x1d, 0x68, 0xf8, 0x06, 0xc6, 0x0f, 0xe0, 0xcd, 0x93,
-	0x1e, 0xfc, 0x08, 0xc6, 0xb3, 0x87, 0x1e, 0xfd, 0x04, 0xa6, 0xed, 0x17, 0xd0, 0xa3, 0x47, 0x9f,
-	0x9d, 0x5d, 0xda, 0x15, 0xf0, 0xf0, 0x24, 0x3b, 0xff, 0xe7, 0xff, 0x9b, 0x79, 0xe6, 0x79, 0x26,
-	0x8b, 0x90, 0xa0, 0x5d, 0x59, 0x1a, 0x09, 0x2e, 0x39, 0x4e, 0xcb, 0xe9, 0x88, 0xf9, 0xe6, 0x66,
-	0x8f, 0xf7, 0xb8, 0x52, 0xee, 0x06, 0x5f, 0x61, 0xd2, 0xbc, 0x46, 0x47, 0x23, 0xb7, 0x7f, 0x4c,
-	0x65, 0x9f, 0x7b, 0xa1, 0x54, 0x7c, 0x8d, 0x36, 0x6a, 0x9e, 0x64, 0xc2, 0xa3, 0x2e, 0x81, 0x5d,
-	0x08, 0x7b, 0x33, 0x66, 0xbe, 0xc4, 0x79, 0x94, 0xec, 0x77, 0x0c, 0xad, 0xa0, 0xed, 0xac, 0x54,
-	0xf4, 0x8b, 0x1f, 0x37, 0x93, 0xb5, 0x3d, 0x02, 0x0a, 0xde, 0x45, 0x3a, 0x3d, 0x0e, 0x70, 0x23,
-	0x59, 0x48, 0xed, 0x64, 0xcb, 0xb8, 0xa4, 0xce, 0x2b, 0xed, 0x4b, 0x2e, 0x98, 0xad, 0x32, 0x24,
-	0x72, 0x14, 0xdf, 0xa7, 0x50, 0x36, 0xa6, 0xe3, 0xd2, 0x25, 0x1b, 0xec, 0xbb, 0x5e, 0xce, 0x2f,
-	0xb2, 0xf5, 0xbe, 0xd7, 0x99, 0xf1, 0xf8, 0x01, 0xca, 0xc6, 0xea, 0x85, 0x03, 0xb5, 0xd8, 0x81,
-	0xf6, 0x55, 0xe6, 0x69, 0x82, 0xc4, 0x8d, 0xf8, 0x1e, 0xca, 0x74, 0x05, 0x1d, 0xb2, 0x13, 0x2e,
-	0x06, 0x46, 0x4a, 0x51, 0xb9, 0x88, 0x7a, 0x32, 0xd3, 0x81, 0xb9, 0x32, 0xc1, 0xad, 0x56, 0x27,
-	0x4c, 0xf8, 0xc1, 0x29, 0x2b, 0xca, 0xbf, 0x1e, 0xf9, 0x0f, 0x42, 0x15, 0xdc, 0x33, 0x03, 0xbe,
-	0x85, 0x56, 0x7c, 0x97, 0x4b, 0x23, 0xad, 0x8c, 0xd9, 0xd9, 0x1d, 0x40, 0x02, 0x97, 0x4a, 0x05,
-	0x16, 0x49, 0xfd, 0x81, 0xa1, 0xff, 0x65, 0x69, 0x81, 0x14, 0x58, 0x82, 0x14, 0xae, 0x23, 0xcc,
-	0xbb, 0x5d, 0x26, 0x6c, 0xd7, 0xe5, 0x50, 0x36, 0x17, 0x35, 0xc9, 0x86, 0xc6, 0xaa, 0x02, 0xb6,
-	0x22, 0xa0, 0xb9, 0x60, 0x00, 0x7c, 0x09, 0x86, 0xb7, 0x51, 0x9a, 0xf6, 0x98, 0x27, 0x8d, 0x35,
-	0xc5, 0xff, 0x37, 0x6b, 0x51, 0xa0, 0x01, 0x12, 0x26, 0x2b, 0x6b, 0x48, 0x97, 0x54, 0xf4, 0x98,
-	0x2c, 0xde, 0x46, 0x99, 0xcb, 0x46, 0xc4, 0x26, 0x9d, 0x89, 0x4f, 0xba, 0xf8, 0x4d, 0x43, 0x69,
-	0xb5, 0xc3, 0xbf, 0x1c, 0xd8, 0x82, 0x87, 0xc7, 0x86, 0x5c, 0x32, 0xbb, 0xd3, 0x11, 0x6a, 0x3c,
-	0x19, 0x12, 0x53, 0x80, 0xd3, 0x7d, 0x49, 0xe5, 0xd8, 0x57, 0x43, 0xc8, 0x90, 0x68, 0x05, 0xf3,
-	0xd1, 0x5d, 0x7a, 0xc4, 0x5c, 0x1f, 0x9a, 0x1d, 0xbc, 0x21, 0x23, 0x5e, 0x6f, 0xe9, 0x99, 0x4a,
-	0x39, 0x9e, 0x14, 0x53, 0x12, 0xf9, 0xcc, 0x47, 0x28, 0x1b, 0x93, 0x71, 0x0e, 0xa5, 0x06, 0x6c,
-	0x1a, 0x56, 0x44, 0x82, 0x4f, 0xbc, 0x89, 0xd2, 0x13, 0xea, 0x8e, 0x59, 0x54, 0x45, 0xb8, 0x78,
-	0x9c, 0x7c, 0xa8, 0xed, 0xfe, 0xd4, 0xd0, 0xff, 0x73, 0x0f, 0x0c, 0xdf, 0x41, 0xab, 0xed, 0x46,
-	0xbd, 0xd1, 0x7c, 0xd9, 0xc8, 0x25, 0x4c, 0xf3, 0xdd, 0x87, 0x42, 0x7e, 0xce, 0xd1, 0xf6, 0x06,
-	0x1e, 0x3f, 0xf1, 0x70, 0x19, 0x6d, 0xec, 0xb7, 0x9a, 0xc4, 0x39, 0xb4, 0xab, 0xad, 0x5a, 0xb3,
-	0x71, 0x58, 0x25, 0x8e, 0xdd, 0x72, 0x72, 0x9a, 0xb9, 0x05, 0xd0, 0xf5, 0x39, 0xa8, 0x2a, 0x18,
-	0x95, 0x6c, 0x81, 0x69, 0xbf, 0xd8, 0x0b, 0x98, 0xe4, 0x52, 0xa6, 0x3d, 0xea, 0x2c, 0x63, 0x88,
-	0xf3, 0xbc, 0x79, 0xe0, 0xe4, 0x52, 0x4b, 0x19, 0x02, 0x1d, 0x9e, 0x30, 0xf3, 0xc6, 0xdb, 0x8f,
-	0x56, 0xe2, 0xeb, 0x27, 0x6b, 0xfe, 0x76, 0x95, 0xed, 0xd3, 0x73, 0x2b, 0x71, 0x76, 0x6e, 0x69,
-	0xbf, 0x20, 0x7e, 0x43, 0x7c, 0xbe, 0xb0, 0xb4, 0x2f, 0x10, 0xa7, 0x10, 0xdf, 0x21, 0xce, 0x20,
-	0x5e, 0x25, 0x8e, 0x74, 0xf5, 0x03, 0xb8, 0xff, 0x27, 0x00, 0x00, 0xff, 0xff, 0x3e, 0xe8, 0xef,
-	0xee, 0x3e, 0x04, 0x00, 0x00,
+	// 619 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x09, 0x6e, 0x88, 0x02, 0xff, 0x74, 0x94, 0x41, 0x4f, 0x13, 0x41,
+	0x14, 0xc7, 0xbb, 0xdd, 0xb2, 0xb0, 0xaf, 0x11, 0xeb, 0x80, 0xb0, 0xec, 0x61, 0xc5, 0x4a, 0x22,
+	0xe1, 0x50, 0x0c, 0x26, 0x46, 0xbd, 0x2d, 0xb0, 0xc6, 0x06, 0x6d, 0xcd, 0xd0, 0xa2, 0x9e, 0xc8,
+	0xc0, 0x4e, 0xc9, 0xa6, 0xcb, 0x4e, 0x9d, 0x1d, 0x20, 0x7c, 0x03, 0xe3, 0xd5, 0xb3, 0x27, 0x3d,
+	0xf8, 0x11, 0x8c, 0x9f, 0x80, 0xa3, 0x9f, 0xc0, 0x00, 0x5f, 0x40, 0x8f, 0x1e, 0x3c, 0x38, 0x33,
+	0xdd, 0xc2, 0x52, 0xea, 0xe1, 0x25, 0xb3, 0xff, 0xf7, 0xff, 0xcd, 0x9b, 0xf7, 0x66, 0xb2, 0x00,
+	0x9c, 0x74, 0x44, 0xad, 0xc7, 0x99, 0x60, 0x68, 0x4c, 0x1c, 0xf7, 0x68, 0xea, 0x4e, 0xef, 0xb1,
+	0x3d, 0xa6, 0x95, 0x65, 0xb5, 0xea, 0x27, 0xdd, 0x5b, 0xa4, 0xd7, 0x8b, 0xa3, 0x5d, 0x22, 0x22,
+	0x96, 0xf4, 0xa5, 0xea, 0x5b, 0x98, 0xaa, 0x27, 0x82, 0xf2, 0x84, 0xc4, 0x58, 0xee, 0x82, 0xe9,
+	0xbb, 0x03, 0x9a, 0x0a, 0x34, 0x03, 0xc5, 0x28, 0x74, 0x8c, 0x79, 0x63, 0xb1, 0xb4, 0x6a, 0x9d,
+	0xff, 0xbc, 0x53, 0xac, 0xaf, 0x63, 0xa9, 0xa0, 0x25, 0xb0, 0xc8, 0xae, 0xc2, 0x9d, 0xe2, 0xbc,
+	0xb9, 0x58, 0x5e, 0x41, 0x35, 0x5d, 0xaf, 0xb6, 0x29, 0x18, 0xa7, 0xbe, 0xce, 0xe0, 0xcc, 0x51,
+	0xfd, 0x68, 0x42, 0x39, 0xa7, 0xa3, 0xda, 0x05, 0xab, 0xf6, 0x9d, 0x5c, 0x99, 0xb9, 0xce, 0x6e,
+	0x44, 0x49, 0x38, 0xe0, 0xd1, 0x23, 0x28, 0xe7, 0xce, 0x2b, 0x0b, 0x1a, 0xb9, 0x82, 0xfe, 0x65,
+	0xe6, 0x79, 0x01, 0xe7, 0x8d, 0xe8, 0x01, 0xd8, 0x1d, 0x4e, 0xf6, 0xe9, 0x11, 0xe3, 0x5d, 0xc7,
+	0xd4, 0x54, 0x25, 0xa3, 0x9e, 0x0d, 0x74, 0xc9, 0x5c, 0x9a, 0x64, 0x57, 0xe3, 0x87, 0x94, 0xa7,
+	0xaa, 0x4a, 0x49, 0xfb, 0x27, 0x33, 0xff, 0x56, 0x5f, 0x95, 0xee, 0x81, 0x01, 0xdd, 0x85, 0x52,
+	0x1a, 0x33, 0xe1, 0x8c, 0x69, 0x63, 0x79, 0xd0, 0x83, 0x94, 0xa4, 0x4b, 0xa7, 0x94, 0x45, 0x90,
+	0xb4, 0xeb, 0x58, 0x57, 0x2c, 0x2d, 0x29, 0x29, 0x8b, 0x4a, 0xa1, 0x0d, 0x40, 0xac, 0xd3, 0xa1,
+	0xdc, 0x8f, 0x63, 0x26, 0x8f, 0xcd, 0x78, 0x5d, 0xd0, 0x7d, 0x67, 0x5c, 0x03, 0x73, 0x19, 0xd0,
+	0xbc, 0x66, 0x90, 0xf8, 0x08, 0x4c, 0xd5, 0x4b, 0x58, 0x48, 0x9d, 0x89, 0x2b, 0xf5, 0x1a, 0x52,
+	0x52, 0xf5, 0x54, 0x6a, 0x75, 0x02, 0x2c, 0x41, 0xf8, 0x1e, 0x15, 0xd5, 0x7b, 0x60, 0x5f, 0x4c,
+	0x21, 0x77, 0xcd, 0x76, 0xfe, 0x9a, 0xab, 0x7f, 0x0d, 0x28, 0x29, 0xfe, 0x7f, 0x06, 0xb4, 0x00,
+	0x37, 0x48, 0x28, 0x47, 0x22, 0xa2, 0x94, 0xfa, 0x61, 0xc8, 0xf5, 0xed, 0xd8, 0xf8, 0xaa, 0x88,
+	0x3c, 0x80, 0x38, 0x4a, 0x05, 0x4d, 0xb4, 0xc5, 0xd4, 0x96, 0x9c, 0x22, 0x77, 0xb7, 0x52, 0x41,
+	0xc4, 0x41, 0xaa, 0xc7, 0x6e, 0xe3, 0xec, 0x0b, 0x2d, 0x83, 0x15, 0x93, 0x1d, 0x1a, 0xa7, 0x72,
+	0xca, 0xea, 0x95, 0xcd, 0xe6, 0x5a, 0xaa, 0xbd, 0xd0, 0x99, 0x20, 0x11, 0xfc, 0x18, 0x67, 0x36,
+	0x84, 0xa0, 0xc4, 0x59, 0x4c, 0xf5, 0xc4, 0x6d, 0xac, 0xd7, 0xee, 0x13, 0x28, 0xe7, 0xac, 0xa8,
+	0x02, 0x66, 0x97, 0x1e, 0xf7, 0x5b, 0xc1, 0x6a, 0x89, 0xa6, 0x61, 0xec, 0x90, 0xc4, 0x07, 0x34,
+	0x3b, 0x7b, 0xff, 0xe3, 0x69, 0xf1, 0xb1, 0xb1, 0xf4, 0xcb, 0x80, 0x9b, 0x43, 0xaf, 0x12, 0xdd,
+	0x87, 0xf1, 0x76, 0x63, 0xa3, 0xd1, 0x7c, 0xdd, 0xa8, 0x14, 0x5c, 0xf7, 0xc3, 0xa7, 0xf9, 0x99,
+	0x21, 0x47, 0x3b, 0xe9, 0x26, 0xec, 0x28, 0x41, 0x2b, 0x30, 0xb5, 0xd9, 0x6a, 0xe2, 0x60, 0xdb,
+	0x5f, 0x6b, 0xd5, 0x9b, 0x8d, 0xed, 0x35, 0x1c, 0xf8, 0xad, 0xa0, 0x62, 0xb8, 0x73, 0x12, 0xba,
+	0x3d, 0x04, 0xad, 0x71, 0x4a, 0x04, 0xbd, 0xc6, 0xb4, 0x5f, 0xad, 0x2b, 0xa6, 0x38, 0x92, 0x69,
+	0xf7, 0xc2, 0x51, 0x0c, 0x0e, 0x5e, 0x36, 0xb7, 0x82, 0x8a, 0x39, 0x92, 0xc1, 0x74, 0x9f, 0x1d,
+	0x52, 0x77, 0xf6, 0xfd, 0x67, 0xaf, 0xf0, 0xfd, 0x8b, 0x37, 0xdc, 0xdd, 0xea, 0xc2, 0xc9, 0x99,
+	0x57, 0x38, 0x3d, 0xf3, 0x8c, 0xdf, 0x32, 0xfe, 0xc8, 0xf8, 0x7a, 0xee, 0x19, 0xdf, 0x64, 0x9c,
+	0xc8, 0xf8, 0x21, 0xe3, 0x54, 0xc6, 0x9b, 0xc2, 0x8e, 0xa5, 0xff, 0x1a, 0x0f, 0xff, 0x05, 0x00,
+	0x00, 0xff, 0xff, 0xd3, 0xfe, 0xd6, 0x74, 0x73, 0x04, 0x00, 0x00,
 }
