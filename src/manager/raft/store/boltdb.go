@@ -21,7 +21,7 @@ var (
 	bucketKeyVersions       = []byte("versions")
 	bucketKeySlots          = []byte("slots")
 	bucketKeyOfferAllocator = []byte("offer_allocator")
-	bucketKeyAgents         = []byte("agents")
+	bucketKeyNodes          = []byte("Nodes")
 	BucketKeyRaftState      = []byte("raft_hard_state")
 
 	BucketKeyData = []byte("data")
@@ -32,7 +32,7 @@ var (
 	ErrTaskUnknown             = errors.New("boltdb: task unknown")
 	ErrVersionUnknown          = errors.New("boltdb: version unknown")
 	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
-	ErrAgentUnknown            = errors.New("boltdb: agent unknow")
+	ErrNodeUnknown             = errors.New("boltdb: node unknow")
 	ErrNilStoreAction          = errors.New("boltdb: nil store action")
 	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
 	ErrUndefineAppStoreAction  = errors.New("boltdb: undefined app store action")
@@ -40,7 +40,7 @@ var (
 	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
 	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
 	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
-	ErrUndefineAgentAction     = errors.New("boltdb: undefined agent store action")
+	ErrUndefineNodeAction      = errors.New("boltdb: undefined node store action")
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
@@ -53,7 +53,7 @@ func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
 			return err
 		}
 
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyAgents); err != nil {
+		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyNodes); err != nil {
 			return err
 		}
 
@@ -135,8 +135,8 @@ func doStoreAction(tx *bolt.Tx, action *types.StoreAction) error {
 		return doSlotStoreAction(tx, action.Action, action.GetSlot())
 	case *types.StoreAction_OfferAllocatorItem:
 		return doOfferAllocatorItemStoreAction(tx, action.Action, action.GetOfferAllocatorItem())
-	case *types.StoreAction_Agent:
-		return doAgentStoreAction(tx, action.Action, action.GetAgent())
+	case *types.StoreAction_Node:
+		return doNodeStoreAction(tx, action.Action, action.GetNode())
 	default:
 		return ErrUndefineStoreAction
 	}
@@ -216,16 +216,16 @@ func doOfferAllocatorItemStoreAction(tx *bolt.Tx, action types.StoreActionKind, 
 	}
 }
 
-func doAgentStoreAction(tx *bolt.Tx, action types.StoreActionKind, agent *types.Agent) error {
+func doNodeStoreAction(tx *bolt.Tx, action types.StoreActionKind, node *types.Node) error {
 	switch action {
 	case types.StoreActionKindCreate:
-		return createAgent(tx, agent)
+		return createNode(tx, node)
 	case types.StoreActionKindUpdate:
-		return updateAgent(tx, agent)
+		return updateNode(tx, node)
 	case types.StoreActionKindRemove:
-		return removeAgent(tx, agent.ID)
+		return removeNode(tx, node.ID)
 	default:
-		return ErrUndefineAgentAction
+		return ErrUndefineNodeAction
 	}
 }
 
@@ -250,29 +250,29 @@ func (db *BoltbDb) GetRaftState() (raftpb.HardState, error) {
 	return state, nil
 }
 
-func (db *BoltbDb) GetAgents() ([]*types.Agent, error) {
-	var agents []*types.Agent
+func (db *BoltbDb) GetNodes() ([]*types.Node, error) {
+	var nodes []*types.Node
 
 	if err := db.View(func(tx *bolt.Tx) error {
-		agentsBkt := getAgentsBucket(tx)
-		if agentsBkt == nil {
-			agents = []*types.Agent{}
+		nodesBkt := getNodesBucket(tx)
+		if nodesBkt == nil {
+			nodes = []*types.Node{}
 			return nil
 		}
 
-		return agentsBkt.ForEach(func(k, v []byte) error {
-			agentBkt := getAgentBucket(tx, string(k))
-			if agentBkt == nil {
+		return nodesBkt.ForEach(func(k, v []byte) error {
+			nodeBkt := getNodeBucket(tx, string(k))
+			if nodeBkt == nil {
 				return nil
 			}
 
-			agent := &types.Agent{}
-			p := agentBkt.Get(BucketKeyData)
-			if err := agent.Unmarshal(p); err != nil {
+			node := &types.Node{}
+			p := nodeBkt.Get(BucketKeyData)
+			if err := node.Unmarshal(p); err != nil {
 				return err
 			}
 
-			agents = append(agents, agent)
+			nodes = append(nodes, node)
 			return nil
 		})
 
@@ -280,5 +280,5 @@ func (db *BoltbDb) GetAgents() ([]*types.Agent, error) {
 		return nil, err
 	}
 
-	return agents, nil
+	return nodes, nil
 }

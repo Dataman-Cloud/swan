@@ -28,7 +28,7 @@
 		InternalRaftRequest
 		StoreAction
 		Framework
-		Agent
+		Node
 */
 package types
 
