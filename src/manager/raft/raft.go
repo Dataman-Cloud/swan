@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
@@ -171,8 +170,6 @@ func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 
 func (n *Node) StartRaft(ctx context.Context) error {
 	if !fileutil.Exist(n.snapdir) {
-		mask := syscall.Umask(0)
-		defer syscall.Umask(mask)
 		if err := os.Mkdir(n.snapdir, 0700); err != nil {
 			return err
 		}
@@ -567,8 +564,6 @@ func (n *Node) loadSnapshot() (*raftpb.Snapshot, error) {
 // returns a WAL ready for reading
 func (n *Node) openWAL(snapshot *raftpb.Snapshot) (*wal.WAL, error) {
 	if !wal.Exist(n.waldir) {
-		mask := syscall.Umask(0)
-		defer syscall.Umask(mask)
 		if err := os.Mkdir(n.waldir, 0700); err != nil {
 			return nil, err
 		}

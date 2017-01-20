@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io/ioutil"
 	"os"
-	"syscall"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/agent"
@@ -54,8 +53,6 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		joinRetryInterval: time.Second * 5,
 	}
 
-	mask := syscall.Umask(0)
-	defer syscall.Umask(mask)
 	os.MkdirAll(config.DataDir+"/"+nodeID, 0700)
 
 	db, err := bolt.Open(config.DataDir+"/"+nodeID+"/swan.db", 0600, nil)
@@ -89,8 +86,6 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 	nodeIDFile := swanConfig.DataDir + NodeIDFileName
 	if !fileutil.Exist(nodeIDFile) {
-		mask := syscall.Umask(0)
-		defer syscall.Umask(mask)
 		os.MkdirAll(swanConfig.DataDir, 0700)
 
 		nodeID := uuid.NewV4().String()
