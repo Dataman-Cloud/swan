@@ -46,16 +46,16 @@ const (
 )
 
 type Event struct {
-	Id      string
+	ID      string
 	Type    string
-	AppId   string
+	AppID   string
 	AppMode string
 	Payload interface{}
 }
 
 func NewEvent(t string, payload interface{}) *Event {
 	return &Event{
-		Id:      uuid.NewV4().String(),
+		ID:      uuid.NewV4().String(),
 		Type:    t,
 		Payload: payload,
 	}
@@ -92,9 +92,9 @@ func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error
 	}
 
 	resolverEvent.Type = "srv"
-	resolverEvent.Ip = payload.Ip
+	resolverEvent.Ip = payload.IP
 	resolverEvent.Port = payload.Port
-	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskId, "-", ".", -1))
+	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
 
 	return resolverEvent, nil
 }
@@ -112,9 +112,9 @@ func BuildJanitorEvent(e *Event) (*upstream.TargetChangeEvent, error) {
 		janitorEvent.Change = "del"
 	}
 
-	janitorEvent.TargetIP = payload.Ip
+	janitorEvent.TargetIP = payload.IP
 	janitorEvent.TargetPort = payload.Port
-	janitorEvent.TargetName = strings.ToLower(strings.Replace(payload.TaskId, "-", ".", -1))
+	janitorEvent.TargetName = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
 
 	return janitorEvent, nil
 }

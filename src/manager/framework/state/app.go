@@ -328,12 +328,12 @@ func (app *App) EmitAppEvent(eventType string) {
 
 func (app *App) BuildAppEvent(eventType string) *swanevent.Event {
 	e := &swanevent.Event{Type: eventType}
-	e.AppId = app.ID
+	e.AppID = app.ID
 	e.Payload = &types.AppInfoEvent{
-		AppId:     app.ID,
+		AppID:     app.ID,
 		Name:      app.Name,
 		State:     app.State,
-		ClusterId: app.ClusterID,
+		ClusterID: app.ClusterID,
 		RunAs:     app.CurrentVersion.RunAs,
 	}
 

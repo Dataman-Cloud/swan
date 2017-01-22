@@ -423,23 +423,23 @@ func (slot *Slot) EmitTaskEvent(eventType string) {
 func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 	e := &swanevent.Event{
 		Type:    eventType,
-		AppId:   slot.App.ID,
+		AppID:   slot.App.ID,
 		AppMode: string(slot.App.Mode),
 	}
 
 	payload := &types.TaskInfoEvent{
-		TaskId:    slot.ID,
-		AppId:     slot.App.ID,
+		TaskID:    slot.ID,
+		AppID:     slot.App.ID,
 		State:     slot.State,
 		Healthy:   slot.healthy,
-		ClusterId: slot.App.ClusterID,
+		ClusterID: slot.App.ClusterID,
 		RunAs:     slot.Version.RunAs,
 	}
 
 	if slot.App.IsFixed() {
-		payload.Ip = slot.Ip
+		payload.IP = slot.Ip
 	} else {
-		payload.Ip = slot.AgentHostName
+		payload.IP = slot.AgentHostName
 		if len(slot.CurrentTask.HostPorts) > 0 {
 			payload.Port = strconv.FormatUint(slot.CurrentTask.HostPorts[0], 10)
 		}
