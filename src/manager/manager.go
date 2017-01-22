@@ -39,19 +39,21 @@ type Manager struct {
 
 	nodes    map[string]types.Node
 	nodeLock sync.RWMutex
+	raftID   uint64
 
 	janitorSubscriber  *event.JanitorSubscriber
 	resolverSubscriber *event.DNSSubscriber
 }
 
 func New(db *bolt.DB) (*Manager, error) {
-	manager := &Manager{
-		criticalErrorChan: make(chan error, 1),
-	}
-
 	raftID, err := loadOrCreateRaftID(db)
 	if err != nil {
 		return nil, err
+	}
+
+	manager := &Manager{
+		criticalErrorChan: make(chan error, 1),
+		raftID:            raftID,
 	}
 
 	swanConfig := swancontext.Instance().Config
@@ -184,6 +186,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 							AdvertiseAddr: swanConfig.AdvertiseAddr,
 							ListenAddr:    swanConfig.ListenAddr,
 							Role:          types.NodeRole(swanConfig.Mode),
+							RaftID:        manager.raftID,
 						}
 
 						if err := manager.AddManager(managerInfo); err != nil {
@@ -311,6 +314,21 @@ func (manager *Manager) AddManager(m types.Node) error {
 	manager.nodeLock.Unlock()
 
 	return nil
+}
+
+func (manager *Manager) AddRaftNode(swanNode types.Node) error {
+	if swanNode.RaftID == 0 {
+		return errors.New("add raft node failed: raftID must not be 0")
+	}
+
+	swanNodes := manager.GetNodes()
+	for _, n := range swanNodes {
+		if n.RaftID == swanNode.RaftID {
+			return errors.New("add raft node failed: duplicate raftID")
+		}
+	}
+
+	return manager.raftNode.AddMember(context.TODO(), swanNode)
 }
 
 func (manager *Manager) presistNodeData(node types.Node) error {

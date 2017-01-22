@@ -7,6 +7,7 @@ type Node struct {
 	Status        string            `json:"status"`
 	Labels        map[string]string `json:"labels"`
 	Role          NodeRole          `json:"role"`
+	RaftID        uint64            `json:"raftid"`
 }
 
 func (n Node) IsManager() bool {

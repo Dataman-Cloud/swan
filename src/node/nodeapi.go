@@ -57,6 +57,20 @@ func (api *NodeApi) AddNode(request *restful.Request, response *restful.Response
 		}
 	}
 
+	if node.IsManager() && node.ID != api.node.ID {
+		if err := api.node.manager.AddRaftNode(node); err != nil {
+			logrus.Errorf("Add manager raft node failed, Error: %s", err.Error())
+			response.WriteError(http.StatusInternalServerError, err)
+			return
+		}
+
+		if err := api.node.manager.AddManager(node); err != nil {
+			logrus.Errorf("Add manager failed, Error: %s", err.Error())
+			response.WriteError(http.StatusInternalServerError, err)
+			return
+		}
+	}
+
 	response.WriteHeaderAndEntity(http.StatusCreated, api.node.manager.GetNodes())
 	return
 }
