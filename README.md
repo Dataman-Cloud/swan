@@ -36,7 +36,7 @@ clone `Swan` source code from github.com:
 ```
 git clone git@github.com:Dataman-Cloud/swan.git
 ```
-Then you can compile `Wwan` with:
+Then you can compile `Swan` with:
 ```
 make
 
