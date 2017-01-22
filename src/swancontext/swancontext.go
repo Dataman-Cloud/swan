@@ -43,3 +43,23 @@ func IsManager() bool {
 func IsAgent() bool {
 	return instance.Config.Mode == config.Agent || instance.Config.Mode == config.Mixed
 }
+
+// TODO(upccup) use joinAddrs to differentiate start new cluster or join to an existed cluster is not
+// very exact. may we need a new started flags to mark it.
+func IsNewCluster() bool {
+	if !IsManager() {
+		return false
+	}
+
+	if len(instance.Config.JoinAddrs) == 0 {
+		return true
+	}
+
+	for _, joinAddr := range instance.Config.JoinAddrs {
+		if instance.Config.AdvertiseAddr == joinAddr {
+			return true
+		}
+	}
+
+	return false
+}

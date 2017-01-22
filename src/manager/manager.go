@@ -37,10 +37,8 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	agents      map[string]types.Node
-	managers    map[string]types.Node
-	agentLock   sync.RWMutex
-	managerLock sync.RWMutex
+	nodes    map[string]types.Node
+	nodeLock sync.RWMutex
 
 	janitorSubscriber  *event.JanitorSubscriber
 	resolverSubscriber *event.DNSSubscriber
@@ -147,6 +145,9 @@ func (manager *Manager) Start(ctx context.Context) error {
 		return err
 	}
 
+	// NOTICE: although WaitForLeader is returned, if call propose value as soon
+	// there maybe return error: node losts leader status.
+	// we should do propseValue in the handleLeadershipEvents go become leader event
 	if err := manager.raftNode.WaitForLeader(ctx); err != nil {
 		return err
 	}
@@ -163,6 +164,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 
 func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
 	var eventBusStarted, frameworkStarted bool
+	var once sync.Once
 	for {
 		select {
 		case leadershipEvent := <-leadershipCh:
@@ -172,6 +174,23 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.raftNode.Config.ID)))
 			if newState == raft.IsLeader {
 				log.G(ctx).Info("Now i become a leader !!!")
+
+				once.Do(func() {
+					// if manager is thie first node in the cluster, add itself to the manager map
+					if swancontext.IsNewCluster() {
+						swanConfig := swancontext.Instance().Config
+						managerInfo := types.Node{
+							ID:            swanConfig.NodeID,
+							AdvertiseAddr: swanConfig.AdvertiseAddr,
+							ListenAddr:    swanConfig.ListenAddr,
+							Role:          types.NodeRole(swanConfig.Mode),
+						}
+
+						if err := manager.AddManager(managerInfo); err != nil {
+							manager.criticalErrorChan <- err
+						}
+					}
+				})
 
 				eventBusCtx, _ := context.WithCancel(ctx)
 				go func() {
@@ -243,7 +262,7 @@ func (manager *Manager) LoadNodeData() error {
 		return err
 	}
 
-	manager.agents = make(map[string]types.Node)
+	manager.nodes = make(map[string]types.Node)
 	for _, nodeMetadata := range nodes {
 		node := types.Node{
 			ID:            nodeMetadata.ID,
@@ -256,74 +275,77 @@ func (manager *Manager) LoadNodeData() error {
 
 		if node.IsAgent() {
 			manager.AddAgentAcceptor(node)
-
-			manager.agentLock.Lock()
-			manager.agents[node.ID] = node
-			manager.agentLock.Unlock()
 		}
+
+		manager.nodeLock.Lock()
+		manager.nodes[node.ID] = node
+		manager.nodeLock.Unlock()
 	}
 
 	return nil
 }
 
 func (manager *Manager) AddAgent(agent types.Node) error {
-	agentMetadata := &rafttypes.Node{
-		ID:            agent.ID,
-		AdvertiseAddr: agent.AdvertiseAddr,
-		ListenAddr:    agent.ListenAddr,
-		Status:        agent.Status,
-		Labels:        agent.Labels,
-		Role:          string(agent.Role),
-	}
-
-	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
-		Action: rafttypes.StoreActionKindCreate,
-		Target: &rafttypes.StoreAction_Node{agentMetadata},
-	}}
-
-	if err := manager.raftNode.ProposeValue(context.TODO(), storeActions, nil); err != nil {
+	if err := manager.presistNodeData(agent); err != nil {
 		return err
 	}
 
 	manager.AddAgentAcceptor(agent)
 
-	manager.agentLock.Lock()
-	manager.agents[agent.ID] = agent
-	manager.agentLock.Unlock()
+	manager.nodeLock.Lock()
+	manager.nodes[agent.ID] = agent
+	manager.nodeLock.Unlock()
 
 	go manager.SendAgentInitData(agent)
 
 	return nil
 }
 
+func (manager *Manager) AddManager(m types.Node) error {
+	if err := manager.presistNodeData(m); err != nil {
+		return err
+	}
+
+	manager.nodeLock.Lock()
+	manager.nodes[m.ID] = m
+	manager.nodeLock.Unlock()
+
+	return nil
+}
+
+func (manager *Manager) presistNodeData(node types.Node) error {
+	nodeMetadata := &rafttypes.Node{
+		ID:            node.ID,
+		AdvertiseAddr: node.AdvertiseAddr,
+		ListenAddr:    node.ListenAddr,
+		Status:        node.Status,
+		Labels:        node.Labels,
+		Role:          string(node.Role),
+	}
+
+	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
+		Action: rafttypes.StoreActionKindCreate,
+		Target: &rafttypes.StoreAction_Node{nodeMetadata},
+	}}
+
+	return manager.raftNode.ProposeValue(context.TODO(), storeActions, nil)
+}
+
 func (manager *Manager) GetNodes() []types.Node {
 	var nodes []types.Node
-	manager.agentLock.RLock()
-	for _, agent := range manager.agents {
-		nodes = append(nodes, agent)
+	manager.nodeLock.RLock()
+	for _, node := range manager.nodes {
+		nodes = append(nodes, node)
 	}
-	manager.agentLock.RUnlock()
-
-	manager.managerLock.RLock()
-	for _, m := range manager.managers {
-		nodes = append(nodes, m)
-	}
-	manager.managerLock.RUnlock()
+	manager.nodeLock.RUnlock()
 
 	return nodes
 }
 
 func (manager *Manager) GetNode(nodeID string) (types.Node, error) {
-	manager.agentLock.RLock()
-	node, ok := manager.agents[nodeID]
-	manager.agentLock.RUnlock()
-	if ok {
-		return node, nil
-	}
-
-	manager.managerLock.RLock()
-	node, ok = manager.managers[nodeID]
-	manager.managerLock.RUnlock()
+	manager.nodeLock.RLock()
+	node, ok := manager.nodes[nodeID]
+	manager.nodeLock.RUnlock()
 	if ok {
 		return node, nil
 	}
