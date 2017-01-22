@@ -55,7 +55,7 @@ func (sse *SSESubscriber) Unsubscribe(bus *EventBus) error {
 
 func (sses *SSESubscriber) Write(e *Event) error {
 	sse.Encode(sses.rw, sse.Event{
-		Id:    e.Id,
+		Id:    e.ID,
 		Event: e.Type,
 		Data:  e.Payload,
 	})
@@ -70,7 +70,7 @@ func (sses *SSESubscriber) Write(e *Event) error {
 
 func (sse *SSESubscriber) InterestIn(e *Event) bool {
 	if sse.appId != "" {
-		if sse.appId == e.AppId {
+		if sse.appId == e.AppID {
 			return true
 		} else {
 			return false

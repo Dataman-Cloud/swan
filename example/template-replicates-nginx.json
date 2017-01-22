@@ -52,7 +52,7 @@
   "healthChecks": [
     {
       "protocol": "CMD",
-      "value": "echo 'sssssssssssssssssss' && exit 1",
+      "value": "echo 'sssssssssssssssssss' && exit 0",
       "path": "/",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
