@@ -2,7 +2,7 @@
 
 SERVER_PATH=localhost:9999
 PATH_PREFIX=v_beta
-APP_NAME=nginx0051-xcm-Unnamed
+APP_NAME=nginx-xcm-foobar
 WAIT_SECOND=10
 
 if ! command -v http &>/dev/null ; then

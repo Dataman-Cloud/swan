@@ -1,15 +1,15 @@
 {
-  "appID": "nginx0051",
+  "appID": "nginx",
   "cmd": null,
-  "cpus": 0.02,
+  "args": null,
+  "cpus": 0.01,
   "mem": 6,
   "disk": 0,
   "runAs": "xcm",
+  "priority": 100,
   "instances": 3,
-  "constraints": [ 
-	  "hostname:UNIQUE",
-          "vcluster:LIKE:dataman"
-  ], 
+  "constraints": [
+  ],
   "container": {
     "docker": {
       "image": "nginx:1.10",
@@ -39,13 +39,11 @@
       }
     ]
   },
-  "uris": [
-      "https://nginx.org/download/nginx-1.8.1.tar.gz"
-  ],
   "env": {
-    "DB": "mysql"
   },
-  "labels": {
+  "uris": [
+  ],
+  "label": {
     "USER_ID": "1"
   },
   "killPolicy": {
@@ -53,19 +51,18 @@
   },
   "healthChecks": [
     {
-      "protocol": "TCP",
+      "protocol": "CMD",
+      "value": "echo 'sssssssssssssssssss' && exit 1",
       "path": "/",
-      "delaySeconds": 15,
+      "delaySeconds": 2,
       "gracePeriodSeconds": 5,
-      "intervalSeconds": 3,
-      "timeoutSeconds": 3,
-      "consecutiveFailures": 5
+      "intervalSeconds": 1,
+      "portName": "web",
+      "timeoutSeconds": 1,
+      "consecutiveFailures": 500
     }
  ],
-  "updatePolicy": {
-	  "updateDelay": 5,
-	  "maxRetries": 3,
-	  "maxFailovers": 3,
-	  "action": "rollback"
-  }
+  "mode": "replicates"
 }
+
+
