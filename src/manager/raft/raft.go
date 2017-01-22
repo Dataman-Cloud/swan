@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/manager/raft/types"
+	api "github.com/Dataman-Cloud/swan/src/types"
 	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
@@ -445,6 +447,48 @@ func (n *Node) processInternalRaftRequest(ctx context.Context, r swan.InternalRa
 		return nil, ErrLostLeadership
 	case <-ctx.Done():
 		return nil, ctx.Err()
+	}
+}
+
+func (n *Node) AddMember(ctx context.Context, swanNode api.Node) error {
+	meta, err := json.Marshal(swanNode)
+	if err != nil {
+		return err
+	}
+
+	cc := raftpb.ConfChange{
+		Type:    raftpb.ConfChangeAddNode,
+		NodeID:  swanNode.RaftID,
+		Context: meta,
+	}
+
+	return n.configure(ctx, cc)
+}
+
+func (n *Node) configure(ctx context.Context, cc raftpb.ConfChange) error {
+	cc.ID = n.reqIDGen.Next()
+
+	ctx, cancel := context.WithCancel(ctx)
+	ch := n.wait.register(cc.ID, nil, cancel)
+
+	if err := n.raftNode.ProposeConfChange(ctx, cc); err != nil {
+		return err
+	}
+
+	select {
+	case x := <-ch:
+		if err, ok := x.(error); ok {
+			return err
+		}
+
+		if x != nil {
+			log.G(ctx).Panic("raft: configuration change error, return type should always be error")
+		}
+
+		return nil
+	case <-ctx.Done():
+		n.wait.cancel(cc.ID)
+		return ctx.Err()
 	}
 }
 
