@@ -9,7 +9,6 @@
   "priority": 100,
   "instances": 3,
   "constraints": [
-    "ip:LIKE:192.168.1.160"
   ],
   "container": {
     "docker": {
@@ -54,7 +53,7 @@
   },
   "healthChecks": [
     {
-      "protocol": "cmd",
+      "protocol": "http",
       "path": "/",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,

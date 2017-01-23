@@ -3,12 +3,11 @@ package agent
 import (
 	"strconv"
 
-	"github.com/Dataman-Cloud/swan-janitor/src/janitor"
+	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 
-	jconfig "github.com/Dataman-Cloud/swan-janitor/src/config"
 	"golang.org/x/net/context"
 )
 
@@ -42,8 +41,7 @@ func New() (*Agent, error) {
 
 	agent.resolver = nameserver.NewResolver(dnsConfig)
 
-	jConfig := jconfig.DefaultConfig()
-	jConfig.Listener.Mode = swancontext.Instance().Config.Janitor.ListenerMode
+	jConfig := janitor.DefaultConfig()
 	jConfig.Listener.IP = swancontext.Instance().Config.Janitor.IP
 	jConfig.Listener.DefaultPort = strconv.Itoa(swancontext.Instance().Config.Janitor.Port)
 	jConfig.HttpHandler.Domain = swancontext.Instance().Config.Janitor.Domain
@@ -63,7 +61,7 @@ func (agent *Agent) Start(ctx context.Context) error {
 		errChan <- agent.resolver.Start(resolverCtx)
 	}()
 
-	go agent.janitorServer.Init().Run()
+	go agent.janitorServer.ServerInit().Run()
 
 	// send proxy info to dns proxy listener
 	rgEvent := &nameserver.RecordGeneratorChangeEvent{}

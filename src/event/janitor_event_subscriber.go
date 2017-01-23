@@ -7,7 +7,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Sirupsen/logrus"
 
-	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
+	"github.com/Dataman-Cloud/swan-janitor/src"
 )
 
 type JanitorSubscriber struct {
@@ -73,7 +73,7 @@ func (js *JanitorSubscriber) InterestIn(e *Event) bool {
 	return false
 }
 
-func (js *JanitorSubscriber) pushJanitorEvent(event *upstream.TargetChangeEvent) {
+func (js *JanitorSubscriber) pushJanitorEvent(event *janitor.TargetChangeEvent) {
 	data, err := json.Marshal(event)
 	if err != nil {
 		logrus.Infof("marshal janitor event got error: %s", err.Error())

@@ -19,7 +19,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
-	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
+	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
@@ -389,7 +389,7 @@ func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 
 func (manager *Manager) SendAgentInitData(agent types.Node) {
 	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
-	var janitorEvents []*upstream.TargetChangeEvent
+	var janitorEvents []*janitor.TargetChangeEvent
 
 	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
 
