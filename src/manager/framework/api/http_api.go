@@ -225,7 +225,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 
 	appsRet := make([]*types.App, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		appsRet = append(appsRet, FormAppRet(app))
+		appsRet = append(appsRet, FormApp(app))
 	}
 
 	response.WriteEntity(appsRet)
@@ -412,7 +412,7 @@ func (api *AppService) GetAppServiceDiscoveries(request *restful.Request, respon
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	serviceDiscoveries := getServiceDiscoveris(app)
+	serviceDiscoveries := getServiceDiscoveries(app)
 	response.WriteEntity(serviceDiscoveries)
 }
 
@@ -423,7 +423,7 @@ func (api *AppService) GetAppServiceDiscoveriesMD5(request *restful.Request, res
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	serviceDiscoveries := getServiceDiscoveris(app)
+	serviceDiscoveries := getServiceDiscoveries(app)
 	sd, err := json.Marshal(serviceDiscoveries)
 	if err != nil {
 		logrus.Errorf("Fails to Marshal serviceDiscoveries: %s", err.Error())
@@ -438,7 +438,7 @@ func (api *AppService) GetAllServiceDiscoveries(request *restful.Request, respon
 	appFilterOptions := types.AppFilterOptions{}
 	allServiceDiscoveries := make([]types.ServiceDiscovery, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		serviceDiscoveries := getServiceDiscoveris(app)
+		serviceDiscoveries := getServiceDiscoveries(app)
 		allServiceDiscoveries = append(allServiceDiscoveries, serviceDiscoveries...)
 	}
 	response.WriteEntity(allServiceDiscoveries)
@@ -448,7 +448,7 @@ func (api *AppService) GetAllServiceDiscoveriesMD5(request *restful.Request, res
 	appFilterOptions := types.AppFilterOptions{}
 	allServiceDiscoveries := make([]types.ServiceDiscovery, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		serviceDiscoveries := getServiceDiscoveris(app)
+		serviceDiscoveries := getServiceDiscoveries(app)
 		allServiceDiscoveries = append(allServiceDiscoveries, serviceDiscoveries...)
 	}
 	sd, err := json.Marshal(allServiceDiscoveries)
@@ -461,7 +461,7 @@ func (api *AppService) GetAllServiceDiscoveriesMD5(request *restful.Request, res
 	response.WriteEntity(hex.EncodeToString(sdMD5[:]))
 }
 
-func getServiceDiscoveris(app *state.App) []types.ServiceDiscovery {
+func getServiceDiscoveries(app *state.App) []types.ServiceDiscovery {
 	slots := app.GetSlots()
 	serviceDiscoveries := make([]types.ServiceDiscovery, 0)
 	if app.Mode == state.APP_MODE_FIXED {
@@ -508,7 +508,7 @@ func getServiceDiscoveris(app *state.App) []types.ServiceDiscovery {
 	return serviceDiscoveries
 }
 
-func FormAppRet(app *state.App) *types.App {
+func FormApp(app *state.App) *types.App {
 	version := app.CurrentVersion
 	appRet := &types.App{
 		ID:               app.ID,
@@ -533,7 +533,7 @@ func FormAppRet(app *state.App) *types.App {
 }
 
 func FormAppRetWithVersions(app *state.App) *types.App {
-	appRet := FormAppRet(app)
+	appRet := FormApp(app)
 	appRet.Versions = make([]string, 0)
 	for _, v := range app.Versions {
 		appRet.Versions = append(appRet.Versions, v.ID)
@@ -557,23 +557,7 @@ func CheckVersion(version *types.Version) error {
 func FilterTasksFromApp(app *state.App) []*types.Task {
 	tasks := make([]*types.Task, 0)
 	for _, slot := range app.GetSlots() {
-		task := &types.Task{ // aka Slot
-			ID:            slot.ID,
-			AppID:         slot.App.ID, // either Name or ID
-			VersionID:     slot.Version.ID,
-			Healthy:       slot.Healthy(),
-			Status:        string(slot.State),
-			OfferID:       slot.OfferID,
-			AgentID:       slot.AgentID,
-			AgentHostname: slot.AgentHostName,
-			History:       make([]*types.TaskHistory, 0), // aka Task
-			CPU:           slot.Version.CPUs,
-			Mem:           slot.Version.Mem,
-			Disk:          slot.Version.Disk,
-			IP:            slot.Ip,
-			Created:       slot.CurrentTask.Created,
-			Image:         slot.Version.Container.Docker.Image,
-		}
+		task := FormTask(slot)
 
 		if len(slot.TaskHistory) > 0 {
 			for _, v := range slot.TaskHistory {
@@ -614,22 +598,7 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 
 	slot := slots[task_index]
 
-	task := &types.Task{ // aka Slot
-		ID:            slot.ID,
-		AppID:         slot.App.ID, // either Name or ID
-		VersionID:     slot.Version.ID,
-		Status:        string(slot.State),
-		OfferID:       slot.OfferID,
-		AgentID:       slot.AgentID,
-		AgentHostname: slot.AgentHostName,
-		History:       make([]*types.TaskHistory, 0), // aka Task
-		CPU:           slot.Version.CPUs,
-		Mem:           slot.Version.Mem,
-		Disk:          slot.Version.Disk,
-		IP:            slot.Ip,
-		Created:       slot.CurrentTask.Created,
-		Image:         slot.Version.Container.Docker.Image,
-	}
+	task := FormTask(slot)
 
 	if len(slot.TaskHistory) > 0 {
 		for _, v := range slot.TaskHistory {
@@ -637,18 +606,18 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 				continue
 			}
 
-			task.History = append(task.History, FormTaskRet(v))
+			task.History = append(task.History, FormTaskHistory(v))
 		}
 	}
 
 	if slot.CurrentTask != nil {
-		task.CurrentTask = FormTaskRet(slot.CurrentTask)
+		task.CurrentTask = FormTaskHistory(slot.CurrentTask)
 	}
 
 	return task, nil
 }
 
-func FormTaskRet(v *state.Task) *types.TaskHistory {
+func FormTaskHistory(v *state.Task) *types.TaskHistory {
 	return &types.TaskHistory{
 		ID:            v.ID,
 		State:         v.State,
@@ -666,4 +635,26 @@ func FormTaskRet(v *state.Task) *types.TaskHistory {
 		Stdout: v.Stdout,
 	}
 
+}
+
+func FormTask(slot *state.Slot) *types.Task {
+	task := &types.Task{
+		ID:            slot.ID,
+		AppID:         slot.App.ID,
+		VersionID:     slot.Version.ID,
+		Healthy:       slot.Healthy(),
+		Status:        string(slot.State),
+		OfferID:       slot.OfferID,
+		AgentID:       slot.AgentID,
+		AgentHostname: slot.AgentHostName,
+		History:       make([]*types.TaskHistory, 0),
+		CPU:           slot.Version.CPUs,
+		Mem:           slot.Version.Mem,
+		Disk:          slot.Version.Disk,
+		IP:            slot.Ip,
+		Ports:         slot.CurrentTask.HostPorts,
+		Created:       slot.CurrentTask.Created,
+		Image:         slot.Version.Container.Docker.Image,
+	}
+	return task
 }

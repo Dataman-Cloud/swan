@@ -106,7 +106,7 @@ func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId *mesos.Offe
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) RetriveSlotIdWithOfferId(offerId *mesos.OfferID) (string, error) {
+func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId *mesos.OfferID) (string, error) {
 	key := ""
 	for k, v := range allocator.BySlotId {
 		if v.Value == offerId.Value {

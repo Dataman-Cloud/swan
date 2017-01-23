@@ -62,7 +62,8 @@ type Task struct {
 
 	History []*TaskHistory `json:"history,omitempty"`
 
-	IP string `json:"ip,omitempty"`
+	IP    string   `json:"ip,omitempty"`
+	Ports []uint64 `json:"ports,omitempty"`
 
 	Created time.Time `json:"created,omitempty"`
 
