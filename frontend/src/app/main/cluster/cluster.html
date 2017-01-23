@@ -5,43 +5,43 @@
 
     <dl layout="row">
       <dt>Created</dt>
-      <dd>2016-10-31 16:38:42</dd>
+      <dd>{/vm.cluster.created * 1000| date: 'yyyy-MM-dd HH:MM:ss'/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>Attributes</dt>
-      <dd>???</dd>
+      <dd>{/vm.cluster.attributes/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>Master</dt>
-      <dd>???</dd>
+      <dd>{/vm.cluster.master/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>Slave</dt>
-      <dd>???</dd>
+      <dd>{/vm.cluster.slaves/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>CPU
         <small>Total / Allocated / Used / Idle</small>
       </dt>
-      <dd>??? / {/vm.cluster.cpuTotalOffered.toFixed(2)/} / {/vm.cluster.cpuTotalUsed.toFixed(2)/} / ???</dd>
+      <dd>{/vm.cluster.totalCpu.toFixed(2)/} / {/vm.cluster.cpuTotalOffered.toFixed(2)/} / {/vm.cluster.cpuTotalUsed.toFixed(2)/} / {/(vm.cluster.totalCpu - vm.cluster.cpuTotalOffered).toFixed(2)/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>Memory
         <small>Total / Allocated / Used / Idle</small>
       </dt>
-      <dd>??? / {/vm.cluster.memTotalOffered | size: 'MB'/} / {/vm.cluster.memTotalUsed | size: 'MB'/} / ???</dd>
+      <dd>{/vm.cluster.totalMem.toFixed(2) | size: 'MB'/} / {/vm.cluster.memTotalOffered | size: 'MB'/} / {/vm.cluster.memTotalUsed | size: 'MB'/} / {/(vm.cluster.totalMem - vm.cluster.memTotalOffered).toFixed(2) | size: 'MB'/}</dd>
     </dl>
 
     <dl layout="row">
       <dt>Disk
         <small>Total / Allocated / Used / Idle</small>
       </dt>
-      <dd>??? / {/vm.cluster.diskTotalOffered/} / {/vm.cluster.diskTotalUsed/} / ???</dd>
+      <dd>{/vm.cluster.totalDisk.toFixed(2) | size: 'MB'/} / {/vm.cluster.diskTotalOffered | size: 'MB'/} / {/vm.cluster.diskTotalUsed | size: 'MB'/} / {/(vm.cluster.totalDisk - vm.cluster.diskTotalOffered).toFixed(2) | size: 'MB'/}</dd>
     </dl>
 
     <dl layout="row">
@@ -50,7 +50,7 @@
     </dl>
 
     <dl layout="row">
-      <dt>Slots</dt>
+      <dt>Tasks</dt>
       <dd>{/vm.cluster.taskCount/}</dd>
     </dl>
 

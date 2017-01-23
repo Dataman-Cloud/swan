@@ -7,8 +7,12 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/types"
-
+	"github.com/andygrunwald/megos"
 	"github.com/emicklei/go-restful"
+
+	"fmt"
+	"net/url"
+	"strings"
 )
 
 type StatsService struct {
@@ -63,6 +67,28 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 			// TODO(xychu): add usage stats
 		}
 	}
+
+	master := strings.Split(mesos_connector.Instance().Master, "@")[1]
+	node, _ := url.Parse(fmt.Sprintf("http://%s", master))
+	state, _ := megos.NewClient([]*url.URL{node}, nil).GetStateFromCluster()
+
+	slaves := make([]string, 0)
+	for _, slave := range state.Slaves {
+		stats.TotalCpu += slave.Resources.CPUs
+		stats.TotalMem += slave.Resources.Mem
+		stats.TotalDisk += slave.Resources.Disk
+
+		s := strings.Split(slave.PID, "@")[1]
+		slaves = append(slaves, s)
+
+		if len(slave.Attributes) != 0 {
+			stats.Attributes = append(stats.Attributes, slave.Attributes)
+		}
+	}
+
+	stats.Created = state.StartTime
+	stats.Master = strings.Split(state.Leader, "@")[1]
+	stats.Slaves = strings.Join(slaves, " ")
 
 	response.WriteEntity(stats)
 }

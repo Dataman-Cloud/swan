@@ -29,7 +29,7 @@ var once sync.Once
 type MesosConnector struct {
 	// mesos framework related
 	ClusterID        string
-	master           string
+	Master           string
 	client           *MesosHttpClient
 	lastHearBeatTime time.Time
 
@@ -57,7 +57,7 @@ func Instance() *MesosConnector {
 }
 
 func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) {
-	logrus.Infof("Subscribe with mesos master %s", s.master)
+	logrus.Infof("Subscribe with mesos master %s", s.Master)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
@@ -214,7 +214,7 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 		return
 	}
 
-	s.master = state.Leader
+	s.Master = state.Leader
 	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
 
 	s.ClusterID = state.Cluster
