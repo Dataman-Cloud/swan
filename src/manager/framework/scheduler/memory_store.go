@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"sync"
+	"sort"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -64,6 +65,8 @@ func (m *memoryStore) Filter(options types.AppFilterOptions) []*state.App {
 
 		apps = append(apps, app)
 	}
+
+	sort.Sort(state.AppsByUpdated(apps))
 
 	return apps
 }
