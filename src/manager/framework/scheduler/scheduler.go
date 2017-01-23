@@ -41,7 +41,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		UserEventChan:    make(chan *event.UserEvent, 1024),
 	}
 
-	RegisterFunc := func(m *HandlerManager) {
+	RegisterHandler := func(m *HandlerManager) {
 		m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
 		m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
 		m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
@@ -53,7 +53,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
 	}
 
-	scheduler.handlerManager = NewHandlerManager(scheduler, RegisterFunc)
+	scheduler.handlerManager = NewHandlerManager(scheduler, RegisterHandler)
 
 	state.SetStore(store)
 
