@@ -24,7 +24,7 @@ type HandlerManager struct {
 	SchedulerRef *Scheduler
 }
 
-func NewHanlderManager(scheduler *Scheduler, installFun func(*HandlerManager)) *HandlerManager {
+func NewHandlerManager(scheduler *Scheduler, installHandler func(*HandlerManager)) *HandlerManager {
 	manager := &HandlerManager{
 		handlers:     make(map[string]*Handler),
 		handlerMap:   make(map[string]HandlerFuncs),
@@ -32,18 +32,18 @@ func NewHanlderManager(scheduler *Scheduler, installFun func(*HandlerManager)) *
 		SchedulerRef: scheduler,
 	}
 	once.Do(func() {
-		installFun(manager)
+		installHandler(manager)
 	})
 
 	return manager
 }
 
-func (m *HandlerManager) Register(etype string, funcs ...HandlerFunc) {
-	m.handlerMap[etype] = HandlerFuncs(funcs)
+func (m *HandlerManager) Register(eType string, funcs ...HandlerFunc) {
+	m.handlerMap[eType] = HandlerFuncs(funcs)
 }
 
-func (m *HandlerManager) HandlerFuncs(etype string) HandlerFuncs {
-	return m.handlerMap[etype]
+func (m *HandlerManager) HandlerFuncs(eType string) HandlerFuncs {
+	return m.handlerMap[eType]
 }
 
 func (m *HandlerManager) Handle(e event.Event) *Handler {
