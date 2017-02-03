@@ -51,8 +51,7 @@
   },
   "healthChecks": [
     {
-      "protocol": "CMD",
-      "value": "echo 'sssssssssssssssssss' && exit 0",
+      "protocol": "http",
       "path": "/",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,

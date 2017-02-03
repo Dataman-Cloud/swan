@@ -3,7 +3,7 @@ package agent
 import (
 	"net/http"
 
-	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
+	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -47,7 +47,7 @@ func (api *AgentApi) Register(container *restful.Container) {
 		Operation("InitAgent").
 		Returns(201, "OK", nil).
 		Returns(400, "BadRequest", nil).
-		Reads([]upstream.TargetChangeEvent{}).
+		Reads([]janitor.TargetChangeEvent{}).
 		Writes(nil))
 
 	ws.Route(ws.POST("/janitor/event").To(metrics.InstrumentRouteFunc("POST", "Janitor Event", api.JanitorEventHandler)).
@@ -96,7 +96,7 @@ func (api *AgentApi) ResolverEventHandler(request *restful.Request, response *re
 }
 
 func (api *AgentApi) InitJanitor(request *restful.Request, response *restful.Response) {
-	var janitorEvents []*upstream.TargetChangeEvent
+	var janitorEvents []*janitor.TargetChangeEvent
 	if err := request.ReadEntity(&janitorEvents); err != nil {
 		logrus.Errorf("init janitor data failed. Error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)
@@ -116,7 +116,7 @@ func (api *AgentApi) InitJanitor(request *restful.Request, response *restful.Res
 }
 
 func (api *AgentApi) JanitorEventHandler(request *restful.Request, response *restful.Response) {
-	var janitorEvent upstream.TargetChangeEvent
+	var janitorEvent janitor.TargetChangeEvent
 	if err := request.ReadEntity(&janitorEvent); err != nil {
 		logrus.Errorf("handle janitor event failed. Error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)

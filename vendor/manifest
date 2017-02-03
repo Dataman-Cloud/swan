@@ -21,7 +21,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-janitor",
 			"repository": "https://github.com/Dataman-Cloud/swan-janitor",
 			"vcs": "git",
-			"revision": "21943f391c2d40a1796a8290f1d2a615cce0ce05",
+			"revision": "448b1a6a31b1808d1e86723aaa6bcb5246c80cb0",
 			"branch": "master",
 			"notests": true
 		},

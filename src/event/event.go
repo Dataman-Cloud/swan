@@ -3,12 +3,13 @@ package event
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/types"
 
-	"github.com/Dataman-Cloud/swan-janitor/src/upstream"
+	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/satori/go.uuid"
 )
@@ -93,28 +94,31 @@ func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error
 
 	resolverEvent.Type = "srv"
 	resolverEvent.Ip = payload.IP
-	resolverEvent.Port = payload.Port
+	resolverEvent.Port = fmt.Sprintf("%d", payload.Port)
 	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
 
 	return resolverEvent, nil
 }
 
-func BuildJanitorEvent(e *Event) (*upstream.TargetChangeEvent, error) {
+func BuildJanitorEvent(e *Event) (*janitor.TargetChangeEvent, error) {
 	payload, ok := e.Payload.(*types.TaskInfoEvent)
 	if !ok {
 		return nil, errors.New("payload type error")
 	}
 
-	janitorEvent := &upstream.TargetChangeEvent{}
+	janitorEvent := &janitor.TargetChangeEvent{}
 	if e.Type == EventTypeTaskHealthy {
 		janitorEvent.Change = "add"
 	} else {
 		janitorEvent.Change = "del"
 	}
 
-	janitorEvent.TargetIP = payload.IP
-	janitorEvent.TargetPort = payload.Port
-	janitorEvent.TargetName = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
+	janitorEvent.TaskIP = payload.IP
+	janitorEvent.TaskPort = payload.Port
+	janitorEvent.AppID = payload.AppID
+	janitorEvent.PortName = payload.PortName
+	janitorEvent.TaskPort = payload.Port
+	janitorEvent.TaskID = strings.ToLower(payload.TaskID)
 
 	return janitorEvent, nil
 }

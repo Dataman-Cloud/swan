@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -441,7 +440,8 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 	} else {
 		payload.IP = slot.AgentHostName
 		if len(slot.CurrentTask.HostPorts) > 0 {
-			payload.Port = strconv.FormatUint(slot.CurrentTask.HostPorts[0], 10)
+			payload.Port = uint32(slot.CurrentTask.HostPorts[0])
+			payload.PortName = slot.Version.Container.Docker.PortMappings[0].Name
 		}
 		e.Payload = payload
 	}
