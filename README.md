@@ -88,12 +88,12 @@ Use `swan --help` to see usage.
 
 + application scale up
 ```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d@example/scale.json
+  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d '{"instances": 2}'
 ```
 
 + application scale down
 ```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d@example/scale.json
+  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d '{"instances": 2}'
 ```
 
 + application rolling upgrade
