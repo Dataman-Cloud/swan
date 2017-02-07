@@ -53,11 +53,15 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		joinRetryInterval: time.Second * 5,
 	}
 
-	os.MkdirAll(config.DataDir+"/"+nodeID, 0700)
-
-	db, err := bolt.Open(config.DataDir+"/"+nodeID+"/swan.db", 0600, nil)
+	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
 	if err != nil {
-		logrus.Errorf("Init store engine failed:%s", err)
+		logrus.Errorf("os.MkdirAll got error: %s", err)
+		return nil, err
+	}
+
+	db, err := bolt.Open(config.DataDir+"/"+nodeID+"/swan.db", 0644, nil)
+	if err != nil {
+		logrus.Errorf("Init bolt store failed:%s", err)
 		return nil, err
 	}
 
@@ -89,7 +93,7 @@ func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 		os.MkdirAll(swanConfig.DataDir, 0700)
 
 		nodeID := uuid.NewV4().String()
-		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0755)
+		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
 			return "", err
 		}
@@ -117,6 +121,12 @@ func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 	}
 }
 
+// node start from here
+// - 1, start manager if needed
+// - 2, start agent if needed
+// - 3, agent join to managers if needed
+// - 4, start the API server, both for agent and client
+// - 5, enter loop, wait for error or ctx.Done
 func (n *Node) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
 	if swancontext.IsManager() {
@@ -164,9 +174,10 @@ func (n *Node) runManager(ctx context.Context) error {
 	return n.manager.Start(managerCtx)
 }
 
-func (n *Node) stopManager() {
-	n.agent.Stop(n.agent.CancelFunc)
-	n.manager.Stop(n.manager.CancelFunc)
+// node stop
+func (n *Node) Stop() {
+	n.agent.Stop()
+	n.manager.Stop()
 }
 
 func (n *Node) JoinAsAgent() error {

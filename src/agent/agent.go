@@ -81,10 +81,11 @@ func (agent *Agent) Start(ctx context.Context) error {
 	}
 }
 
-func (agent *Agent) Stop(cancel context.CancelFunc) {
+func (agent *Agent) Stop() {
 	//TODO resolver and janitor need stop
 	//agent.resolver.Stop()
 	//agent.janitorServer.Stop()
-	cancel()
+
+	agent.CancelFunc()
 	return
 }

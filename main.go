@@ -35,36 +35,6 @@ func main() {
 
 	app.Flags = []cli.Flag{
 		cli.StringFlag{
-			Name:   "cluster-addrs",
-			Usage:  "address api server listen on, eg. 192.168.1.1:9999,192.168.1.2:9999",
-			EnvVar: "SWAN_CLUSTER_ADDRS",
-		},
-		cli.StringFlag{
-			Name:   "zk-path",
-			Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
-			EnvVar: "SWAN_MESOS_ZKPATH",
-		},
-		cli.StringFlag{
-			Name:   "log-level,l",
-			Usage:  "customize debug level [debug|info|error]",
-			EnvVar: "SWAN_LOG_LEVEL",
-		},
-		cli.StringFlag{
-			Name:   "mode",
-			Usage:  "server mode, manager|agent|mixed ",
-			EnvVar: "SWAN_MODE",
-		},
-		cli.StringFlag{
-			Name:   "data-dir,d",
-			Usage:  "swan data store dir",
-			EnvVar: "SWAN_DATA_DIR",
-		},
-		cli.StringFlag{
-			Name:   "domain",
-			Usage:  "domain which resolve to proxies. eg. access a slot by 0.appname.runas.clustername.domain",
-			EnvVar: "SWAN_DOMAIN",
-		},
-		cli.StringFlag{
 			Name:   "listen-addr",
 			Usage:  "listener address for agent",
 			EnvVar: "SWAN_LISTEN_ADDR",
@@ -95,6 +65,31 @@ func main() {
 			EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
 		},
 
+		cli.StringFlag{
+			Name:   "zk-path",
+			Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
+			EnvVar: "SWAN_MESOS_ZKPATH",
+		},
+		cli.StringFlag{
+			Name:   "log-level,l",
+			Usage:  "customize debug level [debug|info|error]",
+			EnvVar: "SWAN_LOG_LEVEL",
+		},
+		cli.StringFlag{
+			Name:   "mode",
+			Usage:  "server mode, manager|agent|mixed ",
+			EnvVar: "SWAN_MODE",
+		},
+		cli.StringFlag{
+			Name:   "data-dir,d",
+			Usage:  "swan data store dir",
+			EnvVar: "SWAN_DATA_DIR",
+		},
+		cli.StringFlag{
+			Name:   "domain",
+			Usage:  "domain which resolve to proxies. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.swan.com",
+			EnvVar: "SWAN_DOMAIN",
+		},
 		//cli.StringFlag{
 		//Name:   "janitor-listen-ip",
 		//Usage:  "janitor proxy listener ip",

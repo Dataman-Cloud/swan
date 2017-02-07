@@ -33,11 +33,10 @@ type Manager struct {
 
 	framework *framework.Framework
 
-	clusterAddrs []string
-
 	criticalErrorChan chan error
 
-	nodes    map[string]types.Node
+	nodes map[string]types.Node
+
 	nodeLock sync.RWMutex
 	raftID   uint64
 
@@ -120,8 +119,9 @@ func loadOrCreateRaftID(db *bolt.DB) (uint64, error) {
 	}
 }
 
-func (manager *Manager) Stop(cancel context.CancelFunc) {
-	cancel()
+func (manager *Manager) Stop() {
+	manager.CancelFunc()
+
 	return
 }
 
@@ -130,15 +130,17 @@ func (manager *Manager) Start(ctx context.Context) error {
 		return err
 	}
 
-	leadershipCh, QueueCancel := manager.raftNode.SubscribeLeadership()
-	defer QueueCancel()
+	// when follower => leader or leader => follower
+	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
+	defer cancel()
 
-	eventCtx, _ := context.WithCancel(ctx)
-	go manager.handleLeadershipEvents(eventCtx, leadershipCh)
+	leadershipChangeEventCtx, _ := context.WithCancel(ctx)
+	go manager.handleLeadershipEvents(leadershipChangeEventCtx, leadershipCh)
 
-	leaderChangeCh, leaderChangeQueueCancel := manager.raftNode.SubcribeLeaderChange()
-	defer leaderChangeQueueCancel()
+	leaderChangeCh, cancel := manager.raftNode.SubcribeLeaderChange()
+	defer cancel()
 
+	// when new leader was elected within cluster
 	leaderChangeEventCtx, _ := context.WithCancel(ctx)
 	go manager.handleLeaderChangeEvents(leaderChangeEventCtx, leaderChangeCh)
 
@@ -178,7 +180,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a leader !!!")
 
 				once.Do(func() {
-					// if manager is thie first node in the cluster, add itself to the manager map
+					// if manager is thie first node in the cluster, add itself to the managers map
 					if swancontext.IsNewCluster() {
 						swanConfig := swancontext.Instance().Config
 						managerInfo := types.Node{
@@ -197,18 +199,19 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 
 				eventBusCtx, _ := context.WithCancel(ctx)
 				go func() {
-					eventBusStarted = true
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
+
+					eventBusStarted = true
 					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
 					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 					swancontext.Instance().EventBus.Start(ctx)
-
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
 				go func() {
-					frameworkStarted = true
 					log.G(frameworkCtx).Info("starting framework in leader.")
+
+					frameworkStarted = true
 					manager.criticalErrorChan <- manager.framework.Start(frameworkCtx)
 				}()
 
@@ -216,16 +219,18 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a follower !!!")
 
 				if eventBusStarted {
+					log.G(ctx).Info("eventBus has been stopped")
+
 					manager.resolverSubscriber.Unsubscribe(swancontext.Instance().EventBus)
 					manager.janitorSubscriber.Unsubscribe(swancontext.Instance().EventBus)
 					swancontext.Instance().EventBus.Stop()
-					log.G(ctx).Info("eventBus has been stopped")
 					eventBusStarted = false
 				}
 
 				if frameworkStarted {
-					manager.framework.Stop()
 					log.G(ctx).Info("framework has been stopped")
+
+					manager.framework.Stop()
 					frameworkStarted = false
 				}
 			}

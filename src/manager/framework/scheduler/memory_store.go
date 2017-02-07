@@ -1,8 +1,8 @@
 package scheduler
 
 import (
-	"sync"
 	"sort"
+	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"

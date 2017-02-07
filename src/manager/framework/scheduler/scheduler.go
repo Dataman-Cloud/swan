@@ -93,7 +93,6 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 		}
 	}
 
-	// temp solution
 	go func() {
 		framework := mesos_connector.CreateFrameworkInfo()
 		frameworkId, err := scheduler.store.GetFrameworkId()
