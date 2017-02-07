@@ -1,14 +1,9 @@
 PACKAGES = $(shell go list ./...)
-TEST_PACKAGES = $(shell go list ./... | grep -v scheduler | grep -v vendor)
+TEST_PACKAGES = $(shell go list ./... | grep -v vendor)
 
 .PHONY: build fmt test test-cover-html test-cover-func collect-cover-data
 
-# Prepend our vendor directory to the system GOPATH
-# so that import path resolution will prioritize
-# our third party snapshots.
 export GO15VENDOREXPERIMENT=1
-# GOPATH := ${PWD}/vendor:${GOPATH}
-# export GOPATH
 
 default: build
 
