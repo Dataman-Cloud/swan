@@ -1,13 +1,15 @@
 package types
 
 type Node struct {
-	ID            string            `json:"id"`
-	ListenAddr    string            `json:"listenAddr"`
-	AdvertiseAddr string            `json:"advertiseAddr"`
-	Status        string            `json:"status"`
-	Labels        map[string]string `json:"labels"`
-	Role          NodeRole          `json:"role"`
-	RaftID        uint64            `json:"raftid"`
+	ID                string            `json:"id"`
+	ListenAddr        string            `json:"listenAddr"`
+	AdvertiseAddr     string            `json:"advertiseAddr"`
+	RaftListenAddr    string            `json:"raftListenAddr"`
+	RaftAdvertiseAddr string            `json:"raftAdvertiseAddr"`
+	Status            string            `json:"status"`
+	Labels            map[string]string `json:"labels"`
+	Role              NodeRole          `json:"role"`
+	RaftID            uint64            `json:"raftid"`
 }
 
 func (n Node) IsManager() bool {

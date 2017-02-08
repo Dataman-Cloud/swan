@@ -4,8 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math/rand"
-	"strconv"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -45,23 +43,16 @@ type Manager struct {
 }
 
 func New(db *bolt.DB) (*Manager, error) {
-	raftID, err := loadOrCreateRaftID(db)
-	if err != nil {
-		return nil, err
-	}
-
 	manager := &Manager{
 		criticalErrorChan: make(chan error, 1),
-		raftID:            raftID,
 	}
 
 	swanConfig := swancontext.Instance().Config
 	raftNodeOpts := raft.NodeOptions{
 		SwanNodeID:    swanConfig.NodeID,
 		DataDir:       swanConfig.DataDir + "/" + swanConfig.NodeID,
-		RaftID:        raftID,
 		ListenAddr:    swanConfig.RaftListenAddr,
-		AdvertiseAddr: swanConfig.AdvertiseAddr,
+		AdvertiseAddr: swanConfig.RaftAdvertiseAddr,
 	}
 	raftNode, err := raft.NewNode(raftNodeOpts, db)
 	if err != nil {
@@ -83,49 +74,15 @@ func New(db *bolt.DB) (*Manager, error) {
 	return manager, nil
 }
 
-func loadOrCreateRaftID(db *bolt.DB) (uint64, error) {
-	var raftID uint64
-	tx, err := db.Begin(true)
-	if err != nil {
-		return raftID, err
-	}
-	defer tx.Commit()
-
-	var (
-		raftIDBukctName = []byte("raftnode")
-		raftIDDataKey   = []byte("raftid")
-	)
-	raftIDBkt := tx.Bucket(raftIDBukctName)
-	if raftIDBkt == nil {
-		raftIDBkt, err = tx.CreateBucketIfNotExists(raftIDBukctName)
-		if err != nil {
-			return raftID, err
-		}
-
-		raftID = uint64(rand.Int63()) + 1
-		if err := raftIDBkt.Put(raftIDDataKey, []byte(strconv.FormatUint(raftID, 10))); err != nil {
-			return raftID, err
-		}
-		logrus.Infof("raft ID was not found create a new raftID %d", raftID)
-		return raftID, nil
-	} else {
-		raftID_ := raftIDBkt.Get(raftIDDataKey)
-		raftID, err = strconv.ParseUint(string(raftID_), 10, 64)
-		if err != nil {
-			return raftID, err
-		}
-
-		return raftID, nil
-	}
-}
-
 func (manager *Manager) Stop() {
 	manager.CancelFunc()
 
 	return
 }
 
-func (manager *Manager) Start(ctx context.Context) error {
+func (manager *Manager) Start(ctx context.Context, raftID uint64, raftPeers []types.Node, isNewCluster bool) error {
+	manager.raftID = raftID
+
 	if err := manager.LoadNodeData(); err != nil {
 		return err
 	}
@@ -145,7 +102,7 @@ func (manager *Manager) Start(ctx context.Context) error {
 	go manager.handleLeaderChangeEvents(leaderChangeEventCtx, leaderChangeCh)
 
 	raftCtx, _ := context.WithCancel(ctx)
-	if err := manager.raftNode.StartRaft(raftCtx); err != nil {
+	if err := manager.raftNode.StartRaft(raftCtx, manager.raftID, raftPeers, isNewCluster); err != nil {
 		return err
 	}
 
@@ -184,11 +141,13 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					if swancontext.IsNewCluster() {
 						swanConfig := swancontext.Instance().Config
 						managerInfo := types.Node{
-							ID:            swanConfig.NodeID,
-							AdvertiseAddr: swanConfig.AdvertiseAddr,
-							ListenAddr:    swanConfig.ListenAddr,
-							Role:          types.NodeRole(swanConfig.Mode),
-							RaftID:        manager.raftID,
+							ID:                swanConfig.NodeID,
+							AdvertiseAddr:     swanConfig.AdvertiseAddr,
+							ListenAddr:        swanConfig.ListenAddr,
+							RaftListenAddr:    swanConfig.RaftListenAddr,
+							RaftAdvertiseAddr: swanConfig.RaftAdvertiseAddr,
+							Role:              types.NodeRole(swanConfig.Mode),
+							RaftID:            manager.raftID,
 						}
 
 						if err := manager.AddManager(managerInfo); err != nil {
@@ -257,7 +216,7 @@ func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChan
 			//}
 
 			//swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
-			log.G(ctx).Info("Now leader is change to ", manager.raftNode.Config.ID)
+			//log.G(ctx).Info("Now leader is change to ", manager.raftNode.Config.ID)
 
 		case <-ctx.Done():
 			return
@@ -311,14 +270,13 @@ func (manager *Manager) AddAgent(agent types.Node) error {
 }
 
 func (manager *Manager) AddManager(m types.Node) error {
-	if err := manager.presistNodeData(m); err != nil {
-		return err
-	}
+	//if err := manager.presistNodeData(m); err != nil {
+	//	return err
+	//}
 
 	manager.nodeLock.Lock()
 	manager.nodes[m.ID] = m
 	manager.nodeLock.Unlock()
-
 	return nil
 }
 
@@ -329,7 +287,7 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 
 	swanNodes := manager.GetNodes()
 	for _, n := range swanNodes {
-		if n.RaftID == swanNode.RaftID {
+		if n.RaftID == swanNode.RaftID && swanNode.ID != n.ID {
 			return errors.New("add raft node failed: duplicate raftID")
 		}
 	}

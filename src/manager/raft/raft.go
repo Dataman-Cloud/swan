@@ -119,7 +119,6 @@ type NodeOptions struct {
 	ListenAddr    string
 	AdvertiseAddr string
 	DataDir       string
-	Peers         []string
 }
 
 var (
@@ -170,7 +169,8 @@ func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 	return &n, nil
 }
 
-func (n *Node) StartRaft(ctx context.Context) error {
+func (n *Node) StartRaft(ctx context.Context, raftID uint64, peers []api.Node, isNewCluster bool) error {
+	n.Config.ID = raftID
 	if !fileutil.Exist(n.snapdir) {
 		if err := os.Mkdir(n.snapdir, 0700); err != nil {
 			return err
@@ -194,26 +194,45 @@ func (n *Node) StartRaft(ctx context.Context) error {
 		n.appliedState = appliedState
 	}
 
+	var startPeers []raft.Peer
+	for _, peer := range peers {
+		log.L.Infof("add raft peer: %+v \n", peer)
+		startPeers = append(startPeers, raft.Peer{ID: peer.RaftID})
+	}
+
 	if oldwal {
 		n.raftNode = raft.RestartNode(n.Config)
 	} else {
-		n.raftNode = raft.StartNode(n.Config, []raft.Peer{raft.Peer{ID: n.Config.ID}})
+		if !isNewCluster {
+			startPeers = nil
+		}
+		n.raftNode = raft.StartNode(n.Config, startPeers)
 	}
 
 	n.reqIDGen = idutil.NewGenerator(uint16(n.Config.ID), time.Now())
 	ss := &stats.ServerStats{}
 	ss.Initialize()
 
+	log.L.Infof("raft node start with config: %+v \n", n.Config)
+
 	n.transport = &rafthttp.Transport{
-		ID:          types.ID(n.Config.ID),
+		ID:          types.ID(raftID),
 		ClusterID:   0x1000,
 		Raft:        n,
 		ServerStats: ss,
-		LeaderStats: stats.NewLeaderStats(strconv.Itoa(int(n.Config.ID))),
+		LeaderStats: stats.NewLeaderStats(strconv.FormatUint(raftID, 10)),
 		ErrorC:      make(chan error),
 	}
 
 	n.transport.Start()
+
+	for _, peer := range peers {
+		if peer.RaftID == raftID {
+			continue
+		}
+
+		n.transport.AddPeer(types.ID(peer.RaftID), []string{peer.RaftAdvertiseAddr})
+	}
 
 	if err := n.serveRaft(); err != nil {
 		return nil
@@ -320,6 +339,7 @@ func (n *Node) Run(ctx context.Context) error {
 
 			if err := n.publishEntries(n.entriesToApply(rd.CommittedEntries)); err != nil {
 				log.L.Errorf("raft: store data failed. Error: %s", err.Error())
+				n.raftNode.Advance()
 				continue
 			}
 
@@ -481,10 +501,6 @@ func (n *Node) configure(ctx context.Context, cc raftpb.ConfChange) error {
 			return err
 		}
 
-		if x != nil {
-			log.G(ctx).Panic("raft: configuration change error, return type should always be error")
-		}
-
 		return nil
 	case <-ctx.Done():
 		n.wait.cancel(cc.ID)
@@ -565,19 +581,24 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 				if !n.wait.trigger(r.ID, &applyResult{resp: r, err: err}) {
 					n.wait.cancelAll()
 				}
-
 			}
 
 		case raftpb.EntryConfChange:
 			var cc raftpb.ConfChange
 			cc.Unmarshal(ents[i].Data)
 
-			n.raftNode.ApplyConfChange(cc)
+			n.confState = *n.raftNode.ApplyConfChange(cc)
 
 			switch cc.Type {
 			case raftpb.ConfChangeAddNode:
 				if len(cc.Context) > 0 {
-					n.transport.AddPeer(types.ID(cc.NodeID), []string{string(cc.Context)})
+
+					var swanNode api.Node
+					if err := json.Unmarshal(cc.Context, &swanNode); err != nil {
+						return err
+					}
+
+					n.transport.AddPeer(types.ID(cc.NodeID), []string{swanNode.RaftAdvertiseAddr})
 				}
 
 			case raftpb.ConfChangeRemoveNode:
@@ -586,6 +607,10 @@ func (n *Node) publishEntries(ents []raftpb.Entry) error {
 				}
 
 				n.transport.RemovePeer(types.ID(cc.NodeID))
+			}
+
+			if !n.wait.trigger(cc.ID, &applyResult{resp: nil, err: nil}) {
+				n.wait.cancelAll()
 			}
 		}
 
