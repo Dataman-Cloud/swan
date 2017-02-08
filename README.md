@@ -61,6 +61,11 @@ Then you can compile `Swan` with:
   make docker-run-mixed
 ```
 
+## Run as high availability mode
+  
+  [detail of swan-cluster](./docs/swan-cluster.md)
+
+
 Use `swan --help` to see usage.
 
 ## Getting Started
