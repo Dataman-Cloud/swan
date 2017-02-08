@@ -1,9 +1,12 @@
 package node
 
 import (
+	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"math/rand"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/agent"
@@ -32,6 +35,7 @@ type Node struct {
 	manager           *manager.Manager // hold a instance of manager, make logic taking place
 	ctx               context.Context
 	joinRetryInterval time.Duration
+	RaftID            uint64
 }
 
 func NewNode(config config.SwanConfig) (*Node, error) {
@@ -64,6 +68,13 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		logrus.Errorf("Init bolt store failed:%s", err)
 		return nil, err
 	}
+
+	raftID, err := loadOrCreateRaftID(db)
+	if err != nil {
+		logrus.Errorf("Init raft ID failed:%s", err)
+		return nil, err
+	}
+	node.RaftID = raftID
 
 	if swancontext.IsManager() {
 		m, err := manager.New(db)
@@ -129,9 +140,31 @@ func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 // - 5, enter loop, wait for error or ctx.Done
 func (n *Node) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
+
+	swanConfig := swancontext.Instance().Config
+	nodeInfo := types.Node{
+		ID:                n.ID,
+		AdvertiseAddr:     swanConfig.AdvertiseAddr,
+		ListenAddr:        swanConfig.ListenAddr,
+		RaftListenAddr:    swanConfig.RaftListenAddr,
+		RaftAdvertiseAddr: swanConfig.RaftAdvertiseAddr,
+		Role:              types.NodeRole(swanConfig.Mode),
+		RaftID:            n.RaftID,
+	}
+
 	if swancontext.IsManager() {
 		go func() {
-			errChan <- n.runManager(ctx)
+			if swancontext.IsNewCluster() {
+				errChan <- n.runManager(ctx, n.RaftID, []types.Node{nodeInfo}, true)
+			} else {
+				existedNodes, err := n.JoinAsManager(nodeInfo)
+				if err != nil {
+					errChan <- err
+				}
+
+				existedNodes = append(existedNodes, nodeInfo)
+				errChan <- n.runManager(ctx, n.RaftID, existedNodes, false)
+			}
 		}()
 	}
 
@@ -141,7 +174,7 @@ func (n *Node) Start(ctx context.Context) error {
 		}()
 
 		go func() {
-			err := n.JoinAsAgent()
+			err := n.JoinAsAgent(nodeInfo)
 			if err != nil {
 				errChan <- err
 			}
@@ -168,10 +201,10 @@ func (n *Node) runAgent(ctx context.Context) error {
 	return n.agent.Start(agentCtx)
 }
 
-func (n *Node) runManager(ctx context.Context) error {
+func (n *Node) runManager(ctx context.Context, raftID uint64, peers []types.Node, isNewCluster bool) error {
 	managerCtx, cancel := context.WithCancel(ctx)
 	n.manager.CancelFunc = cancel
-	return n.manager.Start(managerCtx)
+	return n.manager.Start(managerCtx, raftID, peers, isNewCluster)
 }
 
 // node stop
@@ -180,22 +213,15 @@ func (n *Node) Stop() {
 	n.manager.Stop()
 }
 
-func (n *Node) JoinAsAgent() error {
+func (n *Node) JoinAsAgent(nodeInfo types.Node) error {
 	swanConfig := swancontext.Instance().Config
 	if len(swanConfig.JoinAddrs) == 0 {
 		return errors.New("start agent failed. Error: joinAddrs must be no empty")
 	}
 
-	agentInfo := types.Node{
-		ID:            n.ID,
-		AdvertiseAddr: swanConfig.AdvertiseAddr,
-		ListenAddr:    swanConfig.ListenAddr,
-		Role:          types.NodeRole(swanConfig.Mode),
-	}
-
 	for _, managerAddr := range swanConfig.JoinAddrs {
 		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
-		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agentInfo, nil)
+		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
 		}
@@ -207,6 +233,75 @@ func (n *Node) JoinAsAgent() error {
 	}
 
 	time.Sleep(n.joinRetryInterval)
-	n.JoinAsAgent()
+	n.JoinAsAgent(nodeInfo)
 	return nil
+}
+
+func (n *Node) JoinAsManager(nodeInfo types.Node) ([]types.Node, error) {
+	swanConfig := swancontext.Instance().Config
+	if len(swanConfig.JoinAddrs) == 0 {
+		return nil, errors.New("start agent failed. Error: joinAddrs must be no empty")
+	}
+
+	for _, managerAddr := range swanConfig.JoinAddrs {
+		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		resp, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
+		if err != nil {
+			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+			continue
+		}
+
+		var nodes []types.Node
+		if err := json.Unmarshal(resp, &nodes); err != nil {
+			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+			continue
+		}
+
+		var managerNodes []types.Node
+		for _, exitedNode := range nodes {
+			if exitedNode.IsManager() && exitedNode.ID != nodeInfo.ID {
+				managerNodes = append(managerNodes, exitedNode)
+			}
+		}
+
+		return managerNodes, nil
+	}
+
+	return nil, errors.New("add manager failed")
+}
+
+func loadOrCreateRaftID(db *bolt.DB) (uint64, error) {
+	var raftID uint64
+	tx, err := db.Begin(true)
+	if err != nil {
+		return raftID, err
+	}
+	defer tx.Commit()
+
+	var (
+		raftIDBukctName = []byte("raftnode")
+		raftIDDataKey   = []byte("raftid")
+	)
+	raftIDBkt := tx.Bucket(raftIDBukctName)
+	if raftIDBkt == nil {
+		raftIDBkt, err = tx.CreateBucketIfNotExists(raftIDBukctName)
+		if err != nil {
+			return raftID, err
+		}
+
+		raftID = uint64(rand.Int63()) + 1
+		if err := raftIDBkt.Put(raftIDDataKey, []byte(strconv.FormatUint(raftID, 10))); err != nil {
+			return raftID, err
+		}
+		logrus.Infof("raft ID was not found create a new raftID %x", raftID)
+		return raftID, nil
+	} else {
+		raftID_ := raftIDBkt.Get(raftIDDataKey)
+		raftID, err = strconv.ParseUint(string(raftID_), 10, 64)
+		if err != nil {
+			return raftID, err
+		}
+
+		return raftID, nil
+	}
 }
