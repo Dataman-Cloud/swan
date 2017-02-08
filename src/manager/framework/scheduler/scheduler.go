@@ -114,22 +114,23 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case e := <-scheduler.MesosConnector.MesosEventChan:
-			logrus.WithFields(logrus.Fields{"mesos event chan": "yes"}).Debugf("")
+			logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
 		case e := <-scheduler.UserEventChan:
-			logrus.WithFields(logrus.Fields{"user event chan": "yes"}).Debugf("")
+			logrus.WithFields(logrus.Fields{"event": "user"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
 		case e := <-scheduler.mesosFailureChan:
-			logrus.WithFields(logrus.Fields{"failure": "yes"}).Debugf("%s", e)
+			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
 			scheduler.mesosConnectorCancelFun()
 			return e
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
+			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugf("")
 
 		case <-scheduler.stopC:
-			logrus.Infof("stopping main scheduler")
+			logrus.WithFields(logrus.Fields{"event": "stopC"}).Debugf("")
 			return nil
 		}
 	}
