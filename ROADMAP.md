@@ -31,5 +31,6 @@ functionalities are stable as we expected, of them includes
 
   * more features added to API Gateway, like more protocols supposed to
     be supported.
+  * service discovery easily connect to Nginx or HAProxy
   * quota management & preemptive tasks.
   * more metrics reflect runtime evnronment of `Swan` itself.

@@ -8,9 +8,13 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dataman-Cloud/swan)](https://goreportcard.com/report/github.com/Dataman-Cloud/swan)
 [![Join the chat at https://gitter.im/Dataman-Cloud/swan](https://badges.gitter.im/Dataman-Cloud/swan.svg)](https://gitter.im/Dataman-Cloud/swan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
-#### `Swan` is a general purpose long running `Mesos` framework written in golang based on latest Mesos HTTP API, which highly inspired by `Marathon`.
+## What is `Swan`?
 
-#### with `Swan` you can deploy long running `application` on mesos cluster, and also control entire lifecycle of the application, scale up or scale down any `instances` size you want, can also do rolling-update with new versions base on flexible `health checks` defined by you. `Swan` also designed for high avaliability which means any server crash wouldn't affect running applications. with `service discovery` and `API gateway` buildin, doesn't bother exposing your sevice.
+`Swan` is a `Mesos` framework forcus on long running tasks, which inspired by `Marathon`, written with `Golang` and base on latest `Mesos` HTTP API.
+
+## What does `Swan` do?
+
+With `Swan` you can deploy long running `application` on mesos cluster, control lifecycle of the application, scale up or scale down any `instances` size you want, can also do rolling-update with new versions base on flexible `health checks` defined by you. `Swan` also designed for high avaliability which means any server crash wouldn't affect running applications. with `service discovery` and `API gateway` build-in, service discovery made easy.
 
 #### `Swan` is created and maintained by [Dataman-Cloud](https://github.com/Dataman-Cloud), and licensed under the Apache License, Version 2.0.
 
