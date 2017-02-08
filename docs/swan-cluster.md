@@ -21,11 +21,11 @@ sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos
 
 
  if the advertise address if not the same as the listen address of the swan-node. The start parameter **advertise-addr** and
-**raft-advertise-addr** need to fill out. The start cmd :
+**raft-advertise-addr** need to be provided. The start cmd :
 ```
 sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos 
             --listen-addr=0.0.0.0:9999 --advertise-addr=192.168.1.111
-            --raft-listen-addr=http://127.0.0.1:2111 raft-advertise-add=http://192.168.1.111:2111
+            --raft-listen-addr=http://127.0.0.1:2111 raft-advertise-addr=http://192.168.1.111:2111
             --data-dir=./data/1/ --mode=manager
 ```
 
