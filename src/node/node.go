@@ -162,7 +162,6 @@ func (n *Node) Start(ctx context.Context) error {
 					errChan <- err
 				}
 
-				existedNodes = append(existedNodes, nodeInfo)
 				errChan <- n.runManager(ctx, n.RaftID, existedNodes, false)
 			}
 		}()
@@ -258,9 +257,9 @@ func (n *Node) JoinAsManager(nodeInfo types.Node) ([]types.Node, error) {
 		}
 
 		var managerNodes []types.Node
-		for _, exitedNode := range nodes {
-			if exitedNode.IsManager() && exitedNode.ID != nodeInfo.ID {
-				managerNodes = append(managerNodes, exitedNode)
+		for _, existedNode := range nodes {
+			if existedNode.IsManager() {
+				managerNodes = append(managerNodes, existedNode)
 			}
 		}
 
