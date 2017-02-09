@@ -42,18 +42,21 @@ func (c *MesosHttpClient) Send(payload []byte) (*http.Response, error) {
 	httpReq.Header.Set("Content-Type", "application/x-protobuf")
 	httpReq.Header.Set("Accept", "application/json")
 	httpReq.Header.Set("User-Agent", "swan/0.1")
+
 	if c.StreamID != "" {
 		httpReq.Header.Set("Mesos-Stream-Id", c.StreamID)
 	}
-	//log.Printf("SENDING:%v", httpReq)
 
 	httpResp, err := c.client.Do(httpReq)
+
 	if err != nil {
 		return nil, fmt.Errorf("Unable to do request: %s", err)
 	}
+
 	if httpResp.Header.Get("Mesos-Stream-Id") != "" {
 		c.StreamID = httpResp.Header.Get("Mesos-Stream-Id")
 	}
+
 	return httpResp, nil
 }
 

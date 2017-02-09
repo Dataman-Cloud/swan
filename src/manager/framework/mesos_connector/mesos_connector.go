@@ -56,7 +56,7 @@ func Instance() *MesosConnector {
 	return instance
 }
 
-func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) {
+func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) error {
 	logrus.Infof("Subscribe with mesos master %s", s.Master)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
@@ -73,16 +73,33 @@ func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan er
 
 	resp, err := s.Send(call)
 	if err != nil {
-		mesosFailureChan <- err
+		return err
 	}
 
 	// http might now be the default transport in future release
 	if resp.StatusCode != http.StatusOK {
-		mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
+		//mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
+		return fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
+
 	}
 
-	logrus.Info(s.client.StreamID)
 	go s.handleEvents(ctx, resp, mesosFailureChan)
+
+	return nil
+}
+
+func (s *MesosConnector) resubscribe(ctx context.Context, mesosFailureChan chan error) {
+	for {
+		logrus.Warn("Connection to mesos got error, reconnect")
+		if err := s.subscribe(ctx, mesosFailureChan); err == nil {
+			return
+		} else {
+			logrus.Errorf("%s", err.Error())
+		}
+
+		<-time.After(2 * time.Second)
+	}
+
 }
 
 func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, mesosFailureChan chan error) {
@@ -101,12 +118,16 @@ func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, 
 		default:
 			event := new(sched.Event)
 			if err := dec.Decode(event); err != nil {
-				logrus.Errorf("Deocde event failed: %s", err)
-				mesosFailureChan <- err
+				go func() {
+					s.resubscribe(ctx, mesosFailureChan)
+				}()
+
+				return
 			}
 
 			switch event.GetType() {
 			case sched.Event_SUBSCRIBED:
+				logrus.Infof("Subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
 				s.addEvent(sched.Event_SUBSCRIBED, event)
 			case sched.Event_OFFERS:
 				s.addEvent(sched.Event_OFFERS, event)
@@ -193,6 +214,11 @@ func (s *MesosConnector) Send(call *sched.Call) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if call.Type.String() == "SUBSCRIBE" {
+		s.client.StreamID = ""
+	}
+
 	return s.client.Send(payload)
 }
 
