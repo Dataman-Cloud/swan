@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
@@ -33,10 +34,7 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	nodes map[string]types.Node
-
-	nodeLock sync.RWMutex
-	raftID   uint64
+	raftID uint64
 
 	janitorSubscriber  *event.JanitorSubscriber
 	resolverSubscriber *event.DNSSubscriber
@@ -203,51 +201,67 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChangeCh chan events.Event) {
 	for {
 		select {
-		case <-leaderChangeCh:
-			//case leaderChangeEvent := <-leaderChangeCh:
-			//var leaderAddr string
-			//leader := leaderChangeEvent.(uint64)
+		case leaderChangeEvent := <-leaderChangeCh:
+			leaderRaftID := leaderChangeEvent.(uint64)
 
-			//// If leader was losted, this value is 0
-			//if int(leader) == 0 {
-			//	leaderAddr = ""
-			//} else {
-			//	leaderAddr = manager.clusterAddrs[int(leader)-1]
-			//}
-
-			//swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
-			//log.G(ctx).Info("Now leader is change to ", manager.raftNode.Config.ID)
-
+			manager.updateLeaderAddr(leaderRaftID)
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (manager *Manager) LoadNodeData() error {
-	nodes, err := manager.raftNode.GetNodes()
-	if err != nil {
-		return err
-	}
+func (manager *Manager) updateLeaderAddr(leaderRaftID uint64) {
+	var leaderAddr string
 
-	manager.nodes = make(map[string]types.Node)
-	for _, nodeMetadata := range nodes {
-		node := types.Node{
-			ID:            nodeMetadata.ID,
-			AdvertiseAddr: nodeMetadata.AdvertiseAddr,
-			ListenAddr:    nodeMetadata.ListenAddr,
-			Role:          types.NodeRole(nodeMetadata.Role),
-			Status:        nodeMetadata.Status,
-			Labels:        nodeMetadata.Labels,
+	// beacuse of the leader change event maybe published before all data has been sync.
+	// maybe we can't find the leader node at first time, so need this loop for retry.
+	// maintain a cluster membership maybe a better way like swarmkit:
+	// https://github.com/docker/swarmkit/blob/master/manager/state/raft/membership/cluster.go
+	for {
+		// If leader was losted, this value is 0
+		if int(leaderRaftID) == 0 {
+			leaderAddr = ""
+		} else {
+			leaderNode, err := manager.findLeaderByRaftID(leaderRaftID)
+			if err != nil {
+				log.L.Warnf("update leaderAddr failed. Error: %s", err.Error())
+				leaderAddr = ""
+			} else {
+				leaderAddr = leaderNode.AdvertiseAddr
+			}
+
+			swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
+			log.L.Infof("Now leader is change to %x, leader advertise-addr: %s", leaderRaftID, leaderAddr)
 		}
 
+		// if leader was losted or the leader addresss was found return
+		if int(leaderRaftID) == 0 || leaderAddr != "" {
+			return
+		}
+
+		time.Sleep(time.Second)
+	}
+}
+
+func (manager *Manager) findLeaderByRaftID(raftID uint64) (types.Node, error) {
+	nodes := manager.GetNodes()
+	for _, node := range nodes {
+		if node.IsManager() && node.RaftID == raftID {
+			return node, nil
+		}
+	}
+
+	return types.Node{}, fmt.Errorf("can not find node which raftID is %x", raftID)
+}
+
+func (manager *Manager) LoadNodeData() error {
+	nodes := manager.GetNodes()
+
+	for _, node := range nodes {
 		if node.IsAgent() {
 			manager.AddAgentAcceptor(node)
 		}
-
-		manager.nodeLock.Lock()
-		manager.nodes[node.ID] = node
-		manager.nodeLock.Unlock()
 	}
 
 	return nil
@@ -260,24 +274,13 @@ func (manager *Manager) AddAgent(agent types.Node) error {
 
 	manager.AddAgentAcceptor(agent)
 
-	manager.nodeLock.Lock()
-	manager.nodes[agent.ID] = agent
-	manager.nodeLock.Unlock()
-
 	go manager.SendAgentInitData(agent)
 
 	return nil
 }
 
 func (manager *Manager) AddManager(m types.Node) error {
-	//if err := manager.presistNodeData(m); err != nil {
-	//	return err
-	//}
-
-	manager.nodeLock.Lock()
-	manager.nodes[m.ID] = m
-	manager.nodeLock.Unlock()
-	return nil
+	return manager.presistNodeData(m)
 }
 
 func (manager *Manager) AddRaftNode(swanNode types.Node) error {
@@ -297,12 +300,15 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 
 func (manager *Manager) presistNodeData(node types.Node) error {
 	nodeMetadata := &rafttypes.Node{
-		ID:            node.ID,
-		AdvertiseAddr: node.AdvertiseAddr,
-		ListenAddr:    node.ListenAddr,
-		Status:        node.Status,
-		Labels:        node.Labels,
-		Role:          string(node.Role),
+		ID:                node.ID,
+		AdvertiseAddr:     node.AdvertiseAddr,
+		ListenAddr:        node.ListenAddr,
+		RaftListenAddr:    node.RaftListenAddr,
+		RaftAdvertiseAddr: node.RaftAdvertiseAddr,
+		Status:            node.Status,
+		Labels:            node.Labels,
+		RaftID:            node.RaftID,
+		Role:              string(node.Role),
 	}
 
 	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
@@ -314,22 +320,39 @@ func (manager *Manager) presistNodeData(node types.Node) error {
 }
 
 func (manager *Manager) GetNodes() []types.Node {
-	var nodes []types.Node
-	manager.nodeLock.RLock()
-	for _, node := range manager.nodes {
+	nodes := []types.Node{}
+
+	nodes_, err := manager.raftNode.GetNodes()
+	if err != nil {
+		log.L.Errorf("get nodes failed. Error: %s", err.Error())
+		return nodes
+	}
+
+	for _, nodeMetadata := range nodes_ {
+		node := types.Node{
+			ID:                nodeMetadata.ID,
+			AdvertiseAddr:     nodeMetadata.AdvertiseAddr,
+			ListenAddr:        nodeMetadata.ListenAddr,
+			RaftListenAddr:    nodeMetadata.RaftListenAddr,
+			RaftAdvertiseAddr: nodeMetadata.RaftAdvertiseAddr,
+			Role:              types.NodeRole(nodeMetadata.Role),
+			RaftID:            nodeMetadata.RaftID,
+			Status:            nodeMetadata.Status,
+			Labels:            nodeMetadata.Labels,
+		}
+
 		nodes = append(nodes, node)
 	}
-	manager.nodeLock.RUnlock()
 
 	return nodes
 }
 
 func (manager *Manager) GetNode(nodeID string) (types.Node, error) {
-	manager.nodeLock.RLock()
-	node, ok := manager.nodes[nodeID]
-	manager.nodeLock.RUnlock()
-	if ok {
-		return node, nil
+	nodes := manager.GetNodes()
+	for _, node := range nodes {
+		if node.ID == nodeID {
+			return node, nil
+		}
 	}
 
 	return types.Node{}, errors.New("node not found")

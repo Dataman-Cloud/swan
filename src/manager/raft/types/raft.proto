@@ -57,7 +57,10 @@ message Node {
     string id = 1 [(gogoproto.customname) = "ID"];
     string advertiseAddr = 2;
     string listenAddr = 3;
-    string status = 4;
-    map<string, string> labels = 5;
-    string role = 6;
+    string raftListenAddr = 4;
+    string raftAdvertiseAddr = 5;
+    string status = 6;
+    map<string, string> labels = 7;
+    string role = 8;
+    uint64 raftID = 9;
 }
