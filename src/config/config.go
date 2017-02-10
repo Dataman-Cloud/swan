@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -130,7 +131,11 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 
 	if c.String("api-prefix") != "" {
-		swanConfig.ApiPrefix = c.String("api-prefix")
+		if strings.HasPrefix(c.String("api-prefix"), "/") {
+			swanConfig.ApiPrefix = c.String("api-prefix")
+		} else {
+			swanConfig.ApiPrefix = fmt.Sprintf("/%s", c.String("api-prefix"))
+		}
 	}
 
 	// TODO(upccup): this is not the optimal solution. Maybe we can use listen-addr replace --swan-cluster
