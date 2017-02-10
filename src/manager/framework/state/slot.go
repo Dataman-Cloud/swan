@@ -332,7 +332,6 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_PENDING_OFFER:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingOffer)
 	case SLOT_STATE_PENDING_KILL:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingKill)
 	case SLOT_STATE_REAP:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateReap)
@@ -352,7 +351,6 @@ func (slot *Slot) SetState(state string) error {
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFailed)
-		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
 	case SLOT_STATE_TASK_KILLED:
 		slot.StopRestartPolicy()
 		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilled)
@@ -437,14 +435,17 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 
 	if slot.App.IsFixed() {
 		payload.IP = slot.Ip
+		//payload.Mode = string(APP_MODE_FIXED)
 	} else {
 		payload.IP = slot.AgentHostName
+		//payload.Mode = string(APP_MODE_REPLICATES)
 		if len(slot.CurrentTask.HostPorts) > 0 {
 			payload.Port = uint32(slot.CurrentTask.HostPorts[0])
 			payload.PortName = slot.Version.Container.Docker.PortMappings[0].Name
 		}
-		e.Payload = payload
 	}
+
+	e.Payload = payload
 
 	return e
 }
@@ -461,6 +462,8 @@ func (slot *Slot) SetHealthy(healthy bool) {
 	slot.healthy = healthy
 	if healthy {
 		slot.EmitTaskEvent(swanevent.EventTypeTaskHealthy)
+	} else {
+		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
 	}
 	slot.Touch(false)
 }

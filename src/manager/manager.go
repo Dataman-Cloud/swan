@@ -365,6 +365,8 @@ func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 		Status:     agent.Status,
 	}
 	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
+	fmt.Println("xxxxxxxxxxxxxxxxx000000000000000")
+	fmt.Println(resolverAcceptor)
 
 	janitorAcceptor := types.JanitorAcceptor{
 		ID:         agent.ID,

@@ -172,6 +172,9 @@ func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) 
 func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error {
 	var errs multiError
 	// dig name to proxy ip
+	fmt.Println("xxxxxxxxxxxxxxx")
+	fmt.Println(rs.As)
+	fmt.Println(name)
 	for k, hosts := range rs.As {
 		ok := strings.HasSuffix(name, k)
 		if ok {
