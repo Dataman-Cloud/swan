@@ -81,7 +81,6 @@ func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan er
 		mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
 	}
 
-	logrus.Info(s.client.StreamID)
 	go s.handleEvents(ctx, resp, mesosFailureChan)
 }
 
@@ -107,6 +106,7 @@ func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, 
 
 			switch event.GetType() {
 			case sched.Event_SUBSCRIBED:
+				logrus.Infof("Subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
 				s.addEvent(sched.Event_SUBSCRIBED, event)
 			case sched.Event_OFFERS:
 				s.addEvent(sched.Event_OFFERS, event)
