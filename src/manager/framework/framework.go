@@ -5,6 +5,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"golang.org/x/net/context"
 )
@@ -24,11 +25,13 @@ func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) 
 		StopC: make(chan struct{}),
 	}
 
+	apiPrefix := swancontext.Instance().Config.ApiPrefix
+
 	f.Scheduler = scheduler.NewScheduler(store)
-	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
-	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler)
-	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler)
-	f.HealthApi = api.NewAndInstallHealthyService(apiServer, f.Scheduler)
+	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler, apiPrefix)
+	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler, apiPrefix)
+	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler, apiPrefix)
+	f.HealthApi = api.NewAndInstallHealthyService(apiServer, f.Scheduler, apiPrefix)
 	return f, nil
 }
 

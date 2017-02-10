@@ -90,6 +90,12 @@ func main() {
 			Usage:  "domain which resolve to proxies. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.swan.com",
 			EnvVar: "SWAN_DOMAIN",
 		},
+
+		cli.StringFlag{
+			Name:   "api-prefix",
+			Usage:  "api prefix, default to: v_beta",
+			EnvVar: "SWAN_API_PREFIX",
+		},
 		//cli.StringFlag{
 		//Name:   "janitor-listen-ip",
 		//Usage:  "janitor proxy listener ip",

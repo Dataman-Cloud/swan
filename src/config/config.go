@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"time"
@@ -22,6 +23,8 @@ type SwanConfig struct {
 	ListenAddr        string   `json:"listenAddr"`
 	AdvertiseAddr     string   `json:"advertiseAddr"`
 	JoinAddrs         []string `json:"joinAddrs"`
+
+	ApiPrefix string `json:"apiPrefix"`
 
 	Scheduler Scheduler `json:"scheduler"`
 
@@ -71,6 +74,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		ListenAddr:     "0.0.0.0:9999",
 		RaftListenAddr: "0.0.0.0:2111",
 		JoinAddrs:      []string{"0.0.0.0:9999"},
+		ApiPrefix:      "/v_beta",
 
 		Scheduler: Scheduler{
 			ZkPath:             "0.0.0.0:2181",
@@ -124,6 +128,14 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Domain = c.String("domain")
 		swanConfig.DNS.Domain = c.String("domain")
 		swanConfig.Janitor.Domain = c.String("domain")
+	}
+
+	if c.String("api-prefix") != "" {
+		if strings.HasPrefix(c.String("api-prefix"), "/") {
+			swanConfig.ApiPrefix = c.String("api-prefix")
+		} else {
+			swanConfig.ApiPrefix = fmt.Sprintf("/%s", c.String("api-prefix"))
+		}
 	}
 
 	// TODO(upccup): this is not the optimal solution. Maybe we can use listen-addr replace --swan-cluster

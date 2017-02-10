@@ -3,7 +3,6 @@ package api
 import (
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -18,11 +17,14 @@ import (
 type StatsService struct {
 	Scheduler *scheduler.Scheduler
 	apiserver.ApiRegister
+
+	apiPrefix string
 }
 
-func NewAndInstallStatsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *StatsService {
+func NewAndInstallStatsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler, apiPrefix string) *StatsService {
 	statsService := &StatsService{
 		Scheduler: eng,
+		apiPrefix: apiPrefix,
 	}
 	apiserver.Install(apiServer, statsService)
 	return statsService
@@ -31,7 +33,7 @@ func NewAndInstallStatsService(apiServer *apiserver.ApiServer, eng *scheduler.Sc
 func (api *StatsService) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
+		ApiVersion(api.apiPrefix).
 		Path("/stats").
 		Doc("stats API").
 		Produces(restful.MIME_JSON)

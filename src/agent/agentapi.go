@@ -6,7 +6,6 @@ import (
 	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Sirupsen/logrus"
 
@@ -14,14 +13,15 @@ import (
 )
 
 type AgentApi struct {
-	agent *Agent
+	agent     *Agent
+	apiPrefix string
 }
 
 func (api *AgentApi) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
-		Path(config.API_PREFIX + "/agent").
+		ApiVersion(api.apiPrefix).
+		Path(api.apiPrefix + "/agent").
 		Doc("agent server api").
 		Consumes(restful.MIME_JSON).
 		Produces("*/*")

@@ -22,7 +22,7 @@ func NewSwanContext(c config.SwanConfig, eventBus *event.EventBus) *SwanContext 
 		EventBus: eventBus,
 	}
 
-	instance.ApiServer = apiserver.NewApiServer(c.ListenAddr)
+	instance.ApiServer = apiserver.NewApiServer(c.ListenAddr, c.ApiPrefix)
 
 	return instance
 }

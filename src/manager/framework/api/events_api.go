@@ -5,7 +5,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
@@ -17,11 +16,13 @@ import (
 type EventsService struct {
 	Scheduler *scheduler.Scheduler
 	apiserver.ApiRegister
+	apiPrefix string
 }
 
-func NewAndInstallEventsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *EventsService {
+func NewAndInstallEventsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler, apiPrefix string) *EventsService {
 	statsService := &EventsService{
 		Scheduler: eng,
+		apiPrefix: apiPrefix,
 	}
 	apiserver.Install(apiServer, statsService)
 	return statsService
@@ -30,7 +31,7 @@ func NewAndInstallEventsService(apiServer *apiserver.ApiServer, eng *scheduler.S
 func (api *EventsService) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
+		ApiVersion(api.apiPrefix).
 		Path("/events").
 		Doc("events API").
 		Produces(restful.MIME_JSON).

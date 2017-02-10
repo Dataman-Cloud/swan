@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
 	swanevent "github.com/Dataman-Cloud/swan/src/event"
@@ -361,14 +360,14 @@ func (manager *Manager) GetNode(nodeID string) (types.Node, error) {
 func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 	resolverAcceptor := types.ResolverAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
+		RemoteAddr: "http://" + agent.AdvertiseAddr + swancontext.Instance().Config.ApiPrefix + "/agent/resolver/event",
 		Status:     agent.Status,
 	}
 	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
 
 	janitorAcceptor := types.JanitorAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
+		RemoteAddr: "http://" + agent.AdvertiseAddr + swancontext.Instance().Config.ApiPrefix + "/agent/janitor/event",
 		Status:     agent.Status,
 	}
 	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
@@ -398,7 +397,7 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 
 	resolverData, err := json.Marshal(resolverEvents)
 	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+swancontext.Instance().Config.ApiPrefix+"/agent/resolver/init", "POST", resolverData); err != nil {
 			logrus.Errorf("send resolver init data got error: %s", err.Error())
 		}
 
@@ -408,7 +407,7 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 
 	janitorData, err := json.Marshal(janitorEvents)
 	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+swancontext.Instance().Config.ApiPrefix+"/agent/janitor/init", "POST", janitorData); err != nil {
 			logrus.Errorf("send janitor init data got error: %s", err.Error())
 		}
 	} else {

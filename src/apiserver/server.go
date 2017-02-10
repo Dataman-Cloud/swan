@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
@@ -34,15 +33,17 @@ type ApiServer struct {
 	addr         string
 	leaderAddr   string
 	apiRegisters []ApiRegister
+	apiPrefix    string
 }
 
 func init() {
 	metrics.Register()
 }
 
-func NewApiServer(addr string) *ApiServer {
+func NewApiServer(addr string, prefix string) *ApiServer {
 	return &ApiServer{
-		addr: addr,
+		addr:      addr,
+		apiPrefix: prefix,
 	}
 }
 
@@ -87,7 +88,7 @@ func (apiServer *ApiServer) Start() error {
 	config := swagger.Config{
 		WebServices: wsContainer.RegisteredWebServices(), // you control what services are visible
 		// WebServicesUrl: "",
-		ApiVersion: config.API_PREFIX,
+		ApiVersion: apiServer.apiPrefix,
 		ApiPath:    "/apidocs.json",
 
 		// Optionally, specifiy where the UI is located

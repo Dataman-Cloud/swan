@@ -5,7 +5,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 
 	"github.com/emicklei/go-restful"
@@ -14,11 +13,14 @@ import (
 type HealthyService struct {
 	Scheduler *scheduler.Scheduler
 	apiserver.ApiRegister
+
+	apiPrefix string
 }
 
-func NewAndInstallHealthyService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *HealthyService {
+func NewAndInstallHealthyService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler, apiPrefix string) *HealthyService {
 	healthyService := &HealthyService{
 		Scheduler: eng,
+		apiPrefix: apiPrefix,
 	}
 	apiserver.Install(apiServer, healthyService)
 	return healthyService
@@ -27,7 +29,7 @@ func NewAndInstallHealthyService(apiServer *apiserver.ApiServer, eng *scheduler.
 func (api *HealthyService) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
+		ApiVersion(api.apiPrefix).
 		Path("/ping").
 		Doc("ping API").
 		Produces(restful.MIME_JSON)

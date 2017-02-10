@@ -47,7 +47,7 @@ func New() (*Agent, error) {
 	jConfig.HttpHandler.Domain = swancontext.Instance().Config.Janitor.Domain
 	agent.janitorServer = janitor.NewJanitorServer(jConfig)
 
-	agentApi := &AgentApi{agent}
+	agentApi := &AgentApi{agent, swancontext.Instance().Config.ApiPrefix}
 	apiserver.Install(swancontext.Instance().ApiServer, agentApi)
 
 	return agent, nil
