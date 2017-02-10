@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -13,13 +12,15 @@ import (
 
 type NodeApi struct {
 	node *Node
+
+	apiPrefix string
 }
 
 func (api *NodeApi) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
-		Path(config.API_PREFIX + "/nodes").
+		ApiVersion(api.apiPrefix).
+		Path(api.apiPrefix + "/nodes").
 		Doc("manager server api").
 		Consumes(restful.MIME_JSON).
 		Produces("*/*")

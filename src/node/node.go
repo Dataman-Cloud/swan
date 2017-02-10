@@ -57,13 +57,13 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		joinRetryInterval: time.Second * 5,
 	}
 
-	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
+	err = os.MkdirAll(config.DataDir+nodeID, 0766)
 	if err != nil {
 		logrus.Errorf("os.MkdirAll got error: %s", err)
 		return nil, err
 	}
 
-	db, err := bolt.Open(config.DataDir+"/"+nodeID+"/swan.db", 0644, nil)
+	db, err := bolt.Open(config.DataDir+nodeID+"/swan.db", 0644, nil)
 	if err != nil {
 		logrus.Errorf("Init bolt store failed:%s", err)
 		return nil, err
@@ -92,7 +92,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		node.agent = a
 	}
 
-	nodeApi := &NodeApi{node}
+	nodeApi := &NodeApi{node, swancontext.Instance().Config.ApiPrefix}
 	apiserver.Install(swancontext.Instance().ApiServer, nodeApi)
 
 	return node, nil
@@ -101,7 +101,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 	nodeIDFile := swanConfig.DataDir + NodeIDFileName
 	if !fileutil.Exist(nodeIDFile) {
-		os.MkdirAll(swanConfig.DataDir, 0700)
+		os.MkdirAll(swanConfig.DataDir, 0766)
 
 		nodeID := uuid.NewV4().String()
 		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
@@ -219,7 +219,7 @@ func (n *Node) JoinAsAgent(nodeInfo types.Node) error {
 	}
 
 	for _, managerAddr := range swanConfig.JoinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		registerAddr := "http://" + managerAddr + swancontext.Instance().Config.ApiPrefix + "/nodes"
 		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
@@ -243,7 +243,7 @@ func (n *Node) JoinAsManager(nodeInfo types.Node) ([]types.Node, error) {
 	}
 
 	for _, managerAddr := range swanConfig.JoinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		registerAddr := "http://" + managerAddr + swancontext.Instance().Config.ApiPrefix + "/nodes"
 		resp, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
 			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())

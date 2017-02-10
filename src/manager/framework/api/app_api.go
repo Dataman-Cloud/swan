@@ -10,7 +10,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -24,11 +23,14 @@ import (
 type AppService struct {
 	Scheduler *scheduler.Scheduler
 	apiserver.ApiRegister
+
+	apiPrefix string
 }
 
-func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
+func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler, apiPrefix string) *AppService {
 	appService := &AppService{
 		Scheduler: eng,
+		apiPrefix: apiPrefix,
 	}
 	apiserver.Install(apiServer, appService)
 	return appService
@@ -39,8 +41,8 @@ func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Sche
 func (api *AppService) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
-		ApiVersion(config.API_PREFIX).
-		Path(config.API_PREFIX + "/apps").
+		ApiVersion(api.apiPrefix).
+		Path(api.apiPrefix + "/apps").
 		Doc("App management").
 		Consumes(restful.MIME_JSON).
 		Produces(restful.MIME_JSON)
