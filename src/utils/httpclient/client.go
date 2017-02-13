@@ -229,9 +229,10 @@ func (cli *Client) do(ctx context.Context, requestUrl, method string, query url.
 		if err != nil {
 			return nil, err
 		}
-		if headers == nil {
-			headers = make(map[string][]string)
-		}
+	}
+
+	if headers == nil {
+		headers = make(map[string][]string)
 	}
 
 	headers["Content-Type"] = []string{"application/json"}

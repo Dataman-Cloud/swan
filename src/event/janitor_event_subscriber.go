@@ -46,6 +46,12 @@ func (js *JanitorSubscriber) AddAcceptor(acceptor types.JanitorAcceptor) {
 	js.acceptorLock.Unlock()
 }
 
+func (js *JanitorSubscriber) RemoveAcceptor(ID string) {
+	js.acceptorLock.Lock()
+	delete(js.acceptors, ID)
+	js.acceptorLock.Unlock()
+}
+
 func (js *JanitorSubscriber) Write(e *Event) error {
 	janitorEvent, err := BuildJanitorEvent(e)
 	if err != nil {

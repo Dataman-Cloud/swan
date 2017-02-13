@@ -72,9 +72,6 @@ func (apiServer *ApiServer) Start() error {
 	// Add log filter
 	wsContainer.Filter(NCSACommonLogFormatLogger())
 
-	// proxy the request to leader server
-	wsContainer.Filter(apiServer.proxy())
-
 	// Add prometheus metrics
 	wsContainer.Handle("/metrics", promhttp.Handler())
 
@@ -155,7 +152,7 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 	}
 }
 
-func (apiServer *ApiServer) proxy() restful.FilterFunction {
+func (apiServer *ApiServer) Proxy() restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		if apiServer.leaderAddr == apiServer.addr || apiServer.leaderAddr == "" {
 			chain.ProcessFilter(req, resp)

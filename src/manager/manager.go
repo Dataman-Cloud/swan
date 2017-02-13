@@ -148,7 +148,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 							RaftID:            manager.raftID,
 						}
 
-						if err := manager.AddManager(managerInfo); err != nil {
+						if err := manager.presistNodeData(managerInfo); err != nil {
 							manager.criticalErrorChan <- err
 						}
 					}
@@ -267,20 +267,24 @@ func (manager *Manager) LoadNodeData() error {
 	return nil
 }
 
-func (manager *Manager) AddAgent(agent types.Node) error {
-	if err := manager.presistNodeData(agent); err != nil {
+func (manager *Manager) AddNode(node types.Node) error {
+	if err := manager.presistNodeData(node); err != nil {
 		return err
 	}
 
-	manager.AddAgentAcceptor(agent)
+	if node.IsAgent() {
+		manager.AddAgentAcceptor(node)
 
-	go manager.SendAgentInitData(agent)
+		go manager.SendAgentInitData(node)
+	}
+
+	if node.IsManager() {
+		if err := manager.AddRaftNode(node); err != nil {
+			return err
+		}
+	}
 
 	return nil
-}
-
-func (manager *Manager) AddManager(m types.Node) error {
-	return manager.presistNodeData(m)
 }
 
 func (manager *Manager) AddRaftNode(swanNode types.Node) error {
@@ -296,6 +300,26 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 	}
 
 	return manager.raftNode.AddMember(context.TODO(), swanNode)
+}
+
+func (manager *Manager) RemoveNode(node types.Node) error {
+	if node.IsAgent() {
+		manager.RemoveAgentAcceptor(node.ID)
+	}
+
+	if node.IsManager() {
+		if err := manager.raftNode.RemoveMember(context.TODO(), node.RaftID); err != nil {
+			return err
+		}
+	}
+
+	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
+		Action: rafttypes.StoreActionKindRemove,
+		Target: &rafttypes.StoreAction_Node{&rafttypes.Node{ID: node.ID}},
+	}}
+
+	return manager.raftNode.ProposeValue(context.TODO(), storeActions, nil)
+
 }
 
 func (manager *Manager) presistNodeData(node types.Node) error {
@@ -372,6 +396,11 @@ func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 		Status:     agent.Status,
 	}
 	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
+}
+
+func (manager *Manager) RemoveAgentAcceptor(agentID string) {
+	manager.resolverSubscriber.RemoveAcceptor(agentID)
+	manager.janitorSubscriber.RemoveAcceptor(agentID)
 }
 
 func (manager *Manager) SendAgentInitData(agent types.Node) {
