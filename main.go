@@ -42,9 +42,9 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "advertise-addr",
-			Usage:  "advertise address for agent",
+			Usage:  "advertise address for agent, default is the listen-addr",
 			EnvVar: "SWAN_ADVERTISE_ADDR",
-			Value:  "0.0.0.0:9999",
+			Value:  "",
 		},
 		cli.StringFlag{
 			Name:   "raft-listen-addr",
@@ -54,9 +54,9 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "raft-advertise-addr",
-			Usage:  "swan raft advertise address",
+			Usage:  "swan raft advertise address, default is the raft-listen-addr",
 			EnvVar: "SWAN_RAFT_ADVERTISE_ADDR",
-			Value:  "0.0.0.0:2111",
+			Value:  "",
 		},
 		cli.StringFlag{
 			Name:   "join-addrs",
@@ -68,7 +68,7 @@ func main() {
 			Name:   "janitor-advertise-ip",
 			Usage:  "janitor proxy advertise ip",
 			EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
-			Value:  "0.0.0.0:80",
+			Value:  "",
 		},
 
 		cli.StringFlag{
