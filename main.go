@@ -92,7 +92,7 @@ func main() {
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if c.NArg() == 0 {
+		if c.NumFlags() == 0 {
 			return cli.ShowAppHelp(c)
 		}
 
