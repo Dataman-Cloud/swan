@@ -90,19 +90,12 @@ func main() {
 			Usage:  "domain which resolve to proxies. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.swan.com",
 			EnvVar: "SWAN_DOMAIN",
 		},
-		//cli.StringFlag{
-		//Name:   "janitor-listen-ip",
-		//Usage:  "janitor proxy listener ip",
-		//EnvVar: "SWAN_JANITOR_LISTEN_IP",
-		//},
-
-		//cli.StringFlag{
-		//Name:   "dns-listen-addr",
-		//Usage:  "dns proxy listener address",
-		//EnvVar: "SWAN_DNS_LISTEN_ADDR",
-		//},
 	}
 	app.Action = func(c *cli.Context) error {
+		if c.NArg() == 0 {
+			return cli.ShowAppHelp(c)
+		}
+
 		config, err := config.NewConfig(c)
 		if err != nil {
 			logrus.Errorf("load config failed. Error: %s", err)
@@ -125,5 +118,8 @@ func main() {
 		return nil
 	}
 
-	app.Run(os.Args)
+	if err := app.Run(os.Args); err != nil {
+		logrus.Errorf("%s", err.Error())
+		os.Exit(1)
+	}
 }
