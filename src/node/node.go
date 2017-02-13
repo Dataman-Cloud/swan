@@ -36,6 +36,7 @@ type Node struct {
 	ctx               context.Context
 	joinRetryInterval time.Duration
 	RaftID            uint64
+	stopC             chan struct{}
 }
 
 func NewNode(config config.SwanConfig) (*Node, error) {
@@ -55,6 +56,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 	node := &Node{
 		ID:                nodeID,
 		joinRetryInterval: time.Second * 5,
+		stopC:             make(chan struct{}, 1),
 	}
 
 	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
@@ -188,6 +190,9 @@ func (n *Node) Start(ctx context.Context) error {
 		select {
 		case err := <-errChan:
 			return err
+		case <-n.stopC:
+			n.Stop()
+			return nil
 		case <-ctx.Done():
 			return ctx.Err()
 		}

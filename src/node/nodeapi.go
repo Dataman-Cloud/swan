@@ -111,12 +111,12 @@ func (api *NodeApi) RemoveNode(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	response.WriteHeaderAndEntity(http.StatusNoContent, nil)
+	response.WriteHeaderAndEntity(http.StatusNoContent, "success")
 	return
 }
 
 func (api *NodeApi) StopNode(request *restful.Request, response *restful.Response) {
-	response.WriteHeaderAndEntity(http.StatusOK, nil)
-	api.node.Stop()
+	response.WriteHeaderAndEntity(http.StatusOK, "success")
+	api.node.stopC <- struct{}{}
 	return
 }
