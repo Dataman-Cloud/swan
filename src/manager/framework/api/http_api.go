@@ -13,6 +13,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
+	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
@@ -170,6 +171,8 @@ func (api *AppService) Register(container *restful.Container) {
 		Operation("getAllServiceDiscoveriesMD5").
 		Returns(200, "OK", "").
 		Returns(404, "NotFound", nil))
+
+	ws.Filter(swancontext.Instance().ApiServer.Proxy())
 
 	container.Add(ws)
 }

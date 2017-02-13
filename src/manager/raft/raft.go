@@ -485,6 +485,15 @@ func (n *Node) AddMember(ctx context.Context, swanNode api.Node) error {
 	return n.configure(ctx, cc)
 }
 
+func (n *Node) RemoveMember(ctx context.Context, raftID uint64) error {
+	cc := raftpb.ConfChange{
+		Type:   raftpb.ConfChangeRemoveNode,
+		NodeID: raftID,
+	}
+
+	return n.configure(ctx, cc)
+}
+
 func (n *Node) configure(ctx context.Context, cc raftpb.ConfChange) error {
 	cc.ID = n.reqIDGen.Next()
 

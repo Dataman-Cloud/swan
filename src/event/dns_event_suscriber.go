@@ -46,6 +46,12 @@ func (subscriber *DNSSubscriber) AddAcceptor(acceptor types.ResolverAcceptor) {
 	subscriber.acceptorLock.Unlock()
 }
 
+func (subscriber *DNSSubscriber) RemoveAcceptor(ID string) {
+	subscriber.acceptorLock.Lock()
+	delete(subscriber.acceptors, ID)
+	subscriber.acceptorLock.Unlock()
+}
+
 func (subscriber *DNSSubscriber) Write(e *Event) error {
 	rgEvent, err := BuildResolverEvent(e)
 	if err != nil {
