@@ -69,6 +69,7 @@ func (agent *Agent) Start(ctx context.Context) error {
 	rgEvent.Type = "a"
 	rgEvent.Ip = swancontext.Instance().Config.Janitor.AdvertiseIP
 	rgEvent.DomainPrefix = ""
+	rgEvent.IsProxy = true
 	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
 
 	for {

@@ -86,6 +86,8 @@ func (subscriber *DNSSubscriber) pushResloverEvent(event *nameserver.RecordGener
 	for _, acceptor := range subscriber.acceptors {
 		if err := SendEventByHttp(acceptor.RemoteAddr, "POST", data); err != nil {
 			logrus.Infof("send reslover event by http to %s got error: %s", acceptor.RemoteAddr, err.Error())
+		} else {
+			logrus.Debugf("send reslover event by http to %s success", acceptor.RemoteAddr)
 		}
 	}
 	subscriber.acceptorLock.RUnlock()

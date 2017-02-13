@@ -92,9 +92,15 @@ func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error
 		resolverEvent.Change = "del"
 	}
 
-	resolverEvent.Type = "srv"
 	resolverEvent.Ip = payload.IP
-	resolverEvent.Port = fmt.Sprintf("%d", payload.Port)
+
+	if payload.Mode == "replicates" {
+		resolverEvent.Type = "srv"
+		resolverEvent.Port = fmt.Sprintf("%d", payload.Port)
+	} else {
+		resolverEvent.Type = "a"
+	}
+
 	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
 
 	return resolverEvent, nil

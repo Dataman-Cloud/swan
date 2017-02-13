@@ -33,8 +33,11 @@ func (bus *EventBus) Start(ctx context.Context) error {
 		case e := <-bus.EventChan:
 			for _, subscriber := range bus.Subscribers {
 				if subscriber.InterestIn(e) {
-					subscriber.Write(e)
-					logrus.Debugf("write event e %s to %s", e, subscriber)
+					if err := subscriber.Write(e); err != nil {
+						logrus.Debugf("write event e %s to %s got error: %s", e, subscriber, err)
+					} else {
+						logrus.Debugf("write event e %s to %s", e, subscriber)
+					}
 				} else {
 					logrus.Debugf("subscriber %s have no interest in %s", subscriber, e)
 				}

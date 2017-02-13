@@ -26,11 +26,48 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/Dataman-Cloud/swan-resolver",
+			"importpath": "github.com/Dataman-Cloud/swan-resolver/nameserver",
 			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
 			"vcs": "git",
-			"revision": "65e3965e0f1c4c6b3c4fd7949bbd157d88a7b987",
+			"revision": "a589c305767b6b24a5dd8b37c5b77d03982b8ce3",
 			"branch": "master",
+			"path": "/nameserver",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/Dataman-Cloud/swan-resolver/vendor/github.com/BurntSushi/toml",
+			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
+			"vcs": "git",
+			"revision": "a589c305767b6b24a5dd8b37c5b77d03982b8ce3",
+			"branch": "master",
+			"path": "vendor/github.com/BurntSushi/toml",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/Dataman-Cloud/swan-resolver/vendor/github.com/urfave/cli",
+			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
+			"vcs": "git",
+			"revision": "a589c305767b6b24a5dd8b37c5b77d03982b8ce3",
+			"branch": "master",
+			"path": "vendor/github.com/urfave/cli",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/Dataman-Cloud/swan-resolver/vendor/gopkg.in/urfave/cli.v1",
+			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
+			"vcs": "git",
+			"revision": "a589c305767b6b24a5dd8b37c5b77d03982b8ce3",
+			"branch": "master",
+			"path": "vendor/gopkg.in/urfave/cli.v1",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/Dataman-Cloud/swan-resolver/vendor/gopkg.in/yaml.v2",
+			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
+			"vcs": "git",
+			"revision": "a589c305767b6b24a5dd8b37c5b77d03982b8ce3",
+			"branch": "master",
+			"path": "vendor/gopkg.in/yaml.v2",
 			"notests": true
 		},
 		{

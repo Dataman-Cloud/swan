@@ -1,14 +1,25 @@
 package nameserver
 
 import (
-	"golang.org/x/net/context"
-
 	"github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
+
+// RecordGenerator contains DNS records and methods to access and manipulate
+// them. TODO(kozyraki): Refactor when discovery id is available.
+type RecordGenerator struct {
+	Domain                    string
+	As                        rrs
+	SRVs                      rrs
+	ProxiesAs                 rrs
+	SlaveIPs                  map[string]string
+	RecordGeneratorChangeChan chan *RecordGeneratorChangeEvent
+}
 
 type rrs map[string][]string
 
 func (r rrs) del(name string, host string) bool {
+	logrus.Debugf("del new record for %s %s ", name, host)
 	if host != "" {
 		// remove one host in target r[name]
 		hosts, ok := r[name]
@@ -21,10 +32,10 @@ func (r rrs) del(name string, host string) bool {
 					index = i
 					break
 				}
-
 			}
 			if index > -1 {
 				hosts = append(hosts[:index], hosts[index+1:]...)
+				r[name] = hosts
 			}
 			return true
 		}
@@ -70,39 +81,36 @@ func (rg *RecordGenerator) WatchEvent(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case e := <-rg.RecordGeneratorChangeChan:
-			if e.Change == "add" {
+			if !e.IsProxy && e.Change == "add" {
 				aDomain := e.DomainPrefix + "." + rg.Domain + "."
 				if e.Type == "srv" {
-					rg.SRVAs.add(aDomain, e.Ip)
+					rg.As.add(aDomain, e.Ip)
 					rg.SRVs.add(aDomain, aDomain+":"+e.Port)
 				}
 				if e.Type == "a" {
-					//for proxy rr
 					rg.As.add(aDomain, e.Ip)
 				}
 			}
 
-			if e.Change == "del" {
+			if !e.IsProxy && e.Change == "del" {
 				aDomain := e.DomainPrefix + "." + rg.Domain + "."
 				if e.Type == "srv" {
-					rg.SRVAs.del(aDomain, "")
+					rg.As.del(aDomain, "")
 					rg.SRVs.del(aDomain, "")
 				}
+
 				if e.Type == "a" {
 					rg.As.del(aDomain, e.Ip)
 				}
 			}
+
+			if e.IsProxy && e.Change == "del" {
+				rg.ProxiesAs.del(rg.Domain+".", e.Ip)
+			}
+
+			if e.IsProxy && e.Change == "add" {
+				rg.ProxiesAs.add(rg.Domain+".", e.Ip)
+			}
 		}
 	}
-}
-
-// RecordGenerator contains DNS records and methods to access and manipulate
-// them. TODO(kozyraki): Refactor when discovery id is available.
-type RecordGenerator struct {
-	Domain                    string
-	As                        rrs
-	SRVAs                     rrs //a rrs for srv type
-	SRVs                      rrs
-	SlaveIPs                  map[string]string
-	RecordGeneratorChangeChan chan *RecordGeneratorChangeEvent
 }

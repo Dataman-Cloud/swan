@@ -10,6 +10,7 @@ type TaskInfoEvent struct {
 	Healthy   bool   `json:"healthy"`
 	ClusterID string `json:"clusterID"`
 	RunAs     string `json:"runAs"`
+	Mode      string `json:"mode"`
 }
 
 type AppInfoEvent struct {
@@ -18,4 +19,5 @@ type AppInfoEvent struct {
 	State     string `json:"state"`
 	ClusterID string `json:"clusterID"`
 	RunAs     string `json:"runAs"`
+	Mode      string `json:"mode"`
 }
