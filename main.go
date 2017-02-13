@@ -38,64 +38,71 @@ func main() {
 			Name:   "listen-addr",
 			Usage:  "listener address for agent",
 			EnvVar: "SWAN_LISTEN_ADDR",
+			Value:  "0.0.0.0:9999",
 		},
 		cli.StringFlag{
 			Name:   "advertise-addr",
 			Usage:  "advertise address for agent",
 			EnvVar: "SWAN_ADVERTISE_ADDR",
+			Value:  "0.0.0.0:9999",
 		},
 		cli.StringFlag{
 			Name:   "raft-listen-addr",
 			Usage:  "swan raft serverlistener address",
 			EnvVar: "SWAN_RAFT_LISTEN_ADDR",
+			Value:  "0.0.0.0:2111",
 		},
 		cli.StringFlag{
 			Name:   "raft-advertise-addr",
 			Usage:  "swan raft advertise address",
 			EnvVar: "SWAN_RAFT_ADVERTISE_ADDR",
+			Value:  "0.0.0.0:2111",
 		},
 		cli.StringFlag{
 			Name:   "join-addrs",
 			Usage:  "the addrs new node join to. Splited by ','",
 			EnvVar: "SWAN_JOIN_ADDRS",
+			Value:  "0.0.0.0:9999",
 		},
 		cli.StringFlag{
 			Name:   "janitor-advertise-ip",
 			Usage:  "janitor proxy advertise ip",
 			EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
+			Value:  "0.0.0.0:80",
 		},
 
 		cli.StringFlag{
 			Name:   "zk-path",
 			Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
 			EnvVar: "SWAN_MESOS_ZKPATH",
+			Value:  "localhost:2181/mesos",
 		},
 		cli.StringFlag{
 			Name:   "log-level,l",
 			Usage:  "customize debug level [debug|info|error]",
 			EnvVar: "SWAN_LOG_LEVEL",
+			Value:  "info",
 		},
 		cli.StringFlag{
 			Name:   "mode",
 			Usage:  "server mode, manager|agent|mixed ",
 			EnvVar: "SWAN_MODE",
+			Value:  "mixed",
 		},
 		cli.StringFlag{
 			Name:   "data-dir,d",
 			Usage:  "swan data store dir",
 			EnvVar: "SWAN_DATA_DIR",
+			Value:  "./data",
 		},
 		cli.StringFlag{
 			Name:   "domain",
 			Usage:  "domain which resolve to proxies. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.swan.com",
 			EnvVar: "SWAN_DOMAIN",
+			Value:  "swan.com",
 		},
 	}
 	app.Action = func(c *cli.Context) error {
-		if c.NumFlags() == 0 {
-			return cli.ShowAppHelp(c)
-		}
-
 		config, err := config.NewConfig(c)
 		if err != nil {
 			logrus.Errorf("load config failed. Error: %s", err)
