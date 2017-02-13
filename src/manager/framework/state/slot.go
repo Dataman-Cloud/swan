@@ -435,10 +435,10 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 
 	if slot.App.IsFixed() {
 		payload.IP = slot.Ip
-		//payload.Mode = string(APP_MODE_FIXED)
+		payload.Mode = string(APP_MODE_FIXED)
 	} else {
 		payload.IP = slot.AgentHostName
-		//payload.Mode = string(APP_MODE_REPLICATES)
+		payload.Mode = string(APP_MODE_REPLICATES)
 		if len(slot.CurrentTask.HostPorts) > 0 {
 			payload.Port = uint32(slot.CurrentTask.HostPorts[0])
 			payload.PortName = slot.Version.Container.Docker.PortMappings[0].Name

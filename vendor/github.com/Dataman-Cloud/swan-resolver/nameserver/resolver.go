@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -27,20 +28,20 @@ func NewResolver(config *Config) *Resolver {
 	rr.Domain = res.config.Domain
 	rr.As = make(map[string][]string)
 	rr.SRVs = make(map[string][]string)
-	rr.SRVAs = make(map[string][]string)
+	rr.ProxiesAs = make(map[string][]string)
 
-	res.rs = &rr
+	res.rg = &rr
 	res.defaultFwd = NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
 
 	go func() {
-		res.rs.WatchEvent(context.Background())
+		res.rg.WatchEvent(context.Background())
 	}()
 
 	return res
 }
 
 func (res *Resolver) RecordGeneratorChangeChan() chan *RecordGeneratorChangeEvent {
-	return res.rs.RecordGeneratorChangeChan
+	return res.rg.RecordGeneratorChangeChan
 }
 
 func (res *Resolver) Start(ctx context.Context) error {
@@ -48,7 +49,7 @@ func (res *Resolver) Start(ctx context.Context) error {
 }
 
 func (res *Resolver) Run(ctx context.Context) <-chan error {
-	dns.HandleFunc(res.config.Domain+".", res.HandleSwan)
+	dns.HandleFunc(res.rg.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
 	startedCh, errCh := res.Serve()
@@ -70,7 +71,7 @@ func (res *Resolver) Run(ctx context.Context) <-chan error {
 type Resolver struct {
 	config *Config
 
-	rs         *RecordGenerator
+	rg         *RecordGenerator
 	defaultFwd Forwarder
 	stopC      chan struct{}
 	startedC   chan struct{}
@@ -94,21 +95,15 @@ func (res *Resolver) HandleSwan(w dns.ResponseWriter, r *dns.Msg) {
 		errs.Add(res.handleSRV(rs, name, m, r))
 	case dns.TypeA:
 		errs.Add(res.handleA(rs, name, m))
-	case dns.TypeSOA:
-		errs.Add(res.handleSOA(m, r))
-	case dns.TypeNS:
-		errs.Add(res.handleNS(m, r))
 	case dns.TypeANY:
 		errs.Add(
 			res.handleSRV(rs, name, m, r),
 			res.handleA(rs, name, m),
-			res.handleSOA(m, r),
-			res.handleNS(m, r),
 		)
 	}
 
 	if len(m.Answer) == 0 {
-		errs.Add(res.handleEmpty(rs, name, m, r))
+		errs.Add(errors.New("no record found"))
 	}
 
 	if !errs.Nil() {
@@ -119,7 +114,7 @@ func (res *Resolver) HandleSwan(w dns.ResponseWriter, r *dns.Msg) {
 }
 
 func (res *Resolver) records() *RecordGenerator {
-	return res.rs
+	return res.rg
 }
 
 func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) error {
@@ -145,7 +140,7 @@ func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) 
 				continue
 			}
 
-			hosts, ok := rs.SRVAs[name]
+			hosts, ok := rs.As[name]
 			if !ok {
 				errs.Add(errors.New(fmt.Sprintf("%s is not found in rrs", name)))
 				continue
@@ -171,68 +166,47 @@ func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) 
 
 func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error {
 	var errs multiError
-	// dig name to proxy ip
-	fmt.Println("xxxxxxxxxxxxxxx")
-	fmt.Println(rs.As)
-	fmt.Println(name)
-	for k, hosts := range rs.As {
-		ok := strings.HasSuffix(name, k)
-		if ok {
-			for _, host := range hosts {
-				rr, err := res.formatA(name, host)
-				if err != nil {
-					errs.Add(err)
-					continue
-				}
-				m.Answer = append(m.Answer, rr)
+	var records = make([]string, 0)
+	var isDigit = regexp.MustCompile("\\d+")
+	tokens := strings.Split(strings.TrimRight(name, res.rg.Domain), ".")
+	// 0.nginx.xcm.foobar  -  .swan.com
+	if len(tokens) == 4 && isDigit.MatchString(tokens[0]) {
+		for k, hosts := range rs.As {
+			if name == k {
+				records = append(records, hosts...)
 			}
-		} else {
-			continue
+		}
+	} else if len(tokens) == 3 { // nginx.xcm.foobar  -  .swan.com
+		for k, hosts := range rs.As {
+			if sliceEqual(strings.Split(strings.TrimRight(k, res.rg.Domain), ".")[1:], tokens) {
+				records = append(records, hosts...)
+			}
+		}
+	} else { // wildcard match  eg. foobar.swan.com or  x.foobar.swan.com
+		for k, hosts := range rs.ProxiesAs {
+			ok := strings.HasSuffix(k, res.rg.Domain+".")
+			if ok {
+				records = append(records, hosts...)
+			}
 		}
 	}
+
+	recordsAdded := make([]string, 0)
+	for _, host := range records {
+		if stringInSlice(host, recordsAdded) { // make sure no duplicated record added to A
+			continue
+		}
+		recordsAdded = append(recordsAdded, host)
+
+		rr, err := res.formatA(name, host)
+		if err != nil {
+			errs.Add(err)
+		} else {
+			m.Answer = append(m.Answer, rr)
+		}
+	}
+
 	return errs
-}
-
-func (res *Resolver) handleSOA(m, r *dns.Msg) error {
-	m.Ns = append(m.Ns, res.formatSOA(r.Question[0].Name))
-	return nil
-}
-
-func (res *Resolver) handleNS(m, r *dns.Msg) error {
-	m.Ns = append(m.Ns, res.formatNS(r.Question[0].Name))
-	return nil
-}
-
-func (res *Resolver) handleEmpty(rs *RecordGenerator, name string, m, r *dns.Msg) error {
-	qType := r.Question[0].Qtype
-	switch qType {
-	case dns.TypeSOA, dns.TypeNS, dns.TypeSRV:
-		return nil
-	}
-
-	m.Rcode = dns.RcodeNameError
-
-	// Because we don't implement AAAA records, AAAA queries will always
-	// go via this path
-	// Unfortunately, we don't implement AAAA queries in Swan-DNS,
-	// and although the 'Not Implemented' error code seems more suitable,
-	// RFCs do not recommend it: https://tools.ietf.org/html/rfc4074
-	// Therefore we always return success, which is synonymous with NODATA
-	// to get a positive cache on no records AAAA
-	// Further information:
-	// PR: https://github.com/mesosphere/mesos-dns/pull/366
-	// Issue: https://github.com/mesosphere/mesos-dns/issues/363
-
-	// The second component is just a matter of returning NODATA if we have
-	// SRV or A records for the given name, but no neccessarily the given query
-
-	if (qType == dns.TypeAAAA) || (len(rs.SRVs[name])+len(rs.As[name]) > 0) {
-		m.Rcode = dns.RcodeSuccess
-	}
-
-	m.Ns = append(m.Ns, res.formatSOA(r.Question[0].Name))
-
-	return nil
 }
 
 func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.Msg) {
@@ -252,7 +226,6 @@ func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.
 func reply(w dns.ResponseWriter, m *dns.Msg) {
 	//m.Compress = true // https://github.com/mesosphere/mesos-dns/issues/{170,173,174}
 
-	//if err := w.WriteMsg(truncate(m, isUDP(w))); err != nil {
 	if err := w.WriteMsg(m); err != nil {
 		logrus.Errorf("%s", err)
 	}
@@ -395,20 +368,6 @@ func (res *Resolver) formatSOA(dom string) *dns.SOA {
 	}
 }
 
-func (res *Resolver) formatNS(dom string) *dns.NS {
-	ttl := uint32(res.config.TTL)
-
-	return &dns.NS{
-		Hdr: dns.RR_Header{
-			Name:   dom,
-			Rrtype: dns.TypeNS,
-			Class:  dns.ClassINET,
-			Ttl:    ttl,
-		},
-		Ns: res.config.SOAMname,
-	}
-}
-
 func rcode(err error) int {
 	switch err.(type) {
 	case *ForwardError:
@@ -418,42 +377,20 @@ func rcode(err error) int {
 	}
 }
 
-func truncate(m *dns.Msg, udp bool) *dns.Msg {
-	max := dns.MinMsgSize
-	if !udp {
-		max = dns.MaxMsgSize
-	} else if opt := m.IsEdns0(); opt != nil {
-		max = int(opt.UDPSize())
-	}
-
-	furtherTruncation := m.Len() > max
-	m.Truncated = m.Truncated || furtherTruncation
-
-	if !furtherTruncation {
-		return m
-	}
-
-	m.Extra = nil // Drop all extra records first
-	if m.Len() < max {
-		return m
-	}
-	answers := m.Answer[:]
-	left, right := 0, len(m.Answer)
-	for {
-		if left == right {
-			break
-		}
-		mid := (left + right) / 2
-		m.Answer = answers[:mid]
-		if m.Len() < max {
-			left = mid + 1
-			continue
-		}
-		right = mid
-	}
-	return m
-}
-
 func isUDP(w dns.ResponseWriter) bool {
 	return strings.HasPrefix(w.RemoteAddr().Network(), "udp")
+}
+
+func sliceEqual(a []string, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+
+	for i, _ := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+
+	return true
 }

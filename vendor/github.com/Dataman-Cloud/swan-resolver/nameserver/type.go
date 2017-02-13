@@ -6,4 +6,5 @@ type RecordGeneratorChangeEvent struct {
 	Ip           string
 	Port         string
 	Type         string // "a" or "srv"
+	IsProxy      bool   // if record  reserved for proxy
 }

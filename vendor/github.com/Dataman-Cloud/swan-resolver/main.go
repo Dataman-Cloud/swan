@@ -2,9 +2,7 @@ package main
 
 import (
 	"fmt"
-	"math/rand"
 	"os"
-	"time"
 
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 
@@ -21,7 +19,7 @@ func ServerCommand() cli.Command {
 		Flags: []cli.Flag{
 			cli.StringFlag{
 				Name:  "domain",
-				Value: "swan",
+				Value: "swan.com",
 				Usage: "default doamin prefix",
 			},
 
@@ -48,39 +46,69 @@ func ServerCommand() cli.Command {
 
 			resolver := nameserver.NewResolver(nameserver.NewConfig(c))
 			go func() {
-				i := 0
-				for {
-					e := nameserver.RecordGeneratorChangeEvent{
-						Change:       "add",
-						Type:         aOrSrv(),
-						Ip:           "192.168.1.1",
-						Port:         "1234",
-						DomainPrefix: domainGen(i),
-					}
-					fmt.Println(e)
-					resolver.RecordGeneratorChangeChan() <- &e
-					time.Sleep(time.Second * 8)
-					i += 1
+				a := nameserver.RecordGeneratorChangeEvent{
+					Change:       "add",
+					Type:         "a",
+					Ip:           "192.168.1.1",
+					DomainPrefix: "0.mysql.xcm.cluster",
 				}
+				resolver.RecordGeneratorChangeChan() <- &a
+
+				a1 := nameserver.RecordGeneratorChangeEvent{
+					Change:       "add",
+					Type:         "a",
+					Ip:           "192.168.1.2",
+					DomainPrefix: "1.mysql.xcm.cluster",
+				}
+				resolver.RecordGeneratorChangeChan() <- &a1
+
+				srv := nameserver.RecordGeneratorChangeEvent{
+					Change:       "add",
+					Type:         "srv",
+					Ip:           "192.168.1.3",
+					Port:         "1234",
+					DomainPrefix: "0.nginx.xcm.cluster",
+				}
+				resolver.RecordGeneratorChangeChan() <- &srv
+
+				srv1 := nameserver.RecordGeneratorChangeEvent{
+					Change:       "add",
+					Type:         "srv",
+					Ip:           "192.168.1.4",
+					Port:         "1235",
+					DomainPrefix: "1.nginx.xcm.cluster",
+				}
+				resolver.RecordGeneratorChangeChan() <- &srv1
+
+				proxy1 := nameserver.RecordGeneratorChangeEvent{
+					Change:  "add",
+					Type:    "a",
+					Ip:      "192.168.1.5",
+					IsProxy: true,
+				}
+				resolver.RecordGeneratorChangeChan() <- &proxy1
+
+				proxy2 := nameserver.RecordGeneratorChangeEvent{
+					Change:  "add",
+					Type:    "a",
+					Ip:      "192.168.1.6",
+					IsProxy: true,
+				}
+				resolver.RecordGeneratorChangeChan() <- &proxy2
+
+				da1 := nameserver.RecordGeneratorChangeEvent{
+					Change:       "del",
+					Type:         "a",
+					Ip:           "192.168.1.2",
+					DomainPrefix: "1.mysql.xcm.cluster",
+				}
+				resolver.RecordGeneratorChangeChan() <- &da1
 			}()
 			resolver.Start(context.Background())
 
 			return nil
 		},
 	}
-}
-
-func aOrSrv() string {
-	rand.Seed(time.Now().UnixNano())
-	if rand.Intn(1024)%2 == 0 {
-		return "a"
-	} else {
-		return "srv"
-	}
-}
-
-func domainGen(i int) string {
-	return fmt.Sprintf("task%d.appname.username", i)
 }
 
 func main() {
