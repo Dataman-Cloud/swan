@@ -268,6 +268,10 @@ func (manager *Manager) LoadNodeData() error {
 }
 
 func (manager *Manager) AddNode(node types.Node) error {
+	if err := manager.LeaderConfirm(); err != nil {
+		return err
+	}
+
 	if err := manager.presistNodeData(node); err != nil {
 		return err
 	}
@@ -303,6 +307,10 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 }
 
 func (manager *Manager) RemoveNode(node types.Node) error {
+	if err := manager.LeaderConfirm(); err != nil {
+		return err
+	}
+
 	if node.IsAgent() {
 		manager.RemoveAgentAcceptor(node.ID)
 	}
@@ -430,7 +438,6 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
 			logrus.Errorf("send resolver init data got error: %s", err.Error())
 		}
-
 	} else {
 		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
 	}
@@ -443,4 +450,12 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 	} else {
 		logrus.Errorf("marshal janitor init data got error: %s", err.Error())
 	}
+}
+
+func (manager *Manager) LeaderConfirm() error {
+	if manager.raftNode.IsLeader() {
+		return nil
+	}
+
+	return errors.New("current node is not the leader node")
 }
