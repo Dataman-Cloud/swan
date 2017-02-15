@@ -278,7 +278,9 @@ func (manager *Manager) AddNode(node types.Node) error {
 		go manager.SendAgentInitData(node)
 	}
 
-	if node.IsManager() {
+	// the first mixed node, node contains agent and leader, the leader node
+	// can't add itself to raft-cluster, beacuse of it already in cluster
+	if node.IsManager() && node.RaftID != manager.raftID {
 		if err := manager.AddRaftNode(node); err != nil {
 			return err
 		}
@@ -430,7 +432,6 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
 			logrus.Errorf("send resolver init data got error: %s", err.Error())
 		}
-
 	} else {
 		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
 	}
