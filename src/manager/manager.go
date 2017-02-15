@@ -268,10 +268,6 @@ func (manager *Manager) LoadNodeData() error {
 }
 
 func (manager *Manager) AddNode(node types.Node) error {
-	if err := manager.LeaderConfirm(); err != nil {
-		return err
-	}
-
 	if err := manager.presistNodeData(node); err != nil {
 		return err
 	}
@@ -282,7 +278,9 @@ func (manager *Manager) AddNode(node types.Node) error {
 		go manager.SendAgentInitData(node)
 	}
 
-	if node.IsManager() {
+	// the first mixed node, node contains agent and leader, the leader node
+	// can't add itself to raft-cluster, beacuse of it already in cluster
+	if node.IsManager() && node.RaftID != manager.raftID {
 		if err := manager.AddRaftNode(node); err != nil {
 			return err
 		}
@@ -307,10 +305,6 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 }
 
 func (manager *Manager) RemoveNode(node types.Node) error {
-	if err := manager.LeaderConfirm(); err != nil {
-		return err
-	}
-
 	if node.IsAgent() {
 		manager.RemoveAgentAcceptor(node.ID)
 	}
@@ -450,12 +444,4 @@ func (manager *Manager) SendAgentInitData(agent types.Node) {
 	} else {
 		logrus.Errorf("marshal janitor init data got error: %s", err.Error())
 	}
-}
-
-func (manager *Manager) LeaderConfirm() error {
-	if manager.raftNode.IsLeader() {
-		return nil
-	}
-
-	return errors.New("current node is not the leader node")
 }

@@ -154,7 +154,14 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 
 func (apiServer *ApiServer) Proxy() restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		if apiServer.leaderAddr == apiServer.addr || apiServer.leaderAddr == "" {
+		// NOTICE: this function is use for proxy the follower's request to leader, so if the leader is
+		// losted or have not been produced return error
+		if apiServer.leaderAddr == "" {
+			http.Error(resp, "leader state has been losted", http.StatusInternalServerError)
+			return
+		}
+
+		if apiServer.leaderAddr == apiServer.addr {
 			chain.ProcessFilter(req, resp)
 			return
 		}

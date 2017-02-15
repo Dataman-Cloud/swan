@@ -50,7 +50,7 @@ func main() {
 			Name:   "raft-listen-addr",
 			Usage:  "swan raft serverlistener address",
 			EnvVar: "SWAN_RAFT_LISTEN_ADDR",
-			Value:  "0.0.0.0:2111",
+			Value:  "http://0.0.0.0:2111",
 		},
 		cli.StringFlag{
 			Name:   "raft-advertise-addr",
