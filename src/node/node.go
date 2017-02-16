@@ -38,12 +38,23 @@ type Node struct {
 	joinRetryInterval time.Duration
 	RaftID            uint64
 	stopC             chan struct{}
+	WasJoin           bool
 }
 
 func NewNode(config config.SwanConfig) (*Node, error) {
-	nodeID, err := loadOrCreateNodeID(config)
+	nodeID, wasJoin, err := loadOrCreateNodeID(config)
 	if err != nil {
 		return nil, err
+	}
+
+	if wasJoin {
+		for _, joinAddr := range config.JoinAddrs {
+			if joinAddr == config.AdvertiseAddr {
+				wasJoin = false
+				break
+			}
+		}
+
 	}
 
 	// init swanconfig instance
@@ -58,6 +69,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		ID:                nodeID,
 		joinRetryInterval: time.Second * JoinRetryInterval,
 		stopC:             make(chan struct{}, 1),
+		WasJoin:           wasJoin,
 	}
 
 	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
@@ -101,7 +113,9 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 	return node, nil
 }
 
-func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
+// NOTICE: if the node ID file was found. It prove this node ever running,
+// so the config and cluster info was recorded, it didn't need to join again.
+func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, bool, error) {
 	nodeIDFile := swanConfig.DataDir + NodeIDFileName
 	if !fileutil.Exist(nodeIDFile) {
 		os.MkdirAll(swanConfig.DataDir, 0700)
@@ -109,29 +123,29 @@ func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, error) {
 		nodeID := uuid.NewV4().String()
 		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return "", err
+			return "", true, err
 		}
 
 		if _, err = idFile.WriteString(nodeID); err != nil {
-			return "", err
+			return "", true, err
 		}
 
 		logrus.Infof("starting swan node, ID file was not found started with  new ID: %s", nodeID)
-		return nodeID, nil
+		return nodeID, true, nil
 
 	} else {
 		idFile, err := os.Open(nodeIDFile)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
 		nodeID, err := ioutil.ReadAll(idFile)
 		if err != nil {
-			return "", err
+			return "", false, err
 		}
 
 		logrus.Infof("starting swan node, ID file was found started with ID: %s", string(nodeID))
-		return string(nodeID), nil
+		return string(nodeID), false, nil
 	}
 }
 
@@ -157,15 +171,38 @@ func (n *Node) Start(ctx context.Context) error {
 
 	if swancontext.IsManager() {
 		go func() {
-			if swancontext.IsNewCluster() {
-				errChan <- n.runManager(ctx, n.RaftID, []types.Node{nodeInfo}, true)
-			} else {
+			// NOTICE: start a manager may be have following 2 condition
+			// 1. the ID file was not found and start as new node
+			// 2. the ID file was found and restart with old data
+			// under the first condition witn no old data there have 3 condition
+			// (1). the first node of cluster, and only start as manager, in this conditon
+			//		the join-addrs was nil
+			// (2). the first node of cluster, start with mixed mode, in this conditon the
+			//		join-addrs was nil but it must contains itself advertise-addr
+			// (3). not the first manager node of cluster, in this condition the join-addrs
+			//      was not nil and can't contains itselft advertise-addr
+			if n.WasJoin {
 				existedNodes, err := n.JoinAsManager(nodeInfo)
 				if err != nil {
 					errChan <- err
 				}
 
 				errChan <- n.runManager(ctx, n.RaftID, existedNodes, false)
+			} else {
+
+				var managers []types.Node
+				nodes := n.manager.GetNodes()
+				if len(nodes) == 0 {
+					managers = append(managers, nodeInfo)
+				} else {
+					for _, node := range nodes {
+						if node.IsManager() {
+							managers = append(managers, node)
+						}
+					}
+				}
+
+				errChan <- n.runManager(ctx, n.RaftID, managers, true)
 			}
 		}()
 	}
