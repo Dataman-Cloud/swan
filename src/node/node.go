@@ -214,8 +214,13 @@ func (n *Node) runManager(ctx context.Context, raftID uint64, peers []types.Node
 
 // node stop
 func (n *Node) Stop() {
-	n.agent.Stop()
-	n.manager.Stop()
+	if swancontext.IsAgent() {
+		n.agent.Stop()
+	}
+
+	if swancontext.IsManager() {
+		n.manager.Stop()
+	}
 }
 
 func (n *Node) JoinAsAgent(nodeInfo types.Node) error {
