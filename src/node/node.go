@@ -26,7 +26,8 @@ import (
 )
 
 const (
-	NodeIDFileName = "/ID"
+	NodeIDFileName    = "/ID"
+	JoinRetryInterval = 5
 )
 
 type Node struct {
@@ -55,7 +56,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 
 	node := &Node{
 		ID:                nodeID,
-		joinRetryInterval: time.Second * 5,
+		joinRetryInterval: time.Second * JoinRetryInterval,
 		stopC:             make(chan struct{}, 1),
 	}
 
@@ -227,7 +228,7 @@ func (n *Node) JoinAsAgent(nodeInfo types.Node) error {
 		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
 		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
-			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+			logrus.Infof("register to %s got error: %s, try again after %d seconds", registerAddr, err.Error(), JoinRetryInterval)
 		}
 
 		if err == nil {
