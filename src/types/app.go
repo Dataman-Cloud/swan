@@ -84,10 +84,11 @@ type TaskHistory struct {
 	Mem  float64 `json:"mem,omitempty"`
 	Disk float64 `json:"disk,omitempty"`
 
-	State  string `json:"state,omitempty"`
-	Reason string `json:"reason,omitempty"`
-	Stdout string `json:"stdout,omitempty"`
-	Stderr string `json:"stderr,omitempty"`
+	State   string `json:"state,omitempty"`
+	Reason  string `json:"reason,omitempty"`
+	Message string `json:"message, omitempty"`
+	Stdout  string `json:"stdout,omitempty"`
+	Stderr  string `json:"stderr,omitempty"`
 }
 
 type Stats struct {
