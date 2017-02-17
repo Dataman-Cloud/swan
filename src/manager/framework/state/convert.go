@@ -386,6 +386,7 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 		Ip:            task.Ip,
 		AgentHostName: task.AgentHostName,
 		Reason:        task.Reason,
+		Message:       task.Message,
 		CreatedAt:     task.Created.UnixNano(),
 	}
 }
@@ -402,6 +403,7 @@ func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 		Ip:            raftTask.Ip,
 		AgentHostName: raftTask.AgentHostName,
 		Reason:        raftTask.Reason,
+		Message:       raftTask.Message,
 		Created:       time.Unix(0, raftTask.CreatedAt),
 	}
 

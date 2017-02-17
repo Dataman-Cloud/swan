@@ -137,7 +137,8 @@ message Task {
     string ip = 11;
     string agentHostName = 12;
     string reason = 13;
-    int64 createdAt = 14;
+    string message = 14;
+    int64 createdAt = 15;
 }
 
 message OfferAllocatorItem {
