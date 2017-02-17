@@ -8,7 +8,7 @@
   "runAs": "xcm",
   "priority": 100,
   "instances": 3,
-  "constraints": "OR(CONTAINS hostname \"192.168.1.165\") (LIKE hostname \"192.168.1.175\")",
+  "constraints": "unique hostname",
   "container": {
     "docker": {
       "image": "wordpress",

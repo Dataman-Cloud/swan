@@ -135,6 +135,28 @@ func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId string) (stri
 	return key, nil
 }
 
+func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
+	slots := make([]string, 0)
+	for slotID, info := range allocator.AllocatedOffer {
+		if info.AgentID == agentID {
+			slots = append(slots, slotID)
+		}
+	}
+
+	return slots
+}
+
+func (allocator *OfferAllocator) SlotsByHostname(hostname string) []string {
+	slots := make([]string, 0)
+	for slotID, info := range allocator.AllocatedOffer {
+		if info.Hostname == hostname {
+			slots = append(slots, slotID)
+		}
+	}
+
+	return slots
+}
+
 func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 	allocator.RemoveSlotFromPendingOfferQueue(slot)
 	allocator.RemoveOfferSlotMapBySlot(slot)

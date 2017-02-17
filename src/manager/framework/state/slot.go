@@ -199,7 +199,7 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 			return false
 		}
 
-		evalStatement.SetContext(&ConstraintContextHolder{
+		evalStatement.SetContext(&ConstraintParamHolder{
 			Slot:  slot,
 			Offer: ow.Offer,
 		})

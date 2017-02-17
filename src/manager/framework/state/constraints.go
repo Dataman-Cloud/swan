@@ -20,7 +20,7 @@ var likeWhat = []string{
 	"agentid",
 }
 
-type ConstraintContextHolder struct {
+type ConstraintParamHolder struct {
 	Slot  *Slot
 	Offer *mesos.Offer
 }
@@ -28,7 +28,7 @@ type ConstraintContextHolder struct {
 type Statement interface {
 	Eval() bool
 	Valid() error
-	SetContext(ctx *ConstraintContextHolder)
+	SetContext(ctx *ConstraintParamHolder)
 }
 
 // not (unique hostname)
@@ -49,7 +49,7 @@ func (ns *NotStatement) Valid() error {
 	return nil
 }
 
-func (ns *NotStatement) SetContext(ctx *ConstraintContextHolder) {
+func (ns *NotStatement) SetContext(ctx *ConstraintParamHolder) {
 	ns.Op1.SetContext(ctx)
 }
 
@@ -78,14 +78,14 @@ func (as *AndStatement) Valid() error {
 	return nil
 }
 
-func (as *AndStatement) SetContext(ctx *ConstraintContextHolder) {
+func (as *AndStatement) SetContext(ctx *ConstraintParamHolder) {
 	as.Op1.SetContext(ctx)
 	as.Op2.SetContext(ctx)
 }
 
 // or (like ip foobar) (unique hostname)
 type OrStatement struct {
-	ConstraintContextHolder
+	ConstraintParamHolder
 	Op1 Statement
 	Op2 Statement
 }
@@ -108,23 +108,37 @@ func (os *OrStatement) Valid() error {
 	return nil
 }
 
-func (os *OrStatement) SetContext(ctx *ConstraintContextHolder) {
+func (os *OrStatement) SetContext(ctx *ConstraintParamHolder) {
 	os.Op1.SetContext(ctx)
 	os.Op2.SetContext(ctx)
 }
 
 // (unique hostname)
 type UniqueStatment struct {
-	ConstraintContextHolder
+	ConstraintParamHolder
 	What string
 }
 
 func (us *UniqueStatment) Eval() bool {
 	if us.What == "hostname" {
-		//return r.MatchString(ls.Offer.GetHostname())
+		slotsOnHost := OfferAllocatorInstance().SlotsByHostname(us.Offer.GetHostname())
+		for _, slotOnHost := range slotsOnHost { // slots belongs to same app on same host
+			if strings.SplitN(slotOnHost, "-", 2)[1] == strings.SplitN(us.Slot.ID, "-", 2)[1] {
+				return false
+			}
+		}
 	}
 
-	return false
+	if us.What == "agentid" {
+		slotsOnAgent := OfferAllocatorInstance().SlotsByAgentID(*us.Offer.GetAgentId().Value)
+		for _, slotOnAgent := range slotsOnAgent { // slots belongs to same app on same agentID
+			if strings.SplitN(slotOnAgent, "-", 2)[1] == strings.SplitN(us.Slot.ID, "-", 2)[1] {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func (us *UniqueStatment) Valid() error {
@@ -135,14 +149,14 @@ func (us *UniqueStatment) Valid() error {
 	}
 }
 
-func (us *UniqueStatment) SetContext(ctx *ConstraintContextHolder) {
+func (us *UniqueStatment) SetContext(ctx *ConstraintParamHolder) {
 	us.Offer = ctx.Offer
 	us.Slot = ctx.Slot
 }
 
 // like hostname foobar*
 type LikeStatement struct {
-	ConstraintContextHolder
+	ConstraintParamHolder
 	What  string
 	Regex string
 }
@@ -175,14 +189,14 @@ func (ls *LikeStatement) Valid() error {
 	}
 }
 
-func (ls *LikeStatement) SetContext(ctx *ConstraintContextHolder) {
+func (ls *LikeStatement) SetContext(ctx *ConstraintParamHolder) {
 	ls.Offer = ctx.Offer
 	ls.Slot = ctx.Slot
 }
 
 // contains hostname barfoo
 type ContainsStatement struct {
-	ConstraintContextHolder
+	ConstraintParamHolder
 	What  string
 	Regex string
 }
@@ -214,7 +228,7 @@ func (cs *ContainsStatement) Valid() error {
 	}
 }
 
-func (cs *ContainsStatement) SetContext(ctx *ConstraintContextHolder) {
+func (cs *ContainsStatement) SetContext(ctx *ConstraintParamHolder) {
 	cs.Offer = ctx.Offer
 	cs.Slot = ctx.Slot
 }
