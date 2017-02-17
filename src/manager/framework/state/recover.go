@@ -4,11 +4,9 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/golang/protobuf/proto"
 )
 
 // load app data frm persistent data
@@ -109,12 +107,12 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 	return slots, nil
 }
 
-func LoadOfferAllocatorMap() (map[string]*mesos.OfferID, error) {
-	m := make(map[string]*mesos.OfferID)
+func LoadOfferAllocatorMap() (map[string]*OfferInfo, error) {
+	m := make(map[string]*OfferInfo)
 	if list, err := persistentStore.ListOfferallocatorItems(); err == nil {
 		for _, item := range list {
-			slotId, offerId := OfferAllocatorItemFromRaft(item)
-			m[slotId] = &mesos.OfferID{Value: proto.String(offerId)}
+			slotId, offerInfo := OfferAllocatorItemFromRaft(item)
+			m[slotId] = offerInfo
 		}
 	} else {
 		return m, err

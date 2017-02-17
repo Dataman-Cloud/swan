@@ -145,4 +145,6 @@ message Task {
 message OfferAllocatorItem {
     string slotId = 1 [(gogoproto.customname) = "SlotID"];
     string offerId = 2 [(gogoproto.customname) = "OfferID"];
+    string hostname = 3 [(gogoproto.customname) = "Hostname"];
+    string agentId = 4 [(gogoproto.customname) = "AgentID"];
 }

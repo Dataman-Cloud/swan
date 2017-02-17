@@ -83,14 +83,13 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 			}
 		}
 
-		list, err := state.LoadOfferAllocatorMap()
+		res, err := state.LoadOfferAllocatorMap()
 		if err != nil {
 			return err
 		}
 
-		for k, v := range list {
-			state.OfferAllocatorInstance().BySlotId[k] = v
-		}
+		state.OfferAllocatorInstance().AllocatedOffer = res
+
 	}
 
 	go func() {
