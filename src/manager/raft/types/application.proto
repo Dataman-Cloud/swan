@@ -139,6 +139,7 @@ message Task {
     string reason = 13;
     string message = 14;
     int64 createdAt = 15;
+    int64 archivedAt = 16;
 }
 
 message OfferAllocatorItem {

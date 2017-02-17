@@ -40,6 +40,7 @@ type Task struct {
 	Source  string // mesos updateStatus field
 
 	Created     time.Time
+	ArchivedAt  time.Time
 	taskBuilder *TaskBuilder
 }
 
