@@ -14,11 +14,18 @@ import (
 var instance *OfferAllocator
 var once sync.Once
 
-type OfferAllocator struct {
-	PendingOfferSlots []*Slot
-	BySlotId          map[string]*mesos.OfferID // record allocated offers that map slot
+type OfferInfo struct {
+	OfferID  string
+	AgentID  string
+	Hostname string
+	AgentIP  string
+}
 
+type OfferAllocator struct {
+	PendingOfferSlots  []*Slot
 	pendingOfferRWLock sync.RWMutex
+
+	AllocatedOffer     map[string]*OfferInfo // we store every offer that are occupied by running slot
 	allocatedOfferLock sync.Mutex
 }
 
@@ -26,8 +33,9 @@ func OfferAllocatorInstance() *OfferAllocator {
 	once.Do(func() {
 		instance = &OfferAllocator{
 			PendingOfferSlots:  make([]*Slot, 0),
-			BySlotId:           make(map[string]*mesos.OfferID),
 			pendingOfferRWLock: sync.RWMutex{},
+
+			AllocatedOffer:     make(map[string]*OfferInfo),
 			allocatedOfferLock: sync.Mutex{},
 		}
 	})
@@ -74,24 +82,30 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots[:slotIndex], allocator.PendingOfferSlots[slotIndex+1:]...)
 }
 
-func (allocator *OfferAllocator) SetOfferSlotMap(offerID *mesos.OfferID, slot *Slot) {
+func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
-	allocator.BySlotId[slot.ID] = offerID
-	allocator.create(slot.ID, *offerID.Value)
+	info := &OfferInfo{
+		OfferID:  *offer.GetId().Value,
+		AgentID:  *offer.GetAgentId().Value,
+		Hostname: offer.GetHostname(),
+	}
+	allocator.AllocatedOffer[slot.ID] = info
+	allocator.create(slot.ID, info)
+
 	allocator.allocatedOfferLock.Unlock()
 }
 
 func (allocator *OfferAllocator) RemoveOfferSlotMapBySlot(slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
-	delete(allocator.BySlotId, slot.ID)
+	delete(allocator.AllocatedOffer, slot.ID)
 	allocator.allocatedOfferLock.Unlock()
 	allocator.remove(slot.ID)
 }
 
-func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId *mesos.OfferID) {
+func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId string) {
 	key := ""
-	for k, v := range allocator.BySlotId {
-		if v.Value == offerId.Value {
+	for k, v := range allocator.AllocatedOffer {
+		if v.OfferID == offerId {
 			key = k
 		}
 	}
@@ -102,14 +116,14 @@ func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId *mesos.Offe
 	}
 
 	allocator.allocatedOfferLock.Lock()
-	delete(allocator.BySlotId, key)
+	delete(allocator.AllocatedOffer, key)
 	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId *mesos.OfferID) (string, error) {
+func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId string) (string, error) {
 	key := ""
-	for k, v := range allocator.BySlotId {
-		if v.Value == offerId.Value {
+	for k, v := range allocator.AllocatedOffer {
+		if v.OfferID == offerId {
 			key = k
 		}
 	}
@@ -121,17 +135,43 @@ func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId *mesos.OfferI
 	return key, nil
 }
 
-func (allocator *OfferAllocator) RemoveSlot(slot *Slot) {
+func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
+	slots := make([]string, 0)
+	for slotID, info := range allocator.AllocatedOffer {
+		if info.AgentID == agentID {
+			slots = append(slots, slotID)
+		}
+	}
+
+	return slots
+}
+
+func (allocator *OfferAllocator) SlotsByHostname(hostname string) []string {
+	slots := make([]string, 0)
+	for slotID, info := range allocator.AllocatedOffer {
+		if info.Hostname == hostname {
+			slots = append(slots, slotID)
+		}
+	}
+
+	return slots
+}
+
+func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 	allocator.RemoveSlotFromPendingOfferQueue(slot)
 	allocator.RemoveOfferSlotMapBySlot(slot)
 }
 
-func (allocator *OfferAllocator) create(slotID, offerID string) {
-	logrus.Debugf("create offer allocator item %s => %s", slotID, offerID)
-	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{OfferID: offerID, SlotID: slotID}, nil)
+func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
+	logrus.Debugf("create offer allocator item %s => %s", slotID, offerInfo.OfferID)
+	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{
+		OfferID:  offerInfo.OfferID,
+		SlotID:   slotID,
+		AgentID:  offerInfo.AgentID,
+		Hostname: offerInfo.Hostname}, nil)
 }
 
-func (allocator *OfferAllocator) remove(slotId string) {
-	logrus.Debugf("remove offer allocator item  %s", slotId)
-	persistentStore.DeleteOfferAllocatorItem(context.TODO(), slotId, nil)
+func (allocator *OfferAllocator) remove(slotID string) {
+	logrus.Debugf("remove offer allocator item  %s", slotID)
+	persistentStore.DeleteOfferAllocatorItem(context.TODO(), slotID, nil)
 }

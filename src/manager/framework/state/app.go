@@ -383,7 +383,7 @@ func (app *App) CanBeCleanAfterDeletion() bool {
 
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
-		OfferAllocatorInstance().RemoveSlot(slot)
+		OfferAllocatorInstance().RemoveSlotFromAllocator(slot)
 
 		slot.Remove()
 
@@ -616,6 +616,19 @@ func validateAndFormatVersion(version *types.Version) error {
 					return errors.New("no value provided for health check with CMD ")
 				}
 			}
+		}
+	}
+
+	// validate constraints are all valid
+	if len(version.Constraints) > 0 {
+		evalStatement, err := ParseConstraint(strings.ToLower(version.Constraints))
+		if err != nil {
+			return err
+		}
+
+		err = evalStatement.Valid()
+		if err != nil {
+			return err
 		}
 	}
 

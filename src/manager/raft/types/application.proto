@@ -40,7 +40,7 @@ message Version {
     map<string,string> env = 12;
     KillPolicy killPolicy = 13;
     UpdatePolicy updatePolicy = 14;
-    repeated string constraints = 15;
+    string constraints = 15;
     repeated string uris = 16;
     repeated string ip = 17;
     string mode = 18;
@@ -145,4 +145,6 @@ message Task {
 message OfferAllocatorItem {
     string slotId = 1 [(gogoproto.customname) = "SlotID"];
     string offerId = 2 [(gogoproto.customname) = "OfferID"];
+    string hostname = 3 [(gogoproto.customname) = "Hostname"];
+    string agentId = 4 [(gogoproto.customname) = "AgentID"];
 }

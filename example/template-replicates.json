@@ -8,8 +8,7 @@
   "runAs": "xcm",
   "priority": 100,
   "instances": 3,
-  "constraints": [
-  ],
+  "constraints": "unique hostname",
   "container": {
     "docker": {
       "image": "wordpress",
