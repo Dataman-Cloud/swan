@@ -191,38 +191,24 @@ func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
-	if slot.Version.Constraints != nil && len(slot.Version.Constraints) > 0 {
-		constraints := slot.filterConstraints(slot.Version.Constraints)
-		for _, constraint := range constraints {
-			cons := strings.Split(constraint, ":")
-			if cons[1] == "LIKE" {
-				logrus.Debugf("attributes for offer is %s", ow.Offer.Attributes)
-				for _, attr := range ow.Offer.Attributes {
-					var value string
-					name := attr.GetName()
-					switch attr.GetType() {
-					case mesos.Value_SCALAR:
-						value = fmt.Sprintf("%d", *attr.GetScalar().Value)
-					case mesos.Value_TEXT:
-						value = fmt.Sprintf("%s", *attr.GetText().Value)
-					default:
-						logrus.Errorf("Unsupported attribute value: %s", attr.GetType())
-					}
-
-					if name == cons[0] &&
-						strings.Contains(value, cons[2]) &&
-						ow.CpuRemain() > slot.Version.CPUs &&
-						ow.MemRemain() > slot.Version.Mem &&
-						ow.DiskRemain() > slot.Version.Disk {
-						return true
-					}
-				}
-				return false
-			}
+	constraintsMatch := true
+	if len(slot.Version.Constraints) > 0 {
+		evalStatement, err := ParseConstraint(strings.ToLower(slot.Version.Constraints))
+		if err != nil {
+			logrus.Errorf("fail to found offer due to malformat constraints")
+			return false
 		}
+
+		evalStatement.SetContext(&ConstraintContextHolder{
+			Slot:  slot,
+			Offer: ow.Offer,
+		})
+
+		constraintsMatch = evalStatement.Eval()
 	}
 
-	return ow.CpuRemain() > slot.Version.CPUs &&
+	return constraintsMatch &&
+		ow.CpuRemain() > slot.Version.CPUs &&
 		ow.MemRemain() > slot.Version.Mem &&
 		ow.DiskRemain() > slot.Version.Disk
 }

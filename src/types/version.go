@@ -18,7 +18,7 @@ type Version struct {
 	Env               map[string]string `json:"env,omitempty"`
 	KillPolicy        *KillPolicy       `json:"killPolicy,omitempty"`
 	UpdatePolicy      *UpdatePolicy     `json:"updatPolicy,omitempty"`
-	Constraints       []string          `json:"constraints,omitempty"`
+	Constraints       string            `json:"constraints,omitempty"`
 	URIs              []string          `json:"uris,omitempty"`
 	IP                []string          `json:"ip,omitempty"`
 	Mode              string            `json:"mode,omitempty"`

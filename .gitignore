@@ -7,3 +7,4 @@ bin/*
 .idea/
 Procfile
 Procfile-cluster
+src/manager/framework/state/y.output

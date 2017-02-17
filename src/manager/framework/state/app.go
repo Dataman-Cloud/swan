@@ -619,6 +619,19 @@ func validateAndFormatVersion(version *types.Version) error {
 		}
 	}
 
+	// validate constraints are all valid
+	if len(version.Constraints) > 0 {
+		evalStatement, err := ParseConstraint(strings.ToLower(version.Constraints))
+		if err != nil {
+			return err
+		}
+
+		err = evalStatement.Valid()
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
