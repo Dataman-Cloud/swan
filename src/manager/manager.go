@@ -135,22 +135,21 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("Now i become a leader !!!")
 
 				once.Do(func() {
-					// if manager is thie first node in the cluster, add itself to the managers map
-					if swancontext.IsNewCluster() {
-						swanConfig := swancontext.Instance().Config
-						managerInfo := types.Node{
-							ID:                swanConfig.NodeID,
-							AdvertiseAddr:     swanConfig.AdvertiseAddr,
-							ListenAddr:        swanConfig.ListenAddr,
-							RaftListenAddr:    swanConfig.RaftListenAddr,
-							RaftAdvertiseAddr: swanConfig.RaftAdvertiseAddr,
-							Role:              types.NodeRole(swanConfig.Mode),
-							RaftID:            manager.raftID,
-						}
+					// at the first time node become leader add itself to store.
+					// this is use for ensure the first node of cluster can be add to store.
+					swanConfig := swancontext.Instance().Config
+					managerInfo := types.Node{
+						ID:                swanConfig.NodeID,
+						AdvertiseAddr:     swanConfig.AdvertiseAddr,
+						ListenAddr:        swanConfig.ListenAddr,
+						RaftListenAddr:    swanConfig.RaftListenAddr,
+						RaftAdvertiseAddr: swanConfig.RaftAdvertiseAddr,
+						Role:              types.NodeRole(swanConfig.Mode),
+						RaftID:            manager.raftID,
+					}
 
-						if err := manager.presistNodeData(managerInfo); err != nil {
-							manager.criticalErrorChan <- err
-						}
+					if err := manager.presistNodeData(managerInfo); err != nil {
+						manager.criticalErrorChan <- err
 					}
 				})
 
