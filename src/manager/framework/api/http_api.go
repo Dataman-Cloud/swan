@@ -575,6 +575,8 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 
 					Stderr: v.Stderr,
 					Stdout: v.Stdout,
+
+					ArchivedAt: v.ArchivedAt,
 				}
 				if v.Version != nil {
 					staleTask.VersionID = v.Version.ID
@@ -638,6 +640,8 @@ func FormTaskHistory(v *state.Task) *types.TaskHistory {
 
 		Stderr: v.Stderr,
 		Stdout: v.Stdout,
+
+		ArchivedAt: v.ArchivedAt,
 	}
 
 }

@@ -89,6 +89,8 @@ type TaskHistory struct {
 	Message string `json:"message, omitempty"`
 	Stdout  string `json:"stdout,omitempty"`
 	Stderr  string `json:"stderr,omitempty"`
+
+	ArchivedAt time.Time `json:"archivedAt, omitempty"`
 }
 
 type Stats struct {

@@ -162,6 +162,7 @@ func (slot *Slot) Archive() {
 	slot.BeginTx()
 	defer slot.Commit()
 
+	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
 	WithConvertTask(context.TODO(), slot.CurrentTask, nil, persistentStore.UpdateTask)
 }

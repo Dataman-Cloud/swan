@@ -388,6 +388,7 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 		Reason:        task.Reason,
 		Message:       task.Message,
 		CreatedAt:     task.Created.UnixNano(),
+		ArchivedAt:    task.ArchivedAt.UnixNano(),
 	}
 }
 
