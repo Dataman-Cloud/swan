@@ -86,3 +86,17 @@ func TestRemoveFrameworkUnknown(t *testing.T) {
 
 	cleanup()
 }
+
+func TestErrorFrameworkAction(t *testing.T) {
+	db, cleanup := storageTestEnv(t)
+
+	storeActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUnknown,
+		Target: &types.StoreAction_Framework{&types.Framework{"foo-bar"}},
+	}}
+
+	err := db.DoStoreActions(storeActions)
+	assert.Equal(t, err, ErrUndefineFrameworkAction)
+
+	cleanup()
+}
