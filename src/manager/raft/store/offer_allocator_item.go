@@ -15,15 +15,6 @@ func withCreateOfferAllocatorItemBucketIfNotExists(tx *bolt.Tx, fn func(bkt *bol
 	return fn(bkt)
 }
 
-func WithOfferAllocatorItemBucket(tx *bolt.Tx, fn func(bkt *bolt.Bucket) error) error {
-	bkt := GetOfferAllocatorItemBucket(tx)
-	if bkt == nil {
-		return ErrSlotUnknown
-	}
-
-	return fn(bkt)
-}
-
 func GetOfferAllocatorItemBucket(tx *bolt.Tx) *bolt.Bucket {
 	return getBucket(tx, bucketKeyStorageVersion, bucketKeyOfferAllocator)
 }

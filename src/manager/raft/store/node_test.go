@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/Dataman-Cloud/swan/src/manager/raft/types"
+
 	"github.com/boltdb/bolt"
 	"github.com/stretchr/testify/assert"
 )
@@ -211,6 +212,25 @@ func TestRemoveNodeWithoutInit(t *testing.T) {
 	nodes, err := db.GetNodes()
 	assert.NoError(t, err)
 	assert.NotNil(t, nodes)
+
+	cleanup()
+}
+
+func TestUnknownNodeStoreAction(t *testing.T) {
+	db, cleanup := storageTestEnv(t)
+
+	testNode := &types.Node{
+		ID:            "foo-bar",
+		AdvertiseAddr: "0.0.0.0:9999",
+	}
+
+	createStoreActions := []*types.StoreAction{&types.StoreAction{
+		Action: types.StoreActionKindUnknown,
+		Target: &types.StoreAction_Node{testNode},
+	}}
+
+	err := db.DoStoreActions(createStoreActions)
+	assert.Error(t, err, ErrUndefineNodeAction)
 
 	cleanup()
 }
