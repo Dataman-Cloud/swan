@@ -18,7 +18,13 @@ milestones we set ahead.
 
 ### \#2 feature improvement & `Swan` stabilization 2 (2-24-2017)
 
-  - **[IMPROVEMENT]** Handle recind offer
-  - **[IMPROVEMENT]** Handle inverse offer
-  - **[IMPROVEMENT]** make sure framework handle mesos leader shift gracefully
-  - **[IMPROVEMENT]** make sure framework handle agent lost gracefully
+  - **[IMPROVE]** rename appID to appName in version JSON, import
+    appName which is the name of an app.
+  - **[IMPROVE]** make sure fixed type app allow customized their
+    network name.
+  - **[FEATURE]** restart policy revisit.
+
+  - **[IMPROVE]** Handle recind offer
+  - **[IMPROVE]** Handle inverse offer
+  - **[IMPROVE]** make sure framework handle mesos leader shift gracefully
+  - **[IMPROVE]** make sure framework handle agent lost gracefully
