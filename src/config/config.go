@@ -65,7 +65,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig := SwanConfig{
 		LogLevel:       "info",
 		Mode:           Mixed,
-		DataDir:        "./data/",
+		DataDir:        "./data",
 		NoRecover:      false,
 		Domain:         "swan.com",
 		ListenAddr:     "0.0.0.0:9999",
