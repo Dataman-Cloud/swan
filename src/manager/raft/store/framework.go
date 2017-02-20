@@ -40,10 +40,10 @@ func putFramework(tx *bolt.Tx, framework *types.Framework) error {
 }
 
 func removeFramework(tx *bolt.Tx) error {
-	frameworkBkt := GetFrameworkBucket(tx)
-	if frameworkBkt == nil {
+	storageBkt := getBucket(tx, bucketKeyStorageVersion)
+	if storageBkt == nil {
 		return nil
 	}
 
-	return tx.DeleteBucket(bucketKeyFramework)
+	return storageBkt.DeleteBucket(bucketKeyFramework)
 }

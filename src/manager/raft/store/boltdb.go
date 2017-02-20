@@ -44,25 +44,6 @@ var (
 )
 
 func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
-	if err := db.Update(func(tx *bolt.Tx) error {
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps); err != nil {
-			return err
-		}
-
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework); err != nil {
-			return err
-		}
-
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyNodes); err != nil {
-			return err
-		}
-
-		return nil
-
-	}); err != nil {
-		return nil, err
-	}
-
 	return &BoltbDb{db}, nil
 }
 

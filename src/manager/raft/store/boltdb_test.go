@@ -30,14 +30,6 @@ func TestNewBoltdbStore(t *testing.T) {
 	assert.NotNil(t, boltDb)
 }
 
-func TestNewBoltdbStoreError(t *testing.T) {
-	var db bolt.DB
-
-	boltDb, err := NewBoltbdStore(&db)
-	assert.Error(t, err)
-	assert.Nil(t, boltDb)
-}
-
 // returns an initialized db and cleanup function for use in test
 func storageTestEnv(t *testing.T) (*BoltbDb, func()) {
 	var cleanup []func()
