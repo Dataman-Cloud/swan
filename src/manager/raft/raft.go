@@ -158,11 +158,7 @@ func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 	n.ticker = clock.NewClock().NewTicker(time.Second)
 	n.wait = newWait()
 
-	boltDbStore, err := store.NewBoltbdStore(db)
-	if err != nil {
-		log.L.Errorf("raft: create raft store of boltdb failed. Error: %s", err.Error())
-		return nil, err
-	}
+	boltDbStore := store.NewBoltbdStore(db)
 
 	n.store = boltDbStore
 

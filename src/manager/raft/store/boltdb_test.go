@@ -25,8 +25,7 @@ func TestNewBoltdbStore(t *testing.T) {
 	assert.NotNil(t, db)
 	defer db.Close()
 
-	boltDb, err := NewBoltbdStore(db)
-	assert.NoError(t, err)
+	boltDb := NewBoltbdStore(db)
 	assert.NotNil(t, boltDb)
 }
 
@@ -45,8 +44,7 @@ func storageTestEnv(t *testing.T) (*BoltbDb, func()) {
 	assert.NotNil(t, db)
 	cleanup = append(cleanup, func() { db.Close() })
 
-	boltDb, err := NewBoltbdStore(db)
-	assert.NoError(t, err)
+	boltDb := NewBoltbdStore(db)
 	assert.NotNil(t, boltDb)
 
 	return boltDb, func() {

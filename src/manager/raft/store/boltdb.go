@@ -43,8 +43,8 @@ var (
 	ErrUndefineNodeAction      = errors.New("boltdb: undefined node store action")
 )
 
-func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
-	return &BoltbDb{db}, nil
+func NewBoltbdStore(db *bolt.DB) *BoltbDb {
+	return &BoltbDb{db}
 }
 
 func createBucketIfNotExists(tx *bolt.Tx, keys ...[]byte) (*bolt.Bucket, error) {
