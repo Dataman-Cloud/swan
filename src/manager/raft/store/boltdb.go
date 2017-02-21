@@ -28,42 +28,24 @@ var (
 )
 
 var (
-	ErrAppUnknown              = errors.New("boltdb: app unknown")
-	ErrTaskUnknown             = errors.New("boltdb: task unknown")
-	ErrVersionUnknown          = errors.New("boltdb: version unknown")
-	ErrSlotUnknown             = errors.New("boltdb: slot unknow")
-	ErrNodeUnknown             = errors.New("boltdb: node unknow")
-	ErrNilStoreAction          = errors.New("boltdb: nil store action")
-	ErrUndefineStoreAction     = errors.New("boltdb: undefined store action")
-	ErrUndefineAppStoreAction  = errors.New("boltdb: undefined app store action")
-	ErrUndefineFrameworkAction = errors.New("boltdb: undefined framework store action")
-	ErrUndefineTaskAction      = errors.New("boltdb: undefined task store action")
-	ErrUndefineVersionAction   = errors.New("boltdb: undefined version store action")
-	ErrUndefineSlotAction      = errors.New("boltdb: undefined slot store action")
-	ErrUndefineNodeAction      = errors.New("boltdb: undefined node store action")
+	ErrAppUnknown                       = errors.New("boltdb: app unknown")
+	ErrTaskUnknown                      = errors.New("boltdb: task unknown")
+	ErrVersionUnknown                   = errors.New("boltdb: version unknown")
+	ErrSlotUnknown                      = errors.New("boltdb: slot unknow")
+	ErrNodeUnknown                      = errors.New("boltdb: node unknow")
+	ErrNilStoreAction                   = errors.New("boltdb: nil store action")
+	ErrUndefineStoreAction              = errors.New("boltdb: undefined store action")
+	ErrUndefineAppStoreAction           = errors.New("boltdb: undefined app store action")
+	ErrUndefineFrameworkAction          = errors.New("boltdb: undefined framework store action")
+	ErrUndefineTaskAction               = errors.New("boltdb: undefined task store action")
+	ErrUndefineVersionAction            = errors.New("boltdb: undefined version store action")
+	ErrUndefineOfferAllocatorItemAction = errors.New("boltdb: undefined offer_allocator_item store action")
+	ErrUndefineSlotAction               = errors.New("boltdb: undefined slot store action")
+	ErrUndefineNodeAction               = errors.New("boltdb: undefined node store action")
 )
 
-func NewBoltbdStore(db *bolt.DB) (*BoltbDb, error) {
-	if err := db.Update(func(tx *bolt.Tx) error {
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyApps); err != nil {
-			return err
-		}
-
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyFramework); err != nil {
-			return err
-		}
-
-		if _, err := createBucketIfNotExists(tx, bucketKeyStorageVersion, bucketKeyNodes); err != nil {
-			return err
-		}
-
-		return nil
-
-	}); err != nil {
-		return nil, err
-	}
-
-	return &BoltbDb{db}, nil
+func NewBoltbdStore(db *bolt.DB) *BoltbDb {
+	return &BoltbDb{db}
 }
 
 func createBucketIfNotExists(tx *bolt.Tx, keys ...[]byte) (*bolt.Bucket, error) {
@@ -212,7 +194,7 @@ func doOfferAllocatorItemStoreAction(tx *bolt.Tx, action types.StoreActionKind, 
 	case types.StoreActionKindRemove:
 		return removeOfferAllocatorItem(tx, item)
 	default:
-		return ErrUndefineVersionAction
+		return ErrUndefineOfferAllocatorItemAction
 	}
 }
 
