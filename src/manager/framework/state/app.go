@@ -83,8 +83,8 @@ func NewApp(version *types.Version,
 		Versions:       []*types.Version{},
 		slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		ID:             fmt.Sprintf("%s-%s-%s", version.AppID, version.RunAs, mesos_connector.Instance().ClusterID),
-		Name:           version.AppID,
+		ID:             fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, mesos_connector.Instance().ClusterID),
+		Name:           version.AppName,
 		ClusterID:      mesos_connector.Instance().ClusterID,
 		Created:        time.Now(),
 		Updated:        time.Now(),
@@ -516,9 +516,9 @@ func validateAndFormatVersion(version *types.Version) error {
 	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
 
 	//validation of AppId
-	match := r.MatchString(version.AppID)
+	match := r.MatchString(version.AppName)
 	if match {
-		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppID, errMsg))
+		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppName, errMsg))
 	}
 
 	//validation of RunAs

@@ -2,7 +2,7 @@ package types
 
 type Version struct {
 	ID                string            `json:"id,omitempty"`
-	AppID             string            `json:"appID,omitempty"`
+	AppName           string            `json:"appName,omitempty"`
 	PreviousVersionID string            `json:"previousVersionId,omitempty"`
 	Command           string            `json:"cmd,omitempty"`
 	Args              []string          `json:"args,omitempty"`

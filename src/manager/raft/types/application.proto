@@ -44,9 +44,10 @@ message Version {
     repeated string uris = 16;
     repeated string ip = 17;
     string mode = 18;
-    string appId = 19 [(gogoproto.customname) = "AppID"];
-    int32 priority = 20;
-    repeated string args = 21;
+    string appName = 19;
+    string appID = 20;
+    int32 priority = 21;
+    repeated string args = 22;
 }
 
 message Container {

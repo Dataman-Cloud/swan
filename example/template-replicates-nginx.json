@@ -1,5 +1,5 @@
 {
-  "appID": "nginx",
+  "appName": "nginx",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
