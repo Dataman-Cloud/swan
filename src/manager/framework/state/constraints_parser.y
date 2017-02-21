@@ -3,7 +3,7 @@ package state
 
 import (
 	"strings"
-  "errors"
+        "errors"
 	"text/scanner"
 )
 
@@ -14,6 +14,7 @@ var keywords = map[string]int{
   "like": LIKE,
   "contains": CONTAINS,
   "not": NOT,
+  "equal": EQUAL,
 }
 %}
 
@@ -30,7 +31,7 @@ var keywords = map[string]int{
 %type <expr> program
 %type <expr> expr
 
-%token <token> AND OR UNIQUE LIKE CONTAINS NOT
+%token <token> AND OR UNIQUE LIKE CONTAINS NOT EQUAL
 %token <str> IDENTIFIER
 
 %type <what> what
@@ -51,6 +52,7 @@ expr
     | NOT '(' expr ')' { $$ = &NotStatement{Op1: $3} }
     | UNIQUE what { $$ = &UniqueStatment{What: $2}; }
     | LIKE what param { $$ = &LikeStatement{What: $2, Regex: $3} }
+    | EQUAL what param { $$ = &EqualStatement{What: $2, Regex: $3} }
     | CONTAINS what param { $$ = &LikeStatement{What: $2, Regex: $3} }
     ;
 what: IDENTIFIER { $$ = $1; }

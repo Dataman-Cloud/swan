@@ -20,6 +20,11 @@ var likeWhat = []string{
 	"agentid",
 }
 
+var equalWhat = []string{
+	"hostname",
+	"agentid",
+}
+
 type ConstraintParamHolder struct {
 	Slot  *Slot
 	Offer *mesos.Offer
@@ -190,6 +195,45 @@ func (ls *LikeStatement) Valid() error {
 }
 
 func (ls *LikeStatement) SetContext(ctx *ConstraintParamHolder) {
+	ls.Offer = ctx.Offer
+	ls.Slot = ctx.Slot
+}
+
+// equal hostname xxxx
+type EqualStatement struct {
+	ConstraintParamHolder
+	What  string
+	Regex string
+}
+
+func (ls *EqualStatement) Eval() bool {
+	if ls.What == "hostname" {
+		return ls.Offer.GetHostname() == ls.Regex
+	}
+
+	if ls.What == "agentid" {
+		return *ls.Offer.GetAgentId().Value == ls.Regex
+	}
+
+	// user defined attributes match
+	for _, attr := range ls.Offer.Attributes {
+		if attr.GetName() == ls.What && attr.GetType() == mesos.Value_TEXT {
+			return *attr.GetText().Value == ls.Regex
+		}
+	}
+
+	return false
+}
+
+func (ls *EqualStatement) Valid() error {
+	if ls.What != "" && ls.Regex != "" {
+		return nil
+	} else {
+		return errors.New("Equal statement must contain two operand")
+	}
+}
+
+func (ls *EqualStatement) SetContext(ctx *ConstraintParamHolder) {
 	ls.Offer = ctx.Offer
 	ls.Slot = ctx.Slot
 }

@@ -17,9 +17,10 @@ var keywords = map[string]int{
 	"like":     LIKE,
 	"contains": CONTAINS,
 	"not":      NOT,
+	"equal":    EQUAL,
 }
 
-//line ./constraints_parser.y:20
+//line ./constraints_parser.y:21
 type yySymType struct {
 	yys   int
 	token string
@@ -35,7 +36,8 @@ const UNIQUE = 57348
 const LIKE = 57349
 const CONTAINS = 57350
 const NOT = 57351
-const IDENTIFIER = 57352
+const EQUAL = 57352
+const IDENTIFIER = 57353
 
 var yyToknames = [...]string{
 	"$end",
@@ -47,6 +49,7 @@ var yyToknames = [...]string{
 	"LIKE",
 	"CONTAINS",
 	"NOT",
+	"EQUAL",
 	"IDENTIFIER",
 	"'('",
 	"')'",
@@ -57,7 +60,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyInitialStackSize = 16
 
-//line ./constraints_parser.y:60
+//line ./constraints_parser.y:62
 type ConstraintParser struct {
 	scanner.Scanner
 	result    Statement
@@ -107,53 +110,55 @@ var yyExca = [...]int{
 	-2, 0,
 }
 
-const yyNprod = 10
+const yyNprod = 11
 const yyPrivate = 57344
 
 var yyTokenNames []string
 var yyStates []string
 
-const yyLast = 34
+const yyLast = 35
 
 var yyAct = [...]int{
 
-	2, 19, 3, 4, 6, 7, 8, 5, 30, 29,
-	16, 17, 18, 24, 23, 22, 26, 21, 25, 11,
-	10, 9, 20, 13, 12, 1, 27, 28, 0, 0,
-	0, 0, 14, 15,
+	2, 21, 3, 4, 6, 7, 9, 5, 8, 33,
+	32, 18, 19, 20, 27, 26, 25, 29, 23, 24,
+	28, 12, 11, 10, 13, 22, 14, 1, 0, 30,
+	31, 0, 15, 16, 17,
 }
 var yyPact = [...]int{
 
-	-2, -1000, -1000, 10, 9, 8, 13, 13, 13, -2,
-	-2, -2, -1000, -1000, 12, 12, 3, 2, 1, -1000,
-	-1000, -1000, 7, 5, -1000, -2, -2, -3, -4, -1000,
-	-1000,
+	-2, -1000, -1000, 11, 10, 9, 15, 15, 15, 15,
+	-2, -2, -2, -1000, -1000, 14, 14, 14, 3, 2,
+	1, -1000, -1000, -1000, -1000, 8, 5, -1000, -2, -2,
+	-3, -4, -1000, -1000,
 }
 var yyPgo = [...]int{
 
-	0, 25, 0, 24, 1,
+	0, 27, 0, 24, 1,
 }
 var yyR1 = [...]int{
 
-	0, 1, 2, 2, 2, 2, 2, 2, 3, 4,
+	0, 1, 2, 2, 2, 2, 2, 2, 2, 3,
+	4,
 }
 var yyR2 = [...]int{
 
-	0, 1, 7, 7, 4, 2, 3, 3, 1, 1,
+	0, 1, 7, 7, 4, 2, 3, 3, 3, 1,
+	1,
 }
 var yyChk = [...]int{
 
-	-1000, -1, -2, 4, 5, 9, 6, 7, 8, 11,
-	11, 11, -3, 10, -3, -3, -2, -2, -2, -4,
-	10, -4, 12, 12, 12, 11, 11, -2, -2, 12,
-	12,
+	-1000, -1, -2, 4, 5, 9, 6, 7, 10, 8,
+	12, 12, 12, -3, 11, -3, -3, -3, -2, -2,
+	-2, -4, 11, -4, -4, 13, 13, 13, 12, 12,
+	-2, -2, 13, 13,
 }
 var yyDef = [...]int{
 
 	0, -2, 1, 0, 0, 0, 0, 0, 0, 0,
-	0, 0, 5, 8, 0, 0, 0, 0, 0, 6,
-	9, 7, 0, 0, 4, 0, 0, 0, 0, 2,
-	3,
+	0, 0, 0, 5, 9, 0, 0, 0, 0, 0,
+	0, 6, 10, 7, 8, 0, 0, 4, 0, 0,
+	0, 0, 2, 3,
 }
 var yyTok1 = [...]int{
 
@@ -161,11 +166,11 @@ var yyTok1 = [...]int{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-	11, 12,
+	12, 13,
 }
 var yyTok2 = [...]int{
 
-	2, 3, 4, 5, 6, 7, 8, 9, 10,
+	2, 3, 4, 5, 6, 7, 8, 9, 10, 11,
 }
 var yyTok3 = [...]int{
 	0,
@@ -510,56 +515,62 @@ yydefault:
 
 	case 1:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line ./constraints_parser.y:43
+		//line ./constraints_parser.y:44
 		{
 			yyVAL.expr = yyDollar[1].expr
 			yylex.(*ConstraintParser).result = yyVAL.expr
 		}
 	case 2:
 		yyDollar = yyS[yypt-7 : yypt+1]
-		//line ./constraints_parser.y:49
+		//line ./constraints_parser.y:50
 		{
 			yyVAL.expr = &AndStatement{Op1: yyDollar[3].expr, Op2: yyDollar[6].expr}
 		}
 	case 3:
 		yyDollar = yyS[yypt-7 : yypt+1]
-		//line ./constraints_parser.y:50
+		//line ./constraints_parser.y:51
 		{
 			yyVAL.expr = &OrStatement{Op1: yyDollar[3].expr, Op2: yyDollar[6].expr}
 		}
 	case 4:
 		yyDollar = yyS[yypt-4 : yypt+1]
-		//line ./constraints_parser.y:51
+		//line ./constraints_parser.y:52
 		{
 			yyVAL.expr = &NotStatement{Op1: yyDollar[3].expr}
 		}
 	case 5:
 		yyDollar = yyS[yypt-2 : yypt+1]
-		//line ./constraints_parser.y:52
+		//line ./constraints_parser.y:53
 		{
 			yyVAL.expr = &UniqueStatment{What: yyDollar[2].what}
 		}
 	case 6:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line ./constraints_parser.y:53
+		//line ./constraints_parser.y:54
 		{
 			yyVAL.expr = &LikeStatement{What: yyDollar[2].what, Regex: yyDollar[3].param}
 		}
 	case 7:
 		yyDollar = yyS[yypt-3 : yypt+1]
-		//line ./constraints_parser.y:54
+		//line ./constraints_parser.y:55
+		{
+			yyVAL.expr = &EqualStatement{What: yyDollar[2].what, Regex: yyDollar[3].param}
+		}
+	case 8:
+		yyDollar = yyS[yypt-3 : yypt+1]
+		//line ./constraints_parser.y:56
 		{
 			yyVAL.expr = &LikeStatement{What: yyDollar[2].what, Regex: yyDollar[3].param}
 		}
-	case 8:
+	case 9:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line ./constraints_parser.y:56
+		//line ./constraints_parser.y:58
 		{
 			yyVAL.what = yyDollar[1].str
 		}
-	case 9:
+	case 10:
 		yyDollar = yyS[yypt-1 : yypt+1]
-		//line ./constraints_parser.y:57
+		//line ./constraints_parser.y:59
 		{
 			yyVAL.param = yyDollar[1].str
 		}
