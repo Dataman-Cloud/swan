@@ -28,3 +28,5 @@ milestones we set ahead.
   - **[IMPROVE]** Handle inverse offer
   - **[IMPROVE]** make sure framework handle mesos leader shift gracefully
   - **[IMPROVE]** make sure framework handle agent lost gracefully
+  
+  - **[FEATURE]** add node status and heartbeats from leader to agent
