@@ -44,6 +44,7 @@ func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 		Uris:        version.URIs,
 		Ip:          version.IP,
 		Mode:        version.Mode,
+		AppName:     version.AppName,
 		AppID:       appID,
 	}
 
@@ -73,7 +74,7 @@ func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 	version := &types.Version{
 		ID:          raftVersion.ID,
-		AppID:       raftVersion.AppID,
+		AppName:     raftVersion.AppName,
 		Command:     raftVersion.Command,
 		Args:        raftVersion.Args,
 		CPUs:        raftVersion.Cpus,

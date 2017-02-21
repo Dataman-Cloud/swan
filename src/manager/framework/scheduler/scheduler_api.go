@@ -11,7 +11,7 @@ import (
 
 func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
 	// TODO
-	existedApp := scheduler.AppStorage.Get(fmt.Sprintf("%s-%s-%s", version.AppID, version.RunAs, mesos_connector.Instance().ClusterID))
+	existedApp := scheduler.AppStorage.Get(fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, mesos_connector.Instance().ClusterID))
 	if existedApp != nil {
 		return nil, errors.New("app already exists")
 	}
