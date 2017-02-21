@@ -71,7 +71,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	dockerSpec := task.Slot.Version.Container.Docker
 
 	task.taskBuilder = NewTaskBuilder(task)
-	task.taskBuilder.SetName(task.ID).SetTaskId(task.ID).SetAgentId(*offer.GetAgentId().Value)
+	task.taskBuilder.SetName(task.Slot.ID).SetTaskId(task.ID).SetAgentId(*offer.GetAgentId().Value)
 	task.taskBuilder.SetResources(task.Slot.ResourcesNeeded())
 	task.taskBuilder.SetCommand(false, task.Slot.Version.Command, task.Slot.Version.Args)
 
