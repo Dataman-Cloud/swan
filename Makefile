@@ -18,16 +18,25 @@ VERSION=$(shell git describe --always --tags)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
 GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list ./src/version`.BuildTime=$(BUILD_TIME)"
 
+# Used to build swan image
+IMAGE_TAG=$(shell git describe --tags `git rev-list --tags --max-count=1`)
+
 default: build
 
 build: fmt build-swan
 
+release: build-swan build-swan-image
+
 build-swan:
 	${BUILD_OPTS} go build -v -o bin/swan main.go 
 
+build-swan-image:
+	docker build -t swan:${IMAGE_TAG} -f Dockerfile_runtime .
+	@echo 
+	@echo "You can run swan with image:" swan:${IMAGE_TAG}
+
 install:
 	install -v bin/swan /usr/local/bin
-	install -v bin/swancfg /usr/local/bin
 
 generate:
 	protoc --proto_path=./vendor/github.com/gogo/protobuf/:./src/manager/raft/types/:. --gogo_out=./src/manager/raft/types/ ./src/manager/raft/types/*.proto
@@ -55,8 +64,6 @@ test-cover-html:
 
 test-cover-func:
 	go tool cover -func=coverage-all.out
-
-release: list-authors
 
 list-authors:
 	./contrib/list-authors.sh

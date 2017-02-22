@@ -1,0 +1,9 @@
+FROM demoregistry.dataman-inc.com/library/centos7-base:latest
+
+MAINTAINER MG Niu mgniu@dataman-inc.com
+
+ADD bin/swan /usr/local/bin/swan
+
+EXPOSE 9999 2111 53 80
+
+ENTRYPOINT ["/usr/local/bin/swan"]
