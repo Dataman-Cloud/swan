@@ -5,15 +5,25 @@ TEST_PACKAGES = $(shell go list ./... | grep -v vendor)
 
 export GO15VENDOREXPERIMENT=1
 
+## OS checking
+OS := $(shell uname)
+ifeq ($(OS),Darwin)
+	BUILD_OPTS=
+else
+	BUILD_OPTS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+endif
+
+# Used to populate version variable in main package.
+VERSION=$(shell git describe --always --tags)
+BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
+GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list ./src/version`.BuildTime=$(BUILD_TIME)"
+
 default: build
 
 build: fmt build-swan
 
 build-swan:
-	go build  -ldflags "-X github.com/Dataman-Cloud/swan/srv/version.BuildTime=`date -u +%Y-%m-%d:%H-%M-%S` -X github.com/Dataman-Cloud/swan/src/version.Version=0.01-`git rev-parse --short HEAD`"  -v -o bin/swan main.go
-
-build-swancfg:
-	go build -v -o bin/swancfg src/cli/cli.go
+	${BUILD_OPTS} go build -v -o bin/swan main.go 
 
 install:
 	install -v bin/swan /usr/local/bin
