@@ -72,7 +72,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		WasJoin:           wasJoin,
 	}
 
-	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
+	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0700)
 	if err != nil {
 		logrus.Errorf("os.MkdirAll got error: %s", err)
 		return nil, err

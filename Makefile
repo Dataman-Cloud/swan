@@ -10,11 +10,11 @@ OS := $(shell uname)
 ifeq ($(OS),Darwin)
 	BUILD_OPTS=
 else
-	BUILD_OPTS=CGO_ENABLED=0 GOOS=linux GOARCH=amd64
+	BUILD_OPTS=-e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64
 endif
 
 # Used to populate version variable in main package.
-VERSION=$(shell git describe --always --tags)
+VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
 GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list ./src/version`.BuildTime=$(BUILD_TIME)"
 
@@ -23,7 +23,7 @@ default: build
 build: fmt build-swan
 
 build-swan:
-	${BUILD_OPTS} go build -v -o bin/swan main.go 
+	docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan $(BUILD_OPTS) -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine go build ${GO_LDFLAGS} -v -o bin/swan main.go
 
 install:
 	install -v bin/swan /usr/local/bin
@@ -63,28 +63,28 @@ list-authors:
 
 
 docker-build:
-	docker build --tag swan --rm .
+	docker build --tag swan:$(VERSION) --rm .
 
 docker-run-mixed:
 	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v $(shell pwd)/data:/data:rw swan:$(VERSION)
 
 docker-run-manager:
 	docker rm -f swan-manager-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager-1  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager-1  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/data swan:$(VERSION)
 
 docker-run-agent:
 	docker rm -f swan-agent-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent-1  --rm  -p 9998:9998 -p 53:53/udp -p 80:80  swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent-1  --rm  -p 9998:9998 -p 53:53/udp -p 80:80  swan:$(VERSION)
 
 docker-run-agent-2:
 	docker rm -f swan-agent-2 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent_2 --name swan-agent-2  --rm  -p 9997:9998 -p 54:53/udp -p 81:80 swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent_2 --name swan-agent-2  --rm  -p 9997:9998 -p 54:53/udp -p 81:80 swan:$(VERSION)
 
 docker-run-mixed-detached:
 	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data --detach swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/data --detach swan:$(VERSION)
 
 docker-run-mixed-cluster:
 	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/go/src/github.com/Dataman-Cloud/swan/data swan
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/data swan:$(VERSION)
