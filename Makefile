@@ -65,10 +65,6 @@ list-authors:
 docker-build:
 	docker build --tag swan:$(VERSION) --rm .
 
-docker-run-mixed:
-	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v $(shell pwd)/data:/data:rw swan:$(VERSION)
-
 docker-run-manager:
 	docker rm -f swan-manager-1 2>&1 || echo 0
 	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager-1  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/data swan:$(VERSION)
@@ -77,14 +73,5 @@ docker-run-agent:
 	docker rm -f swan-agent-1 2>&1 || echo 0
 	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent-1  --rm  -p 9998:9998 -p 53:53/udp -p 80:80  swan:$(VERSION)
 
-docker-run-agent-2:
-	docker rm -f swan-agent-2 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent_2 --name swan-agent-2  --rm  -p 9997:9998 -p 54:53/udp -p 81:80 swan:$(VERSION)
 
-docker-run-mixed-detached:
-	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/data --detach swan:$(VERSION)
 
-docker-run-mixed-cluster:
-	docker rm -f swan-mixed-1 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_mixed --name swan-mixed-1  --rm  -p 9999:9999 -p 2111:2111 -p 53:53/udp -p 80:80 -v `pwd`/data:/data swan:$(VERSION)
