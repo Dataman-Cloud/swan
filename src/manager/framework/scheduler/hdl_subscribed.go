@@ -15,7 +15,7 @@ func SubscribedHandler(h *Handler) (*Handler, error) {
 	}
 
 	sub := e.GetSubscribed()
-	h.Manager.SchedulerRef.MesosConnector.Framework.Id = sub.FrameworkId
+	h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.Id = sub.FrameworkId
 
 	if err := h.Manager.SchedulerRef.store.UpdateFrameworkId(context.TODO(), *sub.FrameworkId.Value, nil); err != nil {
 		return nil, err

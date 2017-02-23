@@ -3,6 +3,7 @@ package scheduler
 import (
 	"errors"
 
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
 )

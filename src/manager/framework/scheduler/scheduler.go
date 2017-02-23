@@ -4,11 +4,10 @@ import (
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/Sirupsen/logrus"
@@ -26,12 +25,12 @@ type Scheduler struct {
 
 	AppStorage     *memoryStore
 	UserEventChan  chan *event.UserEvent
-	MesosConnector *mesos_connector.MesosConnector
+	MesosConnector *connector.Connector
 }
 
 func NewScheduler(store store.Store) *Scheduler {
 	scheduler := &Scheduler{
-		MesosConnector: mesos_connector.NewMesosConnector(),
+		MesosConnector: connector.NewConnector(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
@@ -93,12 +92,10 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		framework := mesos_connector.CreateFrameworkInfo()
 		frameworkId, err := scheduler.store.GetFrameworkId()
 		if err == nil {
-			framework.Id = &mesos.FrameworkID{Value: &frameworkId}
+			scheduler.MesosConnector.SetFrameworkInfoId(frameworkId)
 		}
-		scheduler.MesosConnector.Framework = framework
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)

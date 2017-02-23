@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -110,7 +110,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 func (task *Task) Kill() {
 	logrus.Infof("Kill task %s", task.Slot.ID)
 	call := &sched.Call{
-		FrameworkId: mesos_connector.Instance().Framework.GetId(),
+		FrameworkId: connector.Instance().FrameworkInfo.GetId(),
 		Type:        sched.Call_KILL.Enum(),
 		Kill: &sched.Call_Kill{
 			TaskId: &mesos.TaskID{
@@ -132,5 +132,5 @@ func (task *Task) Kill() {
 		}
 	}
 
-	mesos_connector.Instance().MesosCallChan <- call
+	connector.Instance().MesosCallChan <- call
 }

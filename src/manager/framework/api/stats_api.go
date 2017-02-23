@@ -4,7 +4,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/andygrunwald/megos"
@@ -49,7 +49,7 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 	var stats types.Stats
 	stats.AppStats = make(map[string]int)
 
-	stats.ClusterID = mesos_connector.Instance().ClusterID
+	stats.ClusterID = connector.Instance().ClusterID
 
 	appFilterOptions := types.AppFilterOptions{}
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
@@ -68,7 +68,7 @@ func (api *StatsService) Stats(request *restful.Request, response *restful.Respo
 		}
 	}
 
-	master := strings.Split(mesos_connector.Instance().Master, "@")[1]
+	master := strings.Split(connector.Instance().MesosLeader, "@")[1]
 	node, _ := url.Parse(fmt.Sprintf("http://%s", master))
 	state, _ := megos.NewClient([]*url.URL{node}, nil).GetStateFromCluster()
 

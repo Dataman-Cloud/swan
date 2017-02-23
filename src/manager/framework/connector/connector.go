@@ -1,4 +1,4 @@
-package mesos_connector
+package connector
 
 import (
 	"encoding/json"
@@ -24,51 +24,62 @@ import (
 	"golang.org/x/net/context"
 )
 
-var instance *MesosConnector
+var SPECIAL_CHARACTER = regexp.MustCompile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+
+var instance *Connector
 var once sync.Once
 
-type MesosConnector struct {
-	// mesos framework related
-	ClusterID        string
-	Master           string
-	client           *MesosHttpClient
-	lastHearBeatTime time.Time
+type Connector struct {
+	ClusterID             string
+	MesosLeader           string
+	MesosLeaderHttpClient *HttpClient
 
-	MesosCallChan chan *sched.Call
-
-	// TODO make sure this chan doesn't explode
+	MesosCallChan  chan *sched.Call
 	MesosEventChan chan *event.MesosEvent
-	Framework      *mesos.FrameworkInfo
+
+	FrameworkInfo *mesos.FrameworkInfo
 }
 
-func NewMesosConnector() *MesosConnector {
+func NewConnector() *Connector {
 	return Instance() // call initialize method
 }
 
-func Instance() *MesosConnector {
+func Instance() *Connector {
 	once.Do(
 		func() {
-			instance = &MesosConnector{
+			hostname, _ := os.Hostname()
+			info := &mesos.FrameworkInfo{
+				User:      proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
+				Name:      proto.String("swan"),
+				Principal: proto.String("swan"),
+
+				FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
+				Checkpoint:      proto.Bool(true),
+				Hostname:        proto.String(hostname),
+			}
+
+			instance = &Connector{
 				MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
 				MesosCallChan:  make(chan *sched.Call, 1024),
+				FrameworkInfo:  info,
 			}
 		})
 
 	return instance
 }
 
-func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan error) {
-	logrus.Infof("Subscribe with mesos master %s", s.Master)
+func (s *Connector) Subscribe(ctx context.Context, mesosFailureChan chan error) {
+	logrus.Infof("subscribe to mesos leader: %s", s.MesosLeader)
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
-			FrameworkInfo: s.Framework,
+			FrameworkInfo: s.FrameworkInfo,
 		},
 	}
 
-	if s.Framework.Id != nil {
+	if s.FrameworkInfo.Id != nil {
 		call.FrameworkId = &mesos.FrameworkID{
-			Value: proto.String(s.Framework.Id.GetValue()),
+			Value: proto.String(s.FrameworkInfo.Id.GetValue()),
 		}
 	}
 
@@ -82,10 +93,10 @@ func (s *MesosConnector) subscribe(ctx context.Context, mesosFailureChan chan er
 		mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
 	}
 
-	go s.handleEvents(ctx, resp, mesosFailureChan)
+	s.handleEvents(ctx, resp, mesosFailureChan)
 }
 
-func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, mesosFailureChan chan error) {
+func (s *Connector) handleEvents(ctx context.Context, resp *http.Response, mesosFailureChan chan error) {
 	defer func() {
 		resp.Body.Close()
 	}()
@@ -128,20 +139,8 @@ func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, 
 	}
 }
 
-// TODO add framework capbility, make following variables configurable
-func CreateFrameworkInfo() *mesos.FrameworkInfo {
-	hostname, _ := os.Hostname()
-	fw := &mesos.FrameworkInfo{
-		User:      proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
-		Name:      proto.String("swan"),
-		Principal: proto.String("swan"),
-
-		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
-		Checkpoint:      proto.Bool(true),
-		Hostname:        proto.String(hostname),
-	}
-
-	return fw
+func (s *Connector) SetFrameworkInfoId(id string) {
+	s.FrameworkInfo.Id = &mesos.FrameworkID{Value: proto.String(id)}
 }
 
 func getMastersFromZK(zkPath string) ([]string, error) {
@@ -162,7 +161,6 @@ func getMastersFromZK(zkPath string) ([]string, error) {
 		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
 	}
 
-	// find mesos master
 	children, _, err := conn.Children(url.Path)
 	if err != nil {
 		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
@@ -195,19 +193,19 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 	return mesos.GetStateFromCluster()
 }
 
-func (s *MesosConnector) Send(call *sched.Call) (*http.Response, error) {
+func (s *Connector) Send(call *sched.Call) (*http.Response, error) {
 	payload, err := proto.Marshal(call)
 	if err != nil {
 		return nil, err
 	}
-	return s.client.Send(payload)
+	return s.MesosLeaderHttpClient.Send(payload)
 }
 
-func (s *MesosConnector) addEvent(eventType sched.Event_Type, e *sched.Event) {
+func (s *Connector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error) {
+func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
 	var err error
 	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
 	if err != nil {
@@ -221,23 +219,21 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 		return
 	}
 
-	s.Master = state.Leader
-	s.client = NewHTTPClient(state.Leader, "/api/v1/scheduler")
+	s.MesosLeader = state.Leader
+	s.MesosLeaderHttpClient = NewHTTPClient(s.MesosLeader, "/api/v1/scheduler")
 
-	s.ClusterID = state.Cluster
-	if s.ClusterID == "" {
+	if len(strings.TrimSpace(state.Cluster)) == 0 {
 		s.ClusterID = "cluster"
+	} else {
+		s.ClusterID = state.Cluster
 	}
 
-	r, _ := regexp.Compile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
-	match := r.MatchString(s.ClusterID)
-	if match {
+	if SPECIAL_CHARACTER.MatchString(s.ClusterID) {
 		logrus.Warnf(`Swan do not work with mesos cluster name(%s) with special characters "-.$*+?{}()[]|".`, s.ClusterID)
-		s.ClusterID = r.ReplaceAllString(s.ClusterID, "")
-		logrus.Infof("Swan acceptable cluster name: %s", s.ClusterID)
+		s.ClusterID = SPECIAL_CHARACTER.ReplaceAllString(s.ClusterID, "")
 	}
 
-	s.subscribe(ctx, mesosFailureChan)
+	go s.Subscribe(ctx, mesosFailureChan)
 
 	for {
 		select {
@@ -252,7 +248,7 @@ func (s *MesosConnector) Start(ctx context.Context, mesosFailureChan chan error)
 				mesosFailureChan <- err
 			}
 			if resp.StatusCode != 202 {
-				logrus.Infof("send response not 202 but %d", resp.StatusCode)
+				logrus.Errorf("send response not 202 but %d", resp.StatusCode)
 				mesosFailureChan <- errors.New("http got respose not 202")
 			}
 		}
