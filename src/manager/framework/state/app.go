@@ -73,6 +73,11 @@ type App struct {
 
 func NewApp(version *types.Version,
 	userEventChan chan *event.UserEvent) (*App, error) {
+	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, mesos_connector.Instance().ClusterID)
+	existingApp, _ := persistentStore.GetApp(appID)
+	if existingApp != nil {
+		return nil, errors.New("app already exists")
+	}
 
 	err := validateAndFormatVersion(version)
 	if err != nil {
@@ -83,7 +88,7 @@ func NewApp(version *types.Version,
 		Versions:       []*types.Version{},
 		slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		ID:             fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, mesos_connector.Instance().ClusterID),
+		ID:             appID,
 		Name:           version.AppName,
 		ClusterID:      mesos_connector.Instance().ClusterID,
 		Created:        time.Now(),
@@ -511,6 +516,12 @@ func validateAndFormatVersion(version *types.Version) error {
 	if version.Container.Docker == nil {
 		return errors.New("swan only support mesos docker containerization, no container found")
 	}
+
+	if version.AppName == "" {
+		return errors.New("invalid appName: appName was empty")
+	}
+
+	version.AppName = strings.TrimSpace(version.AppName)
 
 	r, _ := regexp.Compile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
 	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
