@@ -34,11 +34,12 @@ type Node struct {
 	ID                string
 	agent             *agent.Agent     // hold reference to agent, take function when in agent mode
 	manager           *manager.Manager // hold a instance of manager, make logic taking place
-	ctx               context.Context
 	joinRetryInterval time.Duration
-	RaftID            uint64
+	RaftID            uint64 // TODO(xcm) why RaftID in this level, supposed it should be in manager
 	stopC             chan struct{}
-	WasJoin           bool
+	WasJoin           bool // need clarification
+
+	ctx context.Context
 }
 
 func NewNode(config config.SwanConfig) (*Node, error) {
@@ -47,9 +48,10 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		return nil, err
 	}
 
-	if wasJoin {
+	if wasJoin { // logic below not quit clear
 		for _, joinAddr := range config.JoinAddrs {
-			if joinAddr == config.AdvertiseAddr {
+			if joinAddr == config.AdvertiseAddr { // AdvertiseAddr I think should be not that as important as listenaddr,
+				// here  we use it to test if was join before, kinda of weird
 				wasJoin = false
 				break
 			}
@@ -72,7 +74,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		WasJoin:           wasJoin,
 	}
 
-	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644)
+	err = os.MkdirAll(config.DataDir+"/"+nodeID, 0644) // 0755 ?
 	if err != nil {
 		logrus.Errorf("os.MkdirAll got error: %s", err)
 		return nil, err
@@ -107,7 +109,7 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 		node.agent = a
 	}
 
-	nodeApi := &NodeApi{node}
+	nodeApi := &NodeApi{node} // does agent have Node API?
 	apiserver.Install(swancontext.Instance().ApiServer, nodeApi)
 
 	return node, nil
@@ -118,15 +120,15 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, bool, error) {
 	nodeIDFile := swanConfig.DataDir + NodeIDFileName
 	if !fileutil.Exist(nodeIDFile) {
-		os.MkdirAll(swanConfig.DataDir, 0700)
+		os.MkdirAll(swanConfig.DataDir, 0700) // 0755 ? other have permission to read
 
 		nodeID := uuid.NewV4().String()
 		idFile, err := os.OpenFile(nodeIDFile, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return "", true, err
+			return "", true, err // wasJoin == true ?
 		}
 
-		if _, err = idFile.WriteString(nodeID); err != nil {
+		if _, err = idFile.WriteString(nodeID); err != nil { // ioutil.WriteFile better ?
 			return "", true, err
 		}
 
@@ -136,10 +138,10 @@ func loadOrCreateNodeID(swanConfig config.SwanConfig) (string, bool, error) {
 	} else {
 		idFile, err := os.Open(nodeIDFile)
 		if err != nil {
-			return "", false, err
+			return "", false, err // wasJoin == false?
 		}
 
-		nodeID, err := ioutil.ReadAll(idFile)
+		nodeID, err := ioutil.ReadAll(idFile) // ioutil.ReadFile better?
 		if err != nil {
 			return "", false, err
 		}
@@ -169,12 +171,16 @@ func (n *Node) Start(ctx context.Context) error {
 		RaftID:            n.RaftID,
 	}
 
+	// I think use advertiseAddr to test for join or not is not good as
+	// advertiseAddr is a weak concept, only function when there are run in
+	// condition listenaddr not same as it.
+
 	if swancontext.IsManager() {
 		go func() {
 			// NOTICE: start a manager may be have following 2 condition
 			// 1. the ID file was not found and start as new node
 			// 2. the ID file was found and restart with old data
-			// under the first condition witn no old data there have 3 condition
+			// under the first condition with no old data there have 3 condition
 			// (1). the first node of cluster, and only start as manager, in this conditon
 			//		the join-addrs was nil
 			// (2). the first node of cluster, start with mixed mode, in this conditon the
