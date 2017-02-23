@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"regexp"
 	"strings"
 	"sync"
@@ -127,11 +128,17 @@ func (s *MesosConnector) handleEvents(ctx context.Context, resp *http.Response, 
 	}
 }
 
+// TODO add framework capbility, make following variables configurable
 func CreateFrameworkInfo() *mesos.FrameworkInfo {
+	hostname, _ := os.Hostname()
 	fw := &mesos.FrameworkInfo{
-		User:            proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
-		Name:            proto.String("swan"),
+		User:      proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
+		Name:      proto.String("swan"),
+		Principal: proto.String("swan"),
+
 		FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
+		Checkpoint:      proto.Bool(true),
+		Hostname:        proto.String(hostname),
 	}
 
 	return fw
