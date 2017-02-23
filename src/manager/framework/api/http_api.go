@@ -187,13 +187,6 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		return
 	}
 
-	err = CheckVersion(&version)
-	if err != nil {
-		logrus.Errorf("Create app error: %s", err.Error())
-		response.WriteError(http.StatusBadRequest, err)
-		return
-	}
-
 	app, err := api.Scheduler.CreateApp(&version)
 	if err != nil {
 		logrus.Errorf("Create app error: %s", err.Error())
@@ -300,24 +293,21 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 		return
 	}
 
-	if CheckVersion(&version) == nil {
-		appID := request.PathParameter("app_id")
-		err := api.Scheduler.UpdateApp(appID, &version)
-		if err != nil {
-			logrus.Errorf("Update app[%s] error: %s", appID, err.Error())
-			response.WriteError(http.StatusBadRequest, err)
-			return
-		}
-		app, err := api.Scheduler.InspectApp(appID)
-		if err != nil {
-			logrus.Errorf("Inspect app[%s] error: %s", appID, err.Error())
-			response.WriteError(http.StatusNotFound, err)
-			return
-		}
-		response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
-	} else {
-		response.WriteErrorString(http.StatusBadRequest, "Invalid Version.")
+	appID := request.PathParameter("app_id")
+	if err := api.Scheduler.UpdateApp(appID, &version); err != nil {
+		logrus.Errorf("Update app[%s] error: %s", appID, err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
 	}
+
+	app, err := api.Scheduler.InspectApp(appID)
+	if err != nil {
+		logrus.Errorf("Inspect app[%s] error: %s", appID, err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
+	return
 }
 
 func (api *AppService) ProceedUpdate(request *restful.Request, response *restful.Response) {
@@ -548,13 +538,6 @@ func FormAppRetWithVersionsAndTasks(app *state.App) *types.App {
 	appRet := FormAppRetWithVersions(app)
 	appRet.Tasks = FilterTasksFromApp(app)
 	return appRet
-}
-
-func CheckVersion(version *types.Version) error {
-	// image format
-	// mode valid
-	// instance exists
-	return nil
 }
 
 func FilterTasksFromApp(app *state.App) []*types.Task {
