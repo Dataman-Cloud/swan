@@ -15,6 +15,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	RESERVED_API_GATEWAY_DOMAIN = "gateway"
+)
+
 func NewResolver(config *Config) *Resolver {
 	res := &Resolver{
 		config: config,
@@ -169,24 +173,26 @@ func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error
 	var records = make([]string, 0)
 	var isDigit = regexp.MustCompile("\\d+")
 	tokens := strings.Split(strings.TrimRight(name, res.rg.Domain), ".")
-	// 0.nginx.xcm.foobar  -  .swan.com
-	if len(tokens) == 4 && isDigit.MatchString(tokens[0]) {
-		for k, hosts := range rs.As {
-			if name == k {
-				records = append(records, hosts...)
-			}
-		}
-	} else if len(tokens) == 3 { // nginx.xcm.foobar  -  .swan.com
-		for k, hosts := range rs.As {
-			if sliceEqual(strings.Split(strings.TrimRight(k, res.rg.Domain), ".")[1:], tokens) {
-				records = append(records, hosts...)
-			}
-		}
-	} else { // wildcard match  eg. foobar.swan.com or  x.foobar.swan.com
+
+	if tokens[len(tokens)-1] == RESERVED_API_GATEWAY_DOMAIN { // api gateway resolve with higher priority
 		for k, hosts := range rs.ProxiesAs {
 			ok := strings.HasSuffix(k, res.rg.Domain+".")
 			if ok {
 				records = append(records, hosts...)
+			}
+		}
+	} else {
+		if len(tokens) == 4 && isDigit.MatchString(tokens[0]) {
+			for k, hosts := range rs.As {
+				if name == k {
+					records = append(records, hosts...)
+				}
+			}
+		} else if len(tokens) == 3 { // nginx.xcm.foobar  -  .swan.com
+			for k, hosts := range rs.As {
+				if sliceEqual(strings.Split(strings.TrimRight(k, res.rg.Domain), ".")[1:], tokens) {
+					records = append(records, hosts...)
+				}
 			}
 		}
 	}
