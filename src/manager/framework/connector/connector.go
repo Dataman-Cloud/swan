@@ -113,7 +113,7 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response, mesos
 	for {
 		select {
 		case <-ctx.Done():
-			logrus.Infof("handleEvents cancelled %s", ctx.Err())
+			logrus.Infof("goroutine handleEvents cancelled %s", ctx.Err())
 			return
 		default:
 			event := new(sched.Event)
