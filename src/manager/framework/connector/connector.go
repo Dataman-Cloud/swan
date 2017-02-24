@@ -16,6 +16,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
@@ -93,7 +94,6 @@ func (s *Connector) Subscribe(ctx context.Context, mesosFailureChan chan error) 
 		return // shortcut this without further actions
 	}
 
-	// http might now be the default transport in future release
 	if resp.StatusCode != http.StatusOK {
 		mesosFailureChan <- fmt.Errorf("subscribe with unexpected response status: %d", resp.StatusCode)
 		return // shortcut this without further actions
@@ -217,7 +217,7 @@ func (s *Connector) Reregister(mesosFailureChan chan error) {
 
 	err := s.LeaderDetect()
 	if err != nil { // if leader detect encounter any error
-		mesosFailureChan <- err
+		mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 		return
 	}
 
@@ -227,8 +227,8 @@ func (s *Connector) Reregister(mesosFailureChan chan error) {
 
 func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
 	err := s.LeaderDetect()
-	if err != nil { // if leader detect encounter any error
-		mesosFailureChan <- err
+	if err != nil {
+		mesosFailureChan <- utils.NewError(utils.SeverityHigh, err) // set SeverityHigh when first start
 		return
 	}
 

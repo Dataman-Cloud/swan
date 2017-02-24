@@ -3,7 +3,6 @@ package scheduler
 import (
 	"errors"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/types"
 )
@@ -40,8 +39,8 @@ func (scheduler *Scheduler) ListApps(appFilterOptions types.AppFilterOptions) []
 	apps := make([]*state.App, 0)
 	for _, v := range scheduler.AppStorage.Filter(appFilterOptions) {
 		apps = append(apps, v)
-	}
 
+	}
 	return apps
 }
 

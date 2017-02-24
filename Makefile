@@ -8,7 +8,7 @@ export GO15VENDOREXPERIMENT=1
 ## OS checking
 OS := $(shell uname)
 ifeq ($(OS),Darwin)
-	BUILD_OPTS=
+	BUILD_OPTS=-e CGO_ENABLED=0 -e GOOS=darwin -e GOARCH=amd64
 else
 	BUILD_OPTS=-e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64
 endif

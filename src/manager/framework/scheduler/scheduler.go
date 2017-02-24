@@ -9,6 +9,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -123,9 +124,14 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
-			time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-			scheduler.MesosConnector.Reregister(scheduler.mesosFailureChan)
-			//scheduler.mesosConnectorCancelFun()
+			swanErr, ok := e.(*utils.SwanError)
+			if ok && swanErr.Severity == utils.SeverityLow {
+				time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
+				scheduler.MesosConnector.Reregister(scheduler.mesosFailureChan)
+			} else {
+				scheduler.mesosConnectorCancelFun()
+				return e
+			}
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugf("")

@@ -73,7 +73,7 @@ type App struct {
 
 func NewApp(version *types.Version,
 	userEventChan chan *event.UserEvent) (*App, error) {
-	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, mesos_connector.Instance().ClusterID)
+	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
 	existingApp, _ := persistentStore.GetApp(appID)
 	if existingApp != nil {
 		return nil, errors.New("app already exists")
