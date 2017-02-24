@@ -12,6 +12,10 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
+const (
+	RESERVED_API_GATEWAY_DOMAIN = "gateway"
+)
+
 func newHTTPProxy(t *url.URL, tr http.RoundTripper, flush time.Duration) http.Handler {
 	rp := httputil.NewSingleHostReverseProxy(t)
 	rp.Transport = tr
@@ -65,7 +69,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	domainIndex := strings.Index(host, p.handlerCfg.Domain)
+	domainIndex := strings.Index(host, RESERVED_API_GATEWAY_DOMAIN+"."+p.handlerCfg.Domain)
 	if domainIndex == 0 {
 		log.Debugf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host)
 		w.WriteHeader(http.StatusBadRequest)
