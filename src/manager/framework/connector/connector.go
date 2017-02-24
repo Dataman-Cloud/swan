@@ -38,6 +38,9 @@ type Connector struct {
 	MesosEventChan chan *event.MesosEvent
 
 	FrameworkInfo *mesos.FrameworkInfo
+
+	StreamCtx       context.Context
+	StreamCancelFun context.CancelFunc
 }
 
 func NewConnector() *Connector {
@@ -70,6 +73,7 @@ func Instance() *Connector {
 
 func (s *Connector) Subscribe(ctx context.Context, mesosFailureChan chan error) {
 	logrus.Infof("subscribe to mesos leader: %s", s.MesosLeader)
+
 	call := &sched.Call{
 		Type: sched.Call_SUBSCRIBE.Enum(),
 		Subscribe: &sched.Call_Subscribe{
@@ -86,11 +90,13 @@ func (s *Connector) Subscribe(ctx context.Context, mesosFailureChan chan error) 
 	resp, err := s.Send(call)
 	if err != nil {
 		mesosFailureChan <- err
+		return // shortcut this without further actions
 	}
 
 	// http might now be the default transport in future release
 	if resp.StatusCode != http.StatusOK {
-		mesosFailureChan <- fmt.Errorf("Subscribe with unexpected response status: %d", resp.StatusCode)
+		mesosFailureChan <- fmt.Errorf("subscribe with unexpected response status: %d", resp.StatusCode)
+		return // shortcut this without further actions
 	}
 
 	s.handleEvents(ctx, resp, mesosFailureChan)
@@ -112,13 +118,12 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response, mesos
 		default:
 			event := new(sched.Event)
 			if err := dec.Decode(event); err != nil {
-				logrus.Errorf("Deocde event failed: %s", err)
 				mesosFailureChan <- err
 			}
 
 			switch event.GetType() {
 			case sched.Event_SUBSCRIBED:
-				logrus.Infof("Subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
+				logrus.Infof("subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
 				s.addEvent(sched.Event_SUBSCRIBED, event)
 			case sched.Event_OFFERS:
 				s.addEvent(sched.Event_OFFERS, event)
@@ -146,11 +151,10 @@ func (s *Connector) SetFrameworkInfoId(id string) {
 func getMastersFromZK(zkPath string) ([]string, error) {
 	masterInfo := new(mesos.MasterInfo)
 
-	connUrl := zkPath
-	if !strings.HasPrefix(connUrl, "zk://") {
-		connUrl = fmt.Sprintf("zk://%s", zkPath)
+	if !strings.HasPrefix(zkPath, "zk://") {
+		zkPath = fmt.Sprintf("zk://%s", zkPath)
 	}
-	url, err := url.Parse(connUrl)
+	url, err := url.Parse(zkPath)
 	if err != nil {
 		return nil, err
 	}
@@ -158,12 +162,12 @@ func getMastersFromZK(zkPath string) ([]string, error) {
 	conn, _, err := zk.Connect(strings.Split(url.Host, ","), time.Second)
 	defer conn.Close()
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+		return nil, err
 	}
 
 	children, _, err := conn.Children(url.Path)
 	if err != nil {
-		return nil, fmt.Errorf("Couldn't connect to zookeeper:%s", err.Error())
+		return nil, err
 	}
 
 	masters := make([]string, 0)
@@ -172,13 +176,12 @@ func getMastersFromZK(zkPath string) ([]string, error) {
 			data, _, _ := conn.Get(url.Path + "/" + node)
 			err := json.Unmarshal(data, masterInfo)
 			if err != nil {
-				return nil, fmt.Errorf("Unmarshal error: %s", err.Error())
+				return nil, err
 			}
 			masters = append(masters, fmt.Sprintf("%s:%d", *masterInfo.GetAddress().Ip, *masterInfo.GetAddress().Port))
 		}
 	}
 
-	logrus.Info("Find mesos masters: ", masters)
 	return masters, nil
 }
 
@@ -205,22 +208,61 @@ func (s *Connector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
-	var err error
-	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
-	if err != nil {
-		logrus.Error(err)
-		return
-	}
-	state, err := stateFromMasters(masters)
-	if err != nil {
-		logrus.Errorf("%s Check your mesos master configuration", err)
+func (s *Connector) Reregister(mesosFailureChan chan error) {
+	s.StreamCancelFun()
+
+	err := s.LeaderDetect()
+	if err != nil { // if leader detect encounter any error
 		mesosFailureChan <- err
 		return
 	}
 
+	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
+	go s.Subscribe(s.StreamCtx, mesosFailureChan)
+}
+
+func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
+	err := s.LeaderDetect()
+	if err != nil { // if leader detect encounter any error
+		mesosFailureChan <- err
+		return
+	}
+
+	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
+	go s.Subscribe(s.StreamCtx, mesosFailureChan)
+
+	for {
+		select {
+		case <-ctx.Done():
+			s.StreamCancelFun() // stop stream goroutine
+			logrus.Infof("connector got done signal: %s", ctx.Err())
+			return
+		case call := <-s.MesosCallChan:
+			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
+			resp, err := s.Send(call)
+			if err != nil {
+				mesosFailureChan <- err
+			}
+			if resp.StatusCode != 202 {
+				mesosFailureChan <- errors.New("sending call response status code not 202")
+			}
+		}
+	}
+}
+
+func (s *Connector) LeaderDetect() error {
+	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
+	if err != nil {
+		return err
+	}
+
+	state, err := stateFromMasters(masters)
+	if err != nil {
+		return err
+	}
+
+	s.MesosLeaderHttpClient = NewHTTPClient(state.Leader, "/api/v1/scheduler")
 	s.MesosLeader = state.Leader
-	s.MesosLeaderHttpClient = NewHTTPClient(s.MesosLeader, "/api/v1/scheduler")
 
 	if len(strings.TrimSpace(state.Cluster)) == 0 {
 		s.ClusterID = "cluster"
@@ -233,24 +275,5 @@ func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
 		s.ClusterID = SPECIAL_CHARACTER.ReplaceAllString(s.ClusterID, "")
 	}
 
-	go s.Subscribe(ctx, mesosFailureChan)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logrus.Errorf("mesosConnector got signal %s", ctx.Err())
-			return
-		case call := <-s.MesosCallChan:
-			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
-			resp, err := s.Send(call)
-			if err != nil {
-				logrus.Errorf("%s", err)
-				mesosFailureChan <- err
-			}
-			if resp.StatusCode != 202 {
-				logrus.Errorf("send response not 202 but %d", resp.StatusCode)
-				mesosFailureChan <- errors.New("http got respose not 202")
-			}
-		}
-	}
+	return nil
 }
