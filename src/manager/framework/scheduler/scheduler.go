@@ -14,6 +14,10 @@ import (
 	"golang.org/x/net/context"
 )
 
+const (
+	CONNECTOR_DEFAULT_BACKOFF = 2 * time.Second
+)
+
 type Scheduler struct {
 	heartbeater      *time.Ticker
 	mesosFailureChan chan error
@@ -119,8 +123,9 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
-			scheduler.mesosConnectorCancelFun()
-			return e
+			time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
+			scheduler.MesosConnector.Reregister(scheduler.mesosFailureChan)
+			//scheduler.mesosConnectorCancelFun()
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugf("")

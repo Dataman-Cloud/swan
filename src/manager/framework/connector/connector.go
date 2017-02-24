@@ -209,7 +209,11 @@ func (s *Connector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 }
 
 func (s *Connector) Reregister(mesosFailureChan chan error) {
-	s.StreamCancelFun()
+	logrus.Infof("register to mesos now")
+
+	if s.StreamCancelFun != nil {
+		s.StreamCancelFun()
+	}
 
 	err := s.LeaderDetect()
 	if err != nil { // if leader detect encounter any error
