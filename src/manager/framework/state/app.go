@@ -538,6 +538,11 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New(fmt.Sprintf("invalid runAs [%s]: %s", version.RunAs, errMsg))
 	}
 
+	match = r.MatchString(version.Container.Docker.Network)
+	if match {
+		return errors.New(fmt.Sprintf("invalid network [%s]: %s", version.Container.Docker.Network, errMsg))
+	}
+
 	if len(version.RunAs) == 0 {
 		return errors.New("runAs should not empty")
 	}
@@ -558,10 +563,6 @@ func validateAndFormatVersion(version *types.Version) error {
 
 		if len(version.Container.Docker.PortMappings) > 0 {
 			return errors.New("fixed mode application doesn't support portmapping")
-		}
-
-		if strings.ToLower(version.Container.Docker.Network) != SWAN_RESERVED_NETWORK {
-			return errors.New("fixed mode app suppose the only network driver should be macvlan and name is swan")
 		}
 	}
 
