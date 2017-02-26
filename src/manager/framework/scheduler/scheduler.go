@@ -127,7 +127,8 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 			swanErr, ok := e.(*utils.SwanError)
 			if ok && swanErr.Severity == utils.SeverityLow {
 				time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-				scheduler.MesosConnector.Reregister(scheduler.mesosFailureChan)
+
+				scheduler.MesosConnector.Reregister()
 			} else {
 				scheduler.mesosConnectorCancelFun()
 				return e
