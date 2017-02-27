@@ -208,9 +208,9 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 	}
 
 	return constraintsMatch &&
-		ow.CpuRemain() > slot.Version.CPUs &&
-		ow.MemRemain() > slot.Version.Mem &&
-		ow.DiskRemain() > slot.Version.Disk
+		ow.CpuRemain() >= slot.Version.CPUs &&
+		ow.MemRemain() >= slot.Version.Mem &&
+		ow.DiskRemain() >= slot.Version.Disk
 }
 
 func (slot *Slot) filterConstraints(constraints []string) []string {
