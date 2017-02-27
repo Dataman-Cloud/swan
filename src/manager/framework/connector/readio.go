@@ -1,4 +1,4 @@
-package mesos_connector
+package connector
 
 import (
 	"bufio"

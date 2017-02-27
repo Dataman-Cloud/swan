@@ -102,7 +102,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
 	if taskStatus.GetUuid() != nil {
 		call := &sched.Call{
-			FrameworkId: h.Manager.SchedulerRef.MesosConnector.Framework.GetId(),
+			FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
 			Type:        sched.Call_ACKNOWLEDGE.Enum(),
 			Acknowledge: &sched.Call_Acknowledge{
 				AgentId: taskStatus.GetAgentId(),

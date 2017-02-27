@@ -58,7 +58,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 
 func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo) {
 	call := &sched.Call{
-		FrameworkId: h.Manager.SchedulerRef.MesosConnector.Framework.GetId(),
+		FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
 		Type:        sched.Call_ACCEPT.Enum(),
 		Accept: &sched.Call_Accept{
 			OfferIds: []*mesos.OfferID{
@@ -81,7 +81,7 @@ func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo
 
 func RejectOffer(h *Handler, offer *mesos.Offer) {
 	call := &sched.Call{
-		FrameworkId: h.Manager.SchedulerRef.MesosConnector.Framework.GetId(),
+		FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
 		Type:        sched.Call_DECLINE.Enum(),
 		Decline: &sched.Call_Decline{
 			OfferIds: []*mesos.OfferID{

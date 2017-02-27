@@ -4,15 +4,19 @@ import (
 	"time"
 
 	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/mesos_connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
+)
+
+const (
+	CONNECTOR_DEFAULT_BACKOFF = 2 * time.Second
 )
 
 type Scheduler struct {
@@ -26,12 +30,12 @@ type Scheduler struct {
 
 	AppStorage     *memoryStore
 	UserEventChan  chan *event.UserEvent
-	MesosConnector *mesos_connector.MesosConnector
+	MesosConnector *connector.Connector
 }
 
 func NewScheduler(store store.Store) *Scheduler {
 	scheduler := &Scheduler{
-		MesosConnector: mesos_connector.NewMesosConnector(),
+		MesosConnector: connector.NewConnector(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
@@ -93,12 +97,10 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		framework := mesos_connector.CreateFrameworkInfo()
 		frameworkId, err := scheduler.store.GetFrameworkId()
 		if err == nil {
-			framework.Id = &mesos.FrameworkID{Value: &frameworkId}
+			scheduler.MesosConnector.SetFrameworkInfoId(frameworkId)
 		}
-		scheduler.MesosConnector.Framework = framework
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
@@ -122,8 +124,15 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 		case e := <-scheduler.mesosFailureChan:
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
-			scheduler.mesosConnectorCancelFun()
-			return e
+			swanErr, ok := e.(*utils.SwanError)
+			if ok && swanErr.Severity == utils.SeverityLow {
+				time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
+
+				scheduler.MesosConnector.Reregister()
+			} else {
+				scheduler.mesosConnectorCancelFun()
+				return e
+			}
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugf("")

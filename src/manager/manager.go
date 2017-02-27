@@ -172,7 +172,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				}()
 
 			} else if newState == raft.IsFollower {
-				log.G(ctx).Info("Now i become a follower !!!")
+				log.G(ctx).Info("now i become a follower !!!")
 
 				if eventBusStarted {
 					manager.resolverSubscriber.Unsubscribe(swancontext.Instance().EventBus)

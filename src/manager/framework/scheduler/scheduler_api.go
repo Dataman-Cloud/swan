@@ -39,8 +39,8 @@ func (scheduler *Scheduler) ListApps(appFilterOptions types.AppFilterOptions) []
 	apps := make([]*state.App, 0)
 	for _, v := range scheduler.AppStorage.Filter(appFilterOptions) {
 		apps = append(apps, v)
-	}
 
+	}
 	return apps
 }
 
