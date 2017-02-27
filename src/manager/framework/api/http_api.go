@@ -204,6 +204,8 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 		labelsSelector, err := labels.Parse(labelsFilter)
 		if err != nil {
 			logrus.Errorf("parse condition of label %s failed. Error: %+v", labelsSelector, err)
+			response.WriteError(http.StatusBadRequest, err)
+			return
 		} else {
 			appFilterOptions.LabelsSelector = labelsSelector
 		}
@@ -214,6 +216,8 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 		fieldSelector, err := fields.ParseSelector(fieldsFilter)
 		if err != nil {
 			logrus.Errorf("parse condition of field %s failed. Error: %+v", fieldsFilter, err)
+			response.WriteError(http.StatusBadRequest, err)
+			return
 		} else {
 			appFilterOptions.FieldsSelector = fieldSelector
 		}
