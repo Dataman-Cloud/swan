@@ -106,6 +106,7 @@ message HealthCheck {
     double gracePeriodSeconds = 10;
     double intervalSeconds = 11;
     double timeoutSeconds = 12;
+    double delaySeconds = 13;
 }
 
 message Slot {
