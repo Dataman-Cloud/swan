@@ -635,7 +635,7 @@ func FormTaskHistory(v *state.Task) *types.TaskHistory {
 
 func FormTask(slot *state.Slot) *types.Task {
 	task := &types.Task{
-		ID:            slot.ID,
+		ID:            slot.CurrentTask.ID,
 		AppID:         slot.App.ID,
 		VersionID:     slot.Version.ID,
 		Healthy:       slot.Healthy(),
