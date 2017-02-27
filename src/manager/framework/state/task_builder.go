@@ -271,6 +271,7 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 		builder.taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
 		builder.taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
 		builder.taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
+		builder.taskInfo.HealthCheck.DelaySeconds = proto.Float64(healthCheck.DelaySeconds)
 	}
 
 	return builder

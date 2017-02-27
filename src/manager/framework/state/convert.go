@@ -306,6 +306,7 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *rafttypes.HealthCheck {
 		GracePeriodSeconds:  healthCheck.GracePeriodSeconds,
 		IntervalSeconds:     healthCheck.IntervalSeconds,
 		TimeoutSeconds:      healthCheck.TimeoutSeconds,
+		DelaySeconds:        healthCheck.DelaySeconds,
 	}
 
 	return raftHealthCheck
@@ -323,6 +324,7 @@ func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCh
 		GracePeriodSeconds:  raftHealthCheck.GracePeriodSeconds,
 		IntervalSeconds:     raftHealthCheck.IntervalSeconds,
 		TimeoutSeconds:      raftHealthCheck.TimeoutSeconds,
+		DelaySeconds:        raftHealthCheck.DelaySeconds,
 	}
 
 	return healthCheck

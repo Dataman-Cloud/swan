@@ -80,6 +80,7 @@ type HealthCheck struct {
 	GracePeriodSeconds  float64 `json:"gracePeriodSeconds,omitempty"`
 	IntervalSeconds     float64 `json:"intervalSeconds,omitempty"`
 	TimeoutSeconds      float64 `json:"timeoutSeconds,omitempty"`
+	DelaySeconds        float64 `json:"delaySeconds,omitempty"`
 }
 
 // AddLabel adds a label to the application
