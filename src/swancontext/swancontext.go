@@ -37,9 +37,9 @@ func Instance() *SwanContext {
 }
 
 func IsManager() bool {
-	return instance.Config.Mode == config.Manager || instance.Config.Mode == config.Mixed
+	return instance.Config.Mode == config.Manager
 }
 
 func IsAgent() bool {
-	return instance.Config.Mode == config.Agent || instance.Config.Mode == config.Mixed
+	return instance.Config.Mode == config.Agent
 }
