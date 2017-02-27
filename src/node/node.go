@@ -176,13 +176,12 @@ func (n *Node) Start(ctx context.Context) error {
 			// 2. the ID file was found and restart with old data
 			// under the first condition witn no old data there have 3 condition
 			// (1). the first node of cluster, and only start as manager, in this conditon
-			//		the join-addrs was nil
-			// (2). the first node of cluster, start with mixed mode, in this conditon the
-			//		join-addrs was nil but it must contains itself advertise-addr
-			// (3). not the first manager node of cluster, in this condition the join-addrs
+			//		the join-addrs was nil or join-addrs contains itself advertis-addr(for
+			//		batch start node with the same command).
+			// (2). not the first manager node of cluster, in this condition the join-addrs
 			//      was not nil and can't contains itselft advertise-addr
 			if n.WasJoin {
-				existedNodes, err := n.JoinAsManager(nodeInfo)
+				existedNodes, err := n.JoinToCluster(nodeInfo)
 				if err != nil {
 					errChan <- err
 				}
@@ -213,7 +212,7 @@ func (n *Node) Start(ctx context.Context) error {
 		}()
 
 		go func() {
-			err := n.JoinAsAgent(nodeInfo)
+			_, err := n.JoinToCluster(nodeInfo)
 			if err != nil {
 				errChan <- err
 			}
@@ -260,47 +259,54 @@ func (n *Node) Stop() {
 	}
 }
 
-func (n *Node) JoinAsAgent(nodeInfo types.Node) error {
-	swanConfig := swancontext.Instance().Config
-	if len(swanConfig.JoinAddrs) == 0 {
-		return errors.New("start agent failed. Error: joinAddrs must be no empty")
+func (n *Node) JoinToCluster(nodeInfo types.Node) ([]types.Node, error) {
+	tryJoinTimes := 1
+	existingNodes, err := n.join(nodeInfo)
+	if err != nil {
+		logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
+	} else {
+		return existingNodes, nil
 	}
 
-	for _, managerAddr := range swanConfig.JoinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
-		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
-		if err != nil {
-			logrus.Infof("register to %s got error: %s, try again after %d seconds", registerAddr, err.Error(), JoinRetryInterval)
-		}
+	retryTicker := time.NewTicker(JoinRetryInterval * time.Second)
+	defer retryTicker.Stop()
 
-		if err == nil {
-			logrus.Infof("agent register to manager success with managerAddr: %s", managerAddr)
-			return nil
+	for {
+		select {
+		case <-retryTicker.C:
+			if tryJoinTimes >= 100 {
+				return nil, errors.New("join to swan cluster has been failed 100 times exit")
+			}
+
+			tryJoinTimes++
+
+			existingNodes, err = n.join(nodeInfo)
+			if err != nil {
+				logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
+			} else {
+				return existingNodes, nil
+			}
 		}
 	}
-
-	time.Sleep(n.joinRetryInterval)
-	n.JoinAsAgent(nodeInfo)
-	return nil
 }
 
-func (n *Node) JoinAsManager(nodeInfo types.Node) ([]types.Node, error) {
+func (n *Node) join(nodeInfo types.Node) ([]types.Node, error) {
 	swanConfig := swancontext.Instance().Config
 	if len(swanConfig.JoinAddrs) == 0 {
-		return nil, errors.New("start agent failed. Error: joinAddrs must be no empty")
+		return nil, errors.New("start swan failed. Error: joinAddrs must be no empty")
 	}
 
 	for _, managerAddr := range swanConfig.JoinAddrs {
 		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
 		resp, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
-			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())
 			continue
 		}
 
 		var nodes []types.Node
 		if err := json.Unmarshal(resp, &nodes); err != nil {
-			logrus.Errorf("register to %s got error: %s", registerAddr, err.Error())
+			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())
 			continue
 		}
 
@@ -311,10 +317,12 @@ func (n *Node) JoinAsManager(nodeInfo types.Node) ([]types.Node, error) {
 			}
 		}
 
+		logrus.Infof("join to swan cluster success with manager adderss %s", managerAddr)
+
 		return managerNodes, nil
 	}
 
-	return nil, errors.New("add manager failed")
+	return nil, errors.New("try join all managers are failed")
 }
 
 func loadOrCreateRaftID(db *bolt.DB) (uint64, error) {
