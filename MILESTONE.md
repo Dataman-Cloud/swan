@@ -22,7 +22,6 @@ milestones we set ahead.
     appName which is the name of an app.
   - **[IMPROVE]** make sure fixed type app allow customized their
     network name.
-  - **[FEATURE]** restart policy revisit.
 
   - **[IMPROVE]** Handle recind offer
   - **[IMPROVE]** Handle inverse offer
@@ -30,3 +29,14 @@ milestones we set ahead.
   - **[IMPROVE]** make sure framework handle agent lost gracefully
   
   - **[FEATURE]** add node status and heartbeats from leader to agent
+
+### \#3 feature improvement & `Swan` stabilization 3 (3-3-2017)
+
+  - **[BUG]** task IP lost after `Swan` restart
+  - **[BUG]** DNS A record lost after `Swan` restart for fixed app
+  - **[IMPROVE]** rename `framework` to more appropriate `scheduler`s
+  - **[IMPROVE]**  teardown a scheduler
+  - **[IMPROVE]**  reconsilation all tasks
+  - **[FEATURE]** restart policy revisit.
+
+
