@@ -49,6 +49,7 @@ func NewTask(version *types.Version, slot *Slot) *Task {
 		ID:        fmt.Sprintf("%s-%s", slot.ID, strings.Replace(uuid.NewV4().String(), "-", "", -1)),
 		Version:   version,
 		Slot:      slot,
+		Ip:        slot.Ip,
 		HostPorts: make([]uint64, 0),
 		Created:   time.Now(),
 	}
