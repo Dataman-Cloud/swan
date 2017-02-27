@@ -13,11 +13,11 @@ type Node struct {
 }
 
 func (n Node) IsManager() bool {
-	return n.Role == RoleManager || n.Role == RoleMix
+	return n.Role == RoleManager
 }
 
 func (n Node) IsAgent() bool {
-	return n.Role == RoleAgent || n.Role == RoleMix
+	return n.Role == RoleAgent
 }
 
 type NodeRole string
@@ -25,5 +25,4 @@ type NodeRole string
 const (
 	RoleManager NodeRole = "manager"
 	RoleAgent   NodeRole = "agent"
-	RoleMix     NodeRole = "mixed"
 )

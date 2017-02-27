@@ -13,10 +13,9 @@ import (
 type SwanConfig struct {
 	NodeID            string   `json:"nodeID"`
 	LogLevel          string   `json:"logLevel"`
-	Mode              SwanMode `json:"mode"` // manager, agent, mixed
+	Mode              SwanMode `json:"mode"` // manager, agent
 	DataDir           string   `json:"dataDir"`
 	NoRecover         bool     `json:"noRecover"`
-	Domain            string   `json:"domain"`
 	RaftAdvertiseAddr string   `json:"raftAdvertiseAddr"`
 	RaftListenAddr    string   `json:"raftListenAddr"`
 	ListenAddr        string   `json:"listenAddr"`
@@ -64,10 +63,9 @@ type Janitor struct {
 func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig := SwanConfig{
 		LogLevel:       "info",
-		Mode:           Mixed,
+		Mode:           Manager,
 		DataDir:        "./data/",
 		NoRecover:      false,
-		Domain:         "swan.com",
 		ListenAddr:     "0.0.0.0:9999",
 		RaftListenAddr: "0.0.0.0:2111",
 		JoinAddrs:      []string{"0.0.0.0:9999"},
@@ -102,10 +100,10 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 
 	if c.String("mode") != "" {
-		if utils.SliceContains([]string{"mixed", "manager", "agent"}, c.String("mode")) {
+		if utils.SliceContains([]string{"manager", "agent"}, c.String("mode")) {
 			swanConfig.Mode = SwanMode(c.String("mode"))
 		} else {
-			return swanConfig, errors.New("mode should be one of mixed, manager or agent")
+			return swanConfig, errors.New("mode should be one of manager or agent")
 		}
 	}
 
@@ -121,16 +119,8 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 
 	if c.String("domain") != "" {
-		swanConfig.Domain = c.String("domain")
 		swanConfig.DNS.Domain = c.String("domain")
 		swanConfig.Janitor.Domain = c.String("domain")
-	}
-
-	// TODO(upccup): this is not the optimal solution. Maybe we can use listen-addr replace --swan-cluster
-	// if swan mode is mixed agent listen addr use the same with manager. But if the mode is agent we need
-	// a listen-addr just for agent
-	if swanConfig.Mode == Agent {
-		swanConfig.ListenAddr = c.String("listen-addr")
 	}
 
 	if c.String("listen-addr") != "" {

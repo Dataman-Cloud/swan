@@ -38,5 +38,6 @@ milestones we set ahead.
   - **[IMPROVE]**  teardown a scheduler
   - **[IMPROVE]**  reconsilation all tasks
   - **[FEATURE]** restart policy revisit.
+  - **[IMPROVE]** remove mixed mode
 
 

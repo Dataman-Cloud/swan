@@ -79,13 +79,13 @@ func main() {
 		},
 		cli.StringFlag{
 			Name:   "log-level,l",
-			Usage:  "customize debug level [debug|info|error]",
+			Usage:  "customize log level [debug|info|error]",
 			EnvVar: "SWAN_LOG_LEVEL",
 			Value:  "info",
 		},
 		cli.StringFlag{
 			Name:   "mode",
-			Usage:  "server mode, manager|agent|mixed ",
+			Usage:  "server mode, manager|agent",
 			EnvVar: "SWAN_MODE",
 			Value:  "mixed",
 		},

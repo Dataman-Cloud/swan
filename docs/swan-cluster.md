@@ -1,6 +1,6 @@
 #swan-cluster
 
-  a swan-cluster contains one or more swan-node, and one swan-node can display one of the following three roles, manager, agent, mixed. 
+  a swan-cluster contains one or more swan-node, and one swan-node can display one of the following two roles, manager, agent. 
 The proxy and DNS server was run in the agent, the manager provide service of manage application, and persist all app and cluster data.
 So there must have one manger and one agent in a swan-cluster.
 
@@ -11,14 +11,11 @@ sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos
             --data-dir=./data/1/ --mode=manager
 ```
 
- as the same we start a swan-node with mixed mode
+ as the same we start a swan-node with agent mode
 ```
-sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos 
-            --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 
-            --data-dir=./data/1/ --mode=mixed
+sudo ./swan --listen-addr=0.0.0.0:9999 --join-addrs=0.0.0.0:9999
+            --data-dir=./data/1/ --mode=agent
 ```
- if swan-node is started as mixed mode, it contains a manager and an agent.
-
 
  if the advertise address if not the same as the listen address of the swan-node. The start parameter **advertise-addr** and
 **raft-advertise-addr** need to be provided. The start cmd :
@@ -38,10 +35,14 @@ sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos
 ```
  the **join-addrs** contains one of more manager advertise-addr which already in swan-cluster
 
-  now we can run a swan-cluster with 3 manager and 1 agent like this:
+  now we can run a swan-cluster with 3 manager and 2 agent like this:
 ```
  sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 --data-dir=./data/1/ --mode=manager
  sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9998 --raft-listen-addr=http://127.0.0.1:2112 --data-dir=./data/2/ --mode=manager --join-addrs=0.0.0.0:9999
  sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113 --data-dir=./data/3/ --mode=manager --join-addrs=0.0.0.0:9999
- sudo ./swan --listen-addr=0.0.0.0:9997 --mode=agent --join-addrs=0.0.0.0:9999
+ sudo ./swan --listen-addr=0.0.0.0:9996 --mode=agent --join-addrs=0.0.0.0:9999,0.0.0.0:9998
+ sudo ./swan --listen-addr=0.0.0.0:9995 --mode=agent --join-addrs=0.0.0.0:9999,0.0.0.0:9997
 ```
+
+## Description of persist data
+  all swan persist data was in the manager node data dir, the default data dir is **./data/**, and there has an file named ID if this file was found swan will start with history data.
