@@ -220,7 +220,7 @@ func (s *Connector) addEvent(eventType sched.Event_Type, e *sched.Event) {
 	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *Connector) Reregister() {
+func (s *Connector) Reregister() error {
 	logrus.Infof("register to mesos now")
 
 	if s.StreamCancelFun != nil {
@@ -229,13 +229,13 @@ func (s *Connector) Reregister() {
 
 	err := s.LeaderDetect()
 	if err != nil { // if leader detect encounter any error
-		s.MesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 		logrus.Errorf("exiting reregister due to err: %s", err)
-		return
+		return err
 	}
 
 	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
 	go s.Subscribe(s.StreamCtx)
+	return nil
 }
 
 func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {

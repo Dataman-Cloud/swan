@@ -126,9 +126,13 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
 			swanErr, ok := e.(*utils.SwanError)
 			if ok && swanErr.Severity == utils.SeverityLow {
-				time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-
-				scheduler.MesosConnector.Reregister()
+				for {
+					err := scheduler.MesosConnector.Reregister()
+					if err == nil {
+						break
+					}
+					time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
+				}
 			} else {
 				scheduler.mesosConnectorCancelFun()
 				return e
