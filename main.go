@@ -126,7 +126,6 @@ func main() {
 	}
 
 	if err := app.Run(os.Args); err != nil {
-		logrus.Errorf("%s", err.Error())
 		os.Exit(1)
 	}
 }
