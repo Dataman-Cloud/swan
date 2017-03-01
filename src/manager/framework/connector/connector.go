@@ -97,7 +97,7 @@ func (s *Connector) Subscribe(ctx context.Context) {
 	resp, err := s.Send(call)
 	if err != nil {
 		logrus.Errorf("send subscribe call got err: %d", err)
-		s.mesosFailureChan <- err
+		s.mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 
 		logrus.Error("exiting Subscribe")
 		return
@@ -105,7 +105,8 @@ func (s *Connector) Subscribe(ctx context.Context) {
 
 	if resp.StatusCode != http.StatusOK {
 		logrus.Errorf("subscribe got http response status code: %d", resp.StatusCode)
-		s.mesosFailureChan <- errors.New(fmt.Sprintf("subscribe with unexpected response status: %d", resp.StatusCode))
+		s.mesosFailureChan <- utils.NewError(utils.SeverityLow,
+			errors.New(fmt.Sprintf("subscribe with unexpected response status: %d", resp.StatusCode)))
 
 		logrus.Error("exiting Subscribe")
 		return
