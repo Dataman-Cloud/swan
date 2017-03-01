@@ -10,11 +10,12 @@ import (
 )
 
 type Framework struct {
-	Scheduler *scheduler.Scheduler
-	RestApi   *api.AppService
-	StatsApi  *api.StatsService
-	EventsApi *api.EventsService
-	HealthApi *api.HealthyService
+	Scheduler    *scheduler.Scheduler
+	RestApi      *api.AppService
+	StatsApi     *api.StatsService
+	EventsApi    *api.EventsService
+	HealthApi    *api.HealthyService
+	FrameworkApi *api.FrameworkService
 
 	StopC chan struct{}
 }
@@ -29,6 +30,7 @@ func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) 
 	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler)
 	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler)
 	f.HealthApi = api.NewAndInstallHealthyService(apiServer, f.Scheduler)
+	f.FrameworkApi = api.NewAndInstallFrameworkService(apiServer, f.Scheduler)
 	return f, nil
 }
 
