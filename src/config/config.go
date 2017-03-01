@@ -103,7 +103,7 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		if utils.SliceContains([]string{"manager", "agent"}, c.String("mode")) {
 			swanConfig.Mode = SwanMode(c.String("mode"))
 		} else {
-			return swanConfig, errors.New("mode should be one of manager or agent")
+			return swanConfig, errors.New("--mode must be specified.")
 		}
 	}
 

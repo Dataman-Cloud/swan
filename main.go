@@ -40,7 +40,6 @@ func main() {
 	app.Commands = append(app.Commands, ManagerCmd())
 
 	if err := app.Run(os.Args); err != nil {
-		logrus.Errorf("%s", err.Error())
 		os.Exit(1)
 	}
 }
