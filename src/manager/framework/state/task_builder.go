@@ -211,14 +211,11 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 		}
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_BRIDGE.Enum()
 
-	case SWAN_RESERVED_NETWORK:
+	default:
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_USER.Enum()
 		builder.taskInfo.Container.NetworkInfos = append(builder.taskInfo.Container.NetworkInfos, &mesos.NetworkInfo{
-			Name: proto.String(SWAN_RESERVED_NETWORK),
+			Name: proto.String(network),
 		})
-
-	default:
-		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	}
 
 	return builder

@@ -16,10 +16,6 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-const (
-	SWAN_RESERVED_NETWORK = "swan"
-)
-
 type Task struct {
 	ID      string
 	Version *types.Version
