@@ -2,15 +2,20 @@ package main
 
 import (
 	"os"
+	"path"
 
+	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/node"
+	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/version"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
 	"golang.org/x/net/context"
 )
+
+const IDFileName = "ID"
 
 func setupLogger(logLevel string) {
 	level, err := logrus.ParseLevel(logLevel)
@@ -136,8 +141,16 @@ func FlagDomain() cli.Flag {
 }
 
 func AgentJoinCmd() cli.Command {
-	agentJoinCmd := cli.Command{
+	agentCmd := cli.Command{
 		Name:        "agent",
+		Usage:       "[COMMAND] [ARG...]",
+		Description: "run swan agent command",
+		Flags:       []cli.Flag{},
+		Subcommands: []cli.Command{},
+	}
+
+	agentJoinCmd := cli.Command{
+		Name:        "join",
 		Usage:       "[COMMAND] [ARG...]",
 		Description: "start and join a swan agent which contains proxy and DNS server",
 		Flags:       []cli.Flag{},
@@ -147,30 +160,37 @@ func AgentJoinCmd() cli.Command {
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagListenAddr())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagAdvertiseAddr())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJoinAddrs())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDataDir())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorAdvertiseIp())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagLogLevel())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDomain())
 
-	return agentJoinCmd
+	agentCmd.Subcommands = append(agentCmd.Subcommands, agentJoinCmd)
+
+	return agentCmd
 }
 
 func JoinAndStartAgent(c *cli.Context) error {
-	conf, err := config.NewConfig(c)
-	conf.Mode = config.Agent
+	conf := config.NewAgentConfig(c)
+	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		logrus.Errorf("load config failed. Error: %s", err)
-		return err
+		os.MkdirAll(conf.DataDir, 0700)
+		ID, err = utils.CreateNodeID(IDFilePath)
+		if err != nil {
+			return nil
+		}
 	}
 
 	setupLogger(conf.LogLevel)
 
-	node, err := node.NewNode(conf)
+	agent, err := agent.New(ID, conf)
 	if err != nil {
-		logrus.Error("Node initialization failed")
+		logrus.Error("agent initialization failed")
 		return err
 	}
 
-	if err := node.Start(context.Background()); err != nil {
+	if err := agent.JoinAndStart(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}

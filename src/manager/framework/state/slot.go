@@ -8,7 +8,6 @@ import (
 
 	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -492,10 +491,7 @@ func (slot *Slot) BeginTx() {
 }
 
 func (slot *Slot) ServiceDiscoveryURL() string {
-	domain := swancontext.Instance().Config.Janitor.Domain
-	url := strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
-	s := []string{url, domain}
-	return strings.Join(s, ".")
+	return strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
 }
 
 // here we persist the app anyway, no matter it touched or not

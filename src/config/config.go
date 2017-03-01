@@ -1,12 +1,10 @@
 package config
 
 import (
-	"errors"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/urfave/cli"
 )
 
@@ -23,9 +21,16 @@ type SwanConfig struct {
 	JoinAddrs         []string `json:"joinAddrs"`
 
 	Scheduler Scheduler `json:"scheduler"`
+}
 
-	DNS     DNS     `json:"dns"`
-	Janitor Janitor `json:"janitor"`
+type AgentConfig struct {
+	DataDir       string   `json:"dataDir"`
+	LogLevel      string   `json:"logLevel"`
+	ListenAddr    string   `json:"listenAddr"`
+	AdvertiseAddr string   `json:"advertiseAddr"`
+	JoinAddrs     []string `json:"joinAddrs"`
+	DNS           DNS      `json:"dns"`
+	Janitor       Janitor  `json:"janitor"`
 }
 
 type Scheduler struct {
@@ -60,21 +65,12 @@ type Janitor struct {
 	AdvertiseIP string `json:"advertiseIp"`
 }
 
-func NewConfig(c *cli.Context) (SwanConfig, error) {
-	swanConfig := SwanConfig{
-		LogLevel:       "info",
-		Mode:           Manager,
-		DataDir:        "./data/",
-		NoRecover:      false,
-		ListenAddr:     "0.0.0.0:9999",
-		RaftListenAddr: "0.0.0.0:2111",
-		JoinAddrs:      []string{"0.0.0.0:9999"},
-
-		Scheduler: Scheduler{
-			ZkPath:             "0.0.0.0:2181",
-			MesosFrameworkUser: "root",
-			Hostname:           hostname(),
-		},
+func NewAgentConfig(c *cli.Context) AgentConfig {
+	agentConfig := AgentConfig{
+		LogLevel:   "info",
+		DataDir:    "./data/",
+		ListenAddr: "0.0.0.0:9999",
+		JoinAddrs:  []string{"0.0.0.0:9999"},
 
 		DNS: DNS{
 			Domain: "swan.com",
@@ -96,15 +92,60 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	}
 
 	if c.String("log-level") != "" {
-		swanConfig.LogLevel = c.String("log-level")
+		agentConfig.LogLevel = c.String("log-level")
 	}
 
-	if c.String("mode") != "" {
-		if utils.SliceContains([]string{"manager", "agent"}, c.String("mode")) {
-			swanConfig.Mode = SwanMode(c.String("mode"))
-		} else {
-			return swanConfig, errors.New("mode should be one of manager or agent")
+	if c.String("data-dir") != "" {
+		agentConfig.DataDir = c.String("data-dir")
+		if !strings.HasSuffix(agentConfig.DataDir, "/") {
+			agentConfig.DataDir = agentConfig.DataDir + "/"
 		}
+	}
+
+	if c.String("domain") != "" {
+		agentConfig.DNS.Domain = c.String("domain")
+		agentConfig.Janitor.Domain = c.String("domain")
+	}
+
+	if c.String("listen-addr") != "" {
+		agentConfig.ListenAddr = c.String("listen-addr")
+	}
+
+	agentConfig.AdvertiseAddr = c.String("advertise-addr")
+	if agentConfig.AdvertiseAddr == "" {
+		agentConfig.AdvertiseAddr = agentConfig.ListenAddr
+	}
+
+	if c.String("janitor-advertise-ip") != "" {
+		agentConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
+	}
+
+	if c.String("join-addrs") != "" {
+		agentConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
+	}
+
+	return agentConfig
+}
+
+func NewConfig(c *cli.Context) (SwanConfig, error) {
+	swanConfig := SwanConfig{
+		LogLevel:       "info",
+		Mode:           Manager,
+		DataDir:        "./data/",
+		NoRecover:      false,
+		ListenAddr:     "0.0.0.0:9999",
+		RaftListenAddr: "0.0.0.0:2111",
+		JoinAddrs:      []string{"0.0.0.0:9999"},
+
+		Scheduler: Scheduler{
+			ZkPath:             "0.0.0.0:2181",
+			MesosFrameworkUser: "root",
+			Hostname:           hostname(),
+		},
+	}
+
+	if c.String("log-level") != "" {
+		swanConfig.LogLevel = c.String("log-level")
 	}
 
 	if c.String("data-dir") != "" {
@@ -118,11 +159,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		swanConfig.Scheduler.ZkPath = c.String("zk-path")
 	}
 
-	if c.String("domain") != "" {
-		swanConfig.DNS.Domain = c.String("domain")
-		swanConfig.Janitor.Domain = c.String("domain")
-	}
-
 	if c.String("listen-addr") != "" {
 		swanConfig.ListenAddr = c.String("listen-addr")
 	}
@@ -130,10 +166,6 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 	swanConfig.AdvertiseAddr = c.String("advertise-addr")
 	if swanConfig.AdvertiseAddr == "" {
 		swanConfig.AdvertiseAddr = swanConfig.ListenAddr
-	}
-
-	if c.String("janitor-advertise-ip") != "" {
-		swanConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
 	}
 
 	if c.String("raft-advertise-addr") != "" {
