@@ -20,9 +20,9 @@ const (
 )
 
 type Scheduler struct {
-	heartbeater      *time.Ticker
-	mesosFailureChan chan error
-	stopC            chan struct{}
+	heartbeater *time.Ticker
+	errorChan   chan error
+	stopC       chan struct{}
 
 	handlerManager          *HandlerManager
 	mesosConnectorCancelFun context.CancelFunc
@@ -41,8 +41,8 @@ func NewScheduler(store store.Store) *Scheduler {
 		AppStorage: NewMemoryStore(),
 		store:      store,
 
-		mesosFailureChan: make(chan error, 1),
-		UserEventChan:    make(chan *event.UserEvent, 1024),
+		errorChan:     make(chan error, 1),
+		UserEventChan: make(chan *event.UserEvent, 1024),
 	}
 
 	RegisterHandler := func(m *HandlerManager) {
@@ -104,7 +104,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
-		scheduler.MesosConnector.Start(c, scheduler.mesosFailureChan)
+		scheduler.MesosConnector.Start(c, scheduler.errorChan)
 	}()
 
 	return scheduler.Run(context.Background()) // context as a placeholder
@@ -114,7 +114,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 func (scheduler *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
-		case e := <-scheduler.MesosConnector.MesosEventChan:
+		case e := <-scheduler.MesosConnector.ReceiveChan:
 			logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
@@ -122,13 +122,17 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 			logrus.WithFields(logrus.Fields{"event": "user"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
-		case e := <-scheduler.mesosFailureChan:
+		case e := <-scheduler.errorChan:
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
 			swanErr, ok := e.(*utils.SwanError)
 			if ok && swanErr.Severity == utils.SeverityLow {
-				time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-
-				scheduler.MesosConnector.Reregister()
+				for {
+					err := scheduler.MesosConnector.Reregister()
+					if err == nil {
+						break
+					}
+					time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
+				}
 			} else {
 				scheduler.mesosConnectorCancelFun()
 				return e

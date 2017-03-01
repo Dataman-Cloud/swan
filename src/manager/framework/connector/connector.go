@@ -35,10 +35,10 @@ type Connector struct {
 	MesosLeader           string
 	MesosLeaderHttpClient *HttpClient
 
-	MesosCallChan  chan *sched.Call
-	MesosEventChan chan *event.MesosEvent
+	SendChan    chan *sched.Call
+	ReceiveChan chan *event.MesosEvent
 
-	MesosFailureChan chan error
+	mesosFailureChan chan error
 
 	FrameworkInfo *mesos.FrameworkInfo
 
@@ -59,15 +59,19 @@ func Instance() *Connector {
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
-				FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
-				Checkpoint:      proto.Bool(true),
+				FailoverTimeout: proto.Float64(60),
+				Checkpoint:      proto.Bool(false),
 				Hostname:        proto.String(hostname),
+				Capabilities: []*mesos.FrameworkInfo_Capability{
+					&mesos.FrameworkInfo_Capability{Type: mesos.FrameworkInfo_Capability_PARTITION_AWARE.Enum()},
+					&mesos.FrameworkInfo_Capability{Type: mesos.FrameworkInfo_Capability_TASK_KILLING_STATE.Enum()},
+				},
 			}
 
 			instance = &Connector{
-				MesosEventChan: make(chan *event.MesosEvent, 1024), // make this unbound in future
-				MesosCallChan:  make(chan *sched.Call, 1024),
-				FrameworkInfo:  info,
+				ReceiveChan:   make(chan *event.MesosEvent, 1024), // make this unbound in future
+				SendChan:      make(chan *sched.Call, 1024),
+				FrameworkInfo: info,
 			}
 		})
 
@@ -93,7 +97,7 @@ func (s *Connector) Subscribe(ctx context.Context) {
 	resp, err := s.Send(call)
 	if err != nil {
 		logrus.Errorf("send subscribe call got err: %d", err)
-		s.MesosFailureChan <- err
+		s.mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 
 		logrus.Error("exiting Subscribe")
 		return
@@ -101,7 +105,8 @@ func (s *Connector) Subscribe(ctx context.Context) {
 
 	if resp.StatusCode != http.StatusOK {
 		logrus.Errorf("subscribe got http response status code: %d", resp.StatusCode)
-		s.MesosFailureChan <- errors.New(fmt.Sprintf("subscribe with unexpected response status: %d", resp.StatusCode))
+		s.mesosFailureChan <- utils.NewError(utils.SeverityLow,
+			errors.New(fmt.Sprintf("subscribe with unexpected response status: %d", resp.StatusCode)))
 
 		logrus.Error("exiting Subscribe")
 		return
@@ -127,7 +132,7 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response) {
 			event := new(sched.Event)
 			if err := dec.Decode(event); err != nil {
 				logrus.Errorf("handleEvents goroutine decode response got err: %s", err)
-				s.MesosFailureChan <- utils.NewError(utils.SeverityLow, err)
+				s.mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 
 				logrus.Error("goroutine handleEvents exiting")
 				return
@@ -217,10 +222,10 @@ func (s *Connector) Send(call *sched.Call) (*http.Response, error) {
 }
 
 func (s *Connector) addEvent(eventType sched.Event_Type, e *sched.Event) {
-	s.MesosEventChan <- &event.MesosEvent{EventType: eventType, Event: e}
+	s.ReceiveChan <- &event.MesosEvent{EventType: eventType, Event: e}
 }
 
-func (s *Connector) Reregister() {
+func (s *Connector) Reregister() error {
 	logrus.Infof("register to mesos now")
 
 	if s.StreamCancelFun != nil {
@@ -229,21 +234,21 @@ func (s *Connector) Reregister() {
 
 	err := s.LeaderDetect()
 	if err != nil { // if leader detect encounter any error
-		s.MesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 		logrus.Errorf("exiting reregister due to err: %s", err)
-		return
+		return err
 	}
 
 	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
 	go s.Subscribe(s.StreamCtx)
+	return nil
 }
 
-func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
-	s.MesosFailureChan = mesosFailureChan
+func (s *Connector) Start(ctx context.Context, errorChan chan error) {
+	s.mesosFailureChan = errorChan
 	err := s.LeaderDetect()
 	if err != nil {
 		logrus.Errorf("start mesos connector got error: %s", err)
-		s.MesosFailureChan <- utils.NewError(utils.SeverityHigh, err) // set SeverityHigh when first start
+		s.mesosFailureChan <- utils.NewError(utils.SeverityHigh, err) // set SeverityHigh when first start
 		return
 	}
 
@@ -256,16 +261,16 @@ func (s *Connector) Start(ctx context.Context, mesosFailureChan chan error) {
 			logrus.Infof("connector got done signal: %s", ctx.Err())
 			s.StreamCancelFun() // stop stream goroutine
 			return
-		case call := <-s.MesosCallChan:
+		case call := <-s.SendChan:
 			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
 			resp, err := s.Send(call)
 			if err != nil {
 				logrus.Errorf("send call to master got err: %s", err)
-				s.MesosFailureChan <- utils.NewError(utils.SeverityLow, err)
+				s.mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 			}
 			if resp != nil && resp.StatusCode != 202 {
 				logrus.Errorf("send call to master response not valie: %d", resp.StatusCode)
-				s.MesosFailureChan <- utils.NewError(utils.SeverityLow, errors.New("sending call response status code not 202"))
+				s.mesosFailureChan <- utils.NewError(utils.SeverityLow, errors.New("sending call response status code not 202"))
 			}
 		}
 	}

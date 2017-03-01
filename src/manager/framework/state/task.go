@@ -133,5 +133,5 @@ func (task *Task) Kill() {
 		}
 	}
 
-	connector.Instance().MesosCallChan <- call
+	connector.Instance().SendChan <- call
 }
