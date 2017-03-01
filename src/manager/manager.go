@@ -67,7 +67,9 @@ func New(db *bolt.DB) (*Manager, error) {
 	}
 
 	manager.resolverSubscriber = event.NewDNSSubscriber()
+	manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
 	manager.janitorSubscriber = event.NewJanitorSubscriber()
+	manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
 
 	return manager, nil
 }
