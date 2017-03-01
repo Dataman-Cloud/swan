@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
@@ -32,7 +31,6 @@ const (
 
 type Node struct {
 	ID                string
-	agent             *agent.Agent     // hold reference to agent, take function when in agent mode
 	manager           *manager.Manager // hold a instance of manager, make logic taking place
 	ctx               context.Context
 	joinRetryInterval time.Duration
@@ -97,14 +95,6 @@ func NewNode(config config.SwanConfig) (*Node, error) {
 			return nil, err
 		}
 		node.manager = m
-	}
-
-	if swancontext.IsAgent() {
-		a, err := agent.New()
-		if err != nil {
-			return nil, err
-		}
-		node.agent = a
 	}
 
 	nodeApi := &NodeApi{node}
@@ -206,19 +196,6 @@ func (n *Node) Start(ctx context.Context) error {
 		}()
 	}
 
-	if swancontext.IsAgent() {
-		go func() {
-			errChan <- n.runAgent(ctx)
-		}()
-
-		go func() {
-			_, err := n.JoinToCluster(nodeInfo)
-			if err != nil {
-				errChan <- err
-			}
-		}()
-	}
-
 	go func() {
 		errChan <- swancontext.Instance().ApiServer.Start()
 	}()
@@ -236,12 +213,6 @@ func (n *Node) Start(ctx context.Context) error {
 	}
 }
 
-func (n *Node) runAgent(ctx context.Context) error {
-	agentCtx, cancel := context.WithCancel(ctx)
-	n.agent.CancelFunc = cancel
-	return n.agent.Start(agentCtx)
-}
-
 func (n *Node) runManager(ctx context.Context, raftID uint64, peers []types.Node, isNewCluster bool) error {
 	managerCtx, cancel := context.WithCancel(ctx)
 	n.manager.CancelFunc = cancel
@@ -250,10 +221,6 @@ func (n *Node) runManager(ctx context.Context, raftID uint64, peers []types.Node
 
 // node stop
 func (n *Node) Stop() {
-	if swancontext.IsAgent() {
-		n.agent.Stop()
-	}
-
 	if swancontext.IsManager() {
 		n.manager.Stop()
 	}

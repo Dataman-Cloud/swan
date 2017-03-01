@@ -1,60 +1,108 @@
 package agent
 
 import (
+	"errors"
 	"strconv"
+	"time"
 
 	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
+	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
+	"github.com/Sirupsen/logrus"
 
 	"golang.org/x/net/context"
 )
+
+const JoinRetryInterval = 5
 
 type Agent struct {
 	resolver *nameserver.Resolver
 
 	janitorServer *janitor.JanitorServer
 
+	apiServer *apiserver.ApiServer
+
 	CancelFunc context.CancelFunc
+
+	NodeInfo types.Node
+
+	JoinAddrs []string
+
+	Config config.AgentConfig
 }
 
-func New() (*Agent, error) {
-	agent := &Agent{}
+func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
+	agent := &Agent{
+		JoinAddrs: agentConf.JoinAddrs,
+		Config:    agentConf,
+	}
+
+	nodeInfo := types.Node{
+		ID:            nodeID,
+		AdvertiseAddr: agentConf.AdvertiseAddr,
+		ListenAddr:    agentConf.ListenAddr,
+		Role:          types.RoleAgent,
+	}
+	agent.NodeInfo = nodeInfo
+
+	agent.apiServer = apiserver.NewApiServer(agentConf.ListenAddr)
 
 	dnsConfig := &nameserver.Config{
-		Domain:   swancontext.Instance().Config.DNS.Domain,
-		Listener: swancontext.Instance().Config.DNS.IP,
-		Port:     swancontext.Instance().Config.DNS.Port,
+		Domain:   agentConf.DNS.Domain,
+		Listener: agentConf.DNS.IP,
+		Port:     agentConf.DNS.Port,
 
-		Resolvers:       swancontext.Instance().Config.DNS.Resolvers,
-		ExchangeTimeout: swancontext.Instance().Config.DNS.ExchangeTimeout,
-		SOARname:        swancontext.Instance().Config.DNS.SOARname,
-		SOAMname:        swancontext.Instance().Config.DNS.SOAMname,
-		SOASerial:       swancontext.Instance().Config.DNS.SOASerial,
-		SOARefresh:      swancontext.Instance().Config.DNS.SOARefresh,
-		SOARetry:        swancontext.Instance().Config.DNS.SOARetry,
-		SOAExpire:       swancontext.Instance().Config.DNS.SOAExpire,
-		RecurseOn:       swancontext.Instance().Config.DNS.RecurseOn,
-		TTL:             swancontext.Instance().Config.DNS.TTL,
+		Resolvers:       agentConf.DNS.Resolvers,
+		ExchangeTimeout: agentConf.DNS.ExchangeTimeout,
+		SOARname:        agentConf.DNS.SOARname,
+		SOAMname:        agentConf.DNS.SOAMname,
+		SOASerial:       agentConf.DNS.SOASerial,
+		SOARefresh:      agentConf.DNS.SOARefresh,
+		SOARetry:        agentConf.DNS.SOARetry,
+		SOAExpire:       agentConf.DNS.SOAExpire,
+		RecurseOn:       agentConf.DNS.RecurseOn,
+		TTL:             agentConf.DNS.TTL,
 	}
 
 	agent.resolver = nameserver.NewResolver(dnsConfig)
 
 	jConfig := janitor.DefaultConfig()
-	jConfig.Listener.IP = swancontext.Instance().Config.Janitor.IP
-	jConfig.Listener.DefaultPort = strconv.Itoa(swancontext.Instance().Config.Janitor.Port)
-	jConfig.HttpHandler.Domain = swancontext.Instance().Config.Janitor.Domain
+	jConfig.Listener.IP = agentConf.Janitor.IP
+	jConfig.Listener.DefaultPort = strconv.Itoa(agentConf.Janitor.Port)
+	jConfig.HttpHandler.Domain = agentConf.Janitor.Domain
 	agent.janitorServer = janitor.NewJanitorServer(jConfig)
 
 	agentApi := &AgentApi{agent}
-	apiserver.Install(swancontext.Instance().ApiServer, agentApi)
+	apiserver.Install(agent.apiServer, agentApi)
 
 	return agent, nil
 }
 
+func (agent *Agent) JoinAndStart(ctx context.Context) error {
+	errChan := make(chan error, 1)
+
+	go func() {
+		errChan <- agent.Start(ctx)
+	}()
+
+	go func() {
+		if err := agent.JoinToCluster(ctx); err != nil {
+			errChan <- err
+		}
+	}()
+
+	return <-errChan
+}
+
 func (agent *Agent) Start(ctx context.Context) error {
 	errChan := make(chan error, 1)
+
+	go func() {
+		errChan <- agent.apiServer.Start()
+	}()
 
 	go func() {
 		resolverCtx, _ := context.WithCancel(ctx)
@@ -67,7 +115,8 @@ func (agent *Agent) Start(ctx context.Context) error {
 	rgEvent := &nameserver.RecordGeneratorChangeEvent{}
 	rgEvent.Change = "add"
 	rgEvent.Type = "a"
-	rgEvent.Ip = swancontext.Instance().Config.Janitor.AdvertiseIP
+	//TODO(): better way is use janitor config replace agent config
+	rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
 	rgEvent.DomainPrefix = ""
 	rgEvent.IsProxy = true
 	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
@@ -89,4 +138,59 @@ func (agent *Agent) Stop() {
 
 	agent.CancelFunc()
 	return
+}
+
+func (agent *Agent) JoinToCluster(ctx context.Context) error {
+	tryJoinTimes := 1
+	err := agent.join()
+	if err != nil {
+		logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
+	} else {
+		return nil
+	}
+
+	retryTicker := time.NewTicker(JoinRetryInterval * time.Second)
+	defer retryTicker.Stop()
+
+	for {
+		select {
+		case <-retryTicker.C:
+			if tryJoinTimes >= 100 {
+				return errors.New("join to swan cluster has been failed 100 times exit")
+			}
+
+			tryJoinTimes++
+
+			err = agent.join()
+			if err != nil {
+				logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
+			} else {
+				return nil
+			}
+
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+}
+
+func (agent *Agent) join() error {
+	if len(agent.JoinAddrs) == 0 {
+		return errors.New("start swan failed. Error: joinAddrs must be no empty")
+	}
+
+	for _, managerAddr := range agent.JoinAddrs {
+		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agent.NodeInfo, nil)
+		if err != nil {
+			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())
+			continue
+		}
+
+		logrus.Infof("join to swan cluster success with manager adderss %s", managerAddr)
+
+		return nil
+	}
+
+	return errors.New("try join all managers are failed")
 }
