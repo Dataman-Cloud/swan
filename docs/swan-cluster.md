@@ -6,42 +6,45 @@ So there must have one manger and one agent in a swan-cluster.
 
   we can start a swan-node as manager by the follower cmd:
 ```
-sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos 
-            --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 
-            --data-dir=./data/1/ --mode=manager
+./swan manager init --zk-path=zk://192.168.59.104:2181/mesos 
+                    --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 
+                    --data-dir=./data/1/
 ```
 
  as the same we start a swan-node with agent mode
 ```
-sudo ./swan --listen-addr=0.0.0.0:9999 --join-addrs=0.0.0.0:9999
-            --data-dir=./data/1/ --mode=agent
+sudo ./swan agent join --listen-addr=0.0.0.0:9999 --join-addrs=0.0.0.0:9999
+                       --data-dir=./data/1/
 ```
+### NOTICE
+* swan agent need to listen 80 and 53/udp port so need **sudo** authority
+* event there is nor persist data in agent the **-data-dir** is need to set, beacuse the agent ID is store on disk.
 
  if the advertise address if not the same as the listen address of the swan-node. The start parameter **advertise-addr** and
 **raft-advertise-addr** need to be provided. The start cmd :
 ```
-sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos 
-            --listen-addr=0.0.0.0:9999 --advertise-addr=192.168.1.111
-            --raft-listen-addr=http://127.0.0.1:2111 raft-advertise-addr=http://192.168.1.111:2111
-            --data-dir=./data/1/ --mode=manager
+./swan manager init --zk-path=zk://192.168.59.104:2181/mesos 
+                    --listen-addr=0.0.0.0:9999 --advertise-addr=192.168.1.111
+                    --raft-listen-addr=http://127.0.0.1:2111 raft-advertise-addr=http://192.168.1.111:2111
+                    --data-dir=./data/1/
 ```
 
  a new swan-node aslo can join to an exist swan-cluster with the followe cmd:
 ```
-sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos 
-            --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113
-            --data-dir=./data/3/ --mode=manager 
-            --join-addrs=0.0.0.0:9999
+./swan manager join --zk-path=zk://192.168.59.104:2181/mesos 
+                    --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113
+                    --data-dir=./data/3/
+                    --join-addrs=0.0.0.0:9999
 ```
  the **join-addrs** contains one of more manager advertise-addr which already in swan-cluster
 
   now we can run a swan-cluster with 3 manager and 2 agent like this:
 ```
- sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 --data-dir=./data/1/ --mode=manager
- sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9998 --raft-listen-addr=http://127.0.0.1:2112 --data-dir=./data/2/ --mode=manager --join-addrs=0.0.0.0:9999
- sudo ./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113 --data-dir=./data/3/ --mode=manager --join-addrs=0.0.0.0:9999
- sudo ./swan --listen-addr=0.0.0.0:9996 --mode=agent --join-addrs=0.0.0.0:9999,0.0.0.0:9998
- sudo ./swan --listen-addr=0.0.0.0:9995 --mode=agent --join-addrs=0.0.0.0:9999,0.0.0.0:9997
+./swan manager init --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 --data-dir=./data/1/
+./swan manager join --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9998 --raft-listen-addr=http://127.0.0.1:2112 --data-dir=./data/2/ --join-addrs=0.0.0.0:9999
+./swan --zk-path=zk://192.168.59.104:2181/mesos --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113 --data-dir=./data/3/ --join-addrs=0.0.0.0:9999
+ sudo ./swan agent join --listen-addr=0.0.0.0:9996 --join-addrs=0.0.0.0:9999,0.0.0.0:9998 --data-dir=./data/4
+ sudo ./swan agent join --listen-addr=0.0.0.0:9995 --join-addrs=0.0.0.0:9999,0.0.0.0:9997 --data-dir=./data/5
 ```
 
 ## Description of persist data
