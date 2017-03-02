@@ -1,11 +1,10 @@
-package node
+package manager
 
 import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 
@@ -14,11 +13,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-type NodeApi struct {
-	node *Node
+type ManagerApi struct {
+	manager *Manager
 }
 
-func (api *NodeApi) Register(container *restful.Container) {
+func (api *ManagerApi) Register(container *restful.Container) {
 	ws := new(restful.WebService)
 	ws.
 		ApiVersion(config.API_PREFIX).
@@ -34,7 +33,7 @@ func (api *NodeApi) Register(container *restful.Container) {
 		Returns(400, "BadRequest", nil).
 		Reads(types.Node{}).
 		Writes([]types.Node{}).
-		Filter(swancontext.Instance().ApiServer.Proxy()))
+		Filter(api.manager.apiServer.Proxy()))
 
 	ws.Route(ws.DELETE("/{node_id}").To(metrics.InstrumentRouteFunc("DELETE", "nodes", api.RemoveNode)).
 		Doc("Remove node").
@@ -43,7 +42,7 @@ func (api *NodeApi) Register(container *restful.Container) {
 		Returns(404, "NotFound", nil).
 		Returns(403, "Forbidden remove", nil).
 		Param(ws.PathParameter("node_id", "identifier of the node").DataType("string")).
-		Filter(swancontext.Instance().ApiServer.Proxy()))
+		Filter(api.manager.apiServer.Proxy()))
 
 	ws.Route(ws.PATCH("/stop").To(metrics.InstrumentRouteFunc("PATCH", "nodes", api.StopNode)).
 		Doc("Stop node").
@@ -58,7 +57,7 @@ func (api *NodeApi) Register(container *restful.Container) {
 	container.Add(ws)
 }
 
-func (api *NodeApi) AddNode(request *restful.Request, response *restful.Response) {
+func (api *ManagerApi) AddNode(request *restful.Request, response *restful.Response) {
 	var node types.Node
 
 	if err := request.ReadEntity(&node); err != nil {
@@ -67,30 +66,30 @@ func (api *NodeApi) AddNode(request *restful.Request, response *restful.Response
 		return
 	}
 
-	if err := api.node.manager.AddNode(node); err != nil {
+	if err := api.manager.AddNode(node); err != nil {
 		logrus.Errorf("Add node failed, Error: %s", err.Error())
 		response.WriteError(http.StatusInternalServerError, err)
 		return
 	}
 
-	response.WriteHeaderAndEntity(http.StatusCreated, api.node.manager.GetNodes())
+	response.WriteHeaderAndEntity(http.StatusCreated, api.manager.GetNodes())
 	return
 }
 
-func (api *NodeApi) GetNodes(request *restful.Request, response *restful.Response) {
-	response.WriteEntity(api.node.manager.GetNodes())
+func (api *ManagerApi) GetNodes(request *restful.Request, response *restful.Response) {
+	response.WriteEntity(api.manager.GetNodes())
 	return
 }
 
-func (api *NodeApi) RemoveNode(request *restful.Request, response *restful.Response) {
+func (api *ManagerApi) RemoveNode(request *restful.Request, response *restful.Response) {
 	targetNodeID := request.PathParameter("node_id")
-	if targetNodeID == api.node.ID {
+	if targetNodeID == api.manager.NodeInfo.ID {
 		logrus.Errorf("Remove the leader node is forbidden")
 		response.WriteErrorString(http.StatusForbidden, "can not remove leader")
 		return
 	}
 
-	targetNode, err := api.node.manager.GetNode(targetNodeID)
+	targetNode, err := api.manager.GetNode(targetNodeID)
 	if err != nil {
 		logrus.Errorf("Remove node: %s failed, Error: %s", targetNodeID, err.Error())
 		response.WriteError(http.StatusNotFound, err)
@@ -105,7 +104,7 @@ func (api *NodeApi) RemoveNode(request *restful.Request, response *restful.Respo
 		return
 	}
 
-	if err := api.node.manager.RemoveNode(targetNode); err != nil {
+	if err := api.manager.RemoveNode(targetNode); err != nil {
 		logrus.Errorf("Remove node: %s failed, Error: %s", targetNodeID, err.Error())
 		response.WriteError(http.StatusInternalServerError, err)
 		return
@@ -115,8 +114,8 @@ func (api *NodeApi) RemoveNode(request *restful.Request, response *restful.Respo
 	return
 }
 
-func (api *NodeApi) StopNode(request *restful.Request, response *restful.Response) {
+func (api *ManagerApi) StopNode(request *restful.Request, response *restful.Response) {
 	response.WriteHeaderAndEntity(http.StatusOK, "success")
-	api.node.stopC <- struct{}{}
+	api.manager.Stop()
 	return
 }

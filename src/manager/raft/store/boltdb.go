@@ -264,3 +264,19 @@ func (db *BoltbDb) GetNodes() ([]*types.Node, error) {
 
 	return nodes, nil
 }
+
+func (db *BoltbDb) GetNode(nodeID string) (*types.Node, error) {
+	node := &types.Node{}
+
+	if err := db.View(func(tx *bolt.Tx) error {
+		return withNodeBucket(tx, nodeID, func(bkt *bolt.Bucket) error {
+			p := bkt.Get(BucketKeyData)
+
+			return node.Unmarshal(p)
+		})
+	}); err != nil {
+		return nil, err
+	}
+
+	return node, nil
+}

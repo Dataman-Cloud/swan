@@ -6,7 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/node"
+	"github.com/Dataman-Cloud/swan/src/manager"
 	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/version"
 
@@ -234,22 +234,26 @@ func ManagerJoinCmd() cli.Command {
 }
 
 func JoinAndStartManager(c *cli.Context) error {
-	conf, err := config.NewConfig(c)
-	conf.Mode = config.Manager
+	conf := config.NewManagerConfig(c)
+	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		logrus.Errorf("load config failed. Error: %s", err)
-		return err
+		os.MkdirAll(conf.DataDir, 0700)
+		ID, err = utils.CreateNodeID(IDFilePath)
+		if err != nil {
+			return nil
+		}
 	}
 
 	setupLogger(conf.LogLevel)
 
-	node, err := node.NewNode(conf)
+	managerNode, err := manager.New(ID, conf)
 	if err != nil {
 		logrus.Error("Node initialization failed")
 		return err
 	}
 
-	if err := node.Start(context.Background()); err != nil {
+	if err := managerNode.JoinAndStart(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}
@@ -278,22 +282,26 @@ func ManagerInitCmd() cli.Command {
 }
 
 func StartManager(c *cli.Context) error {
-	conf, err := config.NewConfig(c)
-	conf.Mode = config.Manager
+	conf := config.NewManagerConfig(c)
+	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		logrus.Errorf("load config failed. Error: %s", err)
-		return err
+		os.MkdirAll(conf.DataDir, 0700)
+		ID, err = utils.CreateNodeID(IDFilePath)
+		if err != nil {
+			return nil
+		}
 	}
 
 	setupLogger(conf.LogLevel)
 
-	node, err := node.NewNode(conf)
+	managerNode, err := manager.New(ID, conf)
 	if err != nil {
 		logrus.Error("Node initialization failed")
 		return err
 	}
 
-	if err := node.Start(context.Background()); err != nil {
+	if err := managerNode.InitAndStart(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}

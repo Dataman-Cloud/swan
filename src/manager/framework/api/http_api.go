@@ -13,7 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/fields"
 	"github.com/Dataman-Cloud/swan/src/utils/labels"
@@ -24,12 +23,14 @@ import (
 
 type AppService struct {
 	Scheduler *scheduler.Scheduler
+	apiServer *apiserver.ApiServer
 	apiserver.ApiRegister
 }
 
 func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
 	appService := &AppService{
 		Scheduler: eng,
+		apiServer: apiServer,
 	}
 	apiserver.Install(apiServer, appService)
 	return appService
@@ -172,7 +173,7 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", "").
 		Returns(404, "NotFound", nil))
 
-	ws.Filter(swancontext.Instance().ApiServer.Proxy())
+	ws.Filter(api.apiServer.Proxy())
 
 	container.Add(ws)
 }

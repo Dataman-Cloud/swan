@@ -8,12 +8,9 @@ import (
 	"github.com/urfave/cli"
 )
 
-type SwanConfig struct {
-	NodeID            string   `json:"nodeID"`
+type ManagerConfig struct {
 	LogLevel          string   `json:"logLevel"`
-	Mode              SwanMode `json:"mode"` // manager, agent
 	DataDir           string   `json:"dataDir"`
-	NoRecover         bool     `json:"noRecover"`
 	RaftAdvertiseAddr string   `json:"raftAdvertiseAddr"`
 	RaftListenAddr    string   `json:"raftListenAddr"`
 	ListenAddr        string   `json:"listenAddr"`
@@ -127,12 +124,10 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 	return agentConfig
 }
 
-func NewConfig(c *cli.Context) (SwanConfig, error) {
-	swanConfig := SwanConfig{
+func NewManagerConfig(c *cli.Context) ManagerConfig {
+	managerConfig := ManagerConfig{
 		LogLevel:       "info",
-		Mode:           Manager,
 		DataDir:        "./data/",
-		NoRecover:      false,
 		ListenAddr:     "0.0.0.0:9999",
 		RaftListenAddr: "0.0.0.0:2111",
 		JoinAddrs:      []string{"0.0.0.0:9999"},
@@ -140,54 +135,56 @@ func NewConfig(c *cli.Context) (SwanConfig, error) {
 		Scheduler: Scheduler{
 			ZkPath:             "0.0.0.0:2181",
 			MesosFrameworkUser: "root",
-			Hostname:           hostname(),
+			Hostname:           Hostname(),
 		},
 	}
 
 	if c.String("log-level") != "" {
-		swanConfig.LogLevel = c.String("log-level")
+		managerConfig.LogLevel = c.String("log-level")
 	}
 
 	if c.String("data-dir") != "" {
-		swanConfig.DataDir = c.String("data-dir")
-		if !strings.HasSuffix(swanConfig.DataDir, "/") {
-			swanConfig.DataDir = swanConfig.DataDir + "/"
+		managerConfig.DataDir = c.String("data-dir")
+		if !strings.HasSuffix(managerConfig.DataDir, "/") {
+			managerConfig.DataDir = managerConfig.DataDir + "/"
 		}
 	}
 
 	if c.String("zk-path") != "" {
-		swanConfig.Scheduler.ZkPath = c.String("zk-path")
+		managerConfig.Scheduler.ZkPath = c.String("zk-path")
 	}
 
 	if c.String("listen-addr") != "" {
-		swanConfig.ListenAddr = c.String("listen-addr")
+		managerConfig.ListenAddr = c.String("listen-addr")
 	}
 
-	swanConfig.AdvertiseAddr = c.String("advertise-addr")
-	if swanConfig.AdvertiseAddr == "" {
-		swanConfig.AdvertiseAddr = swanConfig.ListenAddr
+	managerConfig.AdvertiseAddr = c.String("advertise-addr")
+	if managerConfig.AdvertiseAddr == "" {
+		managerConfig.AdvertiseAddr = managerConfig.ListenAddr
 	}
 
 	if c.String("raft-advertise-addr") != "" {
-		swanConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
+		managerConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
 	}
 
 	if c.String("raft-listen-addr") != "" {
-		swanConfig.RaftListenAddr = c.String("raft-listen-addr")
+		managerConfig.RaftListenAddr = c.String("raft-listen-addr")
 	}
 
-	if swanConfig.RaftAdvertiseAddr == "" {
-		swanConfig.RaftAdvertiseAddr = swanConfig.RaftListenAddr
+	if managerConfig.RaftAdvertiseAddr == "" {
+		managerConfig.RaftAdvertiseAddr = managerConfig.RaftListenAddr
 	}
 
 	if c.String("join-addrs") != "" {
-		swanConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
+		managerConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
 	}
 
-	return swanConfig, nil
+	SchedulerConfig = managerConfig.Scheduler
+
+	return managerConfig
 }
 
-func hostname() string {
+func Hostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "UNKNOWN"
@@ -195,3 +192,5 @@ func hostname() string {
 
 	return hostname
 }
+
+var SchedulerConfig Scheduler
