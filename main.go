@@ -175,10 +175,13 @@ func JoinAndStartAgent(c *cli.Context) error {
 	IDFilePath := path.Join(conf.DataDir, IDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		os.MkdirAll(conf.DataDir, 0700)
+		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
+			return err
+		}
+
 		ID, err = utils.CreateNodeID(IDFilePath)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -238,10 +241,13 @@ func JoinAndStartManager(c *cli.Context) error {
 	IDFilePath := path.Join(conf.DataDir, IDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		os.MkdirAll(conf.DataDir, 0700)
+		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
+			return err
+		}
+
 		ID, err = utils.CreateNodeID(IDFilePath)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
@@ -286,10 +292,13 @@ func StartManager(c *cli.Context) error {
 	IDFilePath := path.Join(conf.DataDir, IDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		os.MkdirAll(conf.DataDir, 0700)
+		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
+			return err
+		}
+
 		ID, err = utils.CreateNodeID(IDFilePath)
 		if err != nil {
-			return nil
+			return err
 		}
 	}
 
