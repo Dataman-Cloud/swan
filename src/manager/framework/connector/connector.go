@@ -12,10 +12,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
@@ -55,7 +55,7 @@ func Instance() *Connector {
 		func() {
 			hostname, _ := os.Hostname()
 			info := &mesos.FrameworkInfo{
-				User:      proto.String(swancontext.Instance().Config.Scheduler.MesosFrameworkUser),
+				User:      proto.String(config.SchedulerConfig.MesosFrameworkUser),
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
@@ -277,7 +277,7 @@ func (s *Connector) Start(ctx context.Context, errorChan chan error) {
 }
 
 func (s *Connector) LeaderDetect() error {
-	masters, err := getMastersFromZK(swancontext.Instance().Config.Scheduler.ZkPath)
+	masters, err := getMastersFromZK(config.SchedulerConfig.ZkPath)
 	if err != nil {
 		return err
 	}

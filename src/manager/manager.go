@@ -1,27 +1,27 @@
 package manager
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
+	"math/rand"
+	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
+	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
-	"github.com/Dataman-Cloud/swan-janitor/src"
-	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Sirupsen/logrus"
 	"github.com/boltdb/bolt"
+	"github.com/coreos/etcd/pkg/fileutil"
 	events "github.com/docker/go-events"
 	"golang.org/x/net/context"
 )
@@ -32,44 +32,120 @@ type Manager struct {
 
 	framework *framework.Framework
 
-	criticalErrorChan chan error
+	apiServer *apiserver.ApiServer
 
-	raftID uint64
+	criticalErrorChan chan error
 
 	janitorSubscriber  *event.JanitorSubscriber
 	resolverSubscriber *event.DNSSubscriber
+
+	NodeInfo types.Node
+
+	JoinAddrs []string
 }
 
-func New(db *bolt.DB) (*Manager, error) {
-	manager := &Manager{
-		criticalErrorChan: make(chan error, 1),
+func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
+	DBDir := filepath.Join(managerConf.DataDir, nodeID)
+	DBPath := filepath.Join(DBDir, "swan.db")
+
+	var nodeInfo types.Node
+	var boltDB *raftstore.BoltbDb
+	var err error
+
+	if fileutil.Exist(DBPath) {
+		nodeInfo, boltDB, err = recoverData(nodeID, DBPath)
+	} else {
+		if err := os.MkdirAll(DBDir, 0700); err != nil {
+			return nil, err
+		}
+
+		nodeInfo, boltDB, err = initManaer(nodeID, DBPath, managerConf)
+	}
+	if err != nil {
+		return nil, err
 	}
 
-	swanConfig := swancontext.Instance().Config
 	raftNodeOpts := raft.NodeOptions{
-		SwanNodeID:    swanConfig.NodeID,
-		DataDir:       swanConfig.DataDir + "/" + swanConfig.NodeID,
-		ListenAddr:    swanConfig.RaftListenAddr,
-		AdvertiseAddr: swanConfig.RaftAdvertiseAddr,
+		RaftID:        nodeInfo.RaftID,
+		SwanNodeID:    nodeID,
+		DataDir:       DBDir,
+		ListenAddr:    nodeInfo.RaftListenAddr,
+		AdvertiseAddr: nodeInfo.RaftAdvertiseAddr,
+		DB:            boltDB,
 	}
-	raftNode, err := raft.NewNode(raftNodeOpts, db)
+	raftNode, err := raft.NewNode(raftNodeOpts)
 	if err != nil {
 		logrus.Errorf("init raft node failed. Error: %s", err.Error())
 		return nil, err
 	}
-	manager.raftNode = raftNode
 
-	frameworkStore := fstore.NewStore(db, raftNode)
-	manager.framework, err = framework.New(frameworkStore, swancontext.Instance().ApiServer)
+	managerServer := apiserver.NewApiServer(managerConf.ListenAddr)
+
+	frameworkStore := fstore.NewStore(boltDB.DB, raftNode)
+	framework, err := framework.New(frameworkStore, managerServer)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: ", err.Error())
 		return nil, err
 	}
 
-	manager.resolverSubscriber = event.NewDNSSubscriber()
-	manager.janitorSubscriber = event.NewJanitorSubscriber()
+	manager := &Manager{
+		raftNode:           raftNode,
+		framework:          framework,
+		resolverSubscriber: event.NewDNSSubscriber(),
+		janitorSubscriber:  event.NewJanitorSubscriber(),
+		NodeInfo:           nodeInfo,
+		apiServer:          managerServer,
+		JoinAddrs:          managerConf.JoinAddrs,
+		criticalErrorChan:  make(chan error, 1),
+	}
+
+	managerApi := &ManagerApi{manager}
+	apiserver.Install(managerServer, managerApi)
+
+	_ = swancontext.NewSwanContext(event.New())
 
 	return manager, nil
+}
+
+func recoverData(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, error) {
+	var nodeInfo types.Node
+	db, err := bolt.Open(DBPath, 0644, nil)
+	if err != nil {
+		return nodeInfo, nil, err
+	}
+
+	boltDb := raftstore.NewBoltbdStore(db)
+
+	nodeMetadata, err := boltDb.GetNode(nodeID)
+	if err != nil {
+		return nodeInfo, nil, err
+	}
+
+	nodeInfo = converRaftTypeNodeToNode(*nodeMetadata)
+
+	return nodeInfo, boltDb, nil
+}
+
+func initManaer(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
+	var nodeInfo types.Node
+	boltDB, err := bolt.Open(DBPath, 0644, nil)
+	if err != nil {
+		return nodeInfo, nil, err
+	}
+
+	nodeInfo = types.Node{
+		ID:                nodeID,
+		ListenAddr:        managerConf.ListenAddr,
+		AdvertiseAddr:     managerConf.AdvertiseAddr,
+		RaftListenAddr:    managerConf.RaftListenAddr,
+		RaftAdvertiseAddr: managerConf.RaftAdvertiseAddr,
+		Role:              types.RoleManager,
+		RaftID:            uint64(rand.Int63()) + 1,
+	}
+
+	boltDBStore := raftstore.NewBoltbdStore(boltDB)
+
+	return nodeInfo, boltDBStore, nil
 }
 
 func (manager *Manager) Stop() {
@@ -78,9 +154,31 @@ func (manager *Manager) Stop() {
 	return
 }
 
-func (manager *Manager) Start(ctx context.Context, raftID uint64, raftPeers []types.Node, isNewCluster bool) error {
-	manager.raftID = raftID
+func (manager *Manager) JoinAndStart(ctx context.Context) error {
+	managers := manager.GetManagers()
+	if len(managers) != 0 {
+		return manager.start(ctx, managers, false)
+	}
 
+	managers, err := manager.JoinToCluster(manager.NodeInfo)
+	if err != nil {
+		return err
+	}
+
+	return manager.start(ctx, managers, false)
+}
+
+func (manager *Manager) InitAndStart(ctx context.Context) error {
+	managers := manager.GetManagers()
+	if len(managers) != 0 {
+		return manager.start(ctx, managers, true)
+	}
+
+	managers = append(managers, manager.NodeInfo)
+	return manager.start(ctx, managers, true)
+}
+
+func (manager *Manager) start(ctx context.Context, raftPeers []types.Node, isNewCluster bool) error {
 	if err := manager.LoadNodeData(); err != nil {
 		return err
 	}
@@ -100,7 +198,7 @@ func (manager *Manager) Start(ctx context.Context, raftID uint64, raftPeers []ty
 	go manager.handleLeaderChangeEvents(leaderChangeEventCtx, leaderChangeCh)
 
 	raftCtx, _ := context.WithCancel(ctx)
-	if err := manager.raftNode.StartRaft(raftCtx, manager.raftID, raftPeers, isNewCluster); err != nil {
+	if err := manager.raftNode.StartRaft(raftCtx, raftPeers, isNewCluster); err != nil {
 		return err
 	}
 
@@ -110,6 +208,10 @@ func (manager *Manager) Start(ctx context.Context, raftID uint64, raftPeers []ty
 	if err := manager.raftNode.WaitForLeader(ctx); err != nil {
 		return err
 	}
+
+	go func() {
+		manager.criticalErrorChan <- manager.apiServer.Start()
+	}()
 
 	for {
 		select {
@@ -137,18 +239,7 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				once.Do(func() {
 					// at the first time node become leader add itself to store.
 					// this is use for ensure the first node of cluster can be add to store.
-					swanConfig := swancontext.Instance().Config
-					managerInfo := types.Node{
-						ID:                swanConfig.NodeID,
-						AdvertiseAddr:     swanConfig.AdvertiseAddr,
-						ListenAddr:        swanConfig.ListenAddr,
-						RaftListenAddr:    swanConfig.RaftListenAddr,
-						RaftAdvertiseAddr: swanConfig.RaftAdvertiseAddr,
-						Role:              types.NodeRole(swanConfig.Mode),
-						RaftID:            manager.raftID,
-					}
-
-					if err := manager.presistNodeData(managerInfo); err != nil {
+					if err := manager.presistNodeData(manager.NodeInfo); err != nil {
 						manager.criticalErrorChan <- err
 					}
 				})
@@ -230,7 +321,7 @@ func (manager *Manager) updateLeaderAddr(leaderRaftID uint64) {
 				leaderAddr = leaderNode.AdvertiseAddr
 			}
 
-			swancontext.Instance().ApiServer.UpdateLeaderAddr(leaderAddr)
+			manager.apiServer.UpdateLeaderAddr(leaderAddr)
 			log.L.Infof("Now leader is change to %x, leader advertise-addr: %s", leaderRaftID, leaderAddr)
 		}
 
@@ -240,207 +331,5 @@ func (manager *Manager) updateLeaderAddr(leaderRaftID uint64) {
 		}
 
 		time.Sleep(time.Second)
-	}
-}
-
-func (manager *Manager) findLeaderByRaftID(raftID uint64) (types.Node, error) {
-	nodes := manager.GetNodes()
-	for _, node := range nodes {
-		if node.IsManager() && node.RaftID == raftID {
-			return node, nil
-		}
-	}
-
-	return types.Node{}, fmt.Errorf("can not find node which raftID is %x", raftID)
-}
-
-func (manager *Manager) LoadNodeData() error {
-	nodes := manager.GetNodes()
-
-	for _, node := range nodes {
-		if node.IsAgent() {
-			manager.AddAgentAcceptor(node)
-		}
-	}
-
-	return nil
-}
-
-func (manager *Manager) AddNode(node types.Node) error {
-	if err := manager.presistNodeData(node); err != nil {
-		return err
-	}
-
-	if node.IsAgent() {
-		manager.AddAgentAcceptor(node)
-
-		go manager.SendAgentInitData(node)
-	}
-
-	// the first mixed node, node contains agent and leader, the leader node
-	// can't add itself to raft-cluster, beacuse of it already in cluster
-	if node.IsManager() && node.RaftID != manager.raftID {
-		if err := manager.AddRaftNode(node); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func (manager *Manager) AddRaftNode(swanNode types.Node) error {
-	if swanNode.RaftID == 0 {
-		return errors.New("add raft node failed: raftID must not be 0")
-	}
-
-	swanNodes := manager.GetNodes()
-	for _, n := range swanNodes {
-		if n.RaftID == swanNode.RaftID && swanNode.ID != n.ID {
-			return errors.New("add raft node failed: duplicate raftID")
-		}
-	}
-
-	return manager.raftNode.AddMember(context.TODO(), swanNode)
-}
-
-func (manager *Manager) RemoveNode(node types.Node) error {
-	if node.IsAgent() {
-		manager.RemoveAgentAcceptor(node.ID)
-	}
-
-	if node.IsManager() {
-		if err := manager.raftNode.RemoveMember(context.TODO(), node.RaftID); err != nil {
-			return err
-		}
-	}
-
-	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
-		Action: rafttypes.StoreActionKindRemove,
-		Target: &rafttypes.StoreAction_Node{&rafttypes.Node{ID: node.ID}},
-	}}
-
-	return manager.raftNode.ProposeValue(context.TODO(), storeActions, nil)
-
-}
-
-func (manager *Manager) presistNodeData(node types.Node) error {
-	nodeMetadata := &rafttypes.Node{
-		ID:                node.ID,
-		AdvertiseAddr:     node.AdvertiseAddr,
-		ListenAddr:        node.ListenAddr,
-		RaftListenAddr:    node.RaftListenAddr,
-		RaftAdvertiseAddr: node.RaftAdvertiseAddr,
-		Status:            node.Status,
-		Labels:            node.Labels,
-		RaftID:            node.RaftID,
-		Role:              string(node.Role),
-	}
-
-	storeActions := []*rafttypes.StoreAction{&rafttypes.StoreAction{
-		Action: rafttypes.StoreActionKindCreate,
-		Target: &rafttypes.StoreAction_Node{nodeMetadata},
-	}}
-
-	return manager.raftNode.ProposeValue(context.TODO(), storeActions, nil)
-}
-
-func (manager *Manager) GetNodes() []types.Node {
-	nodes := []types.Node{}
-
-	nodes_, err := manager.raftNode.GetNodes()
-	if err != nil {
-		log.L.Errorf("get nodes failed. Error: %s", err.Error())
-		return nodes
-	}
-
-	for _, nodeMetadata := range nodes_ {
-		node := types.Node{
-			ID:                nodeMetadata.ID,
-			AdvertiseAddr:     nodeMetadata.AdvertiseAddr,
-			ListenAddr:        nodeMetadata.ListenAddr,
-			RaftListenAddr:    nodeMetadata.RaftListenAddr,
-			RaftAdvertiseAddr: nodeMetadata.RaftAdvertiseAddr,
-			Role:              types.NodeRole(nodeMetadata.Role),
-			RaftID:            nodeMetadata.RaftID,
-			Status:            nodeMetadata.Status,
-			Labels:            nodeMetadata.Labels,
-		}
-
-		nodes = append(nodes, node)
-	}
-
-	return nodes
-}
-
-func (manager *Manager) GetNode(nodeID string) (types.Node, error) {
-	nodes := manager.GetNodes()
-	for _, node := range nodes {
-		if node.ID == nodeID {
-			return node, nil
-		}
-	}
-
-	return types.Node{}, errors.New("node not found")
-}
-
-func (manager *Manager) AddAgentAcceptor(agent types.Node) {
-	resolverAcceptor := types.ResolverAcceptor{
-		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
-		Status:     agent.Status,
-	}
-	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
-
-	janitorAcceptor := types.JanitorAcceptor{
-		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
-		Status:     agent.Status,
-	}
-	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
-}
-
-func (manager *Manager) RemoveAgentAcceptor(agentID string) {
-	manager.resolverSubscriber.RemoveAcceptor(agentID)
-	manager.janitorSubscriber.RemoveAcceptor(agentID)
-}
-
-func (manager *Manager) SendAgentInitData(agent types.Node) {
-	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
-	var janitorEvents []*janitor.TargetChangeEvent
-
-	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
-
-	for _, taskEvent := range taskEvents {
-		resolverEvent, err := swanevent.BuildResolverEvent(taskEvent)
-		if err == nil {
-			resolverEvents = append(resolverEvents, resolverEvent)
-		} else {
-			logrus.Errorf("Build resolver event got error: %s", err.Error())
-		}
-
-		janitorEvent, err := swanevent.BuildJanitorEvent(taskEvent)
-		if err == nil {
-			janitorEvents = append(janitorEvents, janitorEvent)
-		} else {
-			logrus.Errorf("Build janitor event got error: %s", err.Error())
-		}
-	}
-
-	resolverData, err := json.Marshal(resolverEvents)
-	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
-			logrus.Errorf("send resolver init data got error: %s", err.Error())
-		}
-	} else {
-		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
-	}
-
-	janitorData, err := json.Marshal(janitorEvents)
-	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
-			logrus.Errorf("send janitor init data got error: %s", err.Error())
-		}
-	} else {
-		logrus.Errorf("marshal janitor init data got error: %s", err.Error())
 	}
 }

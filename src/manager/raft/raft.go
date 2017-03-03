@@ -16,7 +16,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/raft/store"
 	swan "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	api "github.com/Dataman-Cloud/swan/src/types"
-	"github.com/boltdb/bolt"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/coreos/etcd/etcdserver/stats"
@@ -119,6 +118,7 @@ type NodeOptions struct {
 	ListenAddr    string
 	AdvertiseAddr string
 	DataDir       string
+	DB            *store.BoltbDb
 }
 
 var (
@@ -131,7 +131,7 @@ type applyResult struct {
 	err  error
 }
 
-func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
+func NewNode(opts NodeOptions) (*Node, error) {
 	n := Node{
 		opts:        opts,
 		waldir:      opts.DataDir + "/wal",
@@ -142,6 +142,7 @@ func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 		httpstopC:   make(chan struct{}),
 		httpdoneC:   make(chan struct{}),
 		stoppedC:    make(chan struct{}),
+		store:       opts.DB,
 	}
 
 	n.Config = &raft.Config{
@@ -158,15 +159,10 @@ func NewNode(opts NodeOptions, db *bolt.DB) (*Node, error) {
 	n.ticker = clock.NewClock().NewTicker(time.Second)
 	n.wait = newWait()
 
-	boltDbStore := store.NewBoltbdStore(db)
-
-	n.store = boltDbStore
-
 	return &n, nil
 }
 
-func (n *Node) StartRaft(ctx context.Context, raftID uint64, peers []api.Node, isNewCluster bool) error {
-	n.Config.ID = raftID
+func (n *Node) StartRaft(ctx context.Context, peers []api.Node, isNewCluster bool) error {
 	if !fileutil.Exist(n.snapdir) {
 		if err := os.Mkdir(n.snapdir, 0700); err != nil {
 			return err
@@ -212,18 +208,18 @@ func (n *Node) StartRaft(ctx context.Context, raftID uint64, peers []api.Node, i
 	log.L.Infof("raft node start with config: %+v \n", n.Config)
 
 	n.transport = &rafthttp.Transport{
-		ID:          types.ID(raftID),
+		ID:          types.ID(n.Config.ID),
 		ClusterID:   0x1000,
 		Raft:        n,
 		ServerStats: ss,
-		LeaderStats: stats.NewLeaderStats(strconv.FormatUint(raftID, 10)),
+		LeaderStats: stats.NewLeaderStats(strconv.FormatUint(n.Config.ID, 10)),
 		ErrorC:      make(chan error),
 	}
 
 	n.transport.Start()
 
 	for _, peer := range peers {
-		if peer.RaftID == raftID {
+		if peer.RaftID == n.Config.ID {
 			continue
 		}
 
