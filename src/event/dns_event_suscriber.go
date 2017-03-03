@@ -24,20 +24,8 @@ func NewDNSSubscriber() *DNSSubscriber {
 	return subscriber
 }
 
-func (subscriber *DNSSubscriber) Subscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	bus.Subscribers[subscriber.Key] = subscriber
-	return nil
-}
-
-func (subscriber *DNSSubscriber) Unsubscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	delete(bus.Subscribers, subscriber.Key)
-	return nil
+func (subscriber *DNSSubscriber) GetKey() string {
+	return subscriber.Key
 }
 
 func (subscriber *DNSSubscriber) AddAcceptor(acceptor types.ResolverAcceptor) {

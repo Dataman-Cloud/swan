@@ -37,20 +37,8 @@ func NewSSESubscriber(key string, appId string, rw http.ResponseWriter) (*SSESub
 	return sseSubscriber, sseSubscriber.doneCh
 }
 
-func (sse *SSESubscriber) Subscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	bus.Subscribers[sse.Key] = sse
-	return nil
-}
-
-func (sse *SSESubscriber) Unsubscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	delete(bus.Subscribers, sse.Key)
-	return nil
+func (sses *SSESubscriber) GetKey() string {
+	return sses.Key
 }
 
 func (sses *SSESubscriber) Write(e *Event) error {

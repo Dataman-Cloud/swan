@@ -9,11 +9,10 @@ import (
 	"sync"
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils"
 
@@ -305,19 +304,19 @@ func (app *App) SetState(state string) {
 	app.State = state
 	switch app.State {
 	case APP_STATE_MARK_FOR_CREATING:
-		app.EmitAppEvent(swanevent.EventTypeAppStateCreating)
+		app.EmitAppEvent(eventbus.EventTypeAppStateCreating)
 	case APP_STATE_MARK_FOR_DELETION:
-		app.EmitAppEvent(swanevent.EventTypeAppStateDeletion)
+		app.EmitAppEvent(eventbus.EventTypeAppStateDeletion)
 	case APP_STATE_NORMAL:
-		app.EmitAppEvent(swanevent.EventTypeAppStateNormal)
+		app.EmitAppEvent(eventbus.EventTypeAppStateNormal)
 	case APP_STATE_MARK_FOR_UPDATING:
-		app.EmitAppEvent(swanevent.EventTypeAppStateUpdating)
+		app.EmitAppEvent(eventbus.EventTypeAppStateUpdating)
 	case APP_STATE_MARK_FOR_CANCEL_UPDATE:
-		app.EmitAppEvent(swanevent.EventTypeAppStateCancelUpdate)
+		app.EmitAppEvent(eventbus.EventTypeAppStateCancelUpdate)
 	case APP_STATE_MARK_FOR_SCALE_UP:
-		app.EmitAppEvent(swanevent.EventTypeAppStateScaleUp)
+		app.EmitAppEvent(eventbus.EventTypeAppStateScaleUp)
 	case APP_STATE_MARK_FOR_SCALE_DOWN:
-		app.EmitAppEvent(swanevent.EventTypeAppStateScaleDown)
+		app.EmitAppEvent(eventbus.EventTypeAppStateScaleDown)
 	default:
 	}
 	app.Touch(false)
@@ -328,8 +327,8 @@ func (app *App) EmitAppEvent(eventType string) {
 	app.EmitEvent(app.BuildAppEvent(eventType))
 }
 
-func (app *App) BuildAppEvent(eventType string) *swanevent.Event {
-	e := &swanevent.Event{Type: eventType}
+func (app *App) BuildAppEvent(eventType string) *eventbus.Event {
+	e := &eventbus.Event{Type: eventType}
 	e.AppID = app.ID
 	e.Payload = &types.AppInfoEvent{
 		AppID:     app.ID,
@@ -484,8 +483,8 @@ func (app *App) Reevaluate() {
 	app.Touch(false)
 }
 
-func (app *App) EmitEvent(swanEvent *swanevent.Event) {
-	swancontext.Instance().EventBus.EventChan <- swanEvent
+func (app *App) EmitEvent(e *eventbus.Event) {
+	eventbus.WriteEvent(e)
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion

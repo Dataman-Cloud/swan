@@ -6,9 +6,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 
 	"github.com/emicklei/go-restful"
 	"github.com/satori/go.uuid"
@@ -48,8 +47,8 @@ func (api *EventsService) Register(container *restful.Container) {
 
 func (api *EventsService) Events(request *restful.Request, response *restful.Response) {
 	appId := request.QueryParameter("appId")
-	subscriber, doneChan := event.NewSSESubscriber(uuid.NewV4().String(), appId, http.ResponseWriter(response))
-	subscriber.Subscribe(swancontext.Instance().EventBus)
+	subscriber, doneChan := eventbus.NewSSESubscriber(uuid.NewV4().String(), appId, http.ResponseWriter(response))
+	eventbus.RegistSubscriber(subscriber)
 	<-doneChan
-	subscriber.Unsubscribe(swancontext.Instance().EventBus)
+	eventbus.UnRegistSubcriber(subscriber)
 }

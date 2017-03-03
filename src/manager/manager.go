@@ -12,11 +12,11 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -102,7 +102,7 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	managerApi := &ManagerApi{manager}
 	apiserver.Install(managerServer, managerApi)
 
-	_ = swancontext.NewSwanContext(event.New())
+	eventbus.Init()
 
 	return manager, nil
 }
@@ -249,9 +249,9 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
 
 					eventBusStarted = true
-					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
-					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
-					swancontext.Instance().EventBus.Start(ctx)
+					eventbus.RegistSubscriber(manager.resolverSubscriber)
+					eventbus.RegistSubscriber(manager.janitorSubscriber)
+					eventbus.Start(ctx)
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
@@ -266,9 +266,9 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("now i become a follower !!!")
 
 				if eventBusStarted {
-					manager.resolverSubscriber.Unsubscribe(swancontext.Instance().EventBus)
-					manager.janitorSubscriber.Unsubscribe(swancontext.Instance().EventBus)
-					swancontext.Instance().EventBus.Stop()
+					eventbus.UnRegistSubcriber(manager.resolverSubscriber)
+					eventbus.UnRegistSubcriber(manager.janitorSubscriber)
+					eventbus.Stop()
 					eventBusStarted = false
 
 					log.G(ctx).Info("eventBus has been stopped")

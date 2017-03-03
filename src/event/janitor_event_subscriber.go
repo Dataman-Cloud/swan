@@ -24,20 +24,8 @@ func NewJanitorSubscriber() *JanitorSubscriber {
 	return janitorSubscriber
 }
 
-func (js *JanitorSubscriber) Subscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	bus.Subscribers[js.Key] = js
-	return nil
-}
-
-func (js *JanitorSubscriber) Unsubscribe(bus *EventBus) error {
-	bus.Lock.Lock()
-	defer bus.Lock.Unlock()
-
-	delete(bus.Subscribers, js.Key)
-	return nil
+func (js *JanitorSubscriber) GetKey() string {
+	return js.Key
 }
 
 func (js *JanitorSubscriber) AddAcceptor(acceptor types.JanitorAcceptor) {

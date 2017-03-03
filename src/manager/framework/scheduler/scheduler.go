@@ -3,12 +3,11 @@ package scheduler
 import (
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
@@ -164,17 +163,17 @@ func (scheduler *Scheduler) InvalidateApps() {
 	}
 }
 
-func (scheduler *Scheduler) EmitEvent(swanEvent *swanevent.Event) {
-	swancontext.Instance().EventBus.EventChan <- swanEvent
+func (scheduler *Scheduler) EmitEvent(e *eventbus.Event) {
+	eventbus.WriteEvent(e)
 }
 
-func (scheduler *Scheduler) HealthyTaskEvents() []*swanevent.Event {
-	var healthyEvents []*swanevent.Event
+func (scheduler *Scheduler) HealthyTaskEvents() []*eventbus.Event {
+	var healthyEvents []*eventbus.Event
 
 	for _, app := range scheduler.AppStorage.Data() {
 		for _, slot := range app.GetSlots() {
 			if slot.Healthy() {
-				healthyEvents = append(healthyEvents, slot.BuildTaskEvent(swanevent.EventTypeTaskHealthy))
+				healthyEvents = append(healthyEvents, slot.BuildTaskEvent(eventbus.EventTypeTaskHealthy))
 			}
 		}
 	}

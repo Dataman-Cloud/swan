@@ -10,28 +10,28 @@ import (
 type EventBus struct {
 	Subscribers map[string]EventSubscriber
 
-	EventChan chan *Event
+	eventChan chan *Event
 
 	stopC chan struct{}
 	Lock  sync.Mutex
 }
 
-func New() *EventBus {
-	bus := &EventBus{
+var eventBusInstance *EventBus
+
+func Init() {
+	eventBusInstance = &EventBus{
 		Subscribers: make(map[string]EventSubscriber),
-		EventChan:   make(chan *Event, 1024),
+		eventChan:   make(chan *Event, 1024),
 		stopC:       make(chan struct{}, 1),
 		Lock:        sync.Mutex{},
 	}
-
-	return bus
 }
 
-func (bus *EventBus) Start(ctx context.Context) error {
+func Start(ctx context.Context) error {
 	for {
 		select {
-		case e := <-bus.EventChan:
-			for _, subscriber := range bus.Subscribers {
+		case e := <-eventBusInstance.eventChan:
+			for _, subscriber := range eventBusInstance.Subscribers {
 				if subscriber.InterestIn(e) {
 					if err := subscriber.Write(e); err != nil {
 						logrus.Debugf("write event e %s to %s got error: %s", e, subscriber, err)
@@ -43,7 +43,7 @@ func (bus *EventBus) Start(ctx context.Context) error {
 				}
 			}
 
-		case <-bus.stopC:
+		case <-eventBusInstance.stopC:
 			return nil
 
 		case <-ctx.Done():
@@ -52,6 +52,26 @@ func (bus *EventBus) Start(ctx context.Context) error {
 	}
 }
 
-func (bus *EventBus) Stop() {
-	bus.stopC <- struct{}{}
+func Stop() {
+	eventBusInstance.stopC <- struct{}{}
+}
+
+func WriteEvent(e *Event) {
+	eventBusInstance.eventChan <- e
+}
+
+func RegistSubscriber(subscriber EventSubscriber) {
+	eventBusInstance.Lock.Lock()
+	defer eventBusInstance.Lock.Unlock()
+
+	eventBusInstance.Subscribers[subscriber.GetKey()] = subscriber
+	return
+}
+
+func UnRegistSubcriber(subscriber EventSubscriber) {
+	eventBusInstance.Lock.Lock()
+	defer eventBusInstance.Lock.Unlock()
+
+	delete(eventBusInstance.Subscribers, subscriber.GetKey())
+	return
 }
