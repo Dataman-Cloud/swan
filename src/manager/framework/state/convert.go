@@ -60,12 +60,8 @@ func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 		raftVersion.UpdatePolicy = UpdatePolicyToRaft(version.UpdatePolicy)
 	}
 
-	if version.HealthChecks != nil {
-		var healthChecks []*rafttypes.HealthCheck
-		for _, healthCheck := range version.HealthChecks {
-			healthChecks = append(healthChecks, HealthCheckToRaft(healthCheck))
-		}
-		raftVersion.HealthChecks = healthChecks
+	if version.HealthCheck != nil {
+		raftVersion.HealthCheck = HealthCheckToRaft(version.HealthCheck)
 	}
 
 	return raftVersion
@@ -103,13 +99,8 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 		version.UpdatePolicy = UpdatePolicyFromRaft(raftVersion.UpdatePolicy)
 	}
 
-	if raftVersion.HealthChecks != nil {
-		var healthChecks []*types.HealthCheck
-		for _, healthCheck := range raftVersion.HealthChecks {
-			healthChecks = append(healthChecks, HealthCheckFromRaft(healthCheck))
-		}
-
-		version.HealthChecks = healthChecks
+	if raftVersion.HealthCheck != nil {
+		version.HealthCheck = HealthCheckFromRaft(raftVersion.HealthCheck)
 	}
 
 	return version

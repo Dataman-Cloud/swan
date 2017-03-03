@@ -14,7 +14,7 @@ type Version struct {
 	Priority          int32             `json:"priority,omitempty"`
 	Container         *Container        `json:"container,omitempty"`
 	Labels            map[string]string `json:"labels,omitempty"`
-	HealthChecks      []*HealthCheck    `json:"healthChecks,omitempty"`
+	HealthCheck       *HealthCheck      `json:"healthCheck,omitempty"`
 	Env               map[string]string `json:"env,omitempty"`
 	KillPolicy        *KillPolicy       `json:"killPolicy,omitempty"`
 	UpdatePolicy      *UpdatePolicy     `json:"updatPolicy,omitempty"`
@@ -46,6 +46,7 @@ type Parameter struct {
 
 type PortMapping struct {
 	ContainerPort int32  `json:"containerPort,omitempty"`
+	Port          int32  `json:"port,omitempty"`
 	Name          string `json:"name,omitempty"`
 	Protocol      string `json:"protocol,omitempty"`
 }

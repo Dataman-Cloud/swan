@@ -36,7 +36,7 @@
   "killPolicy": {
     "duration": 5
   },
-  "healthChecks": [
+  "healthCheck": 
     {
       "protocol": "CMD",
       "value": "ls",
@@ -47,7 +47,7 @@
       "timeoutSeconds": 1,
       "consecutiveFailures": 500
     }
- ],
+ ,
   "mode": "fixed",
   "ip": ["192.168.1.210"]
 }

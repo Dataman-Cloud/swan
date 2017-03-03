@@ -224,22 +224,35 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 	return builder
 }
 
-func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *TaskBuilder {
-	for _, healthCheck := range healthChecks {
-		var containerPort int32
+func (builder *TaskBuilder) SetHealthCheck(healthCheck *types.HealthCheck) *TaskBuilder {
+	protocol := strings.ToLower(healthCheck.Protocol)
+	if protocol == "cmd" {
+		builder.taskInfo.HealthCheck = &mesos.HealthCheck{
+			Type: mesos.HealthCheck_COMMAND.Enum(),
+			Command: &mesos.CommandInfo{
+				Value: &healthCheck.Value,
+			},
+		}
+	} else {
+		var namespacePort int32
 		for _, portMapping := range builder.task.Slot.Version.Container.Docker.PortMappings {
 			if portMapping.Name == healthCheck.PortName {
-				containerPort = portMapping.ContainerPort
+				if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "host" {
+					namespacePort = portMapping.Port
+				} else if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "bridge" {
+					namespacePort = portMapping.ContainerPort
+				} else { // not support, shortcut
+					return builder
+				}
 			}
 		}
 
-		protocol := strings.ToLower(healthCheck.Protocol)
 		if protocol == "http" {
 			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
 				Type: mesos.HealthCheck_HTTP.Enum(),
 				Http: &mesos.HealthCheck_HTTPCheckInfo{
 					Scheme:   proto.String(protocol),
-					Port:     proto.Uint32(uint32(containerPort)),
+					Port:     proto.Uint32(uint32(namespacePort)),
 					Path:     &healthCheck.Path,
 					Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
 				},
@@ -250,26 +263,17 @@ func (builder *TaskBuilder) SetHealthCheck(healthChecks []*types.HealthCheck) *T
 			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
 				Type: mesos.HealthCheck_TCP.Enum(),
 				Tcp: &mesos.HealthCheck_TCPCheckInfo{
-					Port: proto.Uint32(uint32(containerPort)),
+					Port: proto.Uint32(uint32(namespacePort)),
 				},
 			}
 		}
-
-		if protocol == "cmd" {
-			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
-				Type: mesos.HealthCheck_COMMAND.Enum(),
-				Command: &mesos.CommandInfo{
-					Value: &healthCheck.Value,
-				},
-			}
-		}
-
-		builder.taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
-		builder.taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
-		builder.taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
-		builder.taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
-		builder.taskInfo.HealthCheck.DelaySeconds = proto.Float64(healthCheck.DelaySeconds)
 	}
+
+	builder.taskInfo.HealthCheck.IntervalSeconds = proto.Float64(healthCheck.IntervalSeconds)
+	builder.taskInfo.HealthCheck.TimeoutSeconds = proto.Float64(healthCheck.TimeoutSeconds)
+	builder.taskInfo.HealthCheck.ConsecutiveFailures = proto.Uint32(healthCheck.ConsecutiveFailures)
+	builder.taskInfo.HealthCheck.GracePeriodSeconds = proto.Float64(healthCheck.GracePeriodSeconds)
+	builder.taskInfo.HealthCheck.DelaySeconds = proto.Float64(healthCheck.DelaySeconds)
 
 	return builder
 }
