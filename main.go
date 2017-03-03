@@ -41,7 +41,7 @@ func main() {
 
 	app.Commands = []cli.Command{}
 
-	app.Commands = append(app.Commands, AgentJoinCmd())
+	app.Commands = append(app.Commands, AgentCmd())
 	app.Commands = append(app.Commands, ManagerCmd())
 
 	if err := app.Run(os.Args); err != nil {
@@ -140,32 +140,22 @@ func FlagDomain() cli.Flag {
 	}
 }
 
-func AgentJoinCmd() cli.Command {
+func AgentCmd() cli.Command {
 	agentCmd := cli.Command{
 		Name:        "agent",
 		Usage:       "[COMMAND] [ARG...]",
-		Description: "run swan agent command",
-		Flags:       []cli.Flag{},
-		Subcommands: []cli.Command{},
-	}
-
-	agentJoinCmd := cli.Command{
-		Name:        "join",
-		Usage:       "[COMMAND] [ARG...]",
-		Description: "start and join a swan agent which contains proxy and DNS server",
+		Description: "Run swan as agent",
 		Flags:       []cli.Flag{},
 		Action:      JoinAndStartAgent,
 	}
 
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagListenAddr())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagAdvertiseAddr())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJoinAddrs())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDataDir())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorAdvertiseIp())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagLogLevel())
-	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDomain())
-
-	agentCmd.Subcommands = append(agentCmd.Subcommands, agentJoinCmd)
+	agentCmd.Flags = append(agentCmd.Flags, FlagListenAddr())
+	agentCmd.Flags = append(agentCmd.Flags, FlagAdvertiseAddr())
+	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
+	agentCmd.Flags = append(agentCmd.Flags, FlagDataDir())
+	agentCmd.Flags = append(agentCmd.Flags, FlagJanitorAdvertiseIp())
+	agentCmd.Flags = append(agentCmd.Flags, FlagLogLevel())
+	agentCmd.Flags = append(agentCmd.Flags, FlagDomain())
 
 	return agentCmd
 }
@@ -202,35 +192,32 @@ func ManagerCmd() cli.Command {
 	managerCmd := cli.Command{
 		Name:        "manager",
 		Usage:       "[COMMAND] [ARG...]",
-		Description: "init a manager as new cluster or join to an exiting cluster",
-		Subcommands: []cli.Command{},
+		Description: "Run swan as manager",
+		Flags: []cli.Flag{
+			cli.BoolFlag{
+				Name:  "init",
+				Usage: "Init a new cluster",
+			},
+		},
+		Action: InitOrJoinCluster,
 	}
-
-	managerCmd.Subcommands = append(managerCmd.Subcommands, ManagerJoinCmd())
-	managerCmd.Subcommands = append(managerCmd.Subcommands, ManagerInitCmd())
+	managerCmd.Flags = append(managerCmd.Flags, FlagListenAddr())
+	managerCmd.Flags = append(managerCmd.Flags, FlagAdvertiseAddr())
+	managerCmd.Flags = append(managerCmd.Flags, FlagRaftListenAddr())
+	managerCmd.Flags = append(managerCmd.Flags, FlagRaftAdvertiseAddr())
+	managerCmd.Flags = append(managerCmd.Flags, FlagJoinAddrs())
+	managerCmd.Flags = append(managerCmd.Flags, FlagZkPath())
+	managerCmd.Flags = append(managerCmd.Flags, FlagLogLevel())
+	managerCmd.Flags = append(managerCmd.Flags, FlagDataDir())
 
 	return managerCmd
 }
 
-func ManagerJoinCmd() cli.Command {
-	managerJoinCmd := cli.Command{
-		Name:        "join",
-		Usage:       "join [ARG...]",
-		Description: "start a manager and join to an exitsing swan cluster",
-		Flags:       []cli.Flag{},
-		Action:      JoinAndStartManager,
+func InitOrJoinCluster(c *cli.Context) error {
+	if c.IsSet("init") {
+		return InitAndStartManager(c)
 	}
-
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagListenAddr())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagAdvertiseAddr())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagRaftListenAddr())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagRaftAdvertiseAddr())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagJoinAddrs())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagZkPath())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagLogLevel())
-	managerJoinCmd.Flags = append(managerJoinCmd.Flags, FlagDataDir())
-
-	return managerJoinCmd
+	return JoinAndStartManager(c)
 }
 
 func JoinAndStartManager(c *cli.Context) error {
@@ -257,27 +244,7 @@ func JoinAndStartManager(c *cli.Context) error {
 	return nil
 }
 
-func ManagerInitCmd() cli.Command {
-	managerInitCmd := cli.Command{
-		Name:        "init",
-		Usage:       "init [ARG...]",
-		Description: "start a manager and init a new swan cluster",
-		Flags:       []cli.Flag{},
-		Action:      StartManager,
-	}
-
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagListenAddr())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagAdvertiseAddr())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagRaftListenAddr())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagRaftAdvertiseAddr())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagZkPath())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagLogLevel())
-	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagDataDir())
-
-	return managerInitCmd
-}
-
-func StartManager(c *cli.Context) error {
+func InitAndStartManager(c *cli.Context) error {
 	conf, err := config.NewConfig(c)
 	conf.Mode = config.Manager
 	if err != nil {
