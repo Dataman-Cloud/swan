@@ -1,39 +1,62 @@
 ## health-check
 
-`Swan`支持为同一端口设置多个HealthCheck，
-通过portName指定要check的端口。
 
-### protocol
+###  protocol
+  which kind of health check let `Mesos` impose on tasks, currently they
+are HTTP, TCP and CMD
 
- * TCP 当前端口为tcp端口，
-   mesos内部会尝试connect到此端口，以判断服务是否正常
+ * TCP
+
+ For replicates app with `BRIDGE` network mode, `Mesos` try connecting to
+randomly assigned port which paired with `containerPort`. For any replicates app
+with `HOST` network mode, `port` specified within `portMapping` will be tested. Default IP address tested is `127.0.0.1` which is the network namespace isolated by mesos executor. If any port is open, healthy status for the task will be true, otherwise false.
+
  * HTTP
-   需要Check的端口是HTTP服务，Mesos会发起curl请求到此端口，当返回结果为200,201,301,302中之一时认为结果正常
 
-### path
+  The port been chosen have the same rule as TCP protocol above. Intead
+of testing port open, mesos will try `curl` to test if status code of any HTTP response match one of 200,201,301,302. If any healthy status should be true, otherwise false.
 
- 当协议是HTTP时，表示请求的path地址
+ * CMD
+
+  Mesos will try execute an command within any mesos agent that running
+the task, if return value is 0, healthy status is true, otherwise false.
+
+### PATH
+
+  if protocol is HTTP, `PATH` is an mandatory field, it means path of
+`curl` command. e.g if path is `/status`, mesos agent will try check 
+`127.0.0.1:$RANDOM_PORT_OR_PORT_FOR_HOST_MODE/status`.
+
+### VALUE
+
+  if protocol is CMD, `VALUE` is an mandatory field, it means the
+command that test healthy status. e.g `ping baidu.com -c 2` or `[ [ -f
+/var/run/foobar.pid ] ] && exit 0`
 
 ### delaySeconds
 
-  health Check开始的最初delay
+  amount of time to wait util starting health checks
 
-### inntervalSeconds
+### intervalSeconds
 
-  多次health check之间的interval
+  interval between health checks
 
 ### timeoutSeconds
 
-  health check的timeout时长
+  amount of time before health check stop
 
 ### consecutiveFailures
   
-  失败多久以后删除task
+  umber of consecutive failures until signaling kill task.
+  
 
 ### gracePeriodSeconds
 
-  任务启动之后允许的失败时常
+  Amount of time to allow failed health checks since launch.
 
 
 
+## NOTEs
 
+the only protocol that fixed app supported is `CMD` because mesos could
+not reach to the IP specifed by fixed app.
