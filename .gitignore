@@ -8,3 +8,6 @@ bin/*
 Procfile
 Procfile-cluster
 src/manager/framework/state/y.output
+./contrib/envfiles/Envfile_agent
+./contrib/envfiles/Envfile_manager_init
+./contrib/envfiles/Envfile_manager_join

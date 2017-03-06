@@ -1,4 +1,4 @@
-FROM alpine:3.5
+FROM ubuntu:latest
 
 COPY bin/swan /swan
 WORKDIR /
