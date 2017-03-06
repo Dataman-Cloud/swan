@@ -34,10 +34,19 @@ milestones we set ahead.
 
   - **[BUG]** task IP lost after `Swan` restart
   - **[BUG]** DNS A record lost after `Swan` restart for fixed app
-  - **[IMPROVE]** rename `framework` to more appropriate `scheduler`s
-  - **[IMPROVE]**  teardown a scheduler
-  - **[IMPROVE]**  reconsilation all tasks
-  - **[FEATURE]** restart policy revisit.
+  - **[IMPROVE]** Handle recind offer
+  - **[IMPROVE]** Handle inverse offer
+  - **[FEATURE]** restart policy revisit
   - **[IMPROVE]** remove mixed mode
+  - **[IMPROVE]** supprt host mode network for replicates app
+
+
+### \#4 feature improvement & `Swan` stabilization 3 (3-10-2017)
+
+  - **[IMPROVE]** rolling update, deletion, scale should not in batch
+    but one after another
+
+  - **[IMPROVE]** revisit janitor
+  - **[IMPROVE]** revisit dns
 
 
