@@ -8,42 +8,42 @@ import (
 )
 
 type EventBus struct {
-	Subscribers map[string]EventSubscriber
+	listeners map[string]EventListener
 
-	EventChan chan *Event
+	eventChan chan *Event
 
 	stopC chan struct{}
 	Lock  sync.Mutex
 }
 
-func New() *EventBus {
-	bus := &EventBus{
-		Subscribers: make(map[string]EventSubscriber),
-		EventChan:   make(chan *Event, 1024),
-		stopC:       make(chan struct{}, 1),
-		Lock:        sync.Mutex{},
-	}
+var eventBusInstance *EventBus
 
-	return bus
+func Init() {
+	eventBusInstance = &EventBus{
+		listeners: make(map[string]EventListener),
+		eventChan: make(chan *Event, 1024),
+		stopC:     make(chan struct{}, 1),
+		Lock:      sync.Mutex{},
+	}
 }
 
-func (bus *EventBus) Start(ctx context.Context) error {
+func Start(ctx context.Context) error {
 	for {
 		select {
-		case e := <-bus.EventChan:
-			for _, subscriber := range bus.Subscribers {
-				if subscriber.InterestIn(e) {
-					if err := subscriber.Write(e); err != nil {
-						logrus.Debugf("write event e %s to %s got error: %s", e, subscriber, err)
+		case e := <-eventBusInstance.eventChan:
+			for _, listener := range eventBusInstance.listeners {
+				if listener.InterestIn(e) {
+					if err := listener.Write(e); err != nil {
+						logrus.Debugf("write event e %s to %s got error: %s", e, listener, err)
 					} else {
-						logrus.Debugf("write event e %s to %s", e, subscriber)
+						logrus.Debugf("write event e %s to %s", e, listener)
 					}
 				} else {
-					logrus.Debugf("subscriber %s have no interest in %s", subscriber, e)
+					logrus.Debugf("listener %s have no interest in %s", listener, e)
 				}
 			}
 
-		case <-bus.stopC:
+		case <-eventBusInstance.stopC:
 			return nil
 
 		case <-ctx.Done():
@@ -52,6 +52,26 @@ func (bus *EventBus) Start(ctx context.Context) error {
 	}
 }
 
-func (bus *EventBus) Stop() {
-	bus.stopC <- struct{}{}
+func Stop() {
+	eventBusInstance.stopC <- struct{}{}
+}
+
+func WriteEvent(e *Event) {
+	eventBusInstance.eventChan <- e
+}
+
+func AddListener(listener EventListener) {
+	eventBusInstance.Lock.Lock()
+	defer eventBusInstance.Lock.Unlock()
+
+	eventBusInstance.listeners[listener.Key()] = listener
+	return
+}
+
+func RemoveListener(listener EventListener) {
+	eventBusInstance.Lock.Lock()
+	defer eventBusInstance.Lock.Unlock()
+
+	delete(eventBusInstance.listeners, listener.Key())
+	return
 }

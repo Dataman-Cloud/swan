@@ -9,15 +9,15 @@ event的设计结构如图所示:
 <img src="./assets/img/eventbus-arch.jpg" width="500" />
 
 结构说明:
-在swan中定义了EventBus, event bus接收events，然后再将events发送给subscribers. Subscriber可以有多个，并且可以选择监听的事件类型, 当events到达event_bus时，event_bus会循环查询subscriber,将此事件发送给订阅的subscriber.
+在swan中定义了EventBus, event bus接收events，然后再将events发送给listeners. listener可以有多个，并且可以选择监听的事件类型, 当events到达event_bus时，event_bus会循环查询listener,将此事件发送给订阅的listener.
 
-目前swan中实现了三个subscriber: dns_event_suscriber, janitor_event_subscriber, sse_event_suscriber。
+目前swan中实现了三个listener: dns_event_suscriber, janitor_event_listener, sse_event_suscriber。
 
-dns_event_subscriber: 此subscriber为dns服务，监听EventTypeTaskHealthy和EventTypeTaskUnhealthy事件，然后将事件信息封装成dns可以识别的类型，发送到dns监听的channel中。  
+dns_event_listener: 此listener为dns服务，监听EventTypeTaskHealthy和EventTypeTaskUnhealthy事件，然后将事件信息封装成dns可以识别的类型，发送到dns监听的channel中。  
 
-janitor_event_subscriber: 此subscriber为proxy服务，监听监听EventTypeTaskHealthy和EventTypeTaskUnhealthy事件,然后将事件封装成janitor可以识别的类型，发送到janitor监听的channel中。 
+janitor_event_listener: 此listener为proxy服务，监听监听EventTypeTaskHealthy和EventTypeTaskUnhealthy事件,然后将事件封装成janitor可以识别的类型，发送到janitor监听的channel中。 
 
-sse_event_subscriber: 此subscriber为api服务，swan对外暴露了一个sse服务: /events, subscriber会将所有事件通过api发送到客户端。 
+sse_event_listener: 此listener为api服务，swan对外暴露了一个sse服务: /events, listener会将所有事件通过api发送到客户端。 
 
 ## 详细设计:
 

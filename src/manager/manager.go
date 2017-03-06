@@ -12,11 +12,11 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	"github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
-	"github.com/Dataman-Cloud/swan/src/swancontext"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -36,8 +36,8 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	janitorSubscriber  *event.JanitorSubscriber
-	resolverSubscriber *event.DNSSubscriber
+	janitorListener  *event.JanitorListener
+	resolverListener *event.DNSListener
 
 	NodeInfo types.Node
 
@@ -89,20 +89,20 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	}
 
 	manager := &Manager{
-		raftNode:           raftNode,
-		framework:          framework,
-		resolverSubscriber: event.NewDNSSubscriber(),
-		janitorSubscriber:  event.NewJanitorSubscriber(),
-		NodeInfo:           nodeInfo,
-		apiServer:          managerServer,
-		JoinAddrs:          managerConf.JoinAddrs,
-		criticalErrorChan:  make(chan error, 1),
+		raftNode:          raftNode,
+		framework:         framework,
+		resolverListener:  event.NewDNSListener(),
+		janitorListener:   event.NewJanitorListener(),
+		NodeInfo:          nodeInfo,
+		apiServer:         managerServer,
+		JoinAddrs:         managerConf.JoinAddrs,
+		criticalErrorChan: make(chan error, 1),
 	}
 
 	managerApi := &ManagerApi{manager}
 	apiserver.Install(managerServer, managerApi)
 
-	_ = swancontext.NewSwanContext(event.New())
+	eventbus.Init()
 
 	return manager, nil
 }
@@ -249,9 +249,9 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
 
 					eventBusStarted = true
-					manager.resolverSubscriber.Subscribe(swancontext.Instance().EventBus)
-					manager.janitorSubscriber.Subscribe(swancontext.Instance().EventBus)
-					swancontext.Instance().EventBus.Start(ctx)
+					eventbus.AddListener(manager.resolverListener)
+					eventbus.AddListener(manager.janitorListener)
+					eventbus.Start(ctx)
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
@@ -266,9 +266,9 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("now i become a follower !!!")
 
 				if eventBusStarted {
-					manager.resolverSubscriber.Unsubscribe(swancontext.Instance().EventBus)
-					manager.janitorSubscriber.Unsubscribe(swancontext.Instance().EventBus)
-					swancontext.Instance().EventBus.Stop()
+					eventbus.RemoveListener(manager.resolverListener)
+					eventbus.RemoveListener(manager.janitorListener)
+					eventbus.Stop()
 					eventBusStarted = false
 
 					log.G(ctx).Info("eventBus has been stopped")
