@@ -128,7 +128,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	}
 
 	if app.IsFixed() && len(newIps) != newInstances {
-		return errors.New(fmt.Sprintf("please provide %d unique ip", newInstances))
+		return fmt.Errorf("please provide %d unique ip", newInstances)
 	}
 
 	app.BeginTx()
@@ -155,11 +155,11 @@ func (app *App) ScaleDown(removeInstances int) error {
 	}
 
 	if removeInstances <= 0 {
-		return errors.New("please specify atleast 1 task to scale-down")
+		return errors.New("please specify at least 1 task to scale-down")
 	}
 
 	if removeInstances >= int(app.CurrentVersion.Instances) {
-		return errors.New(fmt.Sprintf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances))
+		return fmt.Errorf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances)
 	}
 
 	app.BeginTx()
@@ -491,15 +491,15 @@ func (app *App) EmitEvent(e *eventbus.Event) {
 func (app *App) checkProposedVersionValid(version *types.Version) error {
 	// mode can not change
 	if version.Mode != app.CurrentVersion.Mode {
-		return errors.New(fmt.Sprintf("mode can not change when update app, current version is %s", app.CurrentVersion.Mode))
+		return fmt.Errorf("mode can not change when update app, current version is %s", app.CurrentVersion.Mode)
 	}
 	// runAs can not change
 	if version.RunAs != app.CurrentVersion.RunAs {
-		return errors.New(fmt.Sprintf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs))
+		return fmt.Errorf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs)
 	}
 	// app instances should same as current instances
 	if version.Instances != app.CurrentVersion.Instances {
-		return errors.New(fmt.Sprintf("instances can not change when update app, current version is %s", app.CurrentVersion.Instances))
+		return fmt.Errorf("instances can not change when update app, current version is %s", app.CurrentVersion.Instances)
 	}
 	return nil
 }
@@ -529,18 +529,18 @@ func validateAndFormatVersion(version *types.Version) error {
 	//validation of AppId
 	match := r.MatchString(version.AppName)
 	if match {
-		return errors.New(fmt.Sprintf("invalid app id [%s]: %s", version.AppName, errMsg))
+		return fmt.Errorf("invalid app id [%s]: %s", version.AppName, errMsg)
 	}
 
 	//validation of RunAs
 	match = r.MatchString(version.RunAs)
 	if match {
-		return errors.New(fmt.Sprintf("invalid runAs [%s]: %s", version.RunAs, errMsg))
+		return fmt.Errorf("invalid runAs [%s]: %s", version.RunAs, errMsg)
 	}
 
 	match = r.MatchString(version.Container.Docker.Network)
 	if match {
-		return errors.New(fmt.Sprintf("invalid network [%s]: %s", version.Container.Docker.Network, errMsg))
+		return fmt.Errorf("invalid network [%s]: %s", version.Container.Docker.Network, errMsg)
 	}
 
 	if len(version.RunAs) == 0 {
@@ -552,13 +552,13 @@ func validateAndFormatVersion(version *types.Version) error {
 	}
 
 	if (version.Mode != string(APP_MODE_REPLICATES)) && (version.Mode != string(APP_MODE_FIXED)) {
-		return errors.New(fmt.Sprintf("enrecognized app mode %s", version.Mode))
+		return fmt.Errorf("enrecognized app mode %s", version.Mode)
 	}
 
 	// validation for fixed mode application
 	if version.Mode == string(APP_MODE_FIXED) {
 		if len(version.IP) != int(version.Instances) {
-			return errors.New(fmt.Sprintf("should provide exactly %d ip for FIXED type app", version.Instances))
+			return fmt.Errorf("should provide exactly %d ip for FIXED type app", version.Instances)
 		}
 
 		if len(version.Container.Docker.PortMappings) > 0 {
@@ -605,41 +605,37 @@ func validateAndFormatVersion(version *types.Version) error {
 
 		// portName for health check should mandatory
 		if version.HealthCheck != nil {
+			protocol, portName := version.HealthCheck.Protocol, version.HealthCheck.PortName
 			// portName should present in dockers' portMappings definition
-			if !utils.SliceContains(portNames, version.HealthCheck.PortName) {
-				return errors.New(fmt.Sprintf("no port name %s found in docker's PortMappings", version.HealthCheck.PortName))
+			if !utils.SliceContains(portNames, portName) {
+				return fmt.Errorf("no port name %s found in docker's PortMappings", portName)
 			}
 
-			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, version.HealthCheck.Protocol) {
-				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check", version.HealthCheck.Protocol))
+			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, protocol) {
+				return fmt.Errorf("doesn't recoginized protocol %s for health check", protocol)
 			}
 
-			if strings.ToLower(version.HealthCheck.Protocol) == "http" {
+			if strings.ToLower(protocol) == "http" {
 				if len(version.HealthCheck.Path) == 0 {
-					return errors.New("no path provided for health check with HTTP protocol")
+					return fmt.Errorf("no path provided for health check with %s protocol", protocol)
 				}
 			}
 
-			if strings.ToLower(version.HealthCheck.Protocol) == "cmd" {
+			if strings.ToLower(protocol) == "cmd" {
 				if len(version.HealthCheck.Value) == 0 {
-					return errors.New("no value provided for health check with CMD ")
+					return fmt.Errorf("no value provided for health check with %s protocol", protocol)
 				}
-			}
-
-			if (strings.ToLower(version.HealthCheck.Protocol) == "tcp" || strings.ToLower(version.HealthCheck.Protocol) == "http") && strings.TrimSpace(version.HealthCheck.PortName) == "" {
-				return errors.New("port name in healthChecks should not be empty and match name in docker's PortMappings")
 			}
 		}
 	} else {
 		if version.HealthCheck != nil {
-			if !utils.SliceContains([]string{"cmd", "CMD"}, version.HealthCheck.Protocol) {
-				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check for fixed type app", version.HealthCheck.Protocol))
+			protocol := version.HealthCheck.Protocol
+			if !utils.SliceContains([]string{"cmd", "CMD"}, protocol) {
+				return fmt.Errorf("doesn't recoginized protocol %s for health check for fixed type app", protocol)
 			}
 
-			if strings.ToLower(version.HealthCheck.Protocol) == "cmd" {
-				if len(version.HealthCheck.Value) == 0 {
-					return errors.New("no value provided for health check with CMD ")
-				}
+			if len(version.HealthCheck.Value) == 0 {
+				return fmt.Errorf("no value provided for health check with %s", protocol)
 			}
 		}
 	}
