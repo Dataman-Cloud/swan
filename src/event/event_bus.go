@@ -8,7 +8,7 @@ import (
 )
 
 type EventBus struct {
-	Subscribers map[string]EventSubscriber
+	listeners map[string]EventListener
 
 	eventChan chan *Event
 
@@ -20,10 +20,10 @@ var eventBusInstance *EventBus
 
 func Init() {
 	eventBusInstance = &EventBus{
-		Subscribers: make(map[string]EventSubscriber),
-		eventChan:   make(chan *Event, 1024),
-		stopC:       make(chan struct{}, 1),
-		Lock:        sync.Mutex{},
+		listeners: make(map[string]EventListener),
+		eventChan: make(chan *Event, 1024),
+		stopC:     make(chan struct{}, 1),
+		Lock:      sync.Mutex{},
 	}
 }
 
@@ -31,15 +31,15 @@ func Start(ctx context.Context) error {
 	for {
 		select {
 		case e := <-eventBusInstance.eventChan:
-			for _, subscriber := range eventBusInstance.Subscribers {
-				if subscriber.InterestIn(e) {
-					if err := subscriber.Write(e); err != nil {
-						logrus.Debugf("write event e %s to %s got error: %s", e, subscriber, err)
+			for _, listener := range eventBusInstance.listeners {
+				if listener.InterestIn(e) {
+					if err := listener.Write(e); err != nil {
+						logrus.Debugf("write event e %s to %s got error: %s", e, listener, err)
 					} else {
-						logrus.Debugf("write event e %s to %s", e, subscriber)
+						logrus.Debugf("write event e %s to %s", e, listener)
 					}
 				} else {
-					logrus.Debugf("subscriber %s have no interest in %s", subscriber, e)
+					logrus.Debugf("listener %s have no interest in %s", listener, e)
 				}
 			}
 
@@ -60,18 +60,18 @@ func WriteEvent(e *Event) {
 	eventBusInstance.eventChan <- e
 }
 
-func RegistSubscriber(subscriber EventSubscriber) {
+func AddListener(listener EventListener) {
 	eventBusInstance.Lock.Lock()
 	defer eventBusInstance.Lock.Unlock()
 
-	eventBusInstance.Subscribers[subscriber.GetKey()] = subscriber
+	eventBusInstance.listeners[listener.Key()] = listener
 	return
 }
 
-func UnRegistSubcriber(subscriber EventSubscriber) {
+func RemoveListener(listener EventListener) {
 	eventBusInstance.Lock.Lock()
 	defer eventBusInstance.Lock.Unlock()
 
-	delete(eventBusInstance.Subscribers, subscriber.GetKey())
+	delete(eventBusInstance.listeners, listener.Key())
 	return
 }

@@ -47,8 +47,8 @@ func (api *EventsService) Register(container *restful.Container) {
 
 func (api *EventsService) Events(request *restful.Request, response *restful.Response) {
 	appId := request.QueryParameter("appId")
-	subscriber, doneChan := eventbus.NewSSESubscriber(uuid.NewV4().String(), appId, http.ResponseWriter(response))
-	eventbus.RegistSubscriber(subscriber)
+	listener, doneChan := eventbus.NewSSEListener(uuid.NewV4().String(), appId, http.ResponseWriter(response))
+	eventbus.AddListener(listener)
 	<-doneChan
-	eventbus.UnRegistSubcriber(subscriber)
+	eventbus.RemoveListener(listener)
 }

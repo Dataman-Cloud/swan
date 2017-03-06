@@ -36,8 +36,8 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	janitorSubscriber  *event.JanitorSubscriber
-	resolverSubscriber *event.DNSSubscriber
+	janitorListener  *event.JanitorListener
+	resolverListener *event.DNSListener
 
 	NodeInfo types.Node
 
@@ -89,14 +89,14 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	}
 
 	manager := &Manager{
-		raftNode:           raftNode,
-		framework:          framework,
-		resolverSubscriber: event.NewDNSSubscriber(),
-		janitorSubscriber:  event.NewJanitorSubscriber(),
-		NodeInfo:           nodeInfo,
-		apiServer:          managerServer,
-		JoinAddrs:          managerConf.JoinAddrs,
-		criticalErrorChan:  make(chan error, 1),
+		raftNode:          raftNode,
+		framework:         framework,
+		resolverListener:  event.NewDNSListener(),
+		janitorListener:   event.NewJanitorListener(),
+		NodeInfo:          nodeInfo,
+		apiServer:         managerServer,
+		JoinAddrs:         managerConf.JoinAddrs,
+		criticalErrorChan: make(chan error, 1),
 	}
 
 	managerApi := &ManagerApi{manager}
@@ -249,8 +249,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
 
 					eventBusStarted = true
-					eventbus.RegistSubscriber(manager.resolverSubscriber)
-					eventbus.RegistSubscriber(manager.janitorSubscriber)
+					eventbus.AddListener(manager.resolverListener)
+					eventbus.AddListener(manager.janitorListener)
 					eventbus.Start(ctx)
 				}()
 
@@ -266,8 +266,8 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("now i become a follower !!!")
 
 				if eventBusStarted {
-					eventbus.UnRegistSubcriber(manager.resolverSubscriber)
-					eventbus.UnRegistSubcriber(manager.janitorSubscriber)
+					eventbus.RemoveListener(manager.resolverListener)
+					eventbus.RemoveListener(manager.janitorListener)
 					eventbus.Stop()
 					eventBusStarted = false
 

@@ -1,7 +1,7 @@
 package event
 
-type EventSubscriber interface {
+type EventListener interface {
 	Write(e *Event) error
 	InterestIn(e *Event) bool
-	GetKey() string
+	Key() string
 }

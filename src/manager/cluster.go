@@ -222,19 +222,19 @@ func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
 		Status:     agent.Status,
 	}
-	manager.resolverSubscriber.AddAcceptor(resolverAcceptor)
+	manager.resolverListener.AddAcceptor(resolverAcceptor)
 
 	janitorAcceptor := types.JanitorAcceptor{
 		ID:         agent.ID,
 		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
 		Status:     agent.Status,
 	}
-	manager.janitorSubscriber.AddAcceptor(janitorAcceptor)
+	manager.janitorListener.AddAcceptor(janitorAcceptor)
 }
 
 func (manager *Manager) RemoveAgentAcceptor(agentID string) {
-	manager.resolverSubscriber.RemoveAcceptor(agentID)
-	manager.janitorSubscriber.RemoveAcceptor(agentID)
+	manager.resolverListener.RemoveAcceptor(agentID)
+	manager.janitorListener.RemoveAcceptor(agentID)
 }
 
 func (manager *Manager) SendAgentInitData(agent types.Node) {
