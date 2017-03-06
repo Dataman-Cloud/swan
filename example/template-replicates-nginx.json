@@ -7,9 +7,8 @@
   "disk": 0,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 3,
-  "constraints": [
-  ],
+  "instances": 1,
+  "constraints":"" ,
   "container": {
     "docker": {
       "image": "nginx:1.10",
@@ -49,17 +48,16 @@
   "killPolicy": {
     "duration": 5
   },
-  "healthChecks": [
+  "healthCheck": 
     {
-      "protocol": "http",
-      "path": "/",
+      "protocol": "tcp",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 1,
       "portName": "web",
-      "timeoutSeconds": 1,
+      "timeoutSeconds": 4,
       "consecutiveFailures": 500
     }
- ],
+ ,
   "mode": "replicates"
 }

@@ -98,7 +98,10 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 		task.taskBuilder.AppendContainerDockerParameters([]*types.Parameter{&p})
 	}
 
-	task.taskBuilder.SetNetwork(dockerSpec.Network, ow.PortsRemain()).SetHealthCheck(versionSpec.HealthChecks)
+	task.taskBuilder.SetNetwork(dockerSpec.Network, ow.PortsRemain())
+	if versionSpec.HealthCheck != nil {
+		task.taskBuilder.SetHealthCheck(versionSpec.HealthCheck)
+	}
 	task.HostPorts = task.taskBuilder.HostPorts
 
 	return task.taskBuilder.taskInfo

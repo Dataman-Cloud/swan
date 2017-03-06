@@ -566,14 +566,27 @@ func validateAndFormatVersion(version *types.Version) error {
 	// validation for replicates mode app
 	if version.Mode == string(APP_MODE_REPLICATES) {
 		// the only network driver should be **bridge**
-		if strings.ToLower(version.Container.Docker.Network) != "bridge" {
-			return errors.New("replicates mode app suppose the only network driver should be bridge")
+		if !utils.SliceContains([]string{"bridge", "host"}, strings.ToLower(version.Container.Docker.Network)) {
+			return errors.New("replicates mode app suppose the only network driver should be bridge or host")
 		}
 
 		// portMapping.Name should be mandatory
 		for _, portmapping := range version.Container.Docker.PortMappings {
 			if strings.TrimSpace(portmapping.Name) == "" {
 				return errors.New("each port mapping should have a uniquely identified name")
+			}
+		}
+
+		if strings.ToLower(version.Container.Docker.Network) == "host" {
+			// portMapping.Name should be mandatory
+			for _, portmapping := range version.Container.Docker.PortMappings {
+				if portmapping.ContainerPort != 0 {
+					return errors.New("containerPort not recongnizable for docker host network, port is mandatory")
+				}
+
+				if portmapping.Port == 0 {
+					return errors.New("host port not specify as network you select host")
+				}
 			}
 		}
 
@@ -588,40 +601,40 @@ func validateAndFormatVersion(version *types.Version) error {
 		}
 
 		// portName for health check should mandatory
-		for _, hc := range version.HealthChecks {
+		if version.HealthCheck != nil {
 			// portName should present in dockers' portMappings definition
-			if !utils.SliceContains(portNames, hc.PortName) {
-				return errors.New(fmt.Sprintf("no port name %s found in docker's PortMappings", hc.PortName))
+			if !utils.SliceContains(portNames, version.HealthCheck.PortName) {
+				return errors.New(fmt.Sprintf("no port name %s found in docker's PortMappings", version.HealthCheck.PortName))
 			}
 
-			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, hc.Protocol) {
-				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check", hc.Protocol))
+			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, version.HealthCheck.Protocol) {
+				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check", version.HealthCheck.Protocol))
 			}
 
-			if strings.ToLower(hc.Protocol) == "http" {
-				if len(hc.Path) == 0 {
+			if strings.ToLower(version.HealthCheck.Protocol) == "http" {
+				if len(version.HealthCheck.Path) == 0 {
 					return errors.New("no path provided for health check with HTTP protocol")
 				}
 			}
 
-			if strings.ToLower(hc.Protocol) == "cmd" {
-				if len(hc.Value) == 0 {
+			if strings.ToLower(version.HealthCheck.Protocol) == "cmd" {
+				if len(version.HealthCheck.Value) == 0 {
 					return errors.New("no value provided for health check with CMD ")
 				}
 			}
 
-			if (strings.ToLower(hc.Protocol) == "tcp" || strings.ToLower(hc.Protocol) == "http") && strings.TrimSpace(hc.PortName) == "" {
+			if (strings.ToLower(version.HealthCheck.Protocol) == "tcp" || strings.ToLower(version.HealthCheck.Protocol) == "http") && strings.TrimSpace(version.HealthCheck.PortName) == "" {
 				return errors.New("port name in healthChecks should not be empty and match name in docker's PortMappings")
 			}
 		}
 	} else {
-		for _, hc := range version.HealthChecks {
-			if !utils.SliceContains([]string{"cmd", "CMD"}, hc.Protocol) {
-				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check for fixed type app", hc.Protocol))
+		if version.HealthCheck != nil {
+			if !utils.SliceContains([]string{"cmd", "CMD"}, version.HealthCheck.Protocol) {
+				return errors.New(fmt.Sprintf("doesn't recoginized protocol %s for health check for fixed type app", version.HealthCheck.Protocol))
 			}
 
-			if strings.ToLower(hc.Protocol) == "cmd" {
-				if len(hc.Value) == 0 {
+			if strings.ToLower(version.HealthCheck.Protocol) == "cmd" {
+				if len(version.HealthCheck.Value) == 0 {
 					return errors.New("no value provided for health check with CMD ")
 				}
 			}

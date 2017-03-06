@@ -1,5 +1,5 @@
 {
-  "appName": "wordpress2",
+  "appName": "memcached",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
@@ -7,26 +7,25 @@
   "disk": 0,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 1,
-  "constraints": "unique hostname",
+  "instances": 3,
+  "constraints":"unique hostname" ,
   "container": {
     "docker": {
-      "image": "wordpress",
+      "image": "memcached",
       "network": "HOST",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
         {
             "key": "label",
-	    "value": "APP_ID=wordpress"
+	    "value": "APP_ID=nginx"
         }
       ],
       "portMappings": [
         {
-          "containerPort": 80,
+          "port": 11211,
           "protocol": "tcp",
-          "name": "web",
-          "hostPort": 8080
+          "name": "memcached"
         }
       ]
     },
@@ -40,8 +39,6 @@
     ]
   },
   "env": {
-    "WORDPRESS_DB_HOST": "192.168.1.210",
-    "WORDPRESS_DB_PASSWORD": "root"
   },
   "uris": [
   ],
@@ -51,17 +48,15 @@
   "killPolicy": {
     "duration": 5
   },
-  "healthCheck": 
+  "healthCheck":
     {
-      "protocol": "http",
-      "path": "/",
+      "protocol": "tcp",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 1,
-      "portName": "web",
-      "timeoutSeconds": 1,
+      "portName": "memcached",
+      "timeoutSeconds": 4,
       "consecutiveFailures": 500
-    }
- ,
+    } ,
   "mode": "replicates"
 }

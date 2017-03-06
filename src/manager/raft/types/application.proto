@@ -36,7 +36,7 @@ message Version {
     string runAs = 8;
     Container container = 9;
     map<string,string> labels = 10;
-    repeated HealthCheck healthChecks = 11;
+     HealthCheck healthCheck = 11;
     map<string,string> env = 12;
     KillPolicy killPolicy = 13;
     UpdatePolicy updatePolicy = 14;
