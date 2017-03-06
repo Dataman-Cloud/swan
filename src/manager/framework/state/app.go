@@ -517,6 +517,10 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New("invalid appName: appName was empty")
 	}
 
+	if version.Instances == 0 {
+		return errors.New("invalid instances: instances must be specified and should greater than 0")
+	}
+
 	version.AppName = strings.TrimSpace(version.AppName)
 
 	r, _ := regexp.Compile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
