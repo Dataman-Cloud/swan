@@ -117,7 +117,7 @@ func (builder *TaskBuilder) AppendContainerDockerParameters(parameters []*types.
 func (builder *TaskBuilder) AppendContainerDockerVolumes(volumes []*types.Volume) *TaskBuilder {
 	for _, volume := range volumes {
 		mode := mesos.Volume_RO
-		if volume.Mode == "RW" {
+		if strings.ToLower(volume.Mode) == "rw" {
 			mode = mesos.Volume_RW
 		}
 
