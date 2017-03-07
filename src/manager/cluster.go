@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	janitor "github.com/Dataman-Cloud/swan-janitor/src"
-	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	swanevent "github.com/Dataman-Cloud/swan/src/event"
@@ -238,43 +236,15 @@ func (manager *Manager) RemoveAgentAcceptor(agentID string) {
 }
 
 func (manager *Manager) SendAgentInitData(agent types.Node) {
-	var resolverEvents []*nameserver.RecordGeneratorChangeEvent
-	var janitorEvents []*janitor.TargetChangeEvent
-
 	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
 
-	for _, taskEvent := range taskEvents {
-		resolverEvent, err := swanevent.BuildResolverEvent(taskEvent)
-		if err == nil {
-			resolverEvents = append(resolverEvents, resolverEvent)
-		} else {
-			logrus.Errorf("Build resolver event got error: %s", err.Error())
-		}
-
-		janitorEvent, err := swanevent.BuildJanitorEvent(taskEvent)
-		if err == nil {
-			janitorEvents = append(janitorEvents, janitorEvent)
-		} else {
-			logrus.Errorf("Build janitor event got error: %s", err.Error())
-		}
-	}
-
-	resolverData, err := json.Marshal(resolverEvents)
+	eventsData, err := json.Marshal(taskEvents)
 	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/resolver/init", "POST", resolverData); err != nil {
+		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/init", "POST", eventsData); err != nil {
 			logrus.Errorf("send resolver init data got error: %s", err.Error())
 		}
 	} else {
 		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
-	}
-
-	janitorData, err := json.Marshal(janitorEvents)
-	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/janitor/init", "POST", janitorData); err != nil {
-			logrus.Errorf("send janitor init data got error: %s", err.Error())
-		}
-	} else {
-		logrus.Errorf("marshal janitor init data got error: %s", err.Error())
 	}
 }
 
