@@ -59,7 +59,7 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 			return nil, err
 		}
 
-		nodeInfo, boltDB, err = initManaer(nodeID, DBPath, managerConf)
+		nodeInfo, boltDB, err = initManager(nodeID, DBPath, managerConf)
 	}
 	if err != nil {
 		return nil, err
@@ -126,7 +126,7 @@ func recoverData(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, 
 	return nodeInfo, boltDb, nil
 }
 
-func initManaer(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
+func initManager(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
 	var nodeInfo types.Node
 	boltDB, err := bolt.Open(DBPath, 0644, nil)
 	if err != nil {
