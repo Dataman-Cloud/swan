@@ -20,10 +20,11 @@ GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list .
 
 default: build
 
-build: fmt build-swan
+docker-build: fmt
+	docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine go build ${GO_LDFLAGS} -v -o bin/swan main.go
 
-build-swan:
-	docker run -i --rm -w /go/src/github.com/Dataman-Cloud/swan $(BUILD_OPTS) -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine go build ${GO_LDFLAGS} -v -o bin/swan main.go
+build: fmt
+	go build ${GO_LDFLAGS} -v -o bin/swan main.go
 
 install:
 	install -v bin/swan /usr/local/bin
@@ -62,7 +63,7 @@ list-authors:
 	./contrib/list-authors.sh
 
 
-docker-build:
+build-docker-image:
 	docker build --tag swan:$(VERSION) --rm .
 
 docker-run-manager-init:

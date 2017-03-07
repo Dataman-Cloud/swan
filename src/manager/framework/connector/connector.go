@@ -269,7 +269,7 @@ func (s *Connector) Start(ctx context.Context, errorChan chan error) {
 				s.mesosFailureChan <- utils.NewError(utils.SeverityLow, err)
 			}
 			if resp != nil && resp.StatusCode != 202 {
-				logrus.Errorf("send call to master response not valie: %d", resp.StatusCode)
+				logrus.Errorf("send call to master response not valid: %d", resp.StatusCode)
 				s.mesosFailureChan <- utils.NewError(utils.SeverityLow, errors.New("sending call response status code not 202"))
 			}
 		}
