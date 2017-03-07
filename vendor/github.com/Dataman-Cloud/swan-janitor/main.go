@@ -28,7 +28,12 @@ func main() {
 	SetupLogger()
 
 	server := janitor.NewJanitorServer(janitorConfig)
-	go server.ServerInit().Run()
+	err := server.Init()
+	if err != nil {
+		os.Exit(1)
+	}
+
+	go server.Run()
 
 	ticker := time.NewTicker(time.Second * 10)
 	for {
@@ -40,7 +45,7 @@ func main() {
 				Change:   "add",
 				AppID:    "nginx0051-xcm-datamanmesos",
 				TaskID:   "0-nginx0051-xcm-datamanmesos",
-				TaskIp:   "192.168.1.162",
+				TaskIP:   "192.168.1.162",
 				PortName: "web",
 				TaskPort: 80,
 			},
@@ -48,7 +53,7 @@ func main() {
 				Change:   "add",
 				AppID:    "nginx0051-xcm-datamanmesos",
 				TaskID:   "1-nginx0051-xcm-datamanmesos",
-				TaskIp:   "192.168.1.162",
+				TaskIP:   "192.168.1.162",
 				PortName: "web1",
 				TaskPort: 80,
 			},
@@ -63,7 +68,7 @@ func main() {
 				Change:   "del",
 				AppID:    "nginx0051-xcm-datamanmesos",
 				TaskID:   "0-nginx0051-xcm-datamanmesos",
-				TaskIp:   "192.168.1.162",
+				TaskIP:   "192.168.1.162",
 				PortName: "web",
 				TaskPort: 80,
 			},
@@ -71,7 +76,7 @@ func main() {
 				Change:   "del",
 				AppID:    "nginx0051-xcm-datamanmesos",
 				TaskID:   "1-nginx0051-xcm-datamanmesos",
-				TaskIp:   "192.168.1.162",
+				TaskIP:   "192.168.1.162",
 				PortName: "web1",
 				TaskPort: 80,
 			},

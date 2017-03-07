@@ -9,10 +9,9 @@ import (
 
 type Config struct {
 	Domain          string        `json:"domain"`
-	Listener        string        `json:"ip"`
-	Port            int           `json:"port"`
+	ListenAddr      string        `json:"listen-addr"`
 	Resolvers       []string      `json:"resolvers"`
-	ExchangeTimeout time.Duration `json:"exchange_timeout"`
+	ExchangeTimeout time.Duration `json:"exchange-timeout"`
 
 	SOAname    string `json:"soaname"`
 	SOARname   string `json:"soarname"`
@@ -31,8 +30,7 @@ func NewConfig(ctx *cli.Context) *Config {
 	config := &Config{}
 
 	config.Domain = ctx.String("domain")
-	config.Listener = ctx.String("listener")
-	config.Port = ctx.Int("port")
+	config.ListenAddr = ctx.String("listen-addr")
 	config.ExchangeTimeout = ctx.Duration("exchange-timeout")
 
 	if len(strings.Replace(ctx.String("resolvers"), " ", "", -1)) > 0 && strings.Contains(ctx.String("resolvers"), ",") {

@@ -2,7 +2,6 @@ package agent
 
 import (
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/Dataman-Cloud/swan-janitor/src"
@@ -51,9 +50,8 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	agent.apiServer = apiserver.NewApiServer(agentConf.ListenAddr)
 
 	dnsConfig := &nameserver.Config{
-		Domain:   agentConf.DNS.Domain,
-		Listener: agentConf.DNS.IP,
-		Port:     agentConf.DNS.Port,
+		Domain:     agentConf.DNS.Domain,
+		ListenAddr: agentConf.DNS.ListenAddr,
 
 		Resolvers:       agentConf.DNS.Resolvers,
 		ExchangeTimeout: agentConf.DNS.ExchangeTimeout,
@@ -70,8 +68,7 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	agent.resolver = nameserver.NewResolver(dnsConfig)
 
 	jConfig := janitor.DefaultConfig()
-	jConfig.Listener.IP = agentConf.Janitor.IP
-	jConfig.Listener.DefaultPort = strconv.Itoa(agentConf.Janitor.Port)
+	jConfig.ListenAddr = agentConf.Janitor.ListenAddr
 	jConfig.HttpHandler.Domain = agentConf.Janitor.Domain
 	agent.janitorServer = janitor.NewJanitorServer(jConfig)
 
@@ -109,7 +106,12 @@ func (agent *Agent) Start(ctx context.Context) error {
 		errChan <- agent.resolver.Start(resolverCtx)
 	}()
 
-	go agent.janitorServer.ServerInit().Run()
+	err := agent.janitorServer.Init()
+	if err != nil {
+		errChan <- err
+	}
+
+	go agent.janitorServer.Run()
 
 	// send proxy info to dns proxy listener
 	rgEvent := &nameserver.RecordGeneratorChangeEvent{}

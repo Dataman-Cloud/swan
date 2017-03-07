@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net"
 	"os"
 	"strings"
 	"time"
@@ -37,10 +38,9 @@ type Scheduler struct {
 }
 
 type DNS struct {
-	Domain    string `json:"domain"`
-	RecurseOn bool   `json:"recurse_on"`
-	IP        string `json:"ip"`
-	Port      int    `json:"port"`
+	Domain     string `json:"domain"`
+	RecurseOn  bool   `json:"recurse_on"`
+	ListenAddr string `json:"listenAddr"`
 
 	SOARname   string `json:"soarname"`
 	SOAMname   string `json:"soamname"`
@@ -56,10 +56,9 @@ type DNS struct {
 }
 
 type Janitor struct {
-	IP          string `json:"ip"`
-	Port        int    `json:"port"`
+	ListenAddr  string `json:"listenAddr"`
 	Domain      string `json:"domain"`
-	AdvertiseIP string `json:"advertiseIp"`
+	AdvertiseIP string `json:"ddvertiseIP"`
 }
 
 func NewAgentConfig(c *cli.Context) AgentConfig {
@@ -70,9 +69,8 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		JoinAddrs:  []string{"0.0.0.0:9999"},
 
 		DNS: DNS{
-			Domain: "swan.com",
-			IP:     "0.0.0.0",
-			Port:   53,
+			Domain:     "swan.com",
+			ListenAddr: "0.0.0.0:53",
 
 			RecurseOn:       true,
 			TTL:             3,
@@ -81,10 +79,8 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		},
 
 		Janitor: Janitor{
-			IP:          "0.0.0.0",
-			Port:        80,
-			AdvertiseIP: "0.0.0.0",
-			Domain:      "swan.com",
+			ListenAddr: "0.0.0.0:80",
+			Domain:     "swan.com",
 		},
 	}
 
@@ -115,6 +111,22 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 
 	if c.String("janitor-advertise-ip") != "" {
 		agentConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
+	}
+
+	if c.String("janitor-listen-addr") != "" {
+		agentConfig.Janitor.ListenAddr = c.String("janitor-listen-addr")
+
+		if agentConfig.Janitor.AdvertiseIP == "" {
+			agentConfig.Janitor.AdvertiseIP, _, _ = net.SplitHostPort(agentConfig.Janitor.ListenAddr)
+		}
+	}
+
+	if c.String("dns-listen-addr") != "" {
+		agentConfig.DNS.ListenAddr = c.String("dns-listen-addr")
+	}
+
+	if c.String("dns-resolvers") != "" {
+		agentConfig.DNS.Resolvers = strings.Split(c.String("dns-resolvers"), ",")
 	}
 
 	if c.String("join-addrs") != "" {
