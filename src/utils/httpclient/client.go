@@ -279,7 +279,11 @@ func chooseError(ctx context.Context, err error) error {
 }
 
 func (cli *Client) newRequest(method, path string, query url.Values, body io.Reader, headers map[string][]string) (*http.Request, error) {
-	apiPath := getAPIPath(path, query)
+	apiPath, err := getAPIPath(path, query)
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := http.NewRequest(method, apiPath, body)
 	if err != nil {
 		return nil, err
@@ -300,14 +304,16 @@ func (cli *Client) newRequest(method, path string, query url.Values, body io.Rea
 
 // returns the versioned request path to call the api.
 // It appends the query parameters to the path if they are not empty.
-func getAPIPath(apiPath string, query url.Values) string {
-	u := &url.URL{
-		Path: apiPath,
+func getAPIPath(apiPath string, query url.Values) (string, error) {
+	u, err := url.Parse(apiPath)
+	if err != nil {
+		return "", err
 	}
+
 	if len(query) > 0 {
 		u.RawQuery = query.Encode()
 	}
-	return u.String()
+	return u.String(), nil
 }
 
 func encodeData(data interface{}) (*bytes.Buffer, error) {
