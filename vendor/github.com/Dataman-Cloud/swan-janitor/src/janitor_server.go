@@ -1,9 +1,9 @@
 package janitor
 
 import (
+	"fmt"
 	"net"
 	"net/http"
-	"os"
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/armon/go-proxyproto"
@@ -27,7 +27,7 @@ func NewJanitorServer(Config Config) *JanitorServer {
 	return server
 }
 
-func (server *JanitorServer) ServerInit() *JanitorServer {
+func (server *JanitorServer) Init() error {
 	log.Info("Janitor Server Initialing")
 	var err error
 	server.swanUpstreamLoader, err = SwanUpstreamLoaderInit()
@@ -35,28 +35,26 @@ func (server *JanitorServer) ServerInit() *JanitorServer {
 		log.Fatalf("Setup Upstream Loader Got err: %s", err)
 	}
 
-	ln, err := net.Listen("tcp", net.JoinHostPort(server.config.Listener.IP, server.config.Listener.DefaultPort))
+	ln, err := net.Listen("tcp", server.config.ListenAddr)
 	if err != nil {
 		log.Errorf("%s", err)
-		return nil
+		return err
 	}
 
 	server.Listener = &proxyproto.Listener{Listener: TcpKeepAliveListener{ln.(*net.TCPListener)}}
 	if server.Listener == nil {
-		log.Fatalf("failed to listen port")
-		os.Exit(1)
+		return fmt.Errorf("failed to listen port")
 	}
 	server.HttpServer = &http.Server{Handler: NewHTTPProxy(&http.Transport{},
 		server.config.HttpHandler,
-		server.config.Listener,
+		server.config.ListenAddr,
 		server.swanUpstreamLoader)}
 
 	if server.HttpServer == nil {
-		log.Fatalf("failed to listen port")
-		os.Exit(1)
+		return fmt.Errorf("server.HttpServer not initialized")
 	}
 
-	return server
+	return nil
 }
 
 func (server *JanitorServer) UpstreamLoader() *SwanUpstreamLoader {

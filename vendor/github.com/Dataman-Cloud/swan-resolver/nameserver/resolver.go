@@ -262,7 +262,7 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 func (res *Resolver) Serve() (startedCh <-chan struct{}, errCh chan error) {
 	ch := make(chan struct{})
 	server := &dns.Server{
-		Addr:              net.JoinHostPort(res.config.Listener, strconv.Itoa(res.config.Port)),
+		Addr:              res.config.ListenAddr,
 		Net:               "udp",
 		TsigSecret:        nil,
 		NotifyStartedFunc: func() { close(ch) },

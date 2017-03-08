@@ -12,7 +12,7 @@
   "container": {
     "docker": {
       "image": "nginx:1.10",
-      "network": "BRIDGE",
+      "network": "bridge",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
@@ -50,7 +50,7 @@
   },
   "healthCheck": 
     {
-      "protocol": "tcp",
+      "protocol": "http",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 1,

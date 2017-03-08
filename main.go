@@ -104,6 +104,33 @@ func FlagJanitorAdvertiseIp() cli.Flag {
 	}
 }
 
+func FlagJanitorListenAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "janitor-listen-addr",
+		Usage:  "janitor proxy listen addr",
+		Value:  "0.0.0.0:80",
+		EnvVar: "SWAN_JANITOR_LISTEN_ADDR",
+	}
+}
+
+func FlagDNSListenAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "dns-listen-addr",
+		Usage:  "dns listen addr",
+		Value:  "0.0.0.0:53",
+		EnvVar: "SWAN_DNS_LISTEN_ADDR",
+	}
+}
+
+func FlagDNSResolvers() cli.Flag {
+	return cli.StringFlag{
+		Name:   "dns-resolvers",
+		Usage:  "dns resolvers",
+		Value:  "114.114.114.114",
+		EnvVar: "SWAN_DNS_RESOLVERS",
+	}
+}
+
 func FlagZkPath() cli.Flag {
 	return cli.StringFlag{
 		Name:   "zk-path",
@@ -162,6 +189,9 @@ func AgentJoinCmd() cli.Command {
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJoinAddrs())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDataDir())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorAdvertiseIp())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorListenAddr())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDNSListenAddr())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDNSResolvers())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagLogLevel())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDomain())
 

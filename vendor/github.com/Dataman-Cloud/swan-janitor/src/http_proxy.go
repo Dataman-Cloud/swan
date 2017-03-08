@@ -37,14 +37,14 @@ func (m *meteredRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 type httpProxy struct {
 	tr                 http.RoundTripper
 	handlerCfg         HttpHandlerCfg
-	listenerCfg        ListenerCfg
+	listenAddr         string
 	swanUpstreamLoader *SwanUpstreamLoader
 }
 
-func NewHTTPProxy(tr http.RoundTripper, handlerCfg HttpHandlerCfg, listenerCfg ListenerCfg, swanUpstreamLoader *SwanUpstreamLoader) http.Handler {
+func NewHTTPProxy(tr http.RoundTripper, handlerCfg HttpHandlerCfg, listenAddr string, swanUpstreamLoader *SwanUpstreamLoader) http.Handler {
 	return &httpProxy{
 		tr:                 tr,
-		listenerCfg:        listenerCfg,
+		listenAddr:         listenAddr,
 		handlerCfg:         handlerCfg,
 		swanUpstreamLoader: swanUpstreamLoader,
 	}
@@ -206,8 +206,9 @@ func (proxy *httpProxy) AddHeaders(r *http.Request) error {
 			fwd += "; proto=http"
 		}
 	}
-	if proxy.listenerCfg.IP != "" {
-		fwd += "; by=" + proxy.listenerCfg.IP
+	ip, _, err := net.SplitHostPort(proxy.listenAddr)
+	if err == nil && ip != "" {
+		fwd += "; by=" + ip
 	}
 	r.Header.Set("Forwarded", fwd)
 
