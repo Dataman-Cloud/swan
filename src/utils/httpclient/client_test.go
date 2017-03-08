@@ -122,9 +122,13 @@ func TestGetApiPath(t *testing.T) {
 	urlValues := url.Values{}
 
 	urlValues.Set("len", "1")
-	assert.Equal(t, "http://localhost?len=1", getAPIPath("http://localhost", urlValues))
+	apiPath, err := getAPIPath("http://localhost", urlValues)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://localhost?len=1", apiPath)
 
-	assert.Equal(t, "http://localhost", getAPIPath("http://localhost", nil))
+	apiPath, err = getAPIPath("http://localhost", nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "http://localhost", apiPath)
 }
 
 func TestChooseError(t *testing.T) {
