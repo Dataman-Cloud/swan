@@ -182,7 +182,7 @@ func (agent *Agent) join() error {
 	}
 
 	for _, managerAddr := range agent.JoinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		registerAddr := managerAddr + config.API_PREFIX + "/nodes"
 		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agent.NodeInfo, nil)
 		if err != nil {
 			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())

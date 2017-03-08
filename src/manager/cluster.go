@@ -152,7 +152,7 @@ func (manager *Manager) join(nodeInfo types.Node, joinAddrs []string) ([]types.N
 	}
 
 	for _, managerAddr := range joinAddrs {
-		registerAddr := "http://" + managerAddr + config.API_PREFIX + "/nodes"
+		registerAddr := managerAddr + config.API_PREFIX + "/nodes"
 		resp, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, nodeInfo, nil)
 		if err != nil {
 			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())
@@ -217,14 +217,14 @@ func (manager *Manager) presistNodeData(node types.Node) error {
 func (manager *Manager) AddAgentAcceptor(agent types.Node) {
 	resolverAcceptor := types.ResolverAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
+		RemoteAddr: agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
 		Status:     agent.Status,
 	}
 	manager.resolverListener.AddAcceptor(resolverAcceptor)
 
 	janitorAcceptor := types.JanitorAcceptor{
 		ID:         agent.ID,
-		RemoteAddr: "http://" + agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
+		RemoteAddr: agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
 		Status:     agent.Status,
 	}
 	manager.janitorListener.AddAcceptor(janitorAcceptor)
@@ -238,13 +238,8 @@ func (manager *Manager) RemoveAgentAcceptor(agentID string) {
 func (manager *Manager) SendAgentInitData(agent types.Node) {
 	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
 
-	eventsData, err := json.Marshal(taskEvents)
-	if err == nil {
-		if err := swanevent.SendEventByHttp("http://"+agent.AdvertiseAddr+config.API_PREFIX+"/agent/init", "POST", eventsData); err != nil {
-			logrus.Errorf("send resolver init data got error: %s", err.Error())
-		}
-	} else {
-		logrus.Errorf("marshal resolver init data got error: %s", err.Error())
+	if err := swanevent.SendEventByHttp(agent.AdvertiseAddr+config.API_PREFIX+"/agent/init", taskEvents); err != nil {
+		logrus.Errorf("send resolver init data got error: %s", err.Error())
 	}
 }
 
