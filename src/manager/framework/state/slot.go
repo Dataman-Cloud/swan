@@ -296,7 +296,10 @@ func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
 
 func (slot *Slot) ResourcesUsed() *SlotResource {
 	var slotResource SlotResource
-	if slot.StateIs(SLOT_STATE_TASK_STAGING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_KILLING) {
+	if slot.StateIs(SLOT_STATE_TASK_STAGING) ||
+		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
+		slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLING) {
 		slotResource.CPU = slot.Version.CPUs
 		slotResource.Mem = slot.Version.Mem
 		slotResource.Disk = slot.Version.Disk
@@ -357,13 +360,20 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_REAP) || slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_REAP) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
+		slot.StateIs(SLOT_STATE_TASK_LOST)) {
 		// TODO remove slot from OfferAllocator
 		logrus.Infof("removeSlot func")
 		slot.App.RemoveSlot(slot.Index)
 	}
 
-	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST)) {
+	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
+		slot.StateIs(SLOT_STATE_TASK_LOST)) {
 		// TODO remove slot from OfferAllocator
 		logrus.Infof("archive current task")
 		slot.Archive()
@@ -388,15 +398,24 @@ func (slot *Slot) StopRestartPolicy() {
 }
 
 func (slot *Slot) Abnormal() bool {
-	return slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FAILED) || slot.StateIs(SLOT_STATE_TASK_LOST) || slot.StateIs(SLOT_STATE_TASK_FINISHED) || slot.StateIs(SLOT_STATE_REAP)
+	return slot.StateIs(SLOT_STATE_TASK_LOST) ||
+		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
+		slot.StateIs(SLOT_STATE_TASK_LOST) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_REAP)
 }
 
 func (slot *Slot) Dispatched() bool {
-	return slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_STAGING)
+	return slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
+		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
+		slot.StateIs(SLOT_STATE_TASK_STAGING)
 }
 
 func (slot *Slot) Normal() bool {
-	return slot.StateIs(SLOT_STATE_PENDING_OFFER) || slot.StateIs(SLOT_STATE_TASK_RUNNING) || slot.StateIs(SLOT_STATE_TASK_STARTING) || slot.StateIs(SLOT_STATE_TASK_STAGING)
+	return slot.StateIs(SLOT_STATE_PENDING_OFFER) ||
+		slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
+		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
+		slot.StateIs(SLOT_STATE_TASK_STAGING)
 }
 
 func (slot *Slot) EmitTaskEvent(eventType string) {
