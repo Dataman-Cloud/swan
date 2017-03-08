@@ -1,7 +1,6 @@
 package event
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -12,6 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/satori/go.uuid"
+	"golang.org/x/net/context"
 )
 
 const (
