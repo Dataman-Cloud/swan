@@ -180,12 +180,12 @@ func (builder *TaskBuilder) AppendTaskInfoLabels(labelMap map[string]string) *Ta
 
 func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) *TaskBuilder {
 	builder.HostPorts = make([]uint64, 0) // clear this array on every loop
-	switch network {
-	case "NONE":
+	switch strings.ToLower(network) {
+	case "none":
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
-	case "HOST":
+	case "host":
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
-	case "BRIDGE":
+	case "bridge":
 		for index, m := range builder.task.Slot.Version.Container.Docker.PortMappings {
 			hostPort := portsAvailable[index]
 			builder.HostPorts = append(builder.HostPorts, hostPort)
