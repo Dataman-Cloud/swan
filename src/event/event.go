@@ -1,13 +1,13 @@
 package event
 
 import (
-	"bytes"
+	"context"
 	"errors"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 
 	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
@@ -62,21 +62,10 @@ func NewEvent(t string, payload interface{}) *Event {
 	}
 }
 
-func SendEventByHttp(addr, method string, data []byte) error {
-	request, err := http.NewRequest(method, addr, bytes.NewReader(data))
-	if err != nil {
-		return err
-	}
+func SendEventByHttp(addr string, data interface{}) error {
+	_, err := httpclient.NewDefaultClient().POST(context.TODO(), addr, nil, data, nil)
 
-	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("Accept", "application/json")
-
-	_, err = http.DefaultClient.Do(request)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error) {

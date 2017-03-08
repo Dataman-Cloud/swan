@@ -1,7 +1,6 @@
 package event
 
 import (
-	"encoding/json"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -68,15 +67,9 @@ func (jl *JanitorListener) InterestIn(e *Event) bool {
 }
 
 func (jl *JanitorListener) pushJanitorEvent(event *janitor.TargetChangeEvent) {
-	data, err := json.Marshal(event)
-	if err != nil {
-		logrus.Infof("marshal janitor event got error: %s", err.Error())
-		return
-	}
-
 	jl.acceptorLock.RLock()
 	for _, acceptor := range jl.acceptors {
-		if err := SendEventByHttp(acceptor.RemoteAddr, "POST", data); err != nil {
+		if err := SendEventByHttp(acceptor.RemoteAddr, event); err != nil {
 			logrus.Infof("send janitor event by http to %s got error: %s", acceptor.RemoteAddr, err.Error())
 		}
 	}

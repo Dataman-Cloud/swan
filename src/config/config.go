@@ -175,12 +175,21 @@ func NewManagerConfig(c *cli.Context) ManagerConfig {
 		managerConfig.AdvertiseAddr = managerConfig.ListenAddr
 	}
 
-	if c.String("raft-advertise-addr") != "" {
-		managerConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
-	}
-
 	if c.String("raft-listen-addr") != "" {
 		managerConfig.RaftListenAddr = c.String("raft-listen-addr")
+	}
+
+	if strings.Index(managerConfig.RaftListenAddr, "//") == 0 {
+		// Leading double slashes (any scheme). Force http.
+		managerConfig.RaftListenAddr = "http:" + managerConfig.RaftListenAddr
+	}
+	if strings.Index(managerConfig.RaftListenAddr, "://") == -1 {
+		// Missing scheme. Force http.
+		managerConfig.RaftListenAddr = "http://" + managerConfig.RaftListenAddr
+	}
+
+	if c.String("raft-advertise-addr") != "" {
+		managerConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
 	}
 
 	if managerConfig.RaftAdvertiseAddr == "" {

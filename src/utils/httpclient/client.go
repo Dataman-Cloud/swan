@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strings"
 	"time"
 
 	"golang.org/x/net/context"
@@ -305,6 +306,17 @@ func (cli *Client) newRequest(method, path string, query url.Values, body io.Rea
 // returns the versioned request path to call the api.
 // It appends the query parameters to the path if they are not empty.
 func getAPIPath(apiPath string, query url.Values) (string, error) {
+	// Force default http scheme, so net/url.Parse() doesn't
+	// put both host and path into the (relative) path.
+	if strings.Index(apiPath, "//") == 0 {
+		// Leading double slashes (any scheme). Force http.
+		apiPath = "http:" + apiPath
+	}
+	if strings.Index(apiPath, "://") == -1 {
+		// Missing scheme. Force http.
+		apiPath = "http://" + apiPath
+	}
+
 	u, err := url.Parse(apiPath)
 	if err != nil {
 		return "", err
