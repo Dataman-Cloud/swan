@@ -452,14 +452,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/mitchellh/mapstructure",
-			"repository": "https://github.com/mitchellh/mapstructure",
-			"vcs": "git",
-			"revision": "db1efb556f84b25a0a13a04aad883943538ad2e0",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/pivotal-golang/clock",
 			"repository": "https://github.com/pivotal-golang/clock",
 			"vcs": "git",
