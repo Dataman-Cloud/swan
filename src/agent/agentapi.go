@@ -9,10 +9,10 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Sirupsen/logrus"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
+	"github.com/Sirupsen/logrus"
 	restful "github.com/emicklei/go-restful"
-	"github.com/mitchellh/mapstructure"
 )
 
 type AgentApi struct {
@@ -72,9 +72,14 @@ func (api *AgentApi) Init(request *restful.Request, response *restful.Response) 
 func (api *AgentApi) dispenseEvents(events []*event.Event) {
 	for _, taskEvent := range events {
 		// taskEvent.Payload is type of interface{} can not auto unmarshal
-		var eventInfo types.TaskInfoEvent
-		mapstructure.Decode(taskEvent.Payload, &eventInfo)
-		taskEvent.Payload = &eventInfo
+		eventInfo := &types.TaskInfoEvent{}
+		err := utils.FillStruct(eventInfo, taskEvent.Payload.(map[string]interface{}))
+		if err != nil {
+			logrus.Warnf("agent got resolver event %+v", err)
+			return
+		}
+
+		taskEvent.Payload = eventInfo
 
 		resolverEvent, err := event.BuildResolverEvent(taskEvent)
 		if err == nil {
