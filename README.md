@@ -62,17 +62,15 @@ Then you can compile `Swan` with:
   
   or run swan in docker
   
-  make docker-run-mixed
+  make docker-run-manager-init
 ```
 
 ## Run as high availability mode
   
-  [detail of swan-cluster](./docs/swan-cluster.md)
+  [run swan in HA mode](./docs/swan-cluster.md)
 
 
-Use `swan --help` to see usage.
-
-## Getting Started
+## How to deploy my applications with swan
 ### Use `curl`
 
 + application deployment
