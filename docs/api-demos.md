@@ -43,7 +43,7 @@ curl -X PUT -H "Content-Type: application/json"  http://localhost:9999/v_beta/ap
 curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d '{"instances":1}'
 ```
 
-`instances` -1 means updating all instances left. other value means updating the specified instances at one time.
+`instances` -1 means updating all instances left, other value means updating the specified instances at one time.
 
 + application rolling update - cancel
 ```

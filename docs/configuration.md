@@ -1,3 +1,5 @@
+# Depreciated, update needed
+
 ## `swan` 启动参数
 
 ```
