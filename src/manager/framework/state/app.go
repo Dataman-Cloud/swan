@@ -105,10 +105,6 @@ func NewApp(version *types.Version,
 
 // also need user pass ip here
 func (app *App) ScaleUp(newInstances int, newIps []string) error {
-	if !app.StateIs(APP_STATE_NORMAL) {
-		return errors.New("app not in normal state")
-	}
-
 	if newInstances <= 0 {
 		return errors.New("specify instances num want to increase")
 	}
@@ -124,22 +120,12 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
-	app.SetState(APP_STATE_SCALE_UP)
+	app.StateMachine.TransitTo(APP_STATE_SCALE_UP)
 
-	for i := newInstances; i > 0; i-- {
-		slotIndex := int(app.CurrentVersion.Instances) - i
-		slot := NewSlot(app, app.CurrentVersion, slotIndex)
-		app.SetSlot(slotIndex, slot)
-		slot.DispatchNewTask(slot.Version)
-	}
 	return nil
 }
 
 func (app *App) ScaleDown(removeInstances int) error {
-	if !app.StateIs(APP_STATE_NORMAL) {
-		return errors.New("app not in normal state")
-	}
-
 	if removeInstances <= 0 {
 		return errors.New("please specify at least 1 task to scale-down")
 	}
@@ -154,14 +140,7 @@ func (app *App) ScaleDown(removeInstances int) error {
 	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
 	app.Updated = time.Now()
 
-	app.SetState(APP_STATE_SCALE_DOWN)
-
-	for i := removeInstances; i > 0; i-- {
-		slotIndex := int(app.CurrentVersion.Instances) + i - 1
-		if slot, found := app.GetSlot(slotIndex); found {
-			slot.Kill()
-		}
-	}
+	app.StateMachine.TransitTo(APP_STATE_SCALE_DOWN)
 
 	return nil
 }

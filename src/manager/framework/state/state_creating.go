@@ -25,7 +25,7 @@ func NewStateCreating(machine *StateMachine) *StateCreating {
 
 func (creating *StateCreating) OnEnter() {
 	creating.currentSlotIndex = 0
-	creating.targetSlotIndex = int(creating.machine.App.CurrentVersion.Instances)
+	creating.targetSlotIndex = int(creating.machine.App.CurrentVersion.Instances) - 1
 
 	creating.currentSlot = NewSlot(creating.machine.App, creating.machine.App.CurrentVersion, creating.currentSlotIndex)
 	creating.machine.App.SetSlot(creating.currentSlotIndex, creating.currentSlot)

@@ -80,6 +80,10 @@ func (machine *StateMachine) StateFactory(stateName string) State {
 		return NewStateCreating(machine)
 	case APP_STATE_DELETING:
 		return NewStateDeleting(machine)
+	case APP_STATE_SCALE_UP:
+		return NewStateScaleUp(machine)
+	case APP_STATE_SCALE_DOWN:
+		return NewStateScaleDown(machine)
 	default:
 		panic(errors.New("unrecognized state"))
 	}
