@@ -79,7 +79,7 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 		return nil, err
 	}
 
-	managerServer := apiserver.NewApiServer(managerConf.ListenAddr)
+	managerServer := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
 
 	frameworkStore := fstore.NewStore(boltDB.DB, raftNode)
 	framework, err := framework.New(frameworkStore, managerServer)

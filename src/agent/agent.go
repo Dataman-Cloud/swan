@@ -47,7 +47,7 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	}
 	agent.NodeInfo = nodeInfo
 
-	agent.apiServer = apiserver.NewApiServer(agentConf.ListenAddr)
+	agent.apiServer = apiserver.NewApiServer(agentConf.ListenAddr, agentConf.ListenAddr)
 
 	dnsConfig := &nameserver.Config{
 		Domain:     agentConf.DNS.Domain,
