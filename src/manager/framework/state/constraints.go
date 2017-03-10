@@ -15,16 +15,6 @@ var uniqWhat = []string{
 	"hostname",
 }
 
-var likeWhat = []string{
-	"hostname",
-	"agentid",
-}
-
-var equalWhat = []string{
-	"hostname",
-	"agentid",
-}
-
 type ConstraintParamHolder struct {
 	Slot  *Slot
 	Offer *mesos.Offer
@@ -187,11 +177,7 @@ func (ls *LikeStatement) Eval() bool {
 }
 
 func (ls *LikeStatement) Valid() error {
-	if utils.SliceContains(likeWhat, ls.What) {
-		return nil
-	} else {
-		return errors.New("only hostname, agentid are supported")
-	}
+	return nil
 }
 
 func (ls *LikeStatement) SetContext(ctx *ConstraintParamHolder) {
@@ -265,11 +251,7 @@ func (cs *ContainsStatement) Eval() bool {
 }
 
 func (cs *ContainsStatement) Valid() error {
-	if utils.SliceContains(likeWhat, cs.What) {
-		return nil
-	} else {
-		return errors.New("only hostname, ip, agentid are supported")
-	}
+	return nil
 }
 
 func (cs *ContainsStatement) SetContext(ctx *ConstraintParamHolder) {
