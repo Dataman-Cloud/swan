@@ -25,7 +25,7 @@ func NewStateScaleDown(machine *StateMachine) *StateScaleDown {
 
 func (scaleDown *StateScaleDown) OnEnter() {
 	scaleDown.currentSlotIndex = len(scaleDown.machine.App.GetSlots()) - 1
-	scaleDown.targetSlotIndex = int(scaleDown.machine.App.CurrentVersion.Instances) - 1
+	scaleDown.targetSlotIndex = int(scaleDown.machine.App.CurrentVersion.Instances)
 
 	scaleDown.currentSlot = NewSlot(scaleDown.machine.App, scaleDown.machine.App.CurrentVersion, scaleDown.currentSlotIndex)
 

@@ -117,7 +117,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	defer app.Commit()
 
 	app.CurrentVersion.IP = append(app.CurrentVersion.IP, newIps...)
-	app.CurrentVersion.Instances += int32(newInstances)
+	app.CurrentVersion.Instances = int32(len(app.slots) + newInstances)
 	app.Updated = time.Now()
 
 	app.StateMachine.TransitTo(APP_STATE_SCALE_UP)
@@ -130,14 +130,14 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return errors.New("please specify at least 1 task to scale-down")
 	}
 
-	if removeInstances >= int(app.CurrentVersion.Instances) {
+	if removeInstances > len(app.slots) {
 		return fmt.Errorf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances)
 	}
 
 	app.BeginTx()
 	defer app.Commit()
 
-	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
+	app.CurrentVersion.Instances = int32(len(app.slots) - removeInstances)
 	app.Updated = time.Now()
 
 	app.StateMachine.TransitTo(APP_STATE_SCALE_DOWN)
