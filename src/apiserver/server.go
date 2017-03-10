@@ -31,18 +31,20 @@ type ApiRegister interface {
 }
 
 type ApiServer struct {
-	addr         string
-	leaderAddr   string
-	apiRegisters []ApiRegister
+	listenAddr    string
+	advertiseAddr string
+	leaderAddr    string
+	apiRegisters  []ApiRegister
 }
 
 func init() {
 	metrics.Register()
 }
 
-func NewApiServer(addr string) *ApiServer {
+func NewApiServer(listenAddr, advertiseAddr string) *ApiServer {
 	return &ApiServer{
-		addr: addr,
+		listenAddr:    listenAddr,
+		advertiseAddr: advertiseAddr,
 	}
 }
 
@@ -123,8 +125,8 @@ func (apiServer *ApiServer) Start() error {
 		w.Write(output)
 	})
 
-	logrus.Printf("start listening on %s", apiServer.addr)
-	server := &http.Server{Addr: apiServer.addr, Handler: wsContainer}
+	logrus.Printf("start listening on %s", apiServer.listenAddr)
+	server := &http.Server{Addr: apiServer.listenAddr, Handler: wsContainer}
 	logrus.Fatal(server.ListenAndServe())
 
 	return nil
@@ -161,7 +163,7 @@ func (apiServer *ApiServer) Proxy() restful.FilterFunction {
 			return
 		}
 
-		if apiServer.leaderAddr == apiServer.addr {
+		if apiServer.leaderAddr == apiServer.advertiseAddr {
 			chain.ProcessFilter(req, resp)
 			return
 		}
