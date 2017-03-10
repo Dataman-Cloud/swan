@@ -55,20 +55,20 @@ Then you can compile `Swan` with:
 ```
 
 
-## Run as standalone mode
+## Run manager 
 
 ```
-  goreman start
-  
-  or run swan in docker
-  
-  make docker-run-manager-init
+  make docker-run-manager-init 
+```
+```
+  make docker-run-manager-join
 ```
 
-## Run as high availability mode
-  
-  [run swan in HA mode](./docs/swan-cluster.md)
+## Run agent 
 
+```
+  make docker-run-agent
+```
 
 ## How to deploy my applications with swan
 ### Use `curl`
