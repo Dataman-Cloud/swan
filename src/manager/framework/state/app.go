@@ -151,11 +151,6 @@ func (app *App) Delete() error {
 	defer app.Commit()
 
 	return app.StateMachine.TransitTo(APP_STATE_DELETING)
-
-	//app.SetState(APP_STATE_DELETING)
-	//for _, slot := range app.slots {
-	//slot.Kill()
-	//}
 }
 
 // update application by follower steps
@@ -332,21 +327,6 @@ func (app *App) RollingUpdateInstances() int {
 	return rollingUpdateInstances
 }
 
-func (app *App) MarkForDeletionInstances() int {
-	markForDeletionInstances := 0
-	for _, slot := range app.slots {
-		if slot.MarkForDeletion() {
-			markForDeletionInstances += 1
-		}
-	}
-
-	return markForDeletionInstances
-}
-
-func (app *App) CanBeCleanAfterDeletion() bool {
-	return app.StateIs(APP_STATE_DELETING) && len(app.slots) == 0
-}
-
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
 		OfferAllocatorInstance().RemoveSlotFromAllocator(slot)
@@ -393,13 +373,7 @@ func (app *App) Step() {
 func (app *App) Reevaluate() {
 	switch app.State {
 	case APP_STATE_NORMAL:
-	case APP_STATE_DELETING:
-		if app.CanBeCleanAfterDeletion() {
-			// invalidate apps in case need removal
-			app.UserEventChan <- &event.UserEvent{
-				Type: event.EVENT_TYPE_USER_INVALID_APPS,
-			}
-		}
+
 	case APP_STATE_UPDATING:
 		// when updating done
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
@@ -429,23 +403,6 @@ func (app *App) Reevaluate() {
 				slot.SetMarkForRollingUpdate(false)
 			}
 		}
-
-	case APP_STATE_CREATING:
-		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
-	case APP_STATE_SCALE_UP:
-		if app.StateIs(APP_STATE_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
-	case APP_STATE_SCALE_DOWN:
-		if len(app.slots) == int(app.CurrentVersion.Instances) &&
-			app.MarkForDeletionInstances() == 0 {
-			app.SetState(APP_STATE_NORMAL)
-		}
-
 	default:
 	}
 

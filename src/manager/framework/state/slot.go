@@ -68,7 +68,6 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	markForDeletion      bool
 	markForRollingUpdate bool
 
 	restartPolicy *RestartPolicy
@@ -96,7 +95,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		resourceReservationLock: sync.Mutex{},
 
 		markForRollingUpdate: false,
-		markForDeletion:      false,
 
 		inTransaction: false,
 		touched:       true,
@@ -146,8 +144,6 @@ func (slot *Slot) Kill() {
 	defer slot.Commit()
 
 	slot.StopRestartPolicy()
-
-	slot.SetMarkForDeletion(true)
 
 	if slot.Dispatched() {
 		slot.SetState(SLOT_STATE_PENDING_KILL)
@@ -210,36 +206,6 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 		ow.CpuRemain() >= slot.Version.CPUs &&
 		ow.MemRemain() >= slot.Version.Mem &&
 		ow.DiskRemain() >= slot.Version.Disk
-}
-
-func (slot *Slot) filterConstraints(constraints []string) []string {
-	filteredConstraints := make([]string, 0)
-	for _, constraint := range constraints {
-		cons := strings.Split(constraint, ":")
-		if len(cons) > 3 || len(cons) < 2 {
-			logrus.Errorf("Malformed Constraints")
-			continue
-		}
-
-		if cons[1] != "UNIQUE" && cons[1] != "LIKE" {
-			logrus.Errorf("Constraints operator %s not supported", cons[1])
-			continue
-		}
-
-		if cons[1] == "UNIQUE" && strings.ToLower(cons[0]) != "hostname" {
-			logrus.Errorf("Constraints operator UNIQUE only support 'hostname': %s", cons[0])
-			continue
-		}
-
-		if cons[1] == "LIKE" && len(cons) < 3 {
-			logrus.Errorf("Constraints operator LIKE required two operands")
-			continue
-		}
-
-		filteredConstraints = append(filteredConstraints, constraint)
-	}
-
-	return filteredConstraints
 }
 
 func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrapper, *mesos.TaskInfo) {
@@ -360,16 +326,6 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_REAP) ||
-		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
-		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
-		slot.StateIs(SLOT_STATE_TASK_LOST)) {
-		// TODO remove slot from OfferAllocator
-		logrus.Infof("removeSlot func")
-		slot.App.RemoveSlot(slot.Index)
-	}
-
 	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) ||
 		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
 		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
@@ -474,17 +430,8 @@ func (slot *Slot) SetHealthy(healthy bool) {
 	slot.Touch(false)
 }
 
-func (slot *Slot) MarkForDeletion() bool {
-	return slot.markForDeletion
-}
-
 func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
 	slot.markForRollingUpdate = rollingUpdate
-	slot.Touch(false)
-}
-
-func (slot *Slot) SetMarkForDeletion(deletion bool) {
-	slot.markForDeletion = deletion
 	slot.Touch(false)
 }
 

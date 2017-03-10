@@ -328,7 +328,6 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		AppID:                slot.App.ID,
 		VersionID:            slot.Version.ID,
 		State:                slot.State,
-		MarkForDeletion:      slot.MarkForDeletion(),
 		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
 		Healthy:              slot.Healthy(),
 	}
@@ -352,7 +351,6 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 		AgentID:              raftSlot.CurrentTask.AgentID,
 		Ip:                   raftSlot.CurrentTask.Ip,
 		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
-		markForDeletion:      raftSlot.MarkForDeletion,
 		markForRollingUpdate: raftSlot.MarkForRollingUpdate,
 		healthy:              raftSlot.Healthy,
 	}
