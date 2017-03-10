@@ -151,17 +151,17 @@ func (scheduler *Scheduler) handleEvent(e event.Event) {
 
 // reevaluation of apps state, clean up stale apps
 func (scheduler *Scheduler) InvalidateApps() {
-	appsPendingRemove := make([]string, 0)
-	for _, app := range scheduler.AppStorage.Data() {
-		if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
-			app.Remove()
-			appsPendingRemove = append(appsPendingRemove, app.ID)
-		}
-	}
+	//appsPendingRemove := make([]string, 0)
+	//for _, app := range scheduler.AppStorage.Data() {
+	//if app.CanBeCleanAfterDeletion() { // check if app should be cleanup
+	//app.Remove()
+	//appsPendingRemove = append(appsPendingRemove, app.ID)
+	//}
+	//}
 
-	for _, appId := range appsPendingRemove {
-		scheduler.AppStorage.Delete(appId)
-	}
+	//for _, appId := range appsPendingRemove {
+	//scheduler.AppStorage.Delete(appId)
+	//}
 }
 
 func (scheduler *Scheduler) EmitEvent(e *eventbus.Event) {

@@ -27,16 +27,6 @@ var (
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
 
-const (
-	APP_STATE_NORMAL                 = "normal"
-	APP_STATE_MARK_FOR_CREATING      = "creating"
-	APP_STATE_MARK_FOR_DELETION      = "deleting"
-	APP_STATE_MARK_FOR_UPDATING      = "updating"
-	APP_STATE_MARK_FOR_CANCEL_UPDATE = "cancel_update"
-	APP_STATE_MARK_FOR_SCALE_UP      = "scale_up"
-	APP_STATE_MARK_FOR_SCALE_DOWN    = "scale_down"
-)
-
 var persistentStore store.Store
 
 func SetStore(newStore store.Store) {
@@ -61,8 +51,9 @@ type App struct {
 	Created time.Time
 	Updated time.Time
 
-	State     string
-	ClusterID string
+	State        string
+	StateMachine *StateMachine
+	ClusterID    string
 
 	inTransaction bool
 	touched       bool
@@ -104,13 +95,8 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	for i := 0; i < int(version.Instances); i++ {
-		slot := NewSlot(app, version, i)
-		app.SetSlot(i, slot)
-		slot.DispatchNewTask(slot.Version)
-	}
-
-	app.SetState(APP_STATE_MARK_FOR_CREATING)
+	app.StateMachine = NewStateMachine(app)
+	app.StateMachine.Start()
 
 	app.create()
 
@@ -138,7 +124,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.CurrentVersion.Instances += int32(newInstances)
 	app.Updated = time.Now()
 
-	app.SetState(APP_STATE_MARK_FOR_SCALE_UP)
+	app.SetState(APP_STATE_SCALE_UP)
 
 	for i := newInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) - i
@@ -168,7 +154,7 @@ func (app *App) ScaleDown(removeInstances int) error {
 	app.CurrentVersion.Instances = int32(int(app.CurrentVersion.Instances) - removeInstances)
 	app.Updated = time.Now()
 
-	app.SetState(APP_STATE_MARK_FOR_SCALE_DOWN)
+	app.SetState(APP_STATE_SCALE_DOWN)
 
 	for i := removeInstances; i > 0; i-- {
 		slotIndex := int(app.CurrentVersion.Instances) + i - 1
@@ -185,19 +171,19 @@ func (app *App) Delete() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	app.SetState(APP_STATE_MARK_FOR_DELETION)
-	for _, slot := range app.slots {
-		slot.Kill()
-	}
+	return app.StateMachine.TransitTo(APP_STATE_DELETING)
 
-	return nil
+	//app.SetState(APP_STATE_DELETING)
+	//for _, slot := range app.slots {
+	//slot.Kill()
+	//}
 }
 
 // update application by follower steps
 // 1. check app state: if app state if not APP_STATE_NORMAL or app's propose version is not nil
 //    we can not update app, because that means target app maybe is in updateing.
 // 2. set the new version to the app's propose version.
-// 3. persist app data, and set the app's state to APP_STATE_MARK_FOR_UPDATING
+// 3. persist app data, and set the app's state to APP_STATE_UPDATING
 // 4. update slot version to propose version
 // 5. after all slot version update success. put the current version to version history and set the
 //    propose version as current version, set propose version to nil.
@@ -222,7 +208,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return errors.New("update failed: current version was losted")
 	}
 
-	app.SetState(APP_STATE_MARK_FOR_UPDATING)
+	app.SetState(APP_STATE_UPDATING)
 
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	version.PreviousVersionID = app.CurrentVersion.ID
@@ -266,7 +252,7 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 }
 
 func (app *App) CancelUpdate() error {
-	if app.State != APP_STATE_MARK_FOR_UPDATING || app.ProposedVersion == nil {
+	if app.State != APP_STATE_UPDATING || app.ProposedVersion == nil {
 		return errors.New("app not in updating state")
 	}
 
@@ -277,7 +263,7 @@ func (app *App) CancelUpdate() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	app.SetState(APP_STATE_MARK_FOR_CANCEL_UPDATE)
+	app.SetState(APP_STATE_CANCEL_UPDATE)
 
 	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
 		if slot, found := app.GetSlot(i); found {
@@ -303,19 +289,19 @@ func (app *App) IsFixed() bool {
 func (app *App) SetState(state string) {
 	app.State = state
 	switch app.State {
-	case APP_STATE_MARK_FOR_CREATING:
+	case APP_STATE_CREATING:
 		app.EmitAppEvent(eventbus.EventTypeAppStateCreating)
-	case APP_STATE_MARK_FOR_DELETION:
+	case APP_STATE_DELETING:
 		app.EmitAppEvent(eventbus.EventTypeAppStateDeletion)
 	case APP_STATE_NORMAL:
 		app.EmitAppEvent(eventbus.EventTypeAppStateNormal)
-	case APP_STATE_MARK_FOR_UPDATING:
+	case APP_STATE_UPDATING:
 		app.EmitAppEvent(eventbus.EventTypeAppStateUpdating)
-	case APP_STATE_MARK_FOR_CANCEL_UPDATE:
+	case APP_STATE_CANCEL_UPDATE:
 		app.EmitAppEvent(eventbus.EventTypeAppStateCancelUpdate)
-	case APP_STATE_MARK_FOR_SCALE_UP:
+	case APP_STATE_SCALE_UP:
 		app.EmitAppEvent(eventbus.EventTypeAppStateScaleUp)
-	case APP_STATE_MARK_FOR_SCALE_DOWN:
+	case APP_STATE_SCALE_DOWN:
 		app.EmitAppEvent(eventbus.EventTypeAppStateScaleDown)
 	default:
 	}
@@ -379,7 +365,7 @@ func (app *App) MarkForDeletionInstances() int {
 }
 
 func (app *App) CanBeCleanAfterDeletion() bool {
-	return app.StateIs(APP_STATE_MARK_FOR_DELETION) && len(app.slots) == 0
+	return app.StateIs(APP_STATE_DELETING) && len(app.slots) == 0
 }
 
 func (app *App) RemoveSlot(index int) {
@@ -421,17 +407,21 @@ func (app *App) SetSlot(index int, slot *Slot) {
 	app.Touch(false)
 }
 
+func (app *App) Step() {
+	app.StateMachine.Step()
+}
+
 func (app *App) Reevaluate() {
 	switch app.State {
 	case APP_STATE_NORMAL:
-	case APP_STATE_MARK_FOR_DELETION:
+	case APP_STATE_DELETING:
 		if app.CanBeCleanAfterDeletion() {
 			// invalidate apps in case need removal
 			app.UserEventChan <- &event.UserEvent{
 				Type: event.EVENT_TYPE_USER_INVALID_APPS,
 			}
 		}
-	case APP_STATE_MARK_FOR_UPDATING:
+	case APP_STATE_UPDATING:
 		// when updating done
 		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
 			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
@@ -449,7 +439,7 @@ func (app *App) Reevaluate() {
 			}
 		}
 
-	case APP_STATE_MARK_FOR_CANCEL_UPDATE:
+	case APP_STATE_CANCEL_UPDATE:
 		// when update cancelled
 		if app.slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
 			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
@@ -461,17 +451,17 @@ func (app *App) Reevaluate() {
 			}
 		}
 
-	case APP_STATE_MARK_FOR_CREATING:
+	case APP_STATE_CREATING:
 		if app.RunningInstances() == int(app.CurrentVersion.Instances) {
 			app.SetState(APP_STATE_NORMAL)
 		}
 
-	case APP_STATE_MARK_FOR_SCALE_UP:
-		if app.StateIs(APP_STATE_MARK_FOR_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
+	case APP_STATE_SCALE_UP:
+		if app.StateIs(APP_STATE_SCALE_UP) && (app.RunningInstances() == int(app.CurrentVersion.Instances)) {
 			app.SetState(APP_STATE_NORMAL)
 		}
 
-	case APP_STATE_MARK_FOR_SCALE_DOWN:
+	case APP_STATE_SCALE_DOWN:
 		if len(app.slots) == int(app.CurrentVersion.Instances) &&
 			app.MarkForDeletionInstances() == 0 {
 			app.SetState(APP_STATE_NORMAL)
