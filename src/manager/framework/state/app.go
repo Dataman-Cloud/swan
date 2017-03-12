@@ -120,9 +120,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.CurrentVersion.Instances = int32(len(app.slots) + newInstances)
 	app.Updated = time.Now()
 
-	app.StateMachine.TransitTo(APP_STATE_SCALE_UP)
-
-	return nil
+	return app.StateMachine.TransitTo(APP_STATE_SCALE_UP)
 }
 
 func (app *App) ScaleDown(removeInstances int) error {
@@ -140,9 +138,7 @@ func (app *App) ScaleDown(removeInstances int) error {
 	app.CurrentVersion.Instances = int32(len(app.slots) - removeInstances)
 	app.Updated = time.Now()
 
-	app.StateMachine.TransitTo(APP_STATE_SCALE_DOWN)
-
-	return nil
+	return app.StateMachine.TransitTo(APP_STATE_SCALE_DOWN)
 }
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
@@ -182,19 +178,11 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return errors.New("update failed: current version was losted")
 	}
 
-	app.SetState(APP_STATE_UPDATING)
-
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
-	for i := 0; i < 1; i++ { // current we make first slot update
-		if slot, found := app.GetSlot(i); found {
-			slot.UpdateTask(app.ProposedVersion, true)
-		}
-	}
-
-	return nil
+	return app.StateMachine.TransitTo(APP_STATE_UPDATING)
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
@@ -206,27 +194,31 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 		return errors.New("please specify how many instance want proceeding the update")
 	}
 
-	if (instances + app.RollingUpdateInstances()) > int(app.CurrentVersion.Instances) {
-		return errors.New("update instances count exceed the maximum instances number")
-	}
+	//if (instances + app.RollingUpdateInstances()) > int(app.CurrentVersion.Instances) {
+	//return errors.New("update instances count exceed the maximum instances number")
+	//}
 
 	app.BeginTx()
 	defer app.Commit()
 
-	for i := 0; i < instances; i++ {
-		slotIndex := i + app.RollingUpdateInstances()
-		defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
-			if slot, found := app.GetSlot(slotIndex); found {
-				slot.UpdateTask(app.ProposedVersion, true)
-			}
-		}(slotIndex)
-	}
+	//for i := 0; i < instances; i++ {
+	//slotIndex := i + app.RollingUpdateInstances()
+	//defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
+	//if slot, found := app.GetSlot(slotIndex); found {
+	//sloe.UpdateTask(app.ProposedVersion, true)
+	//}
+	//}(slotIndex)
+	//}
 
 	return nil
 }
 
 func (app *App) CancelUpdate() error {
-	if app.State != APP_STATE_UPDATING || app.ProposedVersion == nil {
+	fmt.Println("xxxxxxxxxxxxxxxxx")
+	fmt.Println(app.StateMachine.Is(APP_STATE_UPDATING))
+	fmt.Println(app.ProposedVersion)
+	fmt.Println("xxxxxxxxxxxxxxxxx --------------------       ")
+	if !app.StateMachine.Is(APP_STATE_UPDATING) || app.ProposedVersion == nil {
 		return errors.New("app not in updating state")
 	}
 
@@ -237,13 +229,13 @@ func (app *App) CancelUpdate() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	app.SetState(APP_STATE_CANCEL_UPDATE)
+	app.StateMachine.TransitTo(APP_STATE_CANCEL_UPDATE)
 
-	for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
-		if slot, found := app.GetSlot(i); found {
-			slot.UpdateTask(app.CurrentVersion, true)
-		}
-	}
+	//for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
+	//if slot, found := app.GetSlot(i); found {
+	//slot.UpdateTask(app.CurrentVersion, true)
+	//}
+	//}
 
 	return nil
 }
@@ -302,7 +294,7 @@ func (app *App) BuildAppEvent(eventType string) *eventbus.Event {
 }
 
 func (app *App) StateIs(state string) bool {
-	return app.State == state
+	return app.StateMachine.Is(state)
 }
 
 func (app *App) RunningInstances() int {
@@ -314,17 +306,6 @@ func (app *App) RunningInstances() int {
 	}
 
 	return runningInstances
-}
-
-func (app *App) RollingUpdateInstances() int {
-	rollingUpdateInstances := 0
-	for _, slot := range app.slots {
-		if slot.MarkForRollingUpdate() {
-			rollingUpdateInstances += 1
-		}
-	}
-
-	return rollingUpdateInstances
 }
 
 func (app *App) RemoveSlot(index int) {
@@ -376,21 +357,21 @@ func (app *App) Reevaluate() {
 
 	case APP_STATE_UPDATING:
 		// when updating done
-		if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
-			(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
-			app.SetState(APP_STATE_NORMAL)
+		//if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
+		//(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
+		//app.SetState(APP_STATE_NORMAL)
 
-			// special case, invoke low level storage directly to make version persisted
-			WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
+		//// special case, invoke low level storage directly to make version persisted
+		//WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
 
-			app.CurrentVersion = app.ProposedVersion
-			app.Versions = append(app.Versions, app.CurrentVersion)
-			app.ProposedVersion = nil
+		//app.CurrentVersion = app.ProposedVersion
+		//app.Versions = append(app.Versions, app.CurrentVersion)
+		//app.ProposedVersion = nil
 
-			for _, slot := range app.slots {
-				slot.SetMarkForRollingUpdate(false)
-			}
-		}
+		////for _, slot := range app.slots {
+		////slot.SetMarkForRollingUpdate(false)
+		////}
+		//}
 
 	case APP_STATE_CANCEL_UPDATE:
 		// when update cancelled
@@ -399,9 +380,9 @@ func (app *App) Reevaluate() {
 			app.SetState(APP_STATE_NORMAL)
 			app.ProposedVersion = nil
 
-			for _, slot := range app.slots {
-				slot.SetMarkForRollingUpdate(false)
-			}
+			//for _, slot := range app.slots {
+			//slot.SetMarkForRollingUpdate(false)
+			//}
 		}
 	default:
 	}

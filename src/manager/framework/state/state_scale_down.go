@@ -19,7 +19,7 @@ type StateScaleDown struct {
 func NewStateScaleDown(machine *StateMachine) *StateScaleDown {
 	return &StateScaleDown{
 		machine: machine,
-		name:    APP_STATE_SCALE_UP,
+		name:    APP_STATE_SCALE_DOWN,
 	}
 }
 
@@ -40,7 +40,10 @@ func (scaleDown *StateScaleDown) OnExit() {
 func (scaleDown *StateScaleDown) Step() {
 	logrus.Debug("state scaleDown step")
 
-	if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && (scaleDown.currentSlotIndex > scaleDown.targetSlotIndex) {
+	if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && scaleDown.currentSlotIndex == scaleDown.targetSlotIndex {
+		scaleDown.machine.App.RemoveSlot(scaleDown.currentSlotIndex)
+		scaleDown.machine.App.StateMachine.TransitTo(APP_STATE_NORMAL)
+	} else if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && (scaleDown.currentSlotIndex > scaleDown.targetSlotIndex) {
 		scaleDown.lock.Lock()
 
 		scaleDown.machine.App.RemoveSlot(scaleDown.currentSlotIndex)

@@ -323,13 +323,12 @@ func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCh
 
 func SlotToRaft(slot *Slot) *rafttypes.Slot {
 	raftSlot := &rafttypes.Slot{
-		Index:                int32(slot.Index),
-		ID:                   slot.ID,
-		AppID:                slot.App.ID,
-		VersionID:            slot.Version.ID,
-		State:                slot.State,
-		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
-		Healthy:              slot.Healthy(),
+		Index:     int32(slot.Index),
+		ID:        slot.ID,
+		AppID:     slot.App.ID,
+		VersionID: slot.Version.ID,
+		State:     slot.State,
+		Healthy:   slot.Healthy(),
 	}
 
 	if slot.CurrentTask != nil {
@@ -343,16 +342,15 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 	slot := &Slot{
-		Index:                int(raftSlot.Index),
-		ID:                   raftSlot.ID,
-		State:                raftSlot.State,
-		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
-		OfferID:              raftSlot.CurrentTask.OfferID,
-		AgentID:              raftSlot.CurrentTask.AgentID,
-		Ip:                   raftSlot.CurrentTask.Ip,
-		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
-		markForRollingUpdate: raftSlot.MarkForRollingUpdate,
-		healthy:              raftSlot.Healthy,
+		Index:         int(raftSlot.Index),
+		ID:            raftSlot.ID,
+		State:         raftSlot.State,
+		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask),
+		OfferID:       raftSlot.CurrentTask.OfferID,
+		AgentID:       raftSlot.CurrentTask.AgentID,
+		Ip:            raftSlot.CurrentTask.Ip,
+		AgentHostName: raftSlot.CurrentTask.AgentHostName,
+		healthy:       raftSlot.Healthy,
 	}
 
 	raftVersion, err := persistentStore.GetVersion(raftSlot.AppID, raftSlot.VersionID)

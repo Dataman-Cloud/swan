@@ -519,7 +519,7 @@ func FormApp(app *state.App) *types.App {
 		Created:          app.Created,
 		Updated:          app.Updated,
 		Mode:             string(app.Mode),
-		State:            app.State,
+		State:            app.StateMachine.ReadableState(),
 		CurrentVersion:   app.CurrentVersion,
 		ProposedVersion:  app.ProposedVersion,
 		Labels:           version.Labels,

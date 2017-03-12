@@ -68,8 +68,6 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	markForRollingUpdate bool
-
 	restartPolicy *RestartPolicy
 
 	healthy bool
@@ -93,8 +91,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		ID:          fmt.Sprintf("%d-%s", index, app.ID),
 
 		resourceReservationLock: sync.Mutex{},
-
-		markForRollingUpdate: false,
 
 		inTransaction: false,
 		touched:       true,
@@ -173,14 +169,13 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	OfferAllocatorInstance().PutSlotBackToPendingQueue(slot)
 }
 
-func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
+func (slot *Slot) UpdateTask(version *types.Version) {
 	logrus.Infof("update slot %s with version ID %s", slot.ID, version.ID)
 
 	slot.BeginTx()
 	defer slot.Commit()
 
 	slot.Version = version
-	slot.SetMarkForRollingUpdate(isRollingUpdate)
 
 	slot.KillTask() // kill task but doesn't clean slot
 }
@@ -326,16 +321,6 @@ func (slot *Slot) SetState(state string) error {
 	default:
 	}
 
-	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
-		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
-		slot.StateIs(SLOT_STATE_TASK_LOST)) {
-		// TODO remove slot from OfferAllocator
-		logrus.Infof("archive current task")
-		slot.Archive()
-		slot.DispatchNewTask(slot.Version)
-	}
-
 	// skip app invalidation if slot state is not mesos driven
 	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
 		(slot.State != SLOT_STATE_PENDING_KILL) {
@@ -412,10 +397,6 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 	return e
 }
 
-func (slot *Slot) MarkForRollingUpdate() bool {
-	return slot.markForRollingUpdate
-}
-
 func (slot *Slot) Healthy() bool {
 	return slot.healthy
 }
@@ -427,11 +408,6 @@ func (slot *Slot) SetHealthy(healthy bool) {
 	} else {
 		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
 	}
-	slot.Touch(false)
-}
-
-func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
-	slot.markForRollingUpdate = rollingUpdate
 	slot.Touch(false)
 }
 
