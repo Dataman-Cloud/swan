@@ -638,6 +638,7 @@ func FormTask(slot *state.Slot) *types.Task {
 	task := &types.Task{
 		ID:            slot.CurrentTask.ID,
 		AppID:         slot.App.ID,
+		SlotID:        slot.ID,
 		VersionID:     slot.Version.ID,
 		Healthy:       slot.Healthy(),
 		Status:        string(slot.State),

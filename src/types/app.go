@@ -46,8 +46,9 @@ type AppFilterOptions struct {
 // and together with task history
 type Task struct {
 	ID          string       `json:"id,omitempty"`
-	AppID       string       `json:"appId,omitempty"`
-	VersionID   string       `json:"versionId,omitempty"`
+	AppID       string       `json:"appID,omitempty"`
+	SlotID      string       `json:"slotID,omitempty"`
+	VersionID   string       `json:"versionID,omitempty"`
 	CurrentTask *TaskHistory `json:"currentTask,omitempty"`
 
 	Status string `json:"status"`
