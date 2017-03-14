@@ -60,6 +60,7 @@ func (machine *StateMachine) TransitTo(targetStateString string, args ...interfa
 
 		machine.state.OnExit()
 		machine.state = machine.StateFactory(targetStateString, args...)
+		machine.App.EmitAppEvent(machine.ReadableState())
 		machine.state.OnEnter()
 
 		return nil

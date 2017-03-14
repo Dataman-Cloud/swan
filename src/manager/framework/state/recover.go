@@ -22,7 +22,6 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 		app := &App{
 			ID:      raftApp.ID,
 			Name:    raftApp.Name,
-			State:   raftApp.State,
 			Created: time.Unix(0, raftApp.CreatedAt),
 			Updated: time.Unix(0, raftApp.UpdatedAt),
 			slots:   make(map[int]*Slot),

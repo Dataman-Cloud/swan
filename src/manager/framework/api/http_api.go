@@ -507,12 +507,18 @@ func getServiceDiscoveries(app *state.App) []types.ServiceDiscovery {
 }
 
 func FormApp(app *state.App) *types.App {
+	runningInstances := 0
+	for _, slot := range app.GetSlots() {
+		if slot.State == state.SLOT_STATE_TASK_RUNNING {
+			runningInstances = runningInstances + 1
+		}
+	}
 	version := app.CurrentVersion
 	appRet := &types.App{
 		ID:               app.ID,
 		Name:             app.Name,
 		Instances:        int(version.Instances),
-		RunningInstances: app.RunningInstances(),
+		RunningInstances: runningInstances,
 		RunAs:            version.RunAs,
 		Priority:         int(version.Priority),
 		ClusterID:        app.ClusterID,

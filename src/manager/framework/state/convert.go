@@ -13,7 +13,6 @@ func AppToRaft(app *App) *rafttypes.Application {
 		Name:      app.Name,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
-		State:     app.State,
 	}
 
 	if app.CurrentVersion != nil {
@@ -327,7 +326,6 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		ID:        slot.ID,
 		AppID:     slot.App.ID,
 		VersionID: slot.Version.ID,
-		State:     slot.State,
 		Healthy:   slot.Healthy(),
 	}
 

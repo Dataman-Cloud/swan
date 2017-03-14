@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -254,44 +254,44 @@ func (slot *Slot) SetState(state string) error {
 	slot.State = state
 	switch slot.State {
 	case SLOT_STATE_PENDING_OFFER:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingOffer)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStatePendingOffer)
 	case SLOT_STATE_PENDING_KILL:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingKill)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStatePendingKill)
 	case SLOT_STATE_REAP:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateReap)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateReap)
 	case SLOT_STATE_TASK_STAGING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStaging)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateStaging)
 	case SLOT_STATE_TASK_STARTING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStarting)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateStarting)
 	case SLOT_STATE_TASK_RUNNING:
 		if slot.Version.HealthCheck == nil {
 			slot.SetHealthy(true)
 		}
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateRunning)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateRunning)
 	case SLOT_STATE_TASK_KILLING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilling)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilling)
 	case SLOT_STATE_TASK_FINISHED:
 		slot.StopRestartPolicy()
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFinished)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFailed)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFailed)
 	case SLOT_STATE_TASK_KILLED:
 		slot.StopRestartPolicy()
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilled)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilled)
 	case SLOT_STATE_TASK_ERROR:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateError)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateError)
 	case SLOT_STATE_TASK_LOST:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateLost)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateLost)
 	case SLOT_STATE_TASK_DROPPED:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateDropped)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateDropped)
 	case SLOT_STATE_TASK_UNREACHABLE:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnreachable)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnreachable)
 	case SLOT_STATE_TASK_GONE:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGone)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGone)
 	case SLOT_STATE_TASK_GONE_BY_OPERATOR:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGoneByOperator)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGoneByOperator)
 	case SLOT_STATE_TASK_UNKNOWN:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnknown)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnknown)
 	default:
 	}
 
@@ -335,11 +335,11 @@ func (slot *Slot) Normal() bool {
 }
 
 func (slot *Slot) EmitTaskEvent(eventType string) {
-	slot.App.EmitEvent(slot.BuildTaskEvent(eventType))
+	eventbus.WriteEvent(slot.BuildTaskEvent(eventType))
 }
 
-func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
-	e := &swanevent.Event{
+func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
+	e := &eventbus.Event{
 		Type:    eventType,
 		AppID:   slot.App.ID,
 		AppMode: string(slot.App.Mode),
@@ -378,9 +378,9 @@ func (slot *Slot) Healthy() bool {
 func (slot *Slot) SetHealthy(healthy bool) {
 	slot.healthy = healthy
 	if healthy {
-		slot.EmitTaskEvent(swanevent.EventTypeTaskHealthy)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskHealthy)
 	} else {
-		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
 	}
 	slot.Touch(false)
 }

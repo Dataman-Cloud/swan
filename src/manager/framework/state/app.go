@@ -51,7 +51,6 @@ type App struct {
 	Created time.Time
 	Updated time.Time
 
-	State        string
 	StateMachine *StateMachine
 	ClusterID    string
 
@@ -198,15 +197,15 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
 	}
 
+	if instances < 1 {
+		return errors.New("please specify how many instance want proceeding the update")
+	}
+
 	updatedCount := 0
 	for index, slot := range app.GetSlots() {
 		if slot.Version == app.ProposedVersion {
 			updatedCount = index + 1
 		}
-	}
-
-	if instances < 1 {
-		return errors.New("please specify how many instance want proceeding the update")
 	}
 
 	if updatedCount+instances > len(app.GetSlots()) {
@@ -247,67 +246,45 @@ func (app *App) IsFixed() bool {
 	return app.Mode == APP_MODE_FIXED
 }
 
-func (app *App) SetState(state string) {
-	app.State = state
-	switch app.State {
+func (app *App) EmitAppEvent(stateString string) {
+	eventType := ""
+	switch stateString {
 	case APP_STATE_CREATING:
-		app.EmitAppEvent(eventbus.EventTypeAppStateCreating)
+		eventType = eventbus.EventTypeAppStateCreating
 	case APP_STATE_DELETING:
-		app.EmitAppEvent(eventbus.EventTypeAppStateDeletion)
+		eventType = eventbus.EventTypeAppStateDeletion
 	case APP_STATE_NORMAL:
-		app.EmitAppEvent(eventbus.EventTypeAppStateNormal)
+		eventType = eventbus.EventTypeAppStateNormal
 	case APP_STATE_UPDATING:
-		app.EmitAppEvent(eventbus.EventTypeAppStateUpdating)
+		eventType = eventbus.EventTypeAppStateUpdating
 	case APP_STATE_CANCEL_UPDATE:
-		app.EmitAppEvent(eventbus.EventTypeAppStateCancelUpdate)
+		eventType = eventbus.EventTypeAppStateCancelUpdate
 	case APP_STATE_SCALE_UP:
-		app.EmitAppEvent(eventbus.EventTypeAppStateScaleUp)
+		eventType = eventbus.EventTypeAppStateScaleUp
 	case APP_STATE_SCALE_DOWN:
-		app.EmitAppEvent(eventbus.EventTypeAppStateScaleDown)
+		eventType = eventbus.EventTypeAppStateScaleDown
 	default:
 	}
 
-	app.Touch(false)
-	logrus.Infof("app %s now has state %s", app.ID, app.State)
-}
-
-func (app *App) EmitAppEvent(eventType string) {
-	app.EmitEvent(app.BuildAppEvent(eventType))
-}
-
-func (app *App) BuildAppEvent(eventType string) *eventbus.Event {
 	e := &eventbus.Event{Type: eventType}
 	e.AppID = app.ID
 	e.Payload = &types.AppInfoEvent{
 		AppID:     app.ID,
 		Name:      app.Name,
-		State:     app.State,
 		ClusterID: app.ClusterID,
 		RunAs:     app.CurrentVersion.RunAs,
 	}
 
-	return e
+	eventbus.WriteEvent(e)
 }
 
 func (app *App) StateIs(state string) bool {
 	return app.StateMachine.Is(state)
 }
 
-func (app *App) RunningInstances() int {
-	runningInstances := 0
-	for _, slot := range app.slots {
-		if slot.StateIs(SLOT_STATE_TASK_RUNNING) {
-			runningInstances += 1
-		}
-	}
-
-	return runningInstances
-}
-
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
 		OfferAllocatorInstance().RemoveSlotFromAllocator(slot)
-
 		slot.Remove()
 
 		app.slotsLock.Lock()
@@ -316,11 +293,6 @@ func (app *App) RemoveSlot(index int) {
 
 		app.Touch(false)
 	}
-}
-
-func (app *App) GetSlot(index int) (*Slot, bool) {
-	slot, ok := app.slots[index]
-	return slot, ok
 }
 
 func (app *App) GetSlots() []*Slot {
@@ -335,6 +307,11 @@ func (app *App) GetSlots() []*Slot {
 	return slotsById
 }
 
+func (app *App) GetSlot(index int) (*Slot, bool) {
+	slot, ok := app.slots[index]
+	return slot, ok
+}
+
 func (app *App) SetSlot(index int, slot *Slot) {
 	app.slotsLock.Lock()
 	app.slots[index] = slot
@@ -345,49 +322,6 @@ func (app *App) SetSlot(index int, slot *Slot) {
 
 func (app *App) Step() {
 	app.StateMachine.Step()
-}
-
-func (app *App) Reevaluate() {
-	switch app.State {
-	case APP_STATE_NORMAL:
-
-	case APP_STATE_UPDATING:
-		// when updating done
-		//if (app.RollingUpdateInstances() == int(app.CurrentVersion.Instances)) &&
-		//(app.RunningInstances() == int(app.CurrentVersion.Instances)) { // not perfect as when instances number increase, all instances running might be hard to acheive
-		//app.SetState(APP_STATE_NORMAL)
-
-		//// special case, invoke low level storage directly to make version persisted
-		//WithConvertApp(context.TODO(), app, nil, persistentStore.CommitAppProposeVersion)
-
-		//app.CurrentVersion = app.ProposedVersion
-		//app.Versions = append(app.Versions, app.CurrentVersion)
-		//app.ProposedVersion = nil
-
-		////for _, slot := range app.slots {
-		////slot.SetMarkForRollingUpdate(false)
-		////}
-		//}
-
-	case APP_STATE_CANCEL_UPDATE:
-		// when update cancelled
-		if app.slots[0].Version == app.CurrentVersion && // until the first slot has updated to CurrentVersion
-			app.RunningInstances() == int(app.CurrentVersion.Instances) { // not perfect as when instances number increase, all instances running might be hard to achieve
-			app.SetState(APP_STATE_NORMAL)
-			app.ProposedVersion = nil
-
-			//for _, slot := range app.slots {
-			//slot.SetMarkForRollingUpdate(false)
-			//}
-		}
-	default:
-	}
-
-	app.Touch(false)
-}
-
-func (app *App) EmitEvent(e *eventbus.Event) {
-	eventbus.WriteEvent(e)
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion
