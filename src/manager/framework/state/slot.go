@@ -298,7 +298,6 @@ func (slot *Slot) SetState(state string) error {
 	// skip app invalidation if slot state is not mesos driven
 	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
 		(slot.State != SLOT_STATE_PENDING_KILL) {
-		//slot.App.Reevaluate()
 		slot.App.Step()
 	}
 
