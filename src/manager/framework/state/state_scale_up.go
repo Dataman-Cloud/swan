@@ -24,6 +24,10 @@ func NewStateScaleUp(machine *StateMachine) *StateScaleUp {
 }
 
 func (scaleUp *StateScaleUp) OnEnter() {
+	logrus.Debug("state scaleUp OnEnter")
+
+	scaleUp.machine.App.EmitAppEvent(scaleUp.name)
+
 	scaleUp.currentSlotIndex = len(scaleUp.machine.App.GetSlots())
 	scaleUp.targetSlotIndex = int(scaleUp.machine.App.CurrentVersion.Instances) - 1
 

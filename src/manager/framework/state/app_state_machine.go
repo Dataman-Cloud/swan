@@ -60,7 +60,6 @@ func (machine *StateMachine) TransitTo(targetStateString string, args ...interfa
 
 		machine.state.OnExit()
 		machine.state = machine.StateFactory(targetStateString, args...)
-		machine.App.EmitAppEvent(machine.ReadableState())
 		machine.state.OnEnter()
 
 		return nil
@@ -91,7 +90,6 @@ func (machine *StateMachine) StateFactory(stateName string, args ...interface{})
 		if !ok {
 			slotCountNeedUpdate = 1
 		}
-		fmt.Println(slotCountNeedUpdate)
 		return NewStateUpdating(machine, slotCountNeedUpdate)
 
 	case APP_STATE_CANCEL_UPDATE:

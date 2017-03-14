@@ -24,6 +24,10 @@ func NewStateCreating(machine *StateMachine) *StateCreating {
 }
 
 func (creating *StateCreating) OnEnter() {
+	logrus.Debug("state creating OnEnter")
+
+	creating.machine.App.EmitAppEvent(creating.name)
+
 	creating.currentSlotIndex = 0
 	creating.targetSlotIndex = int(creating.machine.App.CurrentVersion.Instances) - 1
 

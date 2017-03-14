@@ -28,6 +28,8 @@ func NewStateDeleting(machine *StateMachine) *StateDeleting {
 func (deleting *StateDeleting) OnEnter() {
 	logrus.Debug("state deleting OnEnter")
 
+	deleting.machine.App.EmitAppEvent(deleting.name)
+
 	deleting.currentSlotIndex = len(deleting.machine.App.GetSlots()) - 1
 	deleting.targetSlotIndex = 0
 

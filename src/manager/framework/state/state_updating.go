@@ -35,6 +35,10 @@ func NewStateUpdating(machine *StateMachine, slotCountNeedUpdate int) *StateUpda
 }
 
 func (updating *StateUpdating) OnEnter() {
+	logrus.Debug("state updating OnEnter")
+
+	updating.machine.App.EmitAppEvent(updating.name)
+
 	updating.currentSlotIndex = -1
 	for index, slot := range updating.machine.App.GetSlots() {
 		if slot.Version == updating.machine.App.ProposedVersion {

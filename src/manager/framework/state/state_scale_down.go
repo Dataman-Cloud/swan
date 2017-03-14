@@ -24,6 +24,10 @@ func NewStateScaleDown(machine *StateMachine) *StateScaleDown {
 }
 
 func (scaleDown *StateScaleDown) OnEnter() {
+	logrus.Debug("state scaleDown OnEnter")
+
+	scaleDown.machine.App.EmitAppEvent(scaleDown.name)
+
 	scaleDown.currentSlotIndex = len(scaleDown.machine.App.GetSlots()) - 1
 	scaleDown.targetSlotIndex = int(scaleDown.machine.App.CurrentVersion.Instances)
 

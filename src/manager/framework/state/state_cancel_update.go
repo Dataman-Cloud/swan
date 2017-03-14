@@ -24,6 +24,10 @@ func NewStateCancelUpdate(machine *StateMachine) *StateCancelUpdate {
 }
 
 func (cancelUpdate *StateCancelUpdate) OnEnter() {
+	logrus.Debug("state cancelUpdate OnEnter")
+
+	cancelUpdate.machine.App.EmitAppEvent(cancelUpdate.name)
+
 	cancelUpdate.targetSlotIndex = 0
 	for index, slot := range cancelUpdate.machine.App.GetSlots() {
 		if slot.Version == cancelUpdate.machine.App.CurrentVersion {

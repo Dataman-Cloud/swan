@@ -18,6 +18,8 @@ func NewStateNormal(machine *StateMachine) *StateNormal {
 
 func (normal *StateNormal) OnEnter() {
 	logrus.Debug("state normal OnEnter")
+
+	normal.machine.App.EmitAppEvent(normal.name)
 }
 
 func (normal *StateNormal) OnExit() {
