@@ -317,20 +317,30 @@ func (slot *Slot) Abnormal() bool {
 		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
 		slot.StateIs(SLOT_STATE_TASK_LOST) ||
 		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_DROPPED) ||
+		slot.StateIs(SLOT_STATE_TASK_UNKNOWN) ||
+		slot.StateIs(SLOT_STATE_TASK_UNREACHABLE) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE_BY_OPERATOR) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
 		slot.StateIs(SLOT_STATE_REAP)
 }
 
 func (slot *Slot) Dispatched() bool {
 	return slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
 		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
-		slot.StateIs(SLOT_STATE_TASK_STAGING)
-}
-
-func (slot *Slot) Normal() bool {
-	return slot.StateIs(SLOT_STATE_PENDING_OFFER) ||
-		slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
-		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
-		slot.StateIs(SLOT_STATE_TASK_STAGING)
+		slot.StateIs(SLOT_STATE_TASK_STAGING) ||
+		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
+		slot.StateIs(SLOT_STATE_TASK_LOST) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_DROPPED) ||
+		slot.StateIs(SLOT_STATE_TASK_UNKNOWN) ||
+		slot.StateIs(SLOT_STATE_TASK_UNREACHABLE) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE_BY_OPERATOR) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED)
 }
 
 func (slot *Slot) EmitTaskEvent(eventType string) {
