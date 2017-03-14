@@ -134,21 +134,6 @@ func (slot *Slot) KillTask() {
 	}
 }
 
-// kill task and make slot sweeped after successfully kill task
-func (slot *Slot) Kill() {
-	slot.BeginTx()
-	defer slot.Commit()
-
-	slot.StopRestartPolicy()
-
-	if slot.Dispatched() {
-		slot.SetState(SLOT_STATE_PENDING_KILL)
-		slot.CurrentTask.Kill()
-	} else {
-		slot.SetState(SLOT_STATE_REAP)
-	}
-}
-
 func (slot *Slot) Archive() {
 	slot.BeginTx()
 	defer slot.Commit()
@@ -167,17 +152,6 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	OfferAllocatorInstance().PutSlotBackToPendingQueue(slot)
-}
-
-func (slot *Slot) UpdateTask(version *types.Version) {
-	logrus.Infof("update slot %s with version ID %s", slot.ID, version.ID)
-
-	slot.BeginTx()
-	defer slot.Commit()
-
-	slot.Version = version
-
-	slot.KillTask() // kill task but doesn't clean slot
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {

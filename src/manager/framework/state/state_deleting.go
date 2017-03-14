@@ -32,7 +32,7 @@ func (deleting *StateDeleting) OnEnter() {
 	deleting.targetSlotIndex = 0
 
 	deleting.currentSlot, _ = deleting.machine.App.GetSlot(deleting.currentSlotIndex)
-	deleting.currentSlot.Kill()
+	deleting.currentSlot.KillTask()
 }
 
 func (deleting *StateDeleting) OnExit() {
@@ -57,7 +57,7 @@ func (deleting *StateDeleting) Step() {
 		deleting.machine.App.RemoveSlot(deleting.currentSlotIndex)
 		deleting.currentSlotIndex -= 1
 		deleting.currentSlot, _ = deleting.machine.App.GetSlot(deleting.currentSlotIndex)
-		deleting.currentSlot.Kill()
+		deleting.currentSlot.KillTask()
 
 		deleting.lock.Unlock()
 	} else {

@@ -105,6 +105,11 @@ func NewApp(version *types.Version,
 
 // also need user pass ip here
 func (app *App) ScaleUp(newInstances int, newIps []string) error {
+	if !app.StateMachine.CanTransitTo(APP_STATE_SCALE_UP) {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_SCALE_UP))
+	}
+
 	if newInstances <= 0 {
 		return errors.New("specify instances num want to increase")
 	}
@@ -124,6 +129,11 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 }
 
 func (app *App) ScaleDown(removeInstances int) error {
+	if !app.StateMachine.CanTransitTo(APP_STATE_SCALE_DOWN) {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_SCALE_DOWN))
+	}
+
 	if removeInstances <= 0 {
 		return errors.New("please specify at least 1 task to scale-down")
 	}
@@ -143,24 +153,21 @@ func (app *App) ScaleDown(removeInstances int) error {
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
+	if !app.StateMachine.CanTransitTo(APP_STATE_DELETING) {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_DELETING))
+	}
+
 	app.BeginTx()
 	defer app.Commit()
 
 	return app.StateMachine.TransitTo(APP_STATE_DELETING)
 }
 
-// update application by follower steps
-// 1. check app state: if app state if not APP_STATE_NORMAL or app's propose version is not nil
-//    we can not update app, because that means target app maybe is in updateing.
-// 2. set the new version to the app's propose version.
-// 3. persist app data, and set the app's state to APP_STATE_UPDATING
-// 4. update slot version to propose version
-// 5. after all slot version update success. put the current version to version history and set the
-//    propose version as current version, set propose version to nil.
-// 6. set app's state to APP_STATE_NORMAL.
 func (app *App) Update(version *types.Version, store store.Store) error {
-	if !app.StateIs(APP_STATE_NORMAL) || app.ProposedVersion != nil {
-		return errors.New("app not in normal state")
+	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion != nil {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
 	}
 
 	if err := validateAndFormatVersion(version); err != nil {
@@ -182,44 +189,40 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
-	return app.StateMachine.TransitTo(APP_STATE_UPDATING)
+	return app.StateMachine.TransitTo(APP_STATE_UPDATING, 1)
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
-	if app.ProposedVersion == nil {
-		return errors.New("app not in rolling update state")
+	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion == nil {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
+	}
+
+	updatedCount := 0
+	for index, slot := range app.GetSlots() {
+		if slot.Version == app.ProposedVersion {
+			updatedCount = index + 1
+		}
 	}
 
 	if instances < 1 {
 		return errors.New("please specify how many instance want proceeding the update")
 	}
 
-	//if (instances + app.RollingUpdateInstances()) > int(app.CurrentVersion.Instances) {
-	//return errors.New("update instances count exceed the maximum instances number")
-	//}
+	if updatedCount+instances > len(app.GetSlots()) {
+		return errors.New(fmt.Sprintf("only %d tasks left need to be updated now", len(app.GetSlots())-updatedCount))
+	}
 
 	app.BeginTx()
 	defer app.Commit()
 
-	//for i := 0; i < instances; i++ {
-	//slotIndex := i + app.RollingUpdateInstances()
-	//defer func(slotIndex int) { // RollingUpdateInstances() has side effects in the loop
-	//if slot, found := app.GetSlot(slotIndex); found {
-	//sloe.UpdateTask(app.ProposedVersion, true)
-	//}
-	//}(slotIndex)
-	//}
-
-	return nil
+	return app.StateMachine.TransitTo(APP_STATE_UPDATING, instances)
 }
 
 func (app *App) CancelUpdate() error {
-	fmt.Println("xxxxxxxxxxxxxxxxx")
-	fmt.Println(app.StateMachine.Is(APP_STATE_UPDATING))
-	fmt.Println(app.ProposedVersion)
-	fmt.Println("xxxxxxxxxxxxxxxxx --------------------       ")
-	if !app.StateMachine.Is(APP_STATE_UPDATING) || app.ProposedVersion == nil {
-		return errors.New("app not in updating state")
+	if !app.StateMachine.CanTransitTo(APP_STATE_CANCEL_UPDATE) || app.ProposedVersion == nil {
+		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_CANCEL_UPDATE))
 	}
 
 	if app.CurrentVersion == nil {
@@ -229,15 +232,7 @@ func (app *App) CancelUpdate() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	app.StateMachine.TransitTo(APP_STATE_CANCEL_UPDATE)
-
-	//for i := app.RollingUpdateInstances() - 1; i >= 0; i-- {
-	//if slot, found := app.GetSlot(i); found {
-	//slot.UpdateTask(app.CurrentVersion, true)
-	//}
-	//}
-
-	return nil
+	return app.StateMachine.TransitTo(APP_STATE_CANCEL_UPDATE)
 }
 
 func (app *App) ServiceDiscoveryURL() string {
@@ -271,6 +266,7 @@ func (app *App) SetState(state string) {
 		app.EmitAppEvent(eventbus.EventTypeAppStateScaleDown)
 	default:
 	}
+
 	app.Touch(false)
 	logrus.Infof("app %s now has state %s", app.ID, app.State)
 }
@@ -406,7 +402,7 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 	}
 	// app instances should same as current instances
 	if version.Instances != app.CurrentVersion.Instances {
-		return fmt.Errorf("instances can not change when update app, current version is %s", app.CurrentVersion.Instances)
+		return fmt.Errorf("instances can not change when update app, current version is %d", app.CurrentVersion.Instances)
 	}
 	return nil
 }

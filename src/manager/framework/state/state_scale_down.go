@@ -30,7 +30,7 @@ func (scaleDown *StateScaleDown) OnEnter() {
 	scaleDown.currentSlot = NewSlot(scaleDown.machine.App, scaleDown.machine.App.CurrentVersion, scaleDown.currentSlotIndex)
 
 	scaleDown.currentSlot, _ = scaleDown.machine.App.GetSlot(scaleDown.currentSlotIndex)
-	scaleDown.currentSlot.Kill()
+	scaleDown.currentSlot.KillTask()
 }
 
 func (scaleDown *StateScaleDown) OnExit() {
@@ -49,7 +49,7 @@ func (scaleDown *StateScaleDown) Step() {
 		scaleDown.machine.App.RemoveSlot(scaleDown.currentSlotIndex)
 		scaleDown.currentSlotIndex -= 1
 		scaleDown.currentSlot, _ = scaleDown.machine.App.GetSlot(scaleDown.currentSlotIndex)
-		scaleDown.currentSlot.Kill()
+		scaleDown.currentSlot.KillTask()
 
 		scaleDown.lock.Unlock()
 	} else {

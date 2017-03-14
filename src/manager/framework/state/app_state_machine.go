@@ -41,6 +41,11 @@ func (machine *StateMachine) ReadableState() string {
 	return machine.state.Name()
 }
 
+// test if targetState is changable
+func (machine *StateMachine) CanTransitTo(targetStateString string) bool {
+	return machine.state.CanTransitTo(targetStateString)
+}
+
 // test machine.state is stateExpected
 func (machine *StateMachine) Is(stateExpected string) bool {
 	return machine.state.Name() == stateExpected
@@ -48,15 +53,15 @@ func (machine *StateMachine) Is(stateExpected string) bool {
 
 // transition from one state to another,  return error if not a valid
 // transtion condition
-func (machine *StateMachine) TransitTo(targetStateString string) error {
+func (machine *StateMachine) TransitTo(targetStateString string, args ...interface{}) error {
 	if machine.state.CanTransitTo(targetStateString) {
+		defer machine.lock.Unlock()
 		machine.lock.Lock()
 
 		machine.state.OnExit()
-		machine.state = machine.StateFactory(targetStateString)
+		machine.state = machine.StateFactory(targetStateString, args...)
 		machine.state.OnEnter()
 
-		machine.lock.Unlock()
 		return nil
 	} else {
 		return errors.New(fmt.Sprintf("cann't transit from state: %s to state: %s", machine.state.Name(), targetStateString))
@@ -65,14 +70,10 @@ func (machine *StateMachine) TransitTo(targetStateString string) error {
 
 // move state machine step foward
 func (machine *StateMachine) Step() {
-	fmt.Println("xxxxxxxxxxxxxxxxxxxxxxxxxx")
-	fmt.Println(machine)
-	fmt.Println(machine.state)
-	fmt.Println("xxxxxxxxxxxxxxxxxxxxxxxxxx")
 	machine.state.Step()
 }
 
-func (machine *StateMachine) StateFactory(stateName string) State {
+func (machine *StateMachine) StateFactory(stateName string, args ...interface{}) State {
 	switch stateName {
 	case APP_STATE_NORMAL:
 		return NewStateNormal(machine)
@@ -85,7 +86,13 @@ func (machine *StateMachine) StateFactory(stateName string) State {
 	case APP_STATE_SCALE_DOWN:
 		return NewStateScaleDown(machine)
 	case APP_STATE_UPDATING:
-		return NewStateUpdating(machine)
+		slotCountNeedUpdate, ok := args[0].(int)
+		if !ok {
+			slotCountNeedUpdate = 1
+		}
+		fmt.Println(slotCountNeedUpdate)
+		return NewStateUpdating(machine, slotCountNeedUpdate)
+
 	case APP_STATE_CANCEL_UPDATE:
 		return NewStateCancelUpdate(machine)
 	default:
