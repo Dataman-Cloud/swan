@@ -9,8 +9,8 @@ import (
 )
 
 type StateDeleting struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 
 	currentSlot      *Slot
 	currentSlotIndex int
@@ -18,22 +18,22 @@ type StateDeleting struct {
 	lock             sync.Mutex
 }
 
-func NewStateDeleting(machine *StateMachine) *StateDeleting {
+func NewStateDeleting(app *App) *StateDeleting {
 	return &StateDeleting{
-		machine: machine,
-		name:    APP_STATE_DELETING,
+		app:  app,
+		name: APP_STATE_DELETING,
 	}
 }
 
 func (deleting *StateDeleting) OnEnter() {
 	logrus.Debug("state deleting OnEnter")
 
-	deleting.machine.App.EmitAppEvent(deleting.name)
+	deleting.app.EmitAppEvent(deleting.name)
 
-	deleting.currentSlotIndex = len(deleting.machine.App.GetSlots()) - 1
+	deleting.currentSlotIndex = len(deleting.app.GetSlots()) - 1
 	deleting.targetSlotIndex = 0
 
-	deleting.currentSlot, _ = deleting.machine.App.GetSlot(deleting.currentSlotIndex)
+	deleting.currentSlot, _ = deleting.app.GetSlot(deleting.currentSlotIndex)
 	deleting.currentSlot.KillTask()
 }
 
@@ -45,20 +45,20 @@ func (deleting *StateDeleting) Step() {
 	logrus.Debug("state deleting step")
 
 	if deleting.SlotSafeToRemoveFromApp(deleting.currentSlot) && deleting.currentSlotIndex == deleting.targetSlotIndex {
-		deleting.machine.App.RemoveSlot(deleting.currentSlotIndex)
+		deleting.app.RemoveSlot(deleting.currentSlotIndex)
 
-		deleting.machine.App.Remove() // remove self from boltdb store
+		deleting.app.Remove() // remove self from boltdb store
 
-		deleting.machine.App.UserEventChan <- &event.UserEvent{ // signal scheduler in-memory store to remove this app
+		deleting.app.UserEventChan <- &event.UserEvent{ // signal scheduler in-memory store to remove this app
 			Type:  event.EVENT_TYPE_USER_INVALID_APPS,
-			Param: deleting.machine.App.ID,
+			Param: deleting.app.ID,
 		}
 	} else if deleting.SlotSafeToRemoveFromApp(deleting.currentSlot) && (deleting.currentSlotIndex > deleting.targetSlotIndex) {
 		deleting.lock.Lock()
 
-		deleting.machine.App.RemoveSlot(deleting.currentSlotIndex)
+		deleting.app.RemoveSlot(deleting.currentSlotIndex)
 		deleting.currentSlotIndex -= 1
-		deleting.currentSlot, _ = deleting.machine.App.GetSlot(deleting.currentSlotIndex)
+		deleting.currentSlot, _ = deleting.app.GetSlot(deleting.currentSlotIndex)
 		deleting.currentSlot.KillTask()
 
 		deleting.lock.Unlock()

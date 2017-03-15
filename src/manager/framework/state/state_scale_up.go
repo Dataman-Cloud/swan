@@ -7,8 +7,8 @@ import (
 )
 
 type StateScaleUp struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 
 	currentSlot      *Slot
 	currentSlotIndex int
@@ -16,23 +16,23 @@ type StateScaleUp struct {
 	lock             sync.Mutex
 }
 
-func NewStateScaleUp(machine *StateMachine) *StateScaleUp {
+func NewStateScaleUp(app *App) *StateScaleUp {
 	return &StateScaleUp{
-		machine: machine,
-		name:    APP_STATE_SCALE_UP,
+		app:  app,
+		name: APP_STATE_SCALE_UP,
 	}
-}
 
+}
 func (scaleUp *StateScaleUp) OnEnter() {
 	logrus.Debug("state scaleUp OnEnter")
 
-	scaleUp.machine.App.EmitAppEvent(scaleUp.name)
+	scaleUp.app.EmitAppEvent(scaleUp.name)
 
-	scaleUp.currentSlotIndex = len(scaleUp.machine.App.GetSlots())
-	scaleUp.targetSlotIndex = int(scaleUp.machine.App.CurrentVersion.Instances) - 1
+	scaleUp.currentSlotIndex = len(scaleUp.app.GetSlots())
+	scaleUp.targetSlotIndex = int(scaleUp.app.CurrentVersion.Instances) - 1
 
-	scaleUp.currentSlot = NewSlot(scaleUp.machine.App, scaleUp.machine.App.CurrentVersion, scaleUp.currentSlotIndex)
-	scaleUp.machine.App.SetSlot(scaleUp.currentSlotIndex, scaleUp.currentSlot)
+	scaleUp.currentSlot = NewSlot(scaleUp.app, scaleUp.app.CurrentVersion, scaleUp.currentSlotIndex)
+	scaleUp.app.SetSlot(scaleUp.currentSlotIndex, scaleUp.currentSlot)
 	scaleUp.currentSlot.DispatchNewTask(scaleUp.currentSlot.Version)
 }
 
@@ -44,13 +44,13 @@ func (scaleUp *StateScaleUp) Step() {
 	logrus.Debug("state scaleUp step")
 
 	if scaleUp.currentSlotIndex == scaleUp.targetSlotIndex && scaleUp.currentSlot.Healthy() {
-		scaleUp.machine.TransitTo(APP_STATE_NORMAL)
+		scaleUp.app.TransitTo(APP_STATE_NORMAL)
 	} else if scaleUp.currentSlot.Healthy() && scaleUp.currentSlotIndex < scaleUp.targetSlotIndex {
 		scaleUp.lock.Lock()
 
 		scaleUp.currentSlotIndex += 1
-		scaleUp.currentSlot = NewSlot(scaleUp.machine.App, scaleUp.machine.App.CurrentVersion, scaleUp.currentSlotIndex)
-		scaleUp.machine.App.SetSlot(scaleUp.currentSlotIndex, scaleUp.currentSlot)
+		scaleUp.currentSlot = NewSlot(scaleUp.app, scaleUp.app.CurrentVersion, scaleUp.currentSlotIndex)
+		scaleUp.app.SetSlot(scaleUp.currentSlotIndex, scaleUp.currentSlot)
 		scaleUp.currentSlot.DispatchNewTask(scaleUp.currentSlot.Version)
 
 		scaleUp.lock.Unlock()

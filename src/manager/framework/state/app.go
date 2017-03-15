@@ -100,8 +100,8 @@ func NewApp(version *types.Version,
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 
-	app.StateMachine = NewStateMachine(app)
-	app.StateMachine.Start()
+	app.StateMachine = NewStateMachine()
+	app.StateMachine.Start(NewStateCreating(app))
 
 	app.create()
 
@@ -130,7 +130,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	app.CurrentVersion.Instances = int32(len(app.slots) + newInstances)
 	app.Updated = time.Now()
 
-	return app.StateMachine.TransitTo(APP_STATE_SCALE_UP)
+	return app.TransitTo(APP_STATE_SCALE_UP)
 }
 
 func (app *App) ScaleDown(removeInstances int) error {
@@ -153,7 +153,7 @@ func (app *App) ScaleDown(removeInstances int) error {
 	app.CurrentVersion.Instances = int32(len(app.slots) - removeInstances)
 	app.Updated = time.Now()
 
-	return app.StateMachine.TransitTo(APP_STATE_SCALE_DOWN)
+	return app.TransitTo(APP_STATE_SCALE_DOWN)
 }
 
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
@@ -166,7 +166,7 @@ func (app *App) Delete() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	return app.StateMachine.TransitTo(APP_STATE_DELETING)
+	return app.TransitTo(APP_STATE_DELETING)
 }
 
 func (app *App) Update(version *types.Version, store store.Store) error {
@@ -194,7 +194,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
-	return app.StateMachine.TransitTo(APP_STATE_UPDATING, 1)
+	return app.TransitTo(APP_STATE_UPDATING, 1)
 }
 
 func (app *App) ProceedingRollingUpdate(instances int) error {
@@ -221,7 +221,7 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 	app.BeginTx()
 	defer app.Commit()
 
-	return app.StateMachine.TransitTo(APP_STATE_UPDATING, instances)
+	return app.TransitTo(APP_STATE_UPDATING, instances)
 }
 
 func (app *App) CancelUpdate() error {
@@ -237,7 +237,7 @@ func (app *App) CancelUpdate() error {
 	app.BeginTx()
 	defer app.Commit()
 
-	return app.StateMachine.TransitTo(APP_STATE_CANCEL_UPDATE)
+	return app.TransitTo(APP_STATE_CANCEL_UPDATE)
 }
 
 func (app *App) ServiceDiscoveryURL() string {
@@ -288,6 +288,10 @@ func (app *App) StateIs(state string) bool {
 	return app.StateMachine.Is(state)
 }
 
+func (app *App) TransitTo(targetState string, args ...interface{}) error {
+	return app.StateMachine.TransitTo(app.stateFactory(targetState, args...))
+}
+
 func (app *App) RemoveSlot(index int) {
 	if slot, found := app.GetSlot(index); found {
 		OfferAllocatorInstance().RemoveSlotFromAllocator(slot)
@@ -298,6 +302,32 @@ func (app *App) RemoveSlot(index int) {
 		app.slotsLock.Unlock()
 
 		app.Touch(false)
+	}
+}
+
+func (app *App) stateFactory(stateName string, args ...interface{}) State {
+	switch stateName {
+	case APP_STATE_NORMAL:
+		return NewStateNormal(app)
+	case APP_STATE_CREATING:
+		return NewStateCreating(app)
+	case APP_STATE_DELETING:
+		return NewStateDeleting(app)
+	case APP_STATE_SCALE_UP:
+		return NewStateScaleUp(app)
+	case APP_STATE_SCALE_DOWN:
+		return NewStateScaleDown(app)
+	case APP_STATE_UPDATING:
+		slotCountNeedUpdate, ok := args[0].(int)
+		if !ok {
+			slotCountNeedUpdate = 1
+		}
+		return NewStateUpdating(app, slotCountNeedUpdate)
+
+	case APP_STATE_CANCEL_UPDATE:
+		return NewStateCancelUpdate(app)
+	default:
+		panic(errors.New("unrecognized state"))
 	}
 }
 

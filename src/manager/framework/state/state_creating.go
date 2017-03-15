@@ -7,8 +7,8 @@ import (
 )
 
 type StateCreating struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 
 	currentSlot      *Slot
 	currentSlotIndex int
@@ -16,23 +16,23 @@ type StateCreating struct {
 	lock             sync.Mutex
 }
 
-func NewStateCreating(machine *StateMachine) *StateCreating {
+func NewStateCreating(app *App) *StateCreating {
 	return &StateCreating{
-		machine: machine,
-		name:    APP_STATE_CREATING,
+		app:  app,
+		name: APP_STATE_CREATING,
 	}
 }
 
 func (creating *StateCreating) OnEnter() {
 	logrus.Debug("state creating OnEnter")
 
-	creating.machine.App.EmitAppEvent(creating.name)
+	creating.app.EmitAppEvent(creating.name)
 
 	creating.currentSlotIndex = 0
-	creating.targetSlotIndex = int(creating.machine.App.CurrentVersion.Instances) - 1
+	creating.targetSlotIndex = int(creating.app.CurrentVersion.Instances) - 1
 
-	creating.currentSlot = NewSlot(creating.machine.App, creating.machine.App.CurrentVersion, creating.currentSlotIndex)
-	creating.machine.App.SetSlot(creating.currentSlotIndex, creating.currentSlot)
+	creating.currentSlot = NewSlot(creating.app, creating.app.CurrentVersion, creating.currentSlotIndex)
+	creating.app.SetSlot(creating.currentSlotIndex, creating.currentSlot)
 	creating.currentSlot.DispatchNewTask(creating.currentSlot.Version)
 }
 
@@ -44,13 +44,13 @@ func (creating *StateCreating) Step() {
 	logrus.Debug("state creating step")
 
 	if creating.currentSlotIndex == creating.targetSlotIndex && creating.currentSlot.Healthy() {
-		creating.machine.TransitTo(APP_STATE_NORMAL)
+		creating.app.TransitTo(APP_STATE_NORMAL)
 	} else if creating.currentSlot.Healthy() && creating.currentSlotIndex < creating.targetSlotIndex {
 		creating.lock.Lock()
 
 		creating.currentSlotIndex += 1
-		creating.currentSlot = NewSlot(creating.machine.App, creating.machine.App.CurrentVersion, creating.currentSlotIndex)
-		creating.machine.App.SetSlot(creating.currentSlotIndex, creating.currentSlot)
+		creating.currentSlot = NewSlot(creating.app, creating.app.CurrentVersion, creating.currentSlotIndex)
+		creating.app.SetSlot(creating.currentSlotIndex, creating.currentSlot)
 		creating.currentSlot.DispatchNewTask(creating.currentSlot.Version)
 
 		creating.lock.Unlock()

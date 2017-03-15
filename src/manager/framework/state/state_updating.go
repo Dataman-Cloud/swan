@@ -16,8 +16,8 @@ var ValidNextTransitionState = []string{
 }
 
 type StateUpdating struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 
 	currentSlot         *Slot
 	currentSlotIndex    int
@@ -26,9 +26,9 @@ type StateUpdating struct {
 	lock                sync.Mutex
 }
 
-func NewStateUpdating(machine *StateMachine, slotCountNeedUpdate int) *StateUpdating {
+func NewStateUpdating(app *App, slotCountNeedUpdate int) *StateUpdating {
 	return &StateUpdating{
-		machine:             machine,
+		app:                 app,
 		name:                APP_STATE_UPDATING,
 		slotCountNeedUpdate: slotCountNeedUpdate,
 	}
@@ -37,11 +37,11 @@ func NewStateUpdating(machine *StateMachine, slotCountNeedUpdate int) *StateUpda
 func (updating *StateUpdating) OnEnter() {
 	logrus.Debug("state updating OnEnter")
 
-	updating.machine.App.EmitAppEvent(updating.name)
+	updating.app.EmitAppEvent(updating.name)
 
 	updating.currentSlotIndex = -1
-	for index, slot := range updating.machine.App.GetSlots() {
-		if slot.Version == updating.machine.App.ProposedVersion {
+	for index, slot := range updating.app.GetSlots() {
+		if slot.Version == updating.app.ProposedVersion {
 			updating.currentSlotIndex = index + 1
 		}
 	}
@@ -51,7 +51,7 @@ func (updating *StateUpdating) OnEnter() {
 	}
 	updating.targetSlotIndex = updating.currentSlotIndex + updating.slotCountNeedUpdate - 1
 
-	updating.currentSlot, _ = updating.machine.App.GetSlot(updating.currentSlotIndex)
+	updating.currentSlot, _ = updating.app.GetSlot(updating.currentSlotIndex)
 	updating.currentSlot.KillTask()
 }
 
@@ -70,27 +70,27 @@ func (updating *StateUpdating) Step() {
 
 		logrus.Infof("archive current task")
 		updating.currentSlot.Archive()
-		updating.currentSlot.DispatchNewTask(updating.machine.App.ProposedVersion)
+		updating.currentSlot.DispatchNewTask(updating.app.ProposedVersion)
 
 	} else if updating.currentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
 		updating.currentSlot.Healthy() &&
 		updating.currentSlotIndex < updating.targetSlotIndex {
 
 		updating.currentSlotIndex += 1
-		updating.currentSlot, _ = updating.machine.App.GetSlot(updating.currentSlotIndex)
+		updating.currentSlot, _ = updating.app.GetSlot(updating.currentSlotIndex)
 		updating.currentSlot.KillTask()
 
 	} else if updating.currentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
 		updating.currentSlot.Healthy() &&
 		updating.currentSlotIndex == updating.targetSlotIndex {
 
-		if updating.currentSlotIndex == len(updating.machine.App.GetSlots())-1 {
+		if updating.currentSlotIndex == len(updating.app.GetSlots())-1 {
 			logrus.Debug("state updating step, updating done,  all slots updated")
 
-			updating.machine.App.CurrentVersion = updating.machine.App.ProposedVersion
-			updating.machine.App.Versions = append(updating.machine.App.Versions, updating.machine.App.CurrentVersion)
-			updating.machine.App.ProposedVersion = nil
-			updating.machine.TransitTo(APP_STATE_NORMAL)
+			updating.app.CurrentVersion = updating.app.ProposedVersion
+			updating.app.Versions = append(updating.app.Versions, updating.app.CurrentVersion)
+			updating.app.ProposedVersion = nil
+			updating.app.TransitTo(APP_STATE_NORMAL)
 
 		} else {
 			logrus.Debug("state updating step, updating done,  not all slots updated")

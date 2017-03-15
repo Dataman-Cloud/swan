@@ -5,21 +5,21 @@ import (
 )
 
 type StateNormal struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 }
 
-func NewStateNormal(machine *StateMachine) *StateNormal {
+func NewStateNormal(app *App) *StateNormal {
 	return &StateNormal{
-		machine: machine,
-		name:    APP_STATE_NORMAL,
+		app:  app,
+		name: APP_STATE_NORMAL,
 	}
 }
 
 func (normal *StateNormal) OnEnter() {
 	logrus.Debug("state normal OnEnter")
 
-	normal.machine.App.EmitAppEvent(normal.name)
+	normal.app.EmitAppEvent(normal.name)
 }
 
 func (normal *StateNormal) OnExit() {

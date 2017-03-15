@@ -7,8 +7,8 @@ import (
 )
 
 type StateScaleDown struct {
-	name    string
-	machine *StateMachine
+	name string
+	app  *App
 
 	currentSlot      *Slot
 	currentSlotIndex int
@@ -16,24 +16,24 @@ type StateScaleDown struct {
 	lock             sync.Mutex
 }
 
-func NewStateScaleDown(machine *StateMachine) *StateScaleDown {
+func NewStateScaleDown(app *App) *StateScaleDown {
 	return &StateScaleDown{
-		machine: machine,
-		name:    APP_STATE_SCALE_DOWN,
+		app:  app,
+		name: APP_STATE_SCALE_DOWN,
 	}
 }
 
 func (scaleDown *StateScaleDown) OnEnter() {
 	logrus.Debug("state scaleDown OnEnter")
 
-	scaleDown.machine.App.EmitAppEvent(scaleDown.name)
+	scaleDown.app.EmitAppEvent(scaleDown.name)
 
-	scaleDown.currentSlotIndex = len(scaleDown.machine.App.GetSlots()) - 1
-	scaleDown.targetSlotIndex = int(scaleDown.machine.App.CurrentVersion.Instances)
+	scaleDown.currentSlotIndex = len(scaleDown.app.GetSlots()) - 1
+	scaleDown.targetSlotIndex = int(scaleDown.app.CurrentVersion.Instances)
 
-	scaleDown.currentSlot = NewSlot(scaleDown.machine.App, scaleDown.machine.App.CurrentVersion, scaleDown.currentSlotIndex)
+	scaleDown.currentSlot = NewSlot(scaleDown.app, scaleDown.app.CurrentVersion, scaleDown.currentSlotIndex)
 
-	scaleDown.currentSlot, _ = scaleDown.machine.App.GetSlot(scaleDown.currentSlotIndex)
+	scaleDown.currentSlot, _ = scaleDown.app.GetSlot(scaleDown.currentSlotIndex)
 	scaleDown.currentSlot.KillTask()
 }
 
@@ -45,14 +45,14 @@ func (scaleDown *StateScaleDown) Step() {
 	logrus.Debug("state scaleDown step")
 
 	if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && scaleDown.currentSlotIndex == scaleDown.targetSlotIndex {
-		scaleDown.machine.App.RemoveSlot(scaleDown.currentSlotIndex)
-		scaleDown.machine.App.StateMachine.TransitTo(APP_STATE_NORMAL)
+		scaleDown.app.RemoveSlot(scaleDown.currentSlotIndex)
+		scaleDown.app.TransitTo(APP_STATE_NORMAL)
 	} else if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && (scaleDown.currentSlotIndex > scaleDown.targetSlotIndex) {
 		scaleDown.lock.Lock()
 
-		scaleDown.machine.App.RemoveSlot(scaleDown.currentSlotIndex)
+		scaleDown.app.RemoveSlot(scaleDown.currentSlotIndex)
 		scaleDown.currentSlotIndex -= 1
-		scaleDown.currentSlot, _ = scaleDown.machine.App.GetSlot(scaleDown.currentSlotIndex)
+		scaleDown.currentSlot, _ = scaleDown.app.GetSlot(scaleDown.currentSlotIndex)
 		scaleDown.currentSlot.KillTask()
 
 		scaleDown.lock.Unlock()
