@@ -51,6 +51,7 @@
   "healthCheck": 
     {
       "protocol": "http",
+      "path": "/",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 1,
