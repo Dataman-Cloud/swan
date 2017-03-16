@@ -23,9 +23,7 @@ type StateMachine struct {
 
 // default state for a new statemachine is creating
 func NewStateMachine() *StateMachine {
-	machine := &StateMachine{}
-
-	return machine
+	return &StateMachine{}
 }
 
 func (machine *StateMachine) Start(startState State) {
@@ -33,9 +31,8 @@ func (machine *StateMachine) Start(startState State) {
 	machine.state.OnEnter()
 }
 
-// return the current state of machine in readable format
-func (machine *StateMachine) ReadableState() string {
-	return machine.state.Name()
+func (machine *StateMachine) CurrentState() State {
+	return machine.state
 }
 
 // test if targetState is changable
@@ -43,15 +40,23 @@ func (machine *StateMachine) CanTransitTo(targetStateString string) bool {
 	return machine.state.CanTransitTo(targetStateString)
 }
 
+func (machine *StateMachine) ReadableState() string {
+	if machine != nil && machine.state != nil {
+		return machine.state.StateName()
+	} else {
+		return ""
+	}
+}
+
 // test machine.state is stateExpected
 func (machine *StateMachine) Is(stateExpected string) bool {
-	return machine.state.Name() == stateExpected
+	return machine.state.StateName() == stateExpected
 }
 
 // transition from one state to another,  return error if not a valid
 // transtion condition
 func (machine *StateMachine) TransitTo(targetState State) error {
-	if machine.state.CanTransitTo(targetState.Name()) {
+	if machine.state.CanTransitTo(targetState.StateName()) {
 		defer machine.lock.Unlock()
 		machine.lock.Lock()
 
@@ -61,7 +66,7 @@ func (machine *StateMachine) TransitTo(targetState State) error {
 
 		return nil
 	} else {
-		return errors.New(fmt.Sprintf("cann't transit from state: %s to state: %s", machine.state.Name(), targetState.Name()))
+		return errors.New(fmt.Sprintf("cann't transit from state: %s to state: %s", machine.state.StateName(), targetState.StateName()))
 	}
 }
 
@@ -74,7 +79,7 @@ type State interface {
 	OnEnter()
 	OnExit()
 
-	Name() string
+	StateName() string
 	Step()
 	CanTransitTo(targetState string) bool
 }

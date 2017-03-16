@@ -235,7 +235,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 func (api *AppService) GetApp(request *restful.Request, response *restful.Response) {
 	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
 	if err != nil {
-		logrus.Errorf("Get app error: %s", err.Error())
+		logrus.Debugf("Get app error: %s", err.Error())
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}

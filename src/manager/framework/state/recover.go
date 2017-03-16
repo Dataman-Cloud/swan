@@ -24,7 +24,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 			Name:    raftApp.Name,
 			Created: time.Unix(0, raftApp.CreatedAt),
 			Updated: time.Unix(0, raftApp.UpdatedAt),
-			slots:   make(map[int]*Slot),
+			Slots:   make(map[int]*Slot),
 		}
 
 		app.UserEventChan = userEventChan
@@ -60,7 +60,11 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 		}
 
 		for _, slot := range slots {
-			app.SetSlot(int(slot.Index), slot)
+			app.Slots[int(slot.Index)] = slot
+		}
+
+		if raftApp.StateMachine != nil {
+			app.StateMachine = StateMachineFromRaft(app, raftApp.StateMachine)
 		}
 
 		apps[app.ID] = app

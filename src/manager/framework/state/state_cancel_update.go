@@ -7,37 +7,37 @@ import (
 )
 
 type StateCancelUpdate struct {
-	name string
-	app  *App
+	Name string
+	App  *App
 
-	currentSlot      *Slot
-	currentSlotIndex int
-	targetSlotIndex  int
+	CurrentSlot      *Slot
+	CurrentSlotIndex int
+	TargetSlotIndex  int
 	lock             sync.Mutex
 }
 
 func NewStateCancelUpdate(app *App) *StateCancelUpdate {
 	return &StateCancelUpdate{
-		app:  app,
-		name: APP_STATE_CANCEL_UPDATE,
+		App:  app,
+		Name: APP_STATE_CANCEL_UPDATE,
 	}
 }
 
 func (cancelUpdate *StateCancelUpdate) OnEnter() {
 	logrus.Debug("state cancelUpdate OnEnter")
 
-	cancelUpdate.app.EmitAppEvent(cancelUpdate.name)
+	cancelUpdate.App.EmitAppEvent(cancelUpdate.Name)
 
-	cancelUpdate.targetSlotIndex = 0
-	for index, slot := range cancelUpdate.app.GetSlots() {
-		if slot.Version == cancelUpdate.app.CurrentVersion {
-			cancelUpdate.currentSlotIndex = index - 1
+	cancelUpdate.TargetSlotIndex = 0
+	for index, slot := range cancelUpdate.App.GetSlots() {
+		if slot.Version == cancelUpdate.App.CurrentVersion {
+			cancelUpdate.CurrentSlotIndex = index - 1
 			break
 		}
 	}
 
-	cancelUpdate.currentSlot, _ = cancelUpdate.app.GetSlot(cancelUpdate.currentSlotIndex)
-	cancelUpdate.currentSlot.KillTask()
+	cancelUpdate.CurrentSlot, _ = cancelUpdate.App.GetSlot(cancelUpdate.CurrentSlotIndex)
+	cancelUpdate.CurrentSlot.KillTask()
 }
 
 func (cancelUpdate *StateCancelUpdate) OnExit() {
@@ -48,48 +48,48 @@ func (cancelUpdate *StateCancelUpdate) Step() {
 	logrus.Debug("state cancelUpdate step")
 
 	// when slot down but not the last one
-	if (cancelUpdate.currentSlot.StateIs(SLOT_STATE_REAP) ||
-		cancelUpdate.currentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		cancelUpdate.currentSlot.Abnormal()) &&
-		cancelUpdate.currentSlotIndex > cancelUpdate.targetSlotIndex {
+	if (cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_REAP) ||
+		cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		cancelUpdate.CurrentSlot.Abnormal()) &&
+		cancelUpdate.CurrentSlotIndex > cancelUpdate.TargetSlotIndex {
 
 		logrus.Infof("archive current task")
-		cancelUpdate.currentSlot.Archive()
-		cancelUpdate.currentSlot.DispatchNewTask(cancelUpdate.app.CurrentVersion)
+		cancelUpdate.CurrentSlot.Archive()
+		cancelUpdate.CurrentSlot.DispatchNewTask(cancelUpdate.App.CurrentVersion)
 
 		// when slot get running and pass health check
-	} else if cancelUpdate.currentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
-		cancelUpdate.currentSlot.Healthy() &&
-		cancelUpdate.currentSlotIndex > cancelUpdate.targetSlotIndex {
+	} else if cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
+		cancelUpdate.CurrentSlot.Healthy() &&
+		cancelUpdate.CurrentSlotIndex > cancelUpdate.TargetSlotIndex {
 
-		cancelUpdate.currentSlotIndex -= 1
-		cancelUpdate.currentSlot, _ = cancelUpdate.app.GetSlot(cancelUpdate.currentSlotIndex)
-		cancelUpdate.currentSlot.KillTask()
+		cancelUpdate.CurrentSlotIndex -= 1
+		cancelUpdate.CurrentSlot, _ = cancelUpdate.App.GetSlot(cancelUpdate.CurrentSlotIndex)
+		cancelUpdate.CurrentSlot.KillTask()
 
 		// when last slot got killed
-	} else if (cancelUpdate.currentSlot.StateIs(SLOT_STATE_REAP) ||
-		cancelUpdate.currentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		cancelUpdate.currentSlot.Abnormal()) &&
-		cancelUpdate.currentSlotIndex == cancelUpdate.targetSlotIndex {
+	} else if (cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_REAP) ||
+		cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		cancelUpdate.CurrentSlot.Abnormal()) &&
+		cancelUpdate.CurrentSlotIndex == cancelUpdate.TargetSlotIndex {
 
 		logrus.Infof("archive current task")
-		cancelUpdate.currentSlot.Archive()
-		cancelUpdate.currentSlot.DispatchNewTask(cancelUpdate.app.CurrentVersion)
+		cancelUpdate.CurrentSlot.Archive()
+		cancelUpdate.CurrentSlot.DispatchNewTask(cancelUpdate.App.CurrentVersion)
 
 		// when last slot got restarted
-	} else if cancelUpdate.currentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
-		cancelUpdate.currentSlot.Healthy() &&
-		cancelUpdate.currentSlotIndex == cancelUpdate.targetSlotIndex {
-		cancelUpdate.app.ProposedVersion = nil
-		cancelUpdate.app.TransitTo(APP_STATE_NORMAL)
+	} else if cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
+		cancelUpdate.CurrentSlot.Healthy() &&
+		cancelUpdate.CurrentSlotIndex == cancelUpdate.TargetSlotIndex {
+		cancelUpdate.App.ProposedVersion = nil
+		cancelUpdate.App.TransitTo(APP_STATE_NORMAL)
 
 	} else {
 		logrus.Info("state cancelUpdate step, do nothing")
 	}
 }
 
-func (cancelUpdate *StateCancelUpdate) Name() string {
-	return cancelUpdate.name
+func (cancelUpdate *StateCancelUpdate) StateName() string {
+	return cancelUpdate.Name
 }
 
 // state machine can transit to any state if current state is cancelUpdate

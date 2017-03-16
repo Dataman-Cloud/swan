@@ -7,34 +7,34 @@ import (
 )
 
 type StateScaleDown struct {
-	name string
-	app  *App
+	Name string
+	App  *App
 
-	currentSlot      *Slot
-	currentSlotIndex int
-	targetSlotIndex  int
+	CurrentSlot      *Slot
+	CurrentSlotIndex int
+	TargetSlotIndex  int
 	lock             sync.Mutex
 }
 
 func NewStateScaleDown(app *App) *StateScaleDown {
 	return &StateScaleDown{
-		app:  app,
-		name: APP_STATE_SCALE_DOWN,
+		App:  app,
+		Name: APP_STATE_SCALE_DOWN,
 	}
 }
 
 func (scaleDown *StateScaleDown) OnEnter() {
 	logrus.Debug("state scaleDown OnEnter")
 
-	scaleDown.app.EmitAppEvent(scaleDown.name)
+	scaleDown.App.EmitAppEvent(scaleDown.Name)
 
-	scaleDown.currentSlotIndex = len(scaleDown.app.GetSlots()) - 1
-	scaleDown.targetSlotIndex = int(scaleDown.app.CurrentVersion.Instances)
+	scaleDown.CurrentSlotIndex = len(scaleDown.App.GetSlots()) - 1
+	scaleDown.TargetSlotIndex = int(scaleDown.App.CurrentVersion.Instances)
 
-	scaleDown.currentSlot = NewSlot(scaleDown.app, scaleDown.app.CurrentVersion, scaleDown.currentSlotIndex)
+	scaleDown.CurrentSlot = NewSlot(scaleDown.App, scaleDown.App.CurrentVersion, scaleDown.CurrentSlotIndex)
 
-	scaleDown.currentSlot, _ = scaleDown.app.GetSlot(scaleDown.currentSlotIndex)
-	scaleDown.currentSlot.KillTask()
+	scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
+	scaleDown.CurrentSlot.KillTask()
 }
 
 func (scaleDown *StateScaleDown) OnExit() {
@@ -44,16 +44,16 @@ func (scaleDown *StateScaleDown) OnExit() {
 func (scaleDown *StateScaleDown) Step() {
 	logrus.Debug("state scaleDown step")
 
-	if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && scaleDown.currentSlotIndex == scaleDown.targetSlotIndex {
-		scaleDown.app.RemoveSlot(scaleDown.currentSlotIndex)
-		scaleDown.app.TransitTo(APP_STATE_NORMAL)
-	} else if scaleDown.SlotSafeToRemoveFromApp(scaleDown.currentSlot) && (scaleDown.currentSlotIndex > scaleDown.targetSlotIndex) {
+	if scaleDown.SlotSafeToRemoveFromApp(scaleDown.CurrentSlot) && scaleDown.CurrentSlotIndex == scaleDown.TargetSlotIndex {
+		scaleDown.App.RemoveSlot(scaleDown.CurrentSlotIndex)
+		scaleDown.App.TransitTo(APP_STATE_NORMAL)
+	} else if scaleDown.SlotSafeToRemoveFromApp(scaleDown.CurrentSlot) && (scaleDown.CurrentSlotIndex > scaleDown.TargetSlotIndex) {
 		scaleDown.lock.Lock()
 
-		scaleDown.app.RemoveSlot(scaleDown.currentSlotIndex)
-		scaleDown.currentSlotIndex -= 1
-		scaleDown.currentSlot, _ = scaleDown.app.GetSlot(scaleDown.currentSlotIndex)
-		scaleDown.currentSlot.KillTask()
+		scaleDown.App.RemoveSlot(scaleDown.CurrentSlotIndex)
+		scaleDown.CurrentSlotIndex -= 1
+		scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
+		scaleDown.CurrentSlot.KillTask()
 
 		scaleDown.lock.Unlock()
 	} else {
@@ -65,8 +65,8 @@ func (scaleDown *StateScaleDown) SlotSafeToRemoveFromApp(slot *Slot) bool {
 	return slot.StateIs(SLOT_STATE_REAP) || slot.Abnormal()
 }
 
-func (scaleDown *StateScaleDown) Name() string {
-	return scaleDown.name
+func (scaleDown *StateScaleDown) StateName() string {
+	return scaleDown.Name
 }
 
 // state machine can transit to any state if current state is scaleDown

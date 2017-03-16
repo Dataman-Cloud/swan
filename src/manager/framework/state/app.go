@@ -39,7 +39,7 @@ type App struct {
 	Versions []*types.Version `json:"versions"`
 
 	slotsLock sync.Mutex
-	slots     map[int]*Slot `json:"slots"`
+	Slots     map[int]*Slot `json:"slots"`
 
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
@@ -81,7 +81,7 @@ func NewApp(version *types.Version,
 
 	app := &App{
 		Versions:       []*types.Version{},
-		slots:          make(map[int]*Slot),
+		Slots:          make(map[int]*Slot),
 		CurrentVersion: version,
 		ID:             appID,
 		Name:           version.AppName,
@@ -127,7 +127,7 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	defer app.Commit()
 
 	app.CurrentVersion.IP = append(app.CurrentVersion.IP, newIps...)
-	app.CurrentVersion.Instances = int32(len(app.slots) + newInstances)
+	app.CurrentVersion.Instances = int32(len(app.Slots) + newInstances)
 	app.Updated = time.Now()
 
 	return app.TransitTo(APP_STATE_SCALE_UP)
@@ -143,14 +143,14 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return errors.New("please specify at least 1 task to scale-down")
 	}
 
-	if removeInstances > len(app.slots) {
+	if removeInstances > len(app.Slots) {
 		return fmt.Errorf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances)
 	}
 
 	app.BeginTx()
 	defer app.Commit()
 
-	app.CurrentVersion.Instances = int32(len(app.slots) - removeInstances)
+	app.CurrentVersion.Instances = int32(len(app.Slots) - removeInstances)
 	app.Updated = time.Now()
 
 	return app.TransitTo(APP_STATE_SCALE_DOWN)
@@ -203,15 +203,20 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
 	}
 
-	if instances < 1 {
-		return errors.New("please specify how many instance want proceeding the update")
-	}
-
 	updatedCount := 0
 	for index, slot := range app.GetSlots() {
 		if slot.Version == app.ProposedVersion {
 			updatedCount = index + 1
 		}
+	}
+
+	// when instances is -1, indicates all remaining
+	if instances == -1 {
+		instances = len(app.Slots) - updatedCount
+	}
+
+	if instances < 1 {
+		return errors.New("please specify how many instance want proceeding the update")
 	}
 
 	if updatedCount+instances > len(app.GetSlots()) {
@@ -289,7 +294,14 @@ func (app *App) StateIs(state string) bool {
 }
 
 func (app *App) TransitTo(targetState string, args ...interface{}) error {
-	return app.StateMachine.TransitTo(app.stateFactory(targetState, args...))
+	err := app.StateMachine.TransitTo(app.stateFactory(targetState, args...))
+	if err != nil {
+		return err
+	}
+
+	app.Touch(true)
+
+	return nil
 }
 
 func (app *App) RemoveSlot(index int) {
@@ -298,7 +310,7 @@ func (app *App) RemoveSlot(index int) {
 		slot.Remove()
 
 		app.slotsLock.Lock()
-		delete(app.slots, index)
+		delete(app.Slots, index)
 		app.slotsLock.Unlock()
 
 		app.Touch(false)
@@ -333,7 +345,7 @@ func (app *App) stateFactory(stateName string, args ...interface{}) State {
 
 func (app *App) GetSlots() []*Slot {
 	slots := make([]*Slot, 0)
-	for _, v := range app.slots {
+	for _, v := range app.Slots {
 		slots = append(slots, v)
 	}
 
@@ -344,13 +356,13 @@ func (app *App) GetSlots() []*Slot {
 }
 
 func (app *App) GetSlot(index int) (*Slot, bool) {
-	slot, ok := app.slots[index]
+	slot, ok := app.Slots[index]
 	return slot, ok
 }
 
 func (app *App) SetSlot(index int, slot *Slot) {
 	app.slotsLock.Lock()
-	app.slots[index] = slot
+	app.Slots[index] = slot
 	app.slotsLock.Unlock()
 
 	app.Touch(false)
@@ -358,6 +370,7 @@ func (app *App) SetSlot(index int, slot *Slot) {
 
 func (app *App) Step() {
 	app.StateMachine.Step()
+	app.Touch(false)
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion
