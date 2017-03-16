@@ -7,7 +7,7 @@
   "disk": 0,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 1,
+  "instances": 3,
   "constraints":"" ,
   "container": {
     "docker": {
@@ -48,7 +48,7 @@
   "killPolicy": {
     "duration": 5
   },
-  "healthCheck": 
+  "healthCheck":
     {
       "protocol": "http",
       "path": "/",

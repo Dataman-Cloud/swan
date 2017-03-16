@@ -20,9 +20,10 @@ message Application {
     Version version = 3;
     Version proposedVersion = 4;
     string clusterId = 5 [(gogoproto.customname) = "ClusterID"];
-    string state = 6;
+    StateMachine stateMachine = 6;
     int64 createdAt = 7;
     int64 updatedAt = 8;
+    string State = 9;
 }
 
 message Version {
@@ -149,4 +150,15 @@ message OfferAllocatorItem {
     string offerId = 2 [(gogoproto.customname) = "OfferID"];
     string hostname = 3 [(gogoproto.customname) = "Hostname"];
     string agentId = 4 [(gogoproto.customname) = "AgentID"];
+}
+
+message StateMachine {
+    State state = 1;
+}
+
+message State{
+  string name = 1;
+  int64 currentSlotIndex = 2;
+  int64 targetSlotIndex = 3;
+  int64 slotCountNeedUpdate = 4;
 }

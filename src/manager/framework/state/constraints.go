@@ -9,7 +9,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/utils"
 )
 
-//go:generate go tool yacc -o ./constraints_gen.go  ./constraints_parser.y
+//go:generate goyacc -o ./constraints_gen.go  ./constraints_parser.y
 
 var uniqWhat = []string{
 	"hostname",

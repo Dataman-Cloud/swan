@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -68,9 +68,6 @@ type Slot struct {
 
 	resourceReservationLock sync.Mutex
 
-	markForDeletion      bool
-	markForRollingUpdate bool
-
 	restartPolicy *RestartPolicy
 
 	healthy bool
@@ -78,6 +75,12 @@ type Slot struct {
 	inTransaction bool
 	touched       bool
 }
+
+type SlotsById []*Slot
+
+func (a SlotsById) Len() int           { return len(a) }
+func (a SlotsById) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a SlotsById) Less(i, j int) bool { return a[i].Index < a[j].Index }
 
 type SlotResource struct {
 	CPU  float64
@@ -94,9 +97,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		ID:          fmt.Sprintf("%d-%s", index, app.ID),
 
 		resourceReservationLock: sync.Mutex{},
-
-		markForRollingUpdate: false,
-		markForDeletion:      false,
 
 		inTransaction: false,
 		touched:       true,
@@ -140,23 +140,6 @@ func (slot *Slot) KillTask() {
 	}
 }
 
-// kill task and make slot sweeped after successfully kill task
-func (slot *Slot) Kill() {
-	slot.BeginTx()
-	defer slot.Commit()
-
-	slot.StopRestartPolicy()
-
-	slot.SetMarkForDeletion(true)
-
-	if slot.Dispatched() {
-		slot.SetState(SLOT_STATE_PENDING_KILL)
-		slot.CurrentTask.Kill()
-	} else {
-		slot.SetState(SLOT_STATE_REAP)
-	}
-}
-
 func (slot *Slot) Archive() {
 	slot.BeginTx()
 	defer slot.Commit()
@@ -175,18 +158,6 @@ func (slot *Slot) DispatchNewTask(version *types.Version) {
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	OfferAllocatorInstance().PutSlotBackToPendingQueue(slot)
-}
-
-func (slot *Slot) UpdateTask(version *types.Version, isRollingUpdate bool) {
-	logrus.Infof("update slot %s with version ID %s", slot.ID, version.ID)
-
-	slot.BeginTx()
-	defer slot.Commit()
-
-	slot.Version = version
-	slot.SetMarkForRollingUpdate(isRollingUpdate)
-
-	slot.KillTask() // kill task but doesn't clean slot
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
@@ -210,36 +181,6 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 		ow.CpuRemain() >= slot.Version.CPUs &&
 		ow.MemRemain() >= slot.Version.Mem &&
 		ow.DiskRemain() >= slot.Version.Disk
-}
-
-func (slot *Slot) filterConstraints(constraints []string) []string {
-	filteredConstraints := make([]string, 0)
-	for _, constraint := range constraints {
-		cons := strings.Split(constraint, ":")
-		if len(cons) > 3 || len(cons) < 2 {
-			logrus.Errorf("Malformed Constraints")
-			continue
-		}
-
-		if cons[1] != "UNIQUE" && cons[1] != "LIKE" {
-			logrus.Errorf("Constraints operator %s not supported", cons[1])
-			continue
-		}
-
-		if cons[1] == "UNIQUE" && strings.ToLower(cons[0]) != "hostname" {
-			logrus.Errorf("Constraints operator UNIQUE only support 'hostname': %s", cons[0])
-			continue
-		}
-
-		if cons[1] == "LIKE" && len(cons) < 3 {
-			logrus.Errorf("Constraints operator LIKE required two operands")
-			continue
-		}
-
-		filteredConstraints = append(filteredConstraints, constraint)
-	}
-
-	return filteredConstraints
 }
 
 func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrapper, *mesos.TaskInfo) {
@@ -319,71 +260,51 @@ func (slot *Slot) SetState(state string) error {
 	slot.State = state
 	switch slot.State {
 	case SLOT_STATE_PENDING_OFFER:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingOffer)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStatePendingOffer)
 	case SLOT_STATE_PENDING_KILL:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStatePendingKill)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStatePendingKill)
 	case SLOT_STATE_REAP:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateReap)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateReap)
 	case SLOT_STATE_TASK_STAGING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStaging)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateStaging)
 	case SLOT_STATE_TASK_STARTING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateStarting)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateStarting)
 	case SLOT_STATE_TASK_RUNNING:
 		if slot.Version.HealthCheck == nil {
 			slot.SetHealthy(true)
 		}
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateRunning)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateRunning)
 	case SLOT_STATE_TASK_KILLING:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilling)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilling)
 	case SLOT_STATE_TASK_FINISHED:
 		slot.StopRestartPolicy()
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFinished)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateFailed)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFailed)
 	case SLOT_STATE_TASK_KILLED:
 		slot.StopRestartPolicy()
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateKilled)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilled)
 	case SLOT_STATE_TASK_ERROR:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateError)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateError)
 	case SLOT_STATE_TASK_LOST:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateLost)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateLost)
 	case SLOT_STATE_TASK_DROPPED:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateDropped)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateDropped)
 	case SLOT_STATE_TASK_UNREACHABLE:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnreachable)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnreachable)
 	case SLOT_STATE_TASK_GONE:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGone)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGone)
 	case SLOT_STATE_TASK_GONE_BY_OPERATOR:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateGoneByOperator)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGoneByOperator)
 	case SLOT_STATE_TASK_UNKNOWN:
-		slot.EmitTaskEvent(swanevent.EventTypeTaskStateUnknown)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnknown)
 	default:
-	}
-
-	if slot.markForDeletion && (slot.StateIs(SLOT_STATE_REAP) ||
-		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
-		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
-		slot.StateIs(SLOT_STATE_TASK_LOST)) {
-		// TODO remove slot from OfferAllocator
-		logrus.Infof("removeSlot func")
-		slot.App.RemoveSlot(slot.Index)
-	}
-
-	if slot.markForRollingUpdate && (slot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
-		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
-		slot.StateIs(SLOT_STATE_TASK_LOST)) {
-		// TODO remove slot from OfferAllocator
-		logrus.Infof("archive current task")
-		slot.Archive()
-		slot.DispatchNewTask(slot.Version)
 	}
 
 	// skip app invalidation if slot state is not mesos driven
 	if (slot.State != SLOT_STATE_PENDING_OFFER) ||
 		(slot.State != SLOT_STATE_PENDING_KILL) {
-		slot.App.Reevaluate()
+		slot.App.Step()
 	}
 
 	slot.Touch(false)
@@ -402,28 +323,38 @@ func (slot *Slot) Abnormal() bool {
 		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
 		slot.StateIs(SLOT_STATE_TASK_LOST) ||
 		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_DROPPED) ||
+		slot.StateIs(SLOT_STATE_TASK_UNKNOWN) ||
+		slot.StateIs(SLOT_STATE_TASK_UNREACHABLE) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE_BY_OPERATOR) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
 		slot.StateIs(SLOT_STATE_REAP)
 }
 
 func (slot *Slot) Dispatched() bool {
 	return slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
 		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
-		slot.StateIs(SLOT_STATE_TASK_STAGING)
-}
-
-func (slot *Slot) Normal() bool {
-	return slot.StateIs(SLOT_STATE_PENDING_OFFER) ||
-		slot.StateIs(SLOT_STATE_TASK_RUNNING) ||
-		slot.StateIs(SLOT_STATE_TASK_STARTING) ||
-		slot.StateIs(SLOT_STATE_TASK_STAGING)
+		slot.StateIs(SLOT_STATE_TASK_STAGING) ||
+		slot.StateIs(SLOT_STATE_TASK_FAILED) ||
+		slot.StateIs(SLOT_STATE_TASK_LOST) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		slot.StateIs(SLOT_STATE_TASK_KILLED) ||
+		slot.StateIs(SLOT_STATE_TASK_DROPPED) ||
+		slot.StateIs(SLOT_STATE_TASK_UNKNOWN) ||
+		slot.StateIs(SLOT_STATE_TASK_UNREACHABLE) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE_BY_OPERATOR) ||
+		slot.StateIs(SLOT_STATE_TASK_GONE) ||
+		slot.StateIs(SLOT_STATE_TASK_FINISHED)
 }
 
 func (slot *Slot) EmitTaskEvent(eventType string) {
-	slot.App.EmitEvent(slot.BuildTaskEvent(eventType))
+	eventbus.WriteEvent(slot.BuildTaskEvent(eventType))
 }
 
-func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
-	e := &swanevent.Event{
+func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
+	e := &eventbus.Event{
 		Type:    eventType,
 		AppID:   slot.App.ID,
 		AppMode: string(slot.App.Mode),
@@ -455,10 +386,6 @@ func (slot *Slot) BuildTaskEvent(eventType string) *swanevent.Event {
 	return e
 }
 
-func (slot *Slot) MarkForRollingUpdate() bool {
-	return slot.markForRollingUpdate
-}
-
 func (slot *Slot) Healthy() bool {
 	return slot.healthy
 }
@@ -466,24 +393,10 @@ func (slot *Slot) Healthy() bool {
 func (slot *Slot) SetHealthy(healthy bool) {
 	slot.healthy = healthy
 	if healthy {
-		slot.EmitTaskEvent(swanevent.EventTypeTaskHealthy)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskHealthy)
 	} else {
-		slot.EmitTaskEvent(swanevent.EventTypeTaskUnhealthy)
+		slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
 	}
-	slot.Touch(false)
-}
-
-func (slot *Slot) MarkForDeletion() bool {
-	return slot.markForDeletion
-}
-
-func (slot *Slot) SetMarkForRollingUpdate(rollingUpdate bool) {
-	slot.markForRollingUpdate = rollingUpdate
-	slot.Touch(false)
-}
-
-func (slot *Slot) SetMarkForDeletion(deletion bool) {
-	slot.markForDeletion = deletion
 	slot.Touch(false)
 }
 

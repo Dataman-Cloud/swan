@@ -1,6 +1,7 @@
 package state
 
 import (
+	"reflect"
 	"time"
 
 	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
@@ -13,7 +14,6 @@ func AppToRaft(app *App) *rafttypes.Application {
 		Name:      app.Name,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
-		State:     app.State,
 	}
 
 	if app.CurrentVersion != nil {
@@ -22,6 +22,10 @@ func AppToRaft(app *App) *rafttypes.Application {
 
 	if app.ProposedVersion != nil {
 		raftApp.ProposedVersion = VersionToRaft(app.ProposedVersion, app.ID)
+	}
+
+	if app.StateMachine != nil {
+		raftApp.StateMachine = StateMachineToRaft(app.StateMachine)
 	}
 
 	return raftApp
@@ -323,14 +327,12 @@ func HealthCheckFromRaft(raftHealthCheck *rafttypes.HealthCheck) *types.HealthCh
 
 func SlotToRaft(slot *Slot) *rafttypes.Slot {
 	raftSlot := &rafttypes.Slot{
-		Index:                int32(slot.Index),
-		ID:                   slot.ID,
-		AppID:                slot.App.ID,
-		VersionID:            slot.Version.ID,
-		State:                slot.State,
-		MarkForDeletion:      slot.MarkForDeletion(),
-		MarkForRollingUpdate: slot.MarkForRollingUpdate(),
-		Healthy:              slot.Healthy(),
+		Index:     int32(slot.Index),
+		ID:        slot.ID,
+		AppID:     slot.App.ID,
+		VersionID: slot.Version.ID,
+		Healthy:   slot.Healthy(),
+		State:     slot.State,
 	}
 
 	if slot.CurrentTask != nil {
@@ -344,17 +346,15 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 
 func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 	slot := &Slot{
-		Index:                int(raftSlot.Index),
-		ID:                   raftSlot.ID,
-		State:                raftSlot.State,
-		CurrentTask:          TaskFromRaft(raftSlot.CurrentTask),
-		OfferID:              raftSlot.CurrentTask.OfferID,
-		AgentID:              raftSlot.CurrentTask.AgentID,
-		Ip:                   raftSlot.CurrentTask.Ip,
-		AgentHostName:        raftSlot.CurrentTask.AgentHostName,
-		markForDeletion:      raftSlot.MarkForDeletion,
-		markForRollingUpdate: raftSlot.MarkForRollingUpdate,
-		healthy:              raftSlot.Healthy,
+		Index:         int(raftSlot.Index),
+		ID:            raftSlot.ID,
+		State:         raftSlot.State,
+		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask),
+		OfferID:       raftSlot.CurrentTask.OfferID,
+		AgentID:       raftSlot.CurrentTask.AgentID,
+		Ip:            raftSlot.CurrentTask.Ip,
+		AgentHostName: raftSlot.CurrentTask.AgentHostName,
+		healthy:       raftSlot.Healthy,
 	}
 
 	raftVersion, err := persistentStore.GetVersion(raftSlot.AppID, raftSlot.VersionID)
@@ -427,4 +427,102 @@ func OfferAllocatorItemFromRaft(item *rafttypes.OfferAllocatorItem) (slotID stri
 		Hostname: item.Hostname,
 		AgentID:  item.AgentID,
 	}
+}
+
+func StateMachineFromRaft(app *App, machine *rafttypes.StateMachine) *StateMachine {
+	return &StateMachine{
+		state: StateFromRaft(app, machine.State),
+	}
+}
+
+func StateFromRaft(app *App, state *rafttypes.State) State {
+	slot, _ := app.GetSlot(int(state.CurrentSlotIndex))
+	switch state.Name {
+	case APP_STATE_NORMAL:
+		return &StateNormal{
+			App:  app,
+			Name: APP_STATE_NORMAL,
+		}
+	case APP_STATE_CREATING:
+		return &StateCreating{
+			App:              app,
+			Name:             APP_STATE_CREATING,
+			CurrentSlotIndex: int(state.CurrentSlotIndex),
+			CurrentSlot:      slot,
+			TargetSlotIndex:  int(state.TargetSlotIndex),
+		}
+	case APP_STATE_SCALE_UP:
+		return &StateScaleUp{
+			App:              app,
+			Name:             APP_STATE_SCALE_UP,
+			CurrentSlotIndex: int(state.CurrentSlotIndex),
+			CurrentSlot:      slot,
+			TargetSlotIndex:  int(state.TargetSlotIndex),
+		}
+	case APP_STATE_SCALE_DOWN:
+		return &StateScaleDown{
+			App:              app,
+			Name:             APP_STATE_SCALE_DOWN,
+			CurrentSlotIndex: int(state.CurrentSlotIndex),
+			CurrentSlot:      slot,
+			TargetSlotIndex:  int(state.TargetSlotIndex),
+		}
+	case APP_STATE_CANCEL_UPDATE:
+		return &StateCancelUpdate{
+			App:              app,
+			Name:             APP_STATE_CANCEL_UPDATE,
+			CurrentSlotIndex: int(state.CurrentSlotIndex),
+			CurrentSlot:      slot,
+			TargetSlotIndex:  int(state.TargetSlotIndex),
+		}
+	case APP_STATE_UPDATING:
+		return &StateUpdating{
+			App:                 app,
+			Name:                APP_STATE_UPDATING,
+			CurrentSlotIndex:    int(state.CurrentSlotIndex),
+			CurrentSlot:         slot,
+			TargetSlotIndex:     int(state.TargetSlotIndex),
+			SlotCountNeedUpdate: int(state.SlotCountNeedUpdate),
+		}
+
+	case APP_STATE_DELETING:
+		return &StateDeleting{
+			App:              app,
+			Name:             APP_STATE_DELETING,
+			CurrentSlotIndex: int(state.CurrentSlotIndex),
+			CurrentSlot:      slot,
+			TargetSlotIndex:  int(state.TargetSlotIndex),
+		}
+	default:
+		return nil
+	}
+}
+
+func StateMachineToRaft(machine *StateMachine) *rafttypes.StateMachine {
+	return &rafttypes.StateMachine{
+		State: StateToRaft(machine.CurrentState()),
+	}
+}
+
+func StateToRaft(state State) *rafttypes.State {
+	stateObj := reflect.ValueOf(state).Elem()
+	typeOfT := stateObj.Type()
+	raftState := &rafttypes.State{}
+
+	for i := 0; i < stateObj.NumField(); i++ {
+		f := stateObj.Field(i)
+		switch typeOfT.Field(i).Name {
+		case "Name":
+			raftState.Name = f.Interface().(string)
+		case "CurrentSlotIndex":
+			raftState.CurrentSlotIndex = int64(f.Interface().(int))
+		case "TargetSlotIndex":
+			raftState.TargetSlotIndex = int64(f.Interface().(int))
+		case "SlotCountNeedUpdate":
+			raftState.SlotCountNeedUpdate = int64(f.Interface().(int))
+		default:
+		}
+	}
+
+	return raftState
 }

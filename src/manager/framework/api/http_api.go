@@ -235,7 +235,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 func (api *AppService) GetApp(request *restful.Request, response *restful.Response) {
 	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
 	if err != nil {
-		logrus.Errorf("Get app error: %s", err.Error())
+		logrus.Debugf("Get app error: %s", err.Error())
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
@@ -507,19 +507,25 @@ func getServiceDiscoveries(app *state.App) []types.ServiceDiscovery {
 }
 
 func FormApp(app *state.App) *types.App {
+	runningInstances := 0
+	for _, slot := range app.GetSlots() {
+		if slot.State == state.SLOT_STATE_TASK_RUNNING {
+			runningInstances = runningInstances + 1
+		}
+	}
 	version := app.CurrentVersion
 	appRet := &types.App{
 		ID:               app.ID,
 		Name:             app.Name,
 		Instances:        int(version.Instances),
-		RunningInstances: app.RunningInstances(),
+		RunningInstances: runningInstances,
 		RunAs:            version.RunAs,
 		Priority:         int(version.Priority),
 		ClusterID:        app.ClusterID,
 		Created:          app.Created,
 		Updated:          app.Updated,
 		Mode:             string(app.Mode),
-		State:            app.State,
+		State:            app.StateMachine.ReadableState(),
 		CurrentVersion:   app.CurrentVersion,
 		ProposedVersion:  app.ProposedVersion,
 		Labels:           version.Labels,

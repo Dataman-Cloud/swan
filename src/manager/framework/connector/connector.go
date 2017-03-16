@@ -176,7 +176,7 @@ func getMastersFromZK(zkPath string) ([]string, error) {
 		return nil, err
 	}
 
-	conn, _, err := zk.Connect(strings.Split(url.Host, ","), time.Second)
+	conn, _, err := zk.Connect(strings.Split(url.Host, ","), 5*time.Second)
 	defer conn.Close()
 	if err != nil {
 		return nil, err

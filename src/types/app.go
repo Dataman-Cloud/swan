@@ -20,7 +20,7 @@ type App struct {
 	Created          time.Time `json:"created,omitempty"`
 	Updated          time.Time `json:"updated,omitempty"`
 	Mode             string    `json:"mode,omitempty"`
-	State            string    `json:"state"`
+	State            string    `json:"state,omitempty"`
 
 	// use task for compatability now, should be slot here
 	Tasks          []*Task  `json:"tasks,omitempty"`
