@@ -397,6 +397,7 @@ func (slot *Slot) SetHealthy(healthy bool) {
 	} else {
 		slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
 	}
+	slot.App.Step() // step forward state-machine
 	slot.Touch(false)
 }
 
