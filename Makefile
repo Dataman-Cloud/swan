@@ -1,5 +1,5 @@
 PACKAGES = $(shell go list ./...)
-TEST_PACKAGES = $(shell go list ./... | grep -v vendor)
+TEST_PACKAGES = $(shell go list ./src/... | grep -v vendor)
 
 .PHONY: build fmt test test-cover-html test-cover-func collect-cover-data
 
