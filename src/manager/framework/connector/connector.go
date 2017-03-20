@@ -59,7 +59,7 @@ func Instance() *Connector {
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
-				FailoverTimeout: proto.Float64(60),
+				FailoverTimeout: proto.Float64(60 * 10),
 				Checkpoint:      proto.Bool(false),
 				Hostname:        proto.String(hostname),
 				Capabilities: []*mesos.FrameworkInfo_Capability{
