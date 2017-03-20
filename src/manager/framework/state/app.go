@@ -494,7 +494,7 @@ func validateAndFormatVersion(version *types.Version) error {
 			protocol, portName := version.HealthCheck.Protocol, version.HealthCheck.PortName
 			// portName should present in dockers' portMappings definition
 			if !utils.SliceContains(portNames, portName) {
-				return fmt.Errorf("no port name %s found in docker's PortMappings", portName)
+				return fmt.Errorf("portname in healthCheck section should match that defined in portMappings")
 			}
 
 			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, protocol) {
