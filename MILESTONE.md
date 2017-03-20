@@ -41,7 +41,7 @@ milestones we set ahead.
   - **[IMPROVE]** supprt host mode network for replicates app
 
 
-### \#4 feature improvement & `Swan` stabilization 3 (3-10-2017)
+### \#4 feature improvement & `Swan` stabilization 4 (3-10-2017)
 
   - **[IMPROVE]** rolling update, deletion, scale should not in batch
     but one after another
@@ -50,3 +50,9 @@ milestones we set ahead.
   - **[IMPROVE]** revisit dns
 
 
+### \#5 feature improvement & stabilization phase 5 (3-20-2017)
+
+  - **[Testing]** increase unit testing cover rate up to 50%
+  - **[HA]** test HA mode in production alike environment
+  - **[Desgin]** design for service/app group feature
+  
