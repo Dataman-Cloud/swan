@@ -1,6 +1,7 @@
 package event
 
 import (
+	"errors"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -16,15 +17,23 @@ type EventBus struct {
 	Lock  sync.Mutex
 }
 
+var initOnce sync.Once
 var eventBusInstance *EventBus
 
+func Instance() *EventBus {
+	return eventBusInstance
+}
+
 func Init() {
-	eventBusInstance = &EventBus{
-		listeners: make(map[string]EventListener),
-		eventChan: make(chan *Event, 1024),
-		stopC:     make(chan struct{}, 1),
-		Lock:      sync.Mutex{},
-	}
+	initOnce.Do(func() {
+		eventBusInstance = &EventBus{
+			listeners: make(map[string]EventListener),
+			eventChan: make(chan *Event, 1024),
+			stopC:     make(chan struct{}, 1),
+			Lock:      sync.Mutex{},
+		}
+	})
+
 }
 
 func Start(ctx context.Context) error {
@@ -44,10 +53,10 @@ func Start(ctx context.Context) error {
 			}
 
 		case <-eventBusInstance.stopC:
-			return nil
+			return errors.New("eventBusInstance bye")
 
 		case <-ctx.Done():
-			return nil
+			return ctx.Err()
 		}
 	}
 }
