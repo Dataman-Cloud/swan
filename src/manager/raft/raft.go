@@ -227,7 +227,7 @@ func (n *Node) StartRaft(ctx context.Context, peers []api.Node, isNewCluster boo
 	}
 
 	if err := n.serveRaft(); err != nil {
-		return nil
+		return err
 	}
 
 	snap, err := n.raftStorage.Snapshot()
