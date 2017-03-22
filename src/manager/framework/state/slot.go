@@ -177,10 +177,16 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 		constraintsMatch = evalStatement.Eval()
 	}
 
-	return constraintsMatch &&
-		ow.CpuRemain() >= slot.Version.CPUs &&
+	resourcesMatch := ow.CpuRemain() >= slot.Version.CPUs &&
 		ow.MemRemain() >= slot.Version.Mem &&
 		ow.DiskRemain() >= slot.Version.Disk
+
+	portsMatch := true
+	if slot.App.IsReplicates() && len(ow.PortsRemain()) < len(slot.Version.Container.Docker.PortMappings) {
+		portsMatch = false
+	}
+
+	return constraintsMatch && resourcesMatch && portsMatch
 }
 
 func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrapper, *mesos.TaskInfo) {

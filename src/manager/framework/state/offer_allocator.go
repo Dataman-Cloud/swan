@@ -129,7 +129,7 @@ func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId string) (stri
 	}
 
 	if len(key) == 0 {
-		return "", errors.New("not found")
+		return "", errors.New("slot not found")
 	}
 
 	return key, nil
