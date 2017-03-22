@@ -53,13 +53,13 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	var err error
 
 	if fileutil.Exist(DBPath) {
-		nodeInfo, boltDB, err = recoverData(nodeID, DBPath)
+		nodeInfo, boltDB, err = loadNode(nodeID, DBPath)
 	} else {
 		if err := os.MkdirAll(DBDir, 0700); err != nil {
 			return nil, err
 		}
 
-		nodeInfo, boltDB, err = initManager(nodeID, DBPath, managerConf)
+		nodeInfo, boltDB, err = initNode(nodeID, DBPath, managerConf)
 	}
 	if err != nil {
 		return nil, err
@@ -105,7 +105,7 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	return manager, nil
 }
 
-func recoverData(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, error) {
+func loadNode(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, error) {
 	var nodeInfo types.Node
 	db, err := bolt.Open(DBPath, 0644, nil)
 	if err != nil {
@@ -124,7 +124,7 @@ func recoverData(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, 
 	return nodeInfo, boltDb, nil
 }
 
-func initManager(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
+func initNode(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
 	var nodeInfo types.Node
 	boltDB, err := bolt.Open(DBPath, 0644, nil)
 	if err != nil {

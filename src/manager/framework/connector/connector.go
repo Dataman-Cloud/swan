@@ -232,7 +232,7 @@ func (s *Connector) Reregister() error {
 		s.StreamCancelFun()
 	}
 
-	err := s.LeaderDetect()
+	err := s.leaderDetect()
 	if err != nil { // if leader detect encounter any error
 		logrus.Errorf("exiting reregister due to err: %s", err)
 		return err
@@ -245,7 +245,7 @@ func (s *Connector) Reregister() error {
 
 func (s *Connector) Start(ctx context.Context, errorChan chan error) {
 	s.mesosFailureChan = errorChan
-	err := s.LeaderDetect()
+	err := s.leaderDetect()
 	if err != nil {
 		logrus.Errorf("start mesos connector got error: %s", err)
 		s.mesosFailureChan <- utils.NewError(utils.SeverityHigh, err) // set SeverityHigh when first start
@@ -276,7 +276,7 @@ func (s *Connector) Start(ctx context.Context, errorChan chan error) {
 	}
 }
 
-func (s *Connector) LeaderDetect() error {
+func (s *Connector) leaderDetect() error {
 	masters, err := getMastersFromZK(config.SchedulerConfig.ZkPath)
 	if err != nil {
 		return err
