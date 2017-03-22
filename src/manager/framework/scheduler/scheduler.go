@@ -53,6 +53,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
 		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
 		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
+
 		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
 	}
 
