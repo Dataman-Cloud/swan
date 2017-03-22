@@ -5,14 +5,6 @@ TEST_PACKAGES = $(shell go list ./src/... | grep -v vendor)
 
 export GO15VENDOREXPERIMENT=1
 
-## OS checking
-OS := $(shell uname)
-ifeq ($(OS),Darwin)
-	BUILD_OPTS=-e CGO_ENABLED=0 -e GOOS=darwin -e GOARCH=amd64
-else
-	BUILD_OPTS=-e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64
-endif
-
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
