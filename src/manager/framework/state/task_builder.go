@@ -59,17 +59,19 @@ func (builder *TaskBuilder) SetResources(resources []*mesos.Resource) *TaskBuild
 	return builder
 }
 
-func (builder *TaskBuilder) SetCommand(needShell bool, cmd string, args []string) *TaskBuilder {
-	builder.taskInfo.Command = &mesos.CommandInfo{
-		Shell:     proto.Bool(needShell),
-		Arguments: args,
+func (builder *TaskBuilder) SetCommand(cmd string, args []string) *TaskBuilder {
+	if len(cmd) > 0 {
+		builder.taskInfo.Command = &mesos.CommandInfo{
+			Shell:     proto.Bool(true),
+			Arguments: args,
+			Value:     proto.String(cmd),
+		}
+	} else {
+		builder.taskInfo.Command = &mesos.CommandInfo{
+			Shell: proto.Bool(false),
+		}
 	}
 
-	if len(cmd) == 0 {
-		builder.taskInfo.Command.Value = nil
-	} else {
-		builder.taskInfo.Command.Value = proto.String(cmd)
-	}
 	return builder
 }
 
