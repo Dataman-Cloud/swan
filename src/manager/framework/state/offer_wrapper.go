@@ -36,6 +36,11 @@ func (ow *OfferWrapper) PortsRemain() []uint64 {
 		}
 	}
 
+	// when no ports offered
+	if len(ports) == 0 {
+		return ports
+	}
+
 	return ports[ow.PortUsedSize : len(ports)-1]
 }
 

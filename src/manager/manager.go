@@ -247,9 +247,10 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
 
 					eventBusStarted = true
+					eventbus.Start(ctx)
+
 					eventbus.AddListener(manager.resolverListener)
 					eventbus.AddListener(manager.janitorListener)
-					eventbus.Start(ctx)
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
