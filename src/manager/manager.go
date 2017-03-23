@@ -102,6 +102,8 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	managerApi := &ManagerApi{manager}
 	apiserver.Install(managerServer, managerApi)
 
+	eventbus.Init()
+
 	return manager, nil
 }
 
