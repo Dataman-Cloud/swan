@@ -15,7 +15,7 @@ import (
 	"golang.org/x/net/context"
 )
 
-const IDFileName = "ID"
+const NodeIDFileName = "ID"
 
 func setupLogger(logLevel string) {
 	level, err := logrus.ParseLevel(logLevel)
@@ -202,7 +202,7 @@ func AgentJoinCmd() cli.Command {
 
 func JoinAndStartAgent(c *cli.Context) error {
 	conf := config.NewAgentConfig(c)
-	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
 		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
@@ -268,7 +268,7 @@ func ManagerJoinCmd() cli.Command {
 
 func JoinAndStartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
-	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
 		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
@@ -319,7 +319,7 @@ func ManagerInitCmd() cli.Command {
 
 func StartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
-	IDFilePath := path.Join(conf.DataDir, IDFileName)
+	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
 		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
