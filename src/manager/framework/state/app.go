@@ -370,6 +370,10 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 	if version.Instances != app.CurrentVersion.Instances {
 		return fmt.Errorf("instances can not change when update app, current version is %d", app.CurrentVersion.Instances)
 	}
+	// fixed app IP length should be same as current instances
+	if app.IsFixed() && int32(len(version.IP)) != app.CurrentVersion.Instances {
+		return fmt.Errorf("Fixed mode App IP length can not change when update app, current version is %d", app.CurrentVersion.Instances)
+	}
 	return nil
 }
 
