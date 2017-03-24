@@ -70,6 +70,9 @@ func (updating *StateUpdating) Step() {
 
 		logrus.Infof("archive current task")
 		updating.CurrentSlot.Archive()
+		if updating.App.IsFixed() {
+			updating.CurrentSlot.Ip = updating.App.ProposedVersion.IP[updating.CurrentSlotIndex]
+		}
 		updating.CurrentSlot.DispatchNewTask(updating.App.ProposedVersion)
 
 	} else if updating.CurrentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
