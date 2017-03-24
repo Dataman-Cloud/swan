@@ -71,9 +71,6 @@ type Slot struct {
 	restartPolicy *RestartPolicy
 
 	healthy bool
-
-	inTransaction bool
-	touched       bool
 }
 
 type SlotsById []*Slot
@@ -97,9 +94,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		ID:          fmt.Sprintf("%d-%s", index, app.ID),
 
 		resourceReservationLock: sync.Mutex{},
-
-		inTransaction: false,
-		touched:       true,
 	}
 
 	if slot.App.IsFixed() {
@@ -127,9 +121,6 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 
 // kill task doesn't need cleanup slot from app.Slots
 func (slot *Slot) KillTask() {
-	slot.BeginTx()
-	defer slot.Commit()
-
 	slot.StopRestartPolicy()
 
 	if slot.Dispatched() {
@@ -138,26 +129,26 @@ func (slot *Slot) KillTask() {
 	} else {
 		slot.SetState(SLOT_STATE_REAP)
 	}
+
+	slot.Touch()
 }
 
 func (slot *Slot) Archive() {
-	slot.BeginTx()
-	defer slot.Commit()
-
 	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
 	WithConvertTask(context.TODO(), slot.CurrentTask, nil, persistentStore.UpdateTask)
+
+	slot.Touch()
 }
 
 func (slot *Slot) DispatchNewTask(version *types.Version) {
-	slot.BeginTx()
-	defer slot.Commit()
-
 	slot.Version = version
 	slot.CurrentTask = NewTask(slot.Version, slot)
 	slot.SetState(SLOT_STATE_PENDING_OFFER)
 
 	OfferAllocatorInstance().PutSlotBackToPendingQueue(slot)
+
+	slot.Touch()
 }
 
 func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
@@ -313,7 +304,7 @@ func (slot *Slot) SetState(state string) error {
 		slot.App.Step()
 	}
 
-	slot.Touch(false)
+	slot.Touch()
 	return nil
 }
 
@@ -404,58 +395,35 @@ func (slot *Slot) SetHealthy(healthy bool) {
 		slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
 	}
 	slot.App.Step() // step forward state-machine
-	slot.Touch(false)
+
+	slot.Touch()
 }
 
 func (slot *Slot) Remove() {
 	slot.remove()
 }
 
-func (slot *Slot) Touch(force bool) {
-	if force { // force update the app
-		slot.update()
-		return
-	}
-
-	if slot.inTransaction {
-		slot.touched = true
-		logrus.Infof("delay update action as current slot in between tranaction")
-	} else {
-		slot.update()
-	}
-}
-
-func (slot *Slot) BeginTx() {
-	slot.inTransaction = true
+func (slot *Slot) Touch() {
+	slot.update()
 }
 
 func (slot *Slot) ServiceDiscoveryURL() string {
 	return strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
 }
 
-// here we persist the app anyway, no matter it touched or not
-func (slot *Slot) Commit() {
-	slot.inTransaction = false
-	slot.touched = false
-	slot.update()
-}
-
 func (slot *Slot) update() {
 	logrus.Debugf("update slot %s", slot.ID)
 	WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
-	slot.touched = false
 }
 
 func (slot *Slot) create() {
 	logrus.Debugf("create slot %s", slot.ID)
 	WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
-	slot.touched = false
 }
 
 func (slot *Slot) remove() {
 	logrus.Debugf("remove slot %s", slot.ID)
 	persistentStore.DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
-	slot.touched = false
 }
 
 func buildScalarResource(name string, value float64) *mesos.Resource {

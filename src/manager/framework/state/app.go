@@ -54,9 +54,6 @@ type App struct {
 	StateMachine *StateMachine
 	ClusterID    string
 
-	inTransaction bool
-	touched       bool
-
 	UserEventChan chan *event.UserEvent
 }
 
@@ -88,8 +85,6 @@ func NewApp(version *types.Version,
 		ClusterID:      connector.Instance().ClusterID,
 		Created:        time.Now(),
 		Updated:        time.Now(),
-		inTransaction:  false,
-		touched:        true,
 		UserEventChan:  userEventChan,
 	}
 
@@ -123,12 +118,11 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 		return fmt.Errorf("please provide %d unique ip", newInstances)
 	}
 
-	app.BeginTx()
-	defer app.Commit()
-
 	app.CurrentVersion.IP = append(app.CurrentVersion.IP, newIps...)
 	app.CurrentVersion.Instances = int32(len(app.Slots) + newInstances)
 	app.Updated = time.Now()
+
+	app.Touch()
 
 	return app.TransitTo(APP_STATE_SCALE_UP)
 }
@@ -147,11 +141,10 @@ func (app *App) ScaleDown(removeInstances int) error {
 		return fmt.Errorf("no more than %d tasks can be shutdown", app.CurrentVersion.Instances)
 	}
 
-	app.BeginTx()
-	defer app.Commit()
-
 	app.CurrentVersion.Instances = int32(len(app.Slots) - removeInstances)
 	app.Updated = time.Now()
+
+	app.Touch()
 
 	return app.TransitTo(APP_STATE_SCALE_DOWN)
 }
@@ -162,9 +155,6 @@ func (app *App) Delete() error {
 		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
 			app.StateMachine.ReadableState(), APP_STATE_DELETING))
 	}
-
-	app.BeginTx()
-	defer app.Commit()
 
 	return app.TransitTo(APP_STATE_DELETING)
 }
@@ -183,9 +173,6 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return err
 	}
 
-	app.BeginTx()
-	defer app.Commit()
-
 	if app.CurrentVersion == nil {
 		return errors.New("update failed: current version was losted")
 	}
@@ -193,6 +180,8 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
 	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
+
+	app.Touch()
 
 	return app.TransitTo(APP_STATE_UPDATING, 1)
 }
@@ -223,9 +212,6 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 		return errors.New(fmt.Sprintf("only %d tasks left need to be updated now", len(app.GetSlots())-updatedCount))
 	}
 
-	app.BeginTx()
-	defer app.Commit()
-
 	return app.TransitTo(APP_STATE_UPDATING, instances)
 }
 
@@ -238,9 +224,6 @@ func (app *App) CancelUpdate() error {
 	if app.CurrentVersion == nil {
 		return errors.New("cancel update failed: current version was nil")
 	}
-
-	app.BeginTx()
-	defer app.Commit()
 
 	return app.TransitTo(APP_STATE_CANCEL_UPDATE)
 }
@@ -299,7 +282,7 @@ func (app *App) TransitTo(targetState string, args ...interface{}) error {
 		return err
 	}
 
-	app.Touch(true)
+	app.Touch()
 
 	return nil
 }
@@ -313,7 +296,7 @@ func (app *App) RemoveSlot(index int) {
 		delete(app.Slots, index)
 		app.slotsLock.Unlock()
 
-		app.Touch(false)
+		app.Touch()
 	}
 }
 
@@ -365,12 +348,12 @@ func (app *App) SetSlot(index int, slot *Slot) {
 	app.Slots[index] = slot
 	app.slotsLock.Unlock()
 
-	app.Touch(false)
+	app.Touch()
 }
 
 func (app *App) Step() {
 	app.StateMachine.Step()
-	app.Touch(false)
+	app.Touch()
 }
 
 // make sure proposed version is valid then applied it to field ProposedVersion
@@ -549,45 +532,21 @@ func (app *App) Remove() {
 }
 
 // storage related
-func (app *App) Touch(force bool) {
-	if force { // force update the app
-		app.update()
-		return
-	}
-
-	if app.inTransaction {
-		app.touched = true
-		logrus.Infof("delay update action as current app in between tranaction")
-	} else {
-		app.update()
-	}
-}
-
-func (app *App) BeginTx() {
-	app.inTransaction = true
-}
-
-// here we persist the app anyway, no matter it touched or not
-func (app *App) Commit() {
-	app.inTransaction = false
-	app.touched = false
+func (app *App) Touch() {
 	app.update()
 }
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
 	WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp)
-	app.touched = false
 }
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
 	WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp)
-	app.touched = false
 }
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.ID)
 	persistentStore.DeleteApp(context.TODO(), app.ID, nil)
-	app.touched = false
 }
