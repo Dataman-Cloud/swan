@@ -388,15 +388,21 @@ func (slot *Slot) Healthy() bool {
 }
 
 func (slot *Slot) SetHealthy(healthy bool) {
+	needEmitEvent := slot.healthy != healthy
+
 	slot.healthy = healthy
-	if healthy {
-		slot.EmitTaskEvent(eventbus.EventTypeTaskHealthy)
-	} else {
-		slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
-	}
+
 	slot.App.Step() // step forward state-machine
 
 	slot.Touch()
+
+	if needEmitEvent {
+		if healthy {
+			slot.EmitTaskEvent(eventbus.EventTypeTaskHealthy)
+		} else {
+			slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
+		}
+	}
 }
 
 func (slot *Slot) Remove() {
