@@ -9,17 +9,17 @@ import (
 
 type App struct {
 	ID               string    `json:"id,omitempty"`
-	Name             string    `json:"name,omitempty"`
-	Instances        int       `json:"instances,omitempty"`
-	UpdatedInstances int       `json:"updatedInstances,omitempty"`
+	Name             string    `json:"name"`
+	Instances        int       `json:"instances"`
+	UpdatedInstances int       `json:"updatedInstances"`
 	RunningInstances int       `json:"runningInstances"`
-	RunAs            string    `json:"runAs,omitempty"`
+	RunAs            string    `json:"runAs"`
 	Priority         int       `json:"priority"`
 	ClusterID        string    `json:"clusterID,omitempty"`
 	Status           string    `json:"status,omitempty"`
 	Created          time.Time `json:"created,omitempty"`
 	Updated          time.Time `json:"updated,omitempty"`
-	Mode             string    `json:"mode,omitempty"`
+	Mode             string    `json:"mode"`
 	State            string    `json:"state,omitempty"`
 
 	// use task for compatability now, should be slot here
@@ -46,20 +46,20 @@ type AppFilterOptions struct {
 // and together with task history
 type Task struct {
 	ID          string       `json:"id,omitempty"`
-	AppID       string       `json:"appID,omitempty"`
-	SlotID      string       `json:"slotID,omitempty"`
-	VersionID   string       `json:"versionID,omitempty"`
-	CurrentTask *TaskHistory `json:"currentTask,omitempty"`
+	AppID       string       `json:"appID"`
+	SlotID      string       `json:"slotID"`
+	VersionID   string       `json:"versionID"`
+	CurrentTask *TaskHistory `json:"currentTask"`
 
-	Status string `json:"status"`
+	Status string `json:"status,omitempty"`
 
 	OfferID       string `json:"offerID,omitempty"`
 	AgentID       string `json:"agentID,omitempty"`
 	AgentHostname string `json:"agentHostname,omitempty"`
 
-	CPU  float64 `json:"cpu,omitempty"`
-	Mem  float64 `json:"mem,omitempty"`
-	Disk float64 `json:"disk,omitempty"`
+	CPU  float64 `json:"cpu"`
+	Mem  float64 `json:"mem"`
+	Disk float64 `json:"disk"`
 
 	History []*TaskHistory `json:"history,omitempty"`
 
@@ -68,26 +68,26 @@ type Task struct {
 
 	Created time.Time `json:"created,omitempty"`
 
-	Image   string `json:"image,omitempty"`
+	Image   string `json:"image"`
 	Healthy bool   `json:"healthy"`
 }
 
 type TaskHistory struct {
-	ID        string `json:"id,omitempty"`
-	AppID     string `json:"appID,omitempty"`
-	VersionID string `json:"versionID,omitempty"`
+	ID        string `json:"id"`
+	AppID     string `json:"appID"`
+	VersionID string `json:"versionID"`
 
-	OfferID       string `json:"offerID,omitempty"`
-	AgentID       string `json:"agentID,omitempty"`
-	AgentHostname string `json:"agentHostname,omitempty"`
+	OfferID       string `json:"offerID"`
+	AgentID       string `json:"agentID"`
+	AgentHostname string `json:"agentHostname"`
 
-	CPU  float64 `json:"cpu,omitempty"`
-	Mem  float64 `json:"mem,omitempty"`
-	Disk float64 `json:"disk,omitempty"`
+	CPU  float64 `json:"cpu"`
+	Mem  float64 `json:"mem"`
+	Disk float64 `json:"disk"`
 
 	State   string `json:"state,omitempty"`
 	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message, omitempty"`
+	Message string `json:"message,omitempty"`
 	Stdout  string `json:"stdout,omitempty"`
 	Stderr  string `json:"stderr,omitempty"`
 
