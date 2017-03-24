@@ -455,10 +455,6 @@ func validateAndFormatVersion(version *types.Version) error {
 				if portmapping.ContainerPort != 0 {
 					return errors.New("containerPort not recongnizable for docker host network, port is mandatory")
 				}
-
-				if portmapping.Port == 0 {
-					return errors.New("host port not specify as network you select host")
-				}
 			}
 		}
 
