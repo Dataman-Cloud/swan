@@ -476,7 +476,8 @@ func validateAndFormatVersion(version *types.Version) error {
 		if version.HealthCheck != nil {
 			protocol, portName := version.HealthCheck.Protocol, version.HealthCheck.PortName
 			// portName should present in dockers' portMappings definition
-			if !utils.SliceContains(portNames, portName) {
+			// portName if manditory for non-cmd health checks
+			if strings.ToLower(protocol) != "cmd" && !utils.SliceContains(portNames, portName) {
 				return fmt.Errorf("portname in healthCheck section should match that defined in portMappings")
 			}
 
