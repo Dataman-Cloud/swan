@@ -24,7 +24,7 @@ func Instance() *EventBus {
 	return eventBusInstance
 }
 
-func Start(ctx context.Context) error {
+func Init() *EventBus {
 	initOnce.Do(func() {
 		eventBusInstance = &EventBus{
 			listeners: make(map[string]EventListener),
@@ -34,6 +34,10 @@ func Start(ctx context.Context) error {
 		}
 	})
 
+	return eventBusInstance
+}
+
+func Start(ctx context.Context) error {
 	for {
 		select {
 		case e := <-eventBusInstance.eventChan:

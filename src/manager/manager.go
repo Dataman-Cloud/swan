@@ -200,6 +200,8 @@ func (manager *Manager) start(ctx context.Context, raftPeers []types.Node, isNew
 		return err
 	}
 
+	eventbus.Init()
+
 	// NOTICE: although WaitForLeader is returned, if call propose value as soon
 	// there maybe return error: node losts leader status.
 	// we should do propseValue in the handleLeadershipEvents go become leader event
@@ -246,11 +248,12 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				go func() {
 					log.G(eventBusCtx).Info("starting eventBus in leader.")
 
+					eventbus.AddListener(manager.resolverListener)
+					eventbus.AddListener(manager.janitorListener)
+
 					eventBusStarted = true
 					eventbus.Start(ctx)
 
-					eventbus.AddListener(manager.resolverListener)
-					eventbus.AddListener(manager.janitorListener)
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
