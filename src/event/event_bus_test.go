@@ -24,20 +24,6 @@ func (d *DemoEventListener) Key() string {
 	return "demo"
 }
 
-func TestInit(t *testing.T) {
-	assert.Nil(t, Instance())
-	Init()
-	assert.NotNil(t, Instance())
-}
-
-func TestInitOnce(t *testing.T) {
-	x := Instance()
-	Init()
-	assert.NotNil(t, Instance())
-	Init()
-	assert.Equal(t, x, Instance())
-}
-
 func TestStart(t *testing.T) {
 	c, cfun := context.WithCancel(context.Background())
 	done := make(chan bool)
