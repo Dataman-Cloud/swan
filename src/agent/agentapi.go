@@ -63,13 +63,13 @@ func (api *AgentApi) Init(request *restful.Request, response *restful.Response) 
 		return
 	}
 
-	go api.dispenseEvents(events)
+	go api.watchEvents(events)
 
 	response.WriteHeaderAndEntity(http.StatusCreated, nil)
 	return
 }
 
-func (api *AgentApi) dispenseEvents(events []*event.Event) {
+func (api *AgentApi) watchEvents(events []*event.Event) {
 	for _, taskEvent := range events {
 		// taskEvent.Payload is type of interface{} can not auto unmarshal
 		eventInfo := &types.TaskInfoEvent{}
