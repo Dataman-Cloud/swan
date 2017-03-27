@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
@@ -182,10 +183,31 @@ func (builder *TaskBuilder) AppendTaskInfoLabels(labelMap map[string]string) *Ta
 
 func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) *TaskBuilder {
 	builder.HostPorts = make([]uint64, 0) // clear this array on every loop
+	portsRelatedEnvs := make(map[string]string)
 	switch strings.ToLower(network) {
 	case "none":
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	case "host":
+		for index, m := range builder.task.Slot.Version.Container.Docker.PortMappings {
+			hostPort := uint64(m.Port)
+			if m.Port == 0 { // random port when host port is 0
+				hostPort = portsAvailable[index]
+				builder.taskInfo.Resources = append(builder.taskInfo.Resources, &mesos.Resource{
+					Name: proto.String("ports"),
+					Type: mesos.Value_RANGES.Enum(),
+					Ranges: &mesos.Value_Ranges{
+						Range: []*mesos.Value_Range{
+							{
+								Begin: proto.Uint64(uint64(hostPort)),
+								End:   proto.Uint64(uint64(hostPort)),
+							},
+						},
+					},
+				})
+			}
+			builder.HostPorts = append(builder.HostPorts, hostPort)
+			portsRelatedEnvs[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(m.Name))] = fmt.Sprintf("%d", hostPort)
+		}
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
 	case "bridge":
 		for index, m := range builder.task.Slot.Version.Container.Docker.PortMappings {
@@ -198,6 +220,10 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 					Protocol:      proto.String(m.Protocol),
 				},
 			)
+
+			portsRelatedEnvs[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(m.Name))] = fmt.Sprintf("%d", hostPort)
+			portsRelatedEnvs[fmt.Sprintf("SWAN_CONTAINER_PORT_%s", strings.ToUpper(m.Name))] = fmt.Sprintf("%d", m.ContainerPort)
+
 			builder.taskInfo.Resources = append(builder.taskInfo.Resources, &mesos.Resource{
 				Name: proto.String("ports"),
 				Type: mesos.Value_RANGES.Enum(),
@@ -219,6 +245,8 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 			Name: proto.String(network),
 		})
 	}
+
+	builder.AppendContainerDockerEnvironments(portsRelatedEnvs)
 
 	return builder
 }
