@@ -6,13 +6,13 @@ type Version struct {
 	PreviousVersionID string            `json:"previousVersionId,omitempty"`
 	Command           string            `json:"cmd,omitempty"`
 	Args              []string          `json:"args,omitempty"`
-	CPUs              float64           `json:"cpus,omitempty"`
-	Mem               float64           `json:"mem,omitempty"`
-	Disk              float64           `json:"disk,omitempty"`
-	Instances         int32             `json:"instances,omitempty"`
-	RunAs             string            `json:"runAs,omitempty"`
-	Priority          int32             `json:"priority,omitempty"`
-	Container         *Container        `json:"container,omitempty"`
+	CPUs              float64           `json:"cpus"`
+	Mem               float64           `json:"mem"`
+	Disk              float64           `json:"disk"`
+	Instances         int32             `json:"instances"`
+	RunAs             string            `json:"runAs"`
+	Priority          int32             `json:"priority"`
+	Container         *Container        `json:"container"`
 	Labels            map[string]string `json:"labels,omitempty"`
 	HealthCheck       *HealthCheck      `json:"healthCheck,omitempty"`
 	Env               map[string]string `json:"env,omitempty"`
@@ -21,18 +21,18 @@ type Version struct {
 	Constraints       string            `json:"constraints,omitempty"`
 	URIs              []string          `json:"uris,omitempty"`
 	IP                []string          `json:"ip,omitempty"`
-	Mode              string            `json:"mode,omitempty"`
+	Mode              string            `json:"mode"`
 }
 
 type Container struct {
-	Type    string    `json:"type,omitempty"`
-	Docker  *Docker   `json:"docker,omitempty"`
+	Type    string    `json:"type"`
+	Docker  *Docker   `json:"docker"`
 	Volumes []*Volume `json:"volumes,omitempty"`
 }
 
 type Docker struct {
 	ForcePullImage bool           `json:"forcePullImage,omitempty"`
-	Image          string         `json:"image,omitempty"`
+	Image          string         `json:"image"`
 	Network        string         `json:"network,omitempty"`
 	Parameters     []*Parameter   `json:"parameters,omitempty"`
 	PortMappings   []*PortMapping `json:"portMappings,omitempty"`
