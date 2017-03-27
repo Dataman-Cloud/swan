@@ -195,7 +195,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		return
 	}
 
-	response.WriteHeaderAndEntity(http.StatusCreated, FormAppRetWithVersionsAndTasks(app))
+	response.WriteHeaderAndEntity(http.StatusCreated, FormAppRetWithVersions(app))
 }
 
 func (api *AppService) ListApp(request *restful.Request, response *restful.Response) {
@@ -239,7 +239,7 @@ func (api *AppService) GetApp(request *restful.Request, response *restful.Respon
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
+	response.WriteEntity(FormAppRetWithVersions(app))
 }
 
 func (api *AppService) DeleteApp(request *restful.Request, response *restful.Response) {
@@ -311,7 +311,7 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 		response.WriteError(http.StatusNotFound, err)
 		return
 	}
-	response.WriteEntity(FormAppRetWithVersionsAndTasks(app))
+	response.WriteEntity(FormAppRetWithVersions(app))
 	return
 }
 
@@ -533,6 +533,10 @@ func FormApp(app *state.App) *types.App {
 		Constraints:      version.Constraints,
 		URIs:             version.URIs,
 	}
+
+	// Add tasks by default
+	appRet.Tasks = FilterTasksFromApp(app)
+
 	return appRet
 }
 
@@ -542,12 +546,6 @@ func FormAppRetWithVersions(app *state.App) *types.App {
 	for _, v := range app.Versions {
 		appRet.Versions = append(appRet.Versions, v.ID)
 	}
-	return appRet
-}
-
-func FormAppRetWithVersionsAndTasks(app *state.App) *types.App {
-	appRet := FormAppRetWithVersions(app)
-	appRet.Tasks = FilterTasksFromApp(app)
 	return appRet
 }
 
