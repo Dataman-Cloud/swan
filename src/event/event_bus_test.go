@@ -28,6 +28,7 @@ func TestStart(t *testing.T) {
 	c, cfun := context.WithCancel(context.Background())
 	done := make(chan bool)
 	go func() {
+		Init()
 		err := Start(c)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "context canceled")
