@@ -13,7 +13,7 @@ GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list .
 default: build
 
 docker-build:
-	docker run --rm -w /go/src/github.com/Dataman-Cloud/swan -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine sh -c "apk update && apk add make && apk add git && make"
+	docker run --rm -w /go/src/github.com/Dataman-Cloud/swan -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine sh -c 'go build ${GO_LDFLAGS} -v -o bin/swan main.go' 
 
 build: fmt
 	go build ${GO_LDFLAGS} -v -o bin/swan main.go
