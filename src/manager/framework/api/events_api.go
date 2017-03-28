@@ -2,11 +2,12 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
-	"github.com/Dataman-Cloud/swan/src/apiserver"
-	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 
 	"github.com/emicklei/go-restful"
@@ -47,8 +48,16 @@ func (api *EventsService) Register(container *restful.Container) {
 
 func (api *EventsService) Events(request *restful.Request, response *restful.Response) {
 	appId := request.QueryParameter("appId")
+	catchUp := request.QueryParameter("catchUp")
 	listener, doneChan := eventbus.NewSSEListener(uuid.NewV4().String(), appId, http.ResponseWriter(response))
 	eventbus.AddListener(listener)
+	go func() { // put this into a goroutine, make sure no event miss
+		if strings.ToLower(catchUp) == "true" {
+			for _, e := range api.Scheduler.HealthyTaskEvents() {
+				listener.Write(e)
+			}
+		}
+	}()
 	<-doneChan
 	eventbus.RemoveListener(listener)
 }

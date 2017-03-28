@@ -8,7 +8,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
-	swanevent "github.com/Dataman-Cloud/swan/src/event"
 	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
@@ -22,12 +21,6 @@ const JoinRetryInterval = 5
 func (manager *Manager) AddNode(node types.Node) error {
 	if err := manager.presistNodeData(node); err != nil {
 		return err
-	}
-
-	if node.IsAgent() {
-		manager.AddAgentAcceptor(node)
-
-		go manager.SendAgentInitData(node)
 	}
 
 	// the first mixed node, node contains agent and leader, the leader node
@@ -57,10 +50,6 @@ func (manager *Manager) AddRaftNode(swanNode types.Node) error {
 }
 
 func (manager *Manager) RemoveNode(node types.Node) error {
-	if node.IsAgent() {
-		manager.RemoveAgentAcceptor(node.ID)
-	}
-
 	if node.IsManager() {
 		if err := manager.raftNode.RemoveMember(context.TODO(), node.RaftID); err != nil {
 			return err
@@ -191,18 +180,6 @@ func (manager *Manager) findLeaderByRaftID(raftID uint64) (types.Node, error) {
 	return types.Node{}, fmt.Errorf("can not find node which raftID is %x", raftID)
 }
 
-func (manager *Manager) LoadNodeData() error {
-	nodes := manager.GetNodes()
-
-	for _, node := range nodes {
-		if node.IsAgent() {
-			manager.AddAgentAcceptor(node)
-		}
-	}
-
-	return nil
-}
-
 func (manager *Manager) presistNodeData(node types.Node) error {
 	nodeMetadata := converNodeToRaftTypeNode(node)
 
@@ -212,35 +189,6 @@ func (manager *Manager) presistNodeData(node types.Node) error {
 	}}
 
 	return manager.raftNode.ProposeValue(context.TODO(), storeActions, nil)
-}
-
-func (manager *Manager) AddAgentAcceptor(agent types.Node) {
-	resolverAcceptor := types.ResolverAcceptor{
-		ID:         agent.ID,
-		RemoteAddr: agent.AdvertiseAddr + config.API_PREFIX + "/agent/resolver/event",
-		Status:     agent.Status,
-	}
-	manager.resolverListener.AddAcceptor(resolverAcceptor)
-
-	janitorAcceptor := types.JanitorAcceptor{
-		ID:         agent.ID,
-		RemoteAddr: agent.AdvertiseAddr + config.API_PREFIX + "/agent/janitor/event",
-		Status:     agent.Status,
-	}
-	manager.janitorListener.AddAcceptor(janitorAcceptor)
-}
-
-func (manager *Manager) RemoveAgentAcceptor(agentID string) {
-	manager.resolverListener.RemoveAcceptor(agentID)
-	manager.janitorListener.RemoveAcceptor(agentID)
-}
-
-func (manager *Manager) SendAgentInitData(agent types.Node) {
-	taskEvents := manager.framework.Scheduler.HealthyTaskEvents()
-
-	if err := swanevent.SendEventByHttp(agent.AdvertiseAddr+config.API_PREFIX+"/agent/init", taskEvents); err != nil {
-		logrus.Errorf("send resolver init data got error: %s", err.Error())
-	}
 }
 
 func converRaftTypeNodeToNode(rafttypesNode rafttypes.Node) types.Node {

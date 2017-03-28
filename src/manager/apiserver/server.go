@@ -10,8 +10,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"

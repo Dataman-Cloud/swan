@@ -1,36 +1,37 @@
 package agent
 
 import (
+	"bufio"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
-	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
+	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 	"github.com/Sirupsen/logrus"
 
 	"golang.org/x/net/context"
 )
 
-const JoinRetryInterval = 5
+const REJOIN_BACKOFF = 3 * time.Second
 
 type Agent struct {
-	resolver *nameserver.Resolver
-
-	janitorServer *janitor.JanitorServer
-
-	apiServer *apiserver.ApiServer
+	resolver  *nameserver.Resolver
+	janitor   *janitor.JanitorServer
+	apiServer *AgentApiServer
 
 	CancelFunc context.CancelFunc
-
-	NodeInfo types.Node
-
-	JoinAddrs []string
-
-	Config config.AgentConfig
+	NodeInfo   types.Node
+	JoinAddrs  []string
+	Config     config.AgentConfig
 }
 
 func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
@@ -47,7 +48,7 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	}
 	agent.NodeInfo = nodeInfo
 
-	agent.apiServer = apiserver.NewApiServer(agentConf.ListenAddr, agentConf.ListenAddr)
+	agent.apiServer = NewAgentApiServer(agentConf.ListenAddr, agent)
 
 	dnsConfig := &nameserver.Config{
 		Domain:     agentConf.DNS.Domain,
@@ -70,31 +71,141 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	jConfig := janitor.DefaultConfig()
 	jConfig.ListenAddr = agentConf.Janitor.ListenAddr
 	jConfig.HttpHandler.Domain = agentConf.Janitor.Domain
-	agent.janitorServer = janitor.NewJanitorServer(jConfig)
-
-	agentApi := &AgentApi{agent}
-	apiserver.Install(agent.apiServer, agentApi)
+	agent.janitor = janitor.NewJanitorServer(jConfig)
 
 	return agent, nil
 }
 
-func (agent *Agent) JoinAndStart(ctx context.Context) error {
+func (agent *Agent) StartAndJoin(ctx context.Context) error {
 	errChan := make(chan error, 1)
 
 	go func() {
-		errChan <- agent.Start(ctx)
+		errChan <- agent.start(ctx)
 	}()
 
 	go func() {
-		if err := agent.JoinToCluster(ctx); err != nil {
-			errChan <- err
+		for {
+			leaderAddr, err := agent.join(ctx)
+			if err != nil {
+				logrus.Errorf("join to manager got error: %s", err.Error())
+				time.Sleep(REJOIN_BACKOFF)
+				continue
+			}
+
+			err = agent.watchEvents(leaderAddr)
+			if err != nil {
+				logrus.Errorf("watchEvents got error: %s", err.Error())
+				logrus.Info("rejoin to cluster now")
+				time.Sleep(REJOIN_BACKOFF)
+			}
 		}
 	}()
 
 	return <-errChan
 }
 
-func (agent *Agent) Start(ctx context.Context) error {
+func (agent *Agent) watchEvents(leaderAddr string) error {
+	client := &http.Client{}
+	// catchUp=true means get latest events
+	eventsPath := fmt.Sprintf("http://%s/events?catchUp=true", leaderAddr)
+	req, err := http.NewRequest("GET", eventsPath, nil)
+	if err != nil {
+		return err
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			return err
+		}
+
+		// skip blank line
+		if len(line) == 0 {
+			continue
+		}
+
+		eventsDoesMatter := []string{
+			eventbus.EventTypeTaskUnhealthy,
+			eventbus.EventTypeTaskHealthy,
+		}
+
+		if strings.HasPrefix(line, "event:") {
+			eventType := strings.TrimSpace(strings.Split(line, ":")[1])
+			if !utils.SliceContains(eventsDoesMatter, eventType) {
+				continue
+			}
+
+			// read next line of stream
+			line, err := reader.ReadString('\n')
+			if err != nil {
+				return err
+			}
+
+			// if line is not data section
+			if !strings.HasPrefix(line, "data:") {
+				continue
+			}
+
+			var taskInfoEvent types.TaskInfoEvent
+			err = json.Unmarshal([]byte(line[5:len(line)]), &taskInfoEvent)
+			if err != nil {
+				logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
+				continue
+			}
+
+			agent.resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(eventType, &taskInfoEvent)
+			agent.janitor.SwanEventChan() <- janitorTargetgChangeEventFromTaskInfoEvent(eventType, &taskInfoEvent)
+		}
+	}
+}
+
+func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *nameserver.RecordGeneratorChangeEvent {
+	resolverEvent := &nameserver.RecordGeneratorChangeEvent{}
+	if eventType == eventbus.EventTypeTaskHealthy {
+		resolverEvent.Change = "add"
+	} else {
+		resolverEvent.Change = "del"
+	}
+
+	resolverEvent.Ip = taskInfoEvent.IP
+
+	if taskInfoEvent.Mode == "replicates" {
+		resolverEvent.Type = "srv"
+		resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
+	} else {
+		resolverEvent.Type = "a"
+	}
+	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(taskInfoEvent.TaskID, "-", ".", -1))
+	return resolverEvent
+}
+
+func janitorTargetgChangeEventFromTaskInfoEvent(eventType string,
+	taskInfoEvent *types.TaskInfoEvent) *janitor.TargetChangeEvent {
+
+	janitorEvent := &janitor.TargetChangeEvent{}
+	if eventType == eventbus.EventTypeTaskHealthy {
+		janitorEvent.Change = "add"
+	} else {
+		janitorEvent.Change = "del"
+	}
+
+	janitorEvent.TaskIP = taskInfoEvent.IP
+	janitorEvent.TaskPort = taskInfoEvent.Port
+	janitorEvent.AppID = taskInfoEvent.AppID
+	janitorEvent.PortName = taskInfoEvent.PortName
+	janitorEvent.TaskPort = taskInfoEvent.Port
+	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
+	return janitorEvent
+}
+
+func (agent *Agent) start(ctx context.Context) error {
 	errChan := make(chan error, 1)
 
 	go func() {
@@ -106,22 +217,26 @@ func (agent *Agent) Start(ctx context.Context) error {
 		errChan <- agent.resolver.Start(resolverCtx)
 	}()
 
-	err := agent.janitorServer.Init()
-	if err != nil {
-		errChan <- err
-	}
+	go func() {
+		err := agent.janitor.Init()
+		if err != nil {
+			errChan <- err
+		}
 
-	go agent.janitorServer.Run()
+		errChan <- agent.janitor.Run()
+	}()
 
-	// send proxy info to dns proxy listener
-	rgEvent := &nameserver.RecordGeneratorChangeEvent{}
-	rgEvent.Change = "add"
-	rgEvent.Type = "a"
-	//TODO(): better way is use janitor config replace agent config
-	rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
-	rgEvent.DomainPrefix = ""
-	rgEvent.IsProxy = true
-	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
+	// refactor later
+	time.AfterFunc(time.Second, func() {
+		// send proxy info to dns proxy listener
+		rgEvent := &nameserver.RecordGeneratorChangeEvent{}
+		rgEvent.Change = "add"
+		rgEvent.Type = "a"
+		rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
+		rgEvent.DomainPrefix = ""
+		rgEvent.IsProxy = true
+		agent.resolver.RecordGeneratorChangeChan() <- rgEvent
+	})
 
 	for {
 		select {
@@ -134,65 +249,25 @@ func (agent *Agent) Start(ctx context.Context) error {
 }
 
 func (agent *Agent) Stop() {
-	//TODO resolver and janitor need stop
-	//agent.resolver.Stop()
-	//agent.janitorServer.Stop()
-
 	agent.CancelFunc()
 	return
 }
 
-func (agent *Agent) JoinToCluster(ctx context.Context) error {
-	tryJoinTimes := 1
-	err := agent.join()
-	if err != nil {
-		logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
-	} else {
-		return nil
-	}
-
-	retryTicker := time.NewTicker(JoinRetryInterval * time.Second)
-	defer retryTicker.Stop()
-
-	for {
-		select {
-		case <-retryTicker.C:
-			if tryJoinTimes >= 100 {
-				return errors.New("join to swan cluster has been failed 100 times exit")
-			}
-
-			tryJoinTimes++
-
-			err = agent.join()
-			if err != nil {
-				logrus.Infof("join to swan cluster failed at %d times, retry after %d seconds", tryJoinTimes, JoinRetryInterval)
-			} else {
-				return nil
-			}
-
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
-func (agent *Agent) join() error {
+func (agent *Agent) join(ctx context.Context) (leaderAddr string, err error) {
 	if len(agent.JoinAddrs) == 0 {
-		return errors.New("start swan failed. Error: joinAddrs must be no empty")
+		return "", errors.New("start swan failed. Error: joinAddrs must be no empty")
 	}
 
 	for _, managerAddr := range agent.JoinAddrs {
-		registerAddr := managerAddr + config.API_PREFIX + "/nodes"
-		_, err := httpclient.NewDefaultClient().POST(context.TODO(), registerAddr, nil, agent.NodeInfo, nil)
+		nodeRegistrationAddr := managerAddr + config.API_PREFIX + "/nodes"
+		_, err := httpclient.NewDefaultClient().POST(context.TODO(), nodeRegistrationAddr, nil, agent.NodeInfo, nil)
 		if err != nil {
-			logrus.Infof("register to %s got error: %s", registerAddr, err.Error())
+			logrus.Infof("register to %s got error: %s", nodeRegistrationAddr, err.Error())
 			continue
 		}
 
-		logrus.Infof("join to swan cluster success with manager adderss %s", managerAddr)
-
-		return nil
+		return managerAddr, nil
 	}
 
-	return errors.New("try join all managers are failed")
+	return "", errors.New("try join all managers are failed")
 }

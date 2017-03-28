@@ -98,7 +98,7 @@ func FlagJoinAddrs() cli.Flag {
 func FlagJanitorAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
 		Name:   "janitor-advertise-ip",
-		Usage:  "janitor proxy advertise ip",
+		Usage:  "janitor gateway advertise ip",
 		EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
 		Value:  "",
 	}
@@ -107,7 +107,7 @@ func FlagJanitorAdvertiseIp() cli.Flag {
 func FlagJanitorListenAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "janitor-listen-addr",
-		Usage:  "janitor proxy listen addr",
+		Usage:  "janitor gateway listen addr",
 		Value:  "0.0.0.0:80",
 		EnvVar: "SWAN_JANITOR_LISTEN_ADDR",
 	}
@@ -179,7 +179,7 @@ func AgentJoinCmd() cli.Command {
 	agentJoinCmd := cli.Command{
 		Name:        "join",
 		Usage:       "[COMMAND] [ARG...]",
-		Description: "start and join a swan agent which contains proxy and DNS server",
+		Description: "start and join a swan agent which contains Gateway and DNS server",
 		Flags:       []cli.Flag{},
 		Action:      JoinAndStartAgent,
 	}
@@ -223,7 +223,7 @@ func JoinAndStartAgent(c *cli.Context) error {
 		return err
 	}
 
-	if err := agent.JoinAndStart(context.TODO()); err != nil {
+	if err := agent.StartAndJoin(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}
