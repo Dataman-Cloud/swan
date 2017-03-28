@@ -221,7 +221,7 @@ func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.
 		if err != nil {
 			m = new(dns.Msg).SetRcode(r, rcode(err))
 		} else if len(m.Answer) == 0 {
-			logrus.Infof("no answer found")
+			//logrus.Debugf("no answer found")
 		}
 		reply(w, m)
 	}

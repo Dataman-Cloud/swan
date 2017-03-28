@@ -29,7 +29,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-resolver/nameserver",
 			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
 			"vcs": "git",
-			"revision": "39d3760b5c997db315db08324484e46ae63b3139",
+			"revision": "fb87bad3c7caa7d79e9a2ee2ba4f73d09cbcbc53",
 			"branch": "master",
 			"path": "/nameserver",
 			"notests": true
