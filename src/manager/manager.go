@@ -8,11 +8,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/apiserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	log "github.com/Dataman-Cloud/swan/src/context_logger"
-	"github.com/Dataman-Cloud/swan/src/event"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
@@ -35,9 +34,6 @@ type Manager struct {
 	apiServer *apiserver.ApiServer
 
 	criticalErrorChan chan error
-
-	janitorListener  *event.JanitorListener
-	resolverListener *event.DNSListener
 
 	NodeInfo types.Node
 
@@ -91,8 +87,6 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	manager := &Manager{
 		raftNode:          raftNode,
 		framework:         framework,
-		resolverListener:  event.NewDNSListener(),
-		janitorListener:   event.NewJanitorListener(),
 		NodeInfo:          nodeInfo,
 		apiServer:         managerServer,
 		JoinAddrs:         managerConf.JoinAddrs,
@@ -177,10 +171,6 @@ func (manager *Manager) InitAndStart(ctx context.Context) error {
 }
 
 func (manager *Manager) start(ctx context.Context, raftPeers []types.Node, isNewCluster bool) error {
-	if err := manager.LoadNodeData(); err != nil {
-		return err
-	}
-
 	// when follower => leader or leader => follower
 	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
 	defer cancel()
@@ -253,7 +243,6 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 
 					eventBusStarted = true
 					eventbus.Start(ctx)
-
 				}()
 
 				frameworkCtx, _ := context.WithCancel(ctx)
@@ -268,8 +257,6 @@ func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh
 				log.G(ctx).Info("now i become a follower !!!")
 
 				if eventBusStarted {
-					eventbus.RemoveListener(manager.resolverListener)
-					eventbus.RemoveListener(manager.janitorListener)
 					eventbus.Stop()
 					eventBusStarted = false
 

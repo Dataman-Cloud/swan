@@ -28,7 +28,7 @@ func NewJanitorServer(Config Config) *JanitorServer {
 }
 
 func (server *JanitorServer) Init() error {
-	log.Info("Janitor Server Initialing")
+	log.Info("Janitor Server Init")
 	var err error
 	server.swanUpstreamLoader, err = SwanUpstreamLoaderInit()
 	if err != nil {
@@ -65,6 +65,6 @@ func (server *JanitorServer) SwanEventChan() chan<- *TargetChangeEvent {
 	return server.swanUpstreamLoader.SwanEventChan()
 }
 
-func (server *JanitorServer) Run() {
-	server.HttpServer.Serve(server.Listener)
+func (server *JanitorServer) Run() error {
+	return server.HttpServer.Serve(server.Listener)
 }
