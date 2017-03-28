@@ -55,10 +55,10 @@ func NewTask(version *types.Version, slot *Slot) *Task {
 
 func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	defaultLabels := make(map[string]string)
-	defaultLabels["USER"] = task.Slot.Version.RunAs
-	defaultLabels["CLUSTER"] = task.Slot.App.ClusterID
-	defaultLabels["SLOT"] = strconv.Itoa(task.Slot.Index)
-	defaultLabels["APP"] = task.Slot.App.Name
+	defaultLabels["DM_USER"] = task.Slot.Version.RunAs
+	defaultLabels["DM_CLUSTER"] = task.Slot.App.ClusterID
+	defaultLabels["DM_SLOT"] = strconv.Itoa(task.Slot.Index)
+	defaultLabels["DM_APP"] = task.Slot.App.Name
 
 	offer := ow.Offer
 	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.ID, *offer.GetId().Value)
