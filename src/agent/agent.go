@@ -21,7 +21,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-const JoinRetryInterval = 5
 const REJOIN_BACKOFF = 3 * time.Second
 
 type Agent struct {
@@ -227,14 +226,17 @@ func (agent *Agent) start(ctx context.Context) error {
 		errChan <- agent.janitor.Run()
 	}()
 
-	// send proxy info to dns proxy listener
-	rgEvent := &nameserver.RecordGeneratorChangeEvent{}
-	rgEvent.Change = "add"
-	rgEvent.Type = "a"
-	rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
-	rgEvent.DomainPrefix = ""
-	rgEvent.IsProxy = true
-	agent.resolver.RecordGeneratorChangeChan() <- rgEvent
+	// refactor later
+	time.AfterFunc(time.Second, func() {
+		// send proxy info to dns proxy listener
+		rgEvent := &nameserver.RecordGeneratorChangeEvent{}
+		rgEvent.Change = "add"
+		rgEvent.Type = "a"
+		rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
+		rgEvent.DomainPrefix = ""
+		rgEvent.IsProxy = true
+		agent.resolver.RecordGeneratorChangeChan() <- rgEvent
+	})
 
 	for {
 		select {
