@@ -73,8 +73,9 @@ message Parameter {
 
 message PortMapping {
     int32 containerPort = 1;
-    string name = 2;
-    string protocol = 3;
+    int32 hostPort = 2;
+    string name = 3;
+    string protocol = 4;
 }
 
 message Volume {

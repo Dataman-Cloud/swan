@@ -189,8 +189,8 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_NONE.Enum()
 	case "host":
 		for index, m := range builder.task.Slot.Version.Container.Docker.PortMappings {
-			hostPort := uint64(m.Port)
-			if m.Port == 0 { // random port when host port is 0
+			hostPort := uint64(m.HostPort)
+			if m.HostPort == 0 { // random port when host port is 0
 				hostPort = portsAvailable[index]
 				builder.taskInfo.Resources = append(builder.taskInfo.Resources, &mesos.Resource{
 					Name: proto.String("ports"),
@@ -265,7 +265,7 @@ func (builder *TaskBuilder) SetHealthCheck(healthCheck *types.HealthCheck) *Task
 		for _, portMapping := range builder.task.Slot.Version.Container.Docker.PortMappings {
 			if portMapping.Name == healthCheck.PortName {
 				if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "host" {
-					namespacePort = portMapping.Port
+					namespacePort = portMapping.HostPort
 				} else if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "bridge" {
 					namespacePort = portMapping.ContainerPort
 				} else { // not support, shortcut

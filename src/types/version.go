@@ -46,7 +46,7 @@ type Parameter struct {
 
 type PortMapping struct {
 	ContainerPort int32  `json:"containerPort,omitempty"`
-	Port          int32  `json:"port,omitempty"`
+	HostPort      int32  `json:"hostPort,omitempty"`
 	Name          string `json:"name,omitempty"`
 	Protocol      string `json:"protocol,omitempty"`
 }

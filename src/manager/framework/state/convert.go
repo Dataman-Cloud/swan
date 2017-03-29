@@ -232,6 +232,7 @@ func ParameterFromRaft(raftParameter *rafttypes.Parameter) *types.Parameter {
 func PortMappingToRaft(portMapping *types.PortMapping) *rafttypes.PortMapping {
 	return &rafttypes.PortMapping{
 		ContainerPort: portMapping.ContainerPort,
+		HostPort:      portMapping.HostPort,
 		Name:          portMapping.Name,
 		Protocol:      portMapping.Protocol,
 	}
@@ -240,6 +241,7 @@ func PortMappingToRaft(portMapping *types.PortMapping) *rafttypes.PortMapping {
 func PortMappingFromRaft(raftPortMapping *rafttypes.PortMapping) *types.PortMapping {
 	return &types.PortMapping{
 		ContainerPort: raftPortMapping.ContainerPort,
+		HostPort:      raftPortMapping.HostPort,
 		Name:          raftPortMapping.Name,
 		Protocol:      raftPortMapping.Protocol,
 	}
