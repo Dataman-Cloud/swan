@@ -41,7 +41,7 @@ func (updating *StateUpdating) OnEnter() {
 
 	updating.CurrentSlotIndex = -1
 	for index, slot := range updating.App.GetSlots() {
-		if slot.Version == updating.App.ProposedVersion {
+		if slot.Version.ID == updating.App.ProposedVersion.ID {
 			updating.CurrentSlotIndex = index + 1
 		}
 	}

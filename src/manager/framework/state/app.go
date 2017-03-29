@@ -204,7 +204,7 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 
 	updatedCount := 0
 	for index, slot := range app.GetSlots() {
-		if slot.Version == app.ProposedVersion {
+		if slot.Version.ID == app.ProposedVersion.ID {
 			updatedCount = index + 1
 		}
 	}
