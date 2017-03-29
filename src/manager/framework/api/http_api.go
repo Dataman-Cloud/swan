@@ -226,7 +226,7 @@ func (api *AppService) ListApp(request *restful.Request, response *restful.Respo
 
 	appsRet := make([]*types.App, 0)
 	for _, app := range api.Scheduler.ListApps(appFilterOptions) {
-		appsRet = append(appsRet, FormApp(app))
+		appsRet = append(appsRet, FormAppWithTask(app))
 	}
 
 	response.WriteEntity(appsRet)
@@ -534,14 +534,29 @@ func FormApp(app *state.App) *types.App {
 		URIs:             version.URIs,
 	}
 
-	// Add tasks by default
+	return appRet
+}
+
+func FormAppWithTask(app *state.App) *types.App {
+	appRet := FormApp(app)
+
+	// Add tasks without history info, should used by list API
 	appRet.Tasks = FilterTasksFromApp(app)
 
 	return appRet
 }
 
-func FormAppRetWithVersions(app *state.App) *types.App {
+func FormAppWithTaskHistory(app *state.App) *types.App {
 	appRet := FormApp(app)
+
+	// Add tasks with history info, should used by retrieve API
+	appRet.Tasks = FilterTasksWithHistoryFromApp(app)
+
+	return appRet
+}
+
+func FormAppRetWithVersions(app *state.App) *types.App {
+	appRet := FormAppWithTaskHistory(app)
 	appRet.Versions = make([]string, 0)
 	for _, v := range app.Versions {
 		appRet.Versions = append(appRet.Versions, v.ID)
@@ -550,6 +565,16 @@ func FormAppRetWithVersions(app *state.App) *types.App {
 }
 
 func FilterTasksFromApp(app *state.App) []*types.Task {
+	tasks := make([]*types.Task, 0)
+	for _, slot := range app.GetSlots() {
+		task := FormTask(slot)
+		tasks = append(tasks, task)
+	}
+
+	return tasks
+}
+
+func FilterTasksWithHistoryFromApp(app *state.App) []*types.Task {
 	tasks := make([]*types.Task, 0)
 	for _, slot := range app.GetSlots() {
 		task := FormTask(slot)
@@ -635,7 +660,6 @@ func FormTaskHistory(v *state.Task) *types.TaskHistory {
 
 		ArchivedAt: v.ArchivedAt,
 	}
-
 }
 
 func FormTask(slot *state.Slot) *types.Task {
