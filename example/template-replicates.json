@@ -1,5 +1,6 @@
 {
   "appName": "wordpress2",
+  "appVersion": "version1",
   "cmd": null,
   "args": null,
   "cpus": 0.01,

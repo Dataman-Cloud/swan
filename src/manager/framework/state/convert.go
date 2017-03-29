@@ -50,6 +50,7 @@ func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 		Mode:        version.Mode,
 		AppName:     version.AppName,
 		AppID:       appID,
+		AppVersion:  version.AppVersion,
 	}
 
 	if version.Container != nil {
@@ -89,6 +90,7 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 		URIs:        raftVersion.Uris,
 		IP:          raftVersion.Ip,
 		Mode:        raftVersion.Mode,
+		AppVersion:  raftVersion.AppVersion,
 	}
 
 	if raftVersion.Container != nil {
@@ -344,12 +346,12 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 	return raftSlot
 }
 
-func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
+func SlotFromRaft(raftSlot *rafttypes.Slot, app *App) *Slot {
 	slot := &Slot{
 		Index:         int(raftSlot.Index),
 		ID:            raftSlot.ID,
 		State:         raftSlot.State,
-		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask),
+		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask, app),
 		OfferID:       raftSlot.CurrentTask.OfferID,
 		AgentID:       raftSlot.CurrentTask.AgentID,
 		Ip:            raftSlot.CurrentTask.Ip,
@@ -357,10 +359,13 @@ func SlotFromRaft(raftSlot *rafttypes.Slot) *Slot {
 		healthy:       raftSlot.Healthy,
 	}
 
-	raftVersion, err := persistentStore.GetVersion(raftSlot.AppID, raftSlot.VersionID)
-	if err == nil {
-		slot.Version = VersionFromRaft(raftVersion)
+	for _, version := range app.Versions {
+		if raftSlot.VersionID == version.ID {
+			slot.Version = version
+		}
 	}
+
+	slot.CurrentTask.Slot = slot
 
 	return slot
 }
@@ -386,7 +391,7 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 	}
 }
 
-func TaskFromRaft(raftTask *rafttypes.Task) *Task {
+func TaskFromRaft(raftTask *rafttypes.Task, app *App) *Task {
 	task := &Task{
 		ID:            raftTask.ID,
 		State:         raftTask.State,
@@ -402,9 +407,10 @@ func TaskFromRaft(raftTask *rafttypes.Task) *Task {
 		Created:       time.Unix(0, raftTask.CreatedAt),
 	}
 
-	raftVersion, err := persistentStore.GetVersion(raftTask.AppID, raftTask.VersionID)
-	if err == nil {
-		task.Version = VersionFromRaft(raftVersion)
+	for _, version := range app.Versions {
+		if raftTask.VersionID == version.ID {
+			task.Version = version
+		}
 	}
 
 	return task

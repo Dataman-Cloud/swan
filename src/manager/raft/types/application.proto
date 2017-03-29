@@ -28,27 +28,27 @@ message Application {
 
 message Version {
     string id = 1 [(gogoproto.customname) = "ID"];
-    string perviousVersionID = 2;
-    string command = 3;
-    double cpus = 4;
-    double mem = 5;
-    double disk = 6;
-    int32 instances = 7;
-    string runAs = 8;
-    Container container = 9;
-    map<string,string> labels = 10;
-     HealthCheck healthCheck = 11;
-    map<string,string> env = 12;
-    KillPolicy killPolicy = 13;
-    UpdatePolicy updatePolicy = 14;
-    string constraints = 15;
-    repeated string uris = 16;
-    repeated string ip = 17;
-    string mode = 18;
-    string appName = 19;
-    string appID = 20;
-    int32 priority = 21;
-    repeated string args = 22;
+    string command = 2;
+    double cpus = 3;
+    double mem = 4;
+    double disk = 5;
+    int32 instances = 6;
+    string runAs = 7;
+    Container container = 8;
+    map<string,string> labels = 9;
+     HealthCheck healthCheck = 10;
+    map<string,string> env = 11;
+    KillPolicy killPolicy = 12;
+    UpdatePolicy updatePolicy = 13;
+    string constraints = 14;
+    repeated string uris = 15;
+    repeated string ip = 16;
+    string mode = 17;
+    string appName = 18;
+    string appID = 19;
+    int32 priority = 20;
+    repeated string args = 21;
+    string appVersion = 22;
 }
 
 message Container {

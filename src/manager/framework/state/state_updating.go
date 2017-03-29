@@ -91,10 +91,9 @@ func (updating *StateUpdating) Step() {
 			logrus.Debug("state updating step, updating done,  all slots updated")
 
 			updating.App.CurrentVersion = updating.App.ProposedVersion
-			updating.App.Versions = append(updating.App.Versions, updating.App.CurrentVersion)
 			updating.App.ProposedVersion = nil
-			updating.App.TransitTo(APP_STATE_NORMAL)
 
+			updating.App.TransitTo(APP_STATE_NORMAL)
 		} else {
 			logrus.Debug("state updating step, updating done,  not all slots updated")
 		}

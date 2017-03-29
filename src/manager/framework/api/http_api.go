@@ -558,6 +558,7 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 			for _, v := range slot.TaskHistory {
 				staleTask := &types.TaskHistory{
 					ID:            v.ID,
+					AppID:         app.ID,
 					State:         v.State,
 					Reason:        v.Reason,
 					Message:       v.Message,
@@ -572,6 +573,7 @@ func FilterTasksFromApp(app *state.App) []*types.Task {
 				}
 				if v.Version != nil {
 					staleTask.VersionID = v.Version.ID
+					staleTask.AppVersion = v.Version.AppVersion
 					staleTask.CPU = v.Version.CPUs
 					staleTask.Mem = v.Version.Mem
 					staleTask.Disk = v.Version.Disk
@@ -644,6 +646,7 @@ func FormTask(slot *state.Slot) *types.Task {
 		AppID:         slot.App.ID,
 		SlotID:        slot.ID,
 		VersionID:     slot.Version.ID,
+		AppVersion:    slot.Version.AppVersion,
 		Healthy:       slot.Healthy(),
 		Status:        string(slot.State),
 		OfferID:       slot.OfferID,

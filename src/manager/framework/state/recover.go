@@ -31,12 +31,13 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 
 		if raftApp.Version != nil {
 			app.CurrentVersion = VersionFromRaft(raftApp.Version)
-			app.Mode = AppMode(raftApp.Version.Mode)
 		} else {
 			// TODO raftApp.Version should not be nil but we need more infomation to
 			// find the reason cause the raftApp.Version nil
 			logrus.Errorf("app: %s version was nil", app.ID)
 		}
+
+		app.Mode = AppMode(raftApp.Version.Mode)
 
 		if raftApp.ProposedVersion != nil {
 			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
@@ -81,28 +82,20 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 
 	var slots []*Slot
 	for _, raftSlot := range raftSlots {
-		slot := SlotFromRaft(raftSlot)
+		slot := SlotFromRaft(raftSlot, app)
 
 		raftTasks, err := persistentStore.ListTasks(app.ID, slot.ID)
-
 		if err != nil {
 			return nil, err
 		}
 
 		var tasks []*Task
 		for _, raftTask := range raftTasks {
-			tasks = append(tasks, TaskFromRaft(raftTask))
+			tasks = append(tasks, TaskFromRaft(raftTask, app))
 		}
 		slot.TaskHistory = tasks
 
-		slot.CurrentTask.Slot = slot
-
-		if slot.CurrentTask.Version == nil {
-			slot.CurrentTask.Version = app.CurrentVersion
-		}
 		slot.App = app
-		// TODO yaoyun
-		slot.Version = app.CurrentVersion
 
 		slots = append(slots, slot)
 	}
