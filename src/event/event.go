@@ -1,6 +1,7 @@
 package event
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,9 +9,9 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 
-	"github.com/Dataman-Cloud/swan-janitor/src"
+	janitor "github.com/Dataman-Cloud/swan-janitor/src"
 	"github.com/Dataman-Cloud/swan-resolver/nameserver"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 )
 
@@ -52,6 +53,11 @@ type Event struct {
 	AppID   string
 	AppMode string
 	Payload interface{}
+}
+
+func (e *Event) String() string {
+	bs, _ := json.Marshal(e)
+	return string(bs)
 }
 
 func NewEvent(t string, payload interface{}) *Event {

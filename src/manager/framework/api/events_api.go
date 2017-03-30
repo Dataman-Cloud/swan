@@ -10,8 +10,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
 
-	"github.com/emicklei/go-restful"
-	"github.com/satori/go.uuid"
+	restful "github.com/emicklei/go-restful"
+	uuid "github.com/satori/go.uuid"
 )
 
 type EventsService struct {
@@ -47,17 +47,31 @@ func (api *EventsService) Register(container *restful.Container) {
 }
 
 func (api *EventsService) Events(request *restful.Request, response *restful.Response) {
+	response.Header().Set("Content-Type", "text/event-stream")
+	response.Header().Set("Cache-Control", "no-cache")
+	response.Write(nil)
+	if f, ok := response.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+	if eventbus.Full() {
+		http.Error(response, "too many event clients", 500)
+		return
+	}
+
 	appId := request.QueryParameter("appId")
 	catchUp := request.QueryParameter("catchUp")
-	listener, doneChan := eventbus.NewSSEListener(uuid.NewV4().String(), appId, http.ResponseWriter(response))
+
+	listener, _ := eventbus.NewSSEListener(uuid.NewV4().String(), appId, http.ResponseWriter(response))
 	eventbus.AddListener(listener)
-	go func() { // put this into a goroutine, make sure no event miss
-		if strings.ToLower(catchUp) == "true" {
+	defer eventbus.RemoveListener(listener)
+
+	if strings.ToLower(catchUp) == "true" {
+		go func() {
 			for _, e := range api.Scheduler.HealthyTaskEvents() {
 				listener.Write(e)
 			}
-		}
-	}()
-	<-doneChan
-	eventbus.RemoveListener(listener)
+		}()
+	}
+
+	listener.Wait()
 }
