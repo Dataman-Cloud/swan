@@ -13,7 +13,7 @@
   "container": {
     "docker": {
       "image": "nginx:1.10",
-      "network": "host",
+      "network": "bridge",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
@@ -24,7 +24,7 @@
       ],
       "portMappings": [
         {
-          "hostPort": 0,
+          "containerPort": 80,
           "protocol": "tcp",
           "name": "web"
         }

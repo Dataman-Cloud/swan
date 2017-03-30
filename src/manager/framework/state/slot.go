@@ -358,12 +358,14 @@ func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
 	}
 
 	payload := &types.TaskInfoEvent{
-		TaskID:    slot.ID,
-		AppID:     slot.App.ID,
-		State:     slot.State,
-		Healthy:   slot.healthy,
-		ClusterID: slot.App.ClusterID,
-		RunAs:     slot.Version.RunAs,
+		TaskID:         slot.ID,
+		AppID:          slot.App.ID,
+		AppVersionID:   slot.Version.ID,
+		AppVersionName: slot.Version.AppVersion,
+		State:          slot.State,
+		Healthy:        slot.healthy,
+		ClusterID:      slot.App.ClusterID,
+		RunAs:          slot.Version.RunAs,
 	}
 
 	if slot.App.IsFixed() {
