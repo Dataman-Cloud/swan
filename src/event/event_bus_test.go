@@ -24,6 +24,10 @@ func (d *DemoEventListener) Key() string {
 	return "demo"
 }
 
+func (d *DemoEventListener) Wait() {
+	<-d.Pipe
+}
+
 func TestStart(t *testing.T) {
 	c, cfun := context.WithCancel(context.Background())
 	done := make(chan bool)
@@ -89,6 +93,5 @@ func TestDumpEvent(t *testing.T) {
 	}()
 	e := Event{}
 	WriteEvent(&e)
-	Stop()
 	<-done
 }
