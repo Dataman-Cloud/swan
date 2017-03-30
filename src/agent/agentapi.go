@@ -20,7 +20,7 @@ func NewAgentApiServer(listener string, a *Agent) *AgentApiServer {
 	aas.engine = gin.Default()
 
 	aas.engine.GET("/ping", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"key": "value"})
+		c.String(http.StatusOK, "pong")
 	})
 
 	return aas
