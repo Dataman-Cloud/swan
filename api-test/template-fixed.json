@@ -33,9 +33,6 @@
   "labels": {
     "USER_ID": "1"
   },
-  "killPolicy": {
-    "duration": 5
-  },
   "healthChecks": [
     {
       "protocol": "CMD",
