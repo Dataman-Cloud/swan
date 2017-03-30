@@ -46,9 +46,6 @@
   "label": {
     "USER_ID": "1"
   },
-  "killPolicy": {
-    "duration": 5
-  },
   "healthCheck":
     {
       "protocol": "http",
