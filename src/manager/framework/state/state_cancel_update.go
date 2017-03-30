@@ -30,7 +30,7 @@ func (cancelUpdate *StateCancelUpdate) OnEnter() {
 
 	cancelUpdate.TargetSlotIndex = 0
 	for index, slot := range cancelUpdate.App.GetSlots() {
-		if slot.Version == cancelUpdate.App.CurrentVersion {
+		if slot.Version.ID == cancelUpdate.App.CurrentVersion.ID {
 			cancelUpdate.CurrentSlotIndex = index - 1
 			break
 		}

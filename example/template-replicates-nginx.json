@@ -1,10 +1,11 @@
 {
   "appName": "nginx",
+  "appVersion": "version5",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
-  "mem": 5,
-  "disk": 0,
+  "mem": 6,
+  "disk": 100,
   "runAs": "xcm",
   "priority": 100,
   "instances": 3,
@@ -12,7 +13,7 @@
   "container": {
     "docker": {
       "image": "nginx:1.10",
-      "network": "bridge",
+      "network": "host",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
@@ -23,7 +24,7 @@
       ],
       "portMappings": [
         {
-          "containerPort": 80,
+          "hostPort": 0,
           "protocol": "tcp",
           "name": "web"
         }

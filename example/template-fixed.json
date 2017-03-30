@@ -1,5 +1,6 @@
 {
   "appName": "mysql",
+  "appVersion": "version1",
   "cmd": null,
   "cpus": 0.4,
   "mem": 500,

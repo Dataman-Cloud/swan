@@ -49,6 +49,7 @@ type Task struct {
 	AppID       string       `json:"appID"`
 	SlotID      string       `json:"slotID"`
 	VersionID   string       `json:"versionID"`
+	AppVersion  string       `json:"appVersion"`
 	CurrentTask *TaskHistory `json:"currentTask"`
 
 	Status string `json:"status,omitempty"`
@@ -73,9 +74,10 @@ type Task struct {
 }
 
 type TaskHistory struct {
-	ID        string `json:"id"`
-	AppID     string `json:"appID"`
-	VersionID string `json:"versionID"`
+	ID         string `json:"id"`
+	AppID      string `json:"appID"`
+	VersionID  string `json:"versionID"`
+	AppVersion string `json:"appVersion"`
 
 	OfferID       string `json:"offerID"`
 	AgentID       string `json:"agentID"`

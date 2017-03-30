@@ -41,7 +41,7 @@ func (updating *StateUpdating) OnEnter() {
 
 	updating.CurrentSlotIndex = -1
 	for index, slot := range updating.App.GetSlots() {
-		if slot.Version == updating.App.ProposedVersion {
+		if slot.Version.ID == updating.App.ProposedVersion.ID {
 			updating.CurrentSlotIndex = index + 1
 		}
 	}
@@ -91,10 +91,9 @@ func (updating *StateUpdating) Step() {
 			logrus.Debug("state updating step, updating done,  all slots updated")
 
 			updating.App.CurrentVersion = updating.App.ProposedVersion
-			updating.App.Versions = append(updating.App.Versions, updating.App.CurrentVersion)
 			updating.App.ProposedVersion = nil
-			updating.App.TransitTo(APP_STATE_NORMAL)
 
+			updating.App.TransitTo(APP_STATE_NORMAL)
 		} else {
 			logrus.Debug("state updating step, updating done,  not all slots updated")
 		}

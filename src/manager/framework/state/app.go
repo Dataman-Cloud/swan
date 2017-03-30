@@ -93,12 +93,18 @@ func NewApp(version *types.Version,
 	} else { // if no mode specified, default should be replicates
 		app.Mode = APP_MODE_REPLICATES
 	}
+
 	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+	if version.AppVersion == "" {
+		version.AppVersion = version.ID
+	}
 
 	app.StateMachine = NewStateMachine()
 	app.StateMachine.Start(NewStateCreating(app))
 
 	app.create()
+
+	app.SaveVersion(app.CurrentVersion)
 
 	return app, nil
 }
@@ -169,6 +175,11 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return err
 	}
 
+	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+	if version.AppVersion == "" {
+		version.AppVersion = version.ID
+	}
+
 	if err := app.checkProposedVersionValid(version); err != nil {
 		return err
 	}
@@ -177,10 +188,9 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 		return errors.New("update failed: current version was losted")
 	}
 
-	version.ID = fmt.Sprintf("%d", time.Now().Unix())
-	version.PreviousVersionID = app.CurrentVersion.ID
 	app.ProposedVersion = version
 
+	app.SaveVersion(app.ProposedVersion)
 	app.Touch()
 
 	return app.TransitTo(APP_STATE_UPDATING, 1)
@@ -194,7 +204,7 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 
 	updatedCount := 0
 	for index, slot := range app.GetSlots() {
-		if slot.Version == app.ProposedVersion {
+		if slot.Version.ID == app.ProposedVersion.ID {
 			updatedCount = index + 1
 		}
 	}
@@ -366,6 +376,11 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 	if version.RunAs != app.CurrentVersion.RunAs {
 		return fmt.Errorf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs)
 	}
+
+	// appVersion should not equal
+	if version.AppVersion == app.CurrentVersion.AppVersion {
+		return fmt.Errorf("app version %s exists, choose another one", version.AppVersion)
+	}
 	// app instances should same as current instances
 	if version.Instances != app.CurrentVersion.Instances {
 		return fmt.Errorf("instances can not change when update app, current version is %d", app.CurrentVersion.Instances)
@@ -524,6 +539,11 @@ func validateAndFormatVersion(version *types.Version) error {
 	}
 
 	return nil
+}
+
+func (app *App) SaveVersion(version *types.Version) {
+	app.Versions = append(app.Versions, version)
+	WithConvertVersion(context.TODO(), app.ID, version, nil, persistentStore.CreateVersion)
 }
 
 // 1, remove app from persisted storage

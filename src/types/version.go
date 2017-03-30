@@ -1,27 +1,27 @@
 package types
 
 type Version struct {
-	ID                string            `json:"id,omitempty"`
-	AppName           string            `json:"appName,omitempty"`
-	PreviousVersionID string            `json:"previousVersionId,omitempty"`
-	Command           string            `json:"cmd,omitempty"`
-	Args              []string          `json:"args,omitempty"`
-	CPUs              float64           `json:"cpus"`
-	Mem               float64           `json:"mem"`
-	Disk              float64           `json:"disk"`
-	Instances         int32             `json:"instances"`
-	RunAs             string            `json:"runAs"`
-	Priority          int32             `json:"priority"`
-	Container         *Container        `json:"container"`
-	Labels            map[string]string `json:"labels,omitempty"`
-	HealthCheck       *HealthCheck      `json:"healthCheck,omitempty"`
-	Env               map[string]string `json:"env,omitempty"`
-	KillPolicy        *KillPolicy       `json:"killPolicy,omitempty"`
-	UpdatePolicy      *UpdatePolicy     `json:"updatPolicy,omitempty"`
-	Constraints       string            `json:"constraints,omitempty"`
-	URIs              []string          `json:"uris,omitempty"`
-	IP                []string          `json:"ip,omitempty"`
-	Mode              string            `json:"mode"`
+	ID           string            `json:"id,omitempty"`
+	AppName      string            `json:"appName,omitempty"`
+	AppVersion   string            `json:"appVersion,omitempty"`
+	Command      string            `json:"cmd,omitempty"`
+	Args         []string          `json:"args,omitempty"`
+	CPUs         float64           `json:"cpus"`
+	Mem          float64           `json:"mem"`
+	Disk         float64           `json:"disk"`
+	Instances    int32             `json:"instances"`
+	RunAs        string            `json:"runAs"`
+	Priority     int32             `json:"priority"`
+	Container    *Container        `json:"container"`
+	Labels       map[string]string `json:"labels,omitempty"`
+	HealthCheck  *HealthCheck      `json:"healthCheck,omitempty"`
+	Env          map[string]string `json:"env,omitempty"`
+	KillPolicy   *KillPolicy       `json:"killPolicy,omitempty"`
+	UpdatePolicy *UpdatePolicy     `json:"updatPolicy,omitempty"`
+	Constraints  string            `json:"constraints,omitempty"`
+	URIs         []string          `json:"uris,omitempty"`
+	IP           []string          `json:"ip,omitempty"`
+	Mode         string            `json:"mode"`
 }
 
 type Container struct {
@@ -46,7 +46,7 @@ type Parameter struct {
 
 type PortMapping struct {
 	ContainerPort int32  `json:"containerPort,omitempty"`
-	Port          int32  `json:"port,omitempty"`
+	HostPort      int32  `json:"hostPort,omitempty"`
 	Name          string `json:"name,omitempty"`
 	Protocol      string `json:"protocol,omitempty"`
 }

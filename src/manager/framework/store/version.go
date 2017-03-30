@@ -14,7 +14,7 @@ import (
 // 3. push thie old version to version history
 // 4. store the new version in app data
 // 5. put all actions in one storeActions to propose data.
-func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, version *types.Version, cb func()) error {
+func (s *FrameworkStore) CreateVersion(ctx context.Context, appId string, version *types.Version, cb func()) error {
 	app, err := s.GetApp(appId)
 	if err != nil {
 		return err
@@ -27,17 +27,9 @@ func (s *FrameworkStore) UpdateVersion(ctx context.Context, appId string, versio
 	var storeActions []*types.StoreAction
 	updateVersionAction := &types.StoreAction{
 		Action: types.StoreActionKindCreate,
-		Target: &types.StoreAction_Version{app.Version},
+		Target: &types.StoreAction_Version{version},
 	}
 	storeActions = append(storeActions, updateVersionAction)
-
-	version.PerviousVersionID = app.Version.ID
-	app.Version = version
-	updateAppAction := &types.StoreAction{
-		Action: types.StoreActionKindUpdate,
-		Target: &types.StoreAction_Application{app},
-	}
-	storeActions = append(storeActions, updateAppAction)
 
 	return s.RaftNode.ProposeValue(ctx, storeActions, cb)
 }

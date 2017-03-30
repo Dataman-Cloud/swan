@@ -2,6 +2,7 @@ package state
 
 import (
 	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
+	"github.com/Dataman-Cloud/swan/src/types"
 
 	"golang.org/x/net/context"
 )
@@ -22,4 +23,10 @@ func WithConvertTask(ctx context.Context, task *Task, cb func(), action func(ctx
 	raftTask := TaskToRaft(task)
 
 	return action(ctx, raftTask, cb)
+}
+
+func WithConvertVersion(ctx context.Context, appId string, version *types.Version, cb func(), action func(ctx context.Context, appId string, version *rafttypes.Version, cb func()) error) error {
+	raftVersion := VersionToRaft(version, appId)
+
+	return action(ctx, appId, raftVersion, cb)
 }
