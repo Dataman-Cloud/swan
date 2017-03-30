@@ -3,6 +3,7 @@ package state
 import (
 	"errors"
 	"fmt"
+	"net"
 	"regexp"
 	"sort"
 	"strings"
@@ -401,17 +402,28 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New("swan only support mesos docker containerization, no container found")
 	}
 
-	if version.AppName == "" {
-		return errors.New("invalid appName: appName was empty")
+	if version.Container.Docker.Image == "" {
+		return errors.New("image field required")
 	}
 
-	if version.Instances == 0 {
+	if n := len(version.AppName); n == 0 || n > 48 {
+		return errors.New("invalid appName: appName empty or too long")
+	}
+
+	if version.Instances <= 0 {
 		return errors.New("invalid instances: instances must be specified and should greater than 0")
+	}
+
+	if version.CPUs < 0.01 {
+		return errors.New("cpu should >= 0.01")
+	}
+	if version.Mem < 5 {
+		return errors.New("mem should >= 5m")
 	}
 
 	version.AppName = strings.TrimSpace(version.AppName)
 
-	r, _ := regexp.Compile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	r := regexp.MustCompile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
 	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
 
 	//validation of AppId
@@ -439,12 +451,8 @@ func validateAndFormatVersion(version *types.Version) error {
 		version.Mode = string(APP_MODE_REPLICATES)
 	}
 
-	if (version.Mode != string(APP_MODE_REPLICATES)) && (version.Mode != string(APP_MODE_FIXED)) {
-		return fmt.Errorf("enrecognized app mode %s", version.Mode)
-	}
-
-	// validation for fixed mode application
-	if version.Mode == string(APP_MODE_FIXED) {
+	switch version.Mode {
+	case string(APP_MODE_FIXED): // validation for fixed mode application
 		if len(version.IP) != int(version.Instances) {
 			return fmt.Errorf("should provide exactly %d ip for FIXED type app", version.Instances)
 		}
@@ -452,10 +460,24 @@ func validateAndFormatVersion(version *types.Version) error {
 		if len(version.Container.Docker.PortMappings) > 0 {
 			return errors.New("fixed mode application doesn't support portmapping")
 		}
-	}
 
-	// validation for replicates mode app
-	if version.Mode == string(APP_MODE_REPLICATES) {
+		for _, ip := range version.IP {
+			if addr := net.ParseIP(ip); addr == nil || addr.IsLoopback() {
+				return errors.New("invalid fix ip: " + ip)
+			}
+		}
+
+		if version.HealthCheck != nil {
+			protocol := version.HealthCheck.Protocol
+			if !utils.SliceContains([]string{"cmd", "CMD"}, protocol) {
+				return fmt.Errorf("doesn't recoginized protocol %s for health check for fixed type app", protocol)
+			}
+
+			if len(version.HealthCheck.Value) == 0 {
+				return fmt.Errorf("no value provided for health check with %s", protocol)
+			}
+		}
+	case string(APP_MODE_REPLICATES): // validation for replicates mode app
 		// the only network driver should be **bridge**
 		if !utils.SliceContains([]string{"bridge", "host"}, strings.ToLower(version.Container.Docker.Network)) {
 			return errors.New("replicates mode app suppose the only network driver should be bridge or host")
@@ -512,17 +534,8 @@ func validateAndFormatVersion(version *types.Version) error {
 				}
 			}
 		}
-	} else {
-		if version.HealthCheck != nil {
-			protocol := version.HealthCheck.Protocol
-			if !utils.SliceContains([]string{"cmd", "CMD"}, protocol) {
-				return fmt.Errorf("doesn't recoginized protocol %s for health check for fixed type app", protocol)
-			}
-
-			if len(version.HealthCheck.Value) == 0 {
-				return fmt.Errorf("no value provided for health check with %s", protocol)
-			}
-		}
+	default:
+		return fmt.Errorf("enrecognized app mode %s", version.Mode)
 	}
 
 	// validate constraints are all valid
