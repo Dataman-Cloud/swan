@@ -13,6 +13,8 @@ type Target struct {
 	TaskIP   string
 	TaskPort uint32
 	PortName string
+
+	Weight float64
 }
 
 func (t *Target) Equal(t1 *Target) bool {
@@ -24,7 +26,7 @@ func (t *Target) Equal(t1 *Target) bool {
 }
 
 func (t *Target) ToString() string {
-	return fmt.Sprintf("%s\n%s\n%s\n%s\n%s\n%s", t.AppID, t.TaskID, t.TaskIP, t.TaskPort, t.PortName)
+	return fmt.Sprintf("%s %s %s %s %s %s\n", t.AppID, t.TaskID, t.TaskIP, t.TaskPort, t.PortName)
 }
 
 func (t Target) Entry() *url.URL {

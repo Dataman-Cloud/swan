@@ -11,22 +11,13 @@ type Upstream struct {
 	Targets     []*Target
 	LoadBalance *RoundRobinLoadBalancer
 
-	lock sync.Mutex
-}
-
-func (u *Upstream) GetTarget(taskID string) *Target {
-	for _, t := range u.Targets {
-		if t.TaskID == taskID {
-			return t
-			break
-		}
-	}
-	return nil
+	mu sync.RWMutex
 }
 
 func NewUpstream() *Upstream {
 	lb := NewRoundRobinLoadBalancer()
 	lb.Seed()
+
 	return &Upstream{
 		LoadBalance: lb,
 	}
@@ -41,8 +32,8 @@ func (u *Upstream) ContainsTarget(taskID string) bool {
 }
 
 func (u *Upstream) AddTarget(target *Target) {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+	u.mu.Lock()
+	defer u.mu.Unlock()
 
 	u.Targets = append(u.Targets, target)
 }
@@ -56,19 +47,30 @@ func (u *Upstream) RemoveTarget(target *Target) {
 		}
 	}
 	if index >= 0 {
-		u.lock.Lock()
-		defer u.lock.Unlock()
+		u.mu.Lock()
+		defer u.mu.Unlock()
+
 		u.Targets = append(u.Targets[:index], u.Targets[index+1:]...)
 	}
 }
 
 func (u *Upstream) NextTargetEntry() *url.URL {
-	u.lock.Lock()
-	defer u.lock.Unlock()
+	u.mu.RLock()
+	defer u.mu.RUnlock()
 
 	rr := u.LoadBalance
 	current := u.Targets[rr.NextIndex]
 	rr.NextIndex = (rr.NextIndex + 1) % len(u.Targets)
 
 	return current.Entry()
+}
+
+func (u *Upstream) GetTarget(taskID string) *Target {
+	for _, t := range u.Targets {
+		if t.TaskID == taskID {
+			return t
+		}
+	}
+
+	return nil
 }

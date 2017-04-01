@@ -95,6 +95,23 @@ func FlagJoinAddrs() cli.Flag {
 	}
 }
 
+func FlagGossipListenAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gossip-listen-addr",
+		Usage:  "swan gossip node listen address",
+		EnvVar: "SWAN_GOSSIP_LISTEN_ADDR",
+		Value:  "0.0.0.0:5000",
+	}
+}
+
+func FlagGossipJoinAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gossip-join-addr",
+		Usage:  "swan gossip node join address",
+		EnvVar: "SWAN_GOSSIP_JOIN_ADDR",
+	}
+}
+
 func FlagJanitorAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
 		Name:   "janitor-advertise-ip",
@@ -187,6 +204,8 @@ func AgentJoinCmd() cli.Command {
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagListenAddr())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagAdvertiseAddr())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJoinAddrs())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagGossipJoinAddr())
+	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagGossipListenAddr())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagDataDir())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorAdvertiseIp())
 	agentJoinCmd.Flags = append(agentJoinCmd.Flags, FlagJanitorListenAddr())

@@ -48,28 +48,11 @@ func (res *Resolver) RecordGeneratorChangeChan() chan *RecordGeneratorChangeEven
 	return res.rg.RecordGeneratorChangeChan
 }
 
-func (res *Resolver) Start(ctx context.Context) error {
-	return <-res.Run(ctx)
-}
-
-func (res *Resolver) Run(ctx context.Context) <-chan error {
+func (res *Resolver) Start(ctx context.Context, started chan bool) error {
 	dns.HandleFunc(res.rg.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
-	startedCh, errCh := res.Serve()
-	<-startedCh // when successfully listen
-
-	go func() {
-		for {
-			select {
-			case <-ctx.Done():
-				errCh <- ctx.Err()
-				return
-			}
-		}
-	}()
-
-	return errCh
+	return res.Serve(ctx, started)
 }
 
 type Resolver struct {
@@ -259,24 +242,25 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 	return exs
 }
 
-func (res *Resolver) Serve() (startedCh <-chan struct{}, errCh chan error) {
-	ch := make(chan struct{})
+func (res *Resolver) Serve(ctx context.Context, started chan bool) (err error) {
 	server := &dns.Server{
 		Addr:              res.config.ListenAddr,
 		Net:               "udp",
 		TsigSecret:        nil,
-		NotifyStartedFunc: func() { close(ch) },
+		NotifyStartedFunc: func() { started <- true },
 	}
 
+	errCh := make(chan error)
 	go func() {
-		defer close(errCh)
-		err := server.ListenAndServe()
-		if err != nil {
-			errCh <- fmt.Errorf("Failed to setup %q server: %v", err)
-		}
+		errCh <- server.ListenAndServe()
 	}()
 
-	return ch, errCh
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case err := <-errCh:
+		return err
+	}
 }
 
 type multiError []error
