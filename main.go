@@ -6,6 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
+	_ "github.com/Dataman-Cloud/swan/src/debug"
 	"github.com/Dataman-Cloud/swan/src/manager"
 	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/version"
