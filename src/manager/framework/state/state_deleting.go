@@ -68,7 +68,9 @@ func (deleting *StateDeleting) Step() {
 		deleting.App.RemoveSlot(deleting.CurrentSlotIndex)
 		deleting.CurrentSlotIndex -= 1
 		deleting.CurrentSlot, _ = deleting.App.GetSlot(deleting.CurrentSlotIndex)
-		deleting.CurrentSlot.KillTask()
+		if deleting.CurrentSlot != nil {
+			deleting.CurrentSlot.KillTask()
+		}
 
 		deleting.lock.Unlock()
 	} else {

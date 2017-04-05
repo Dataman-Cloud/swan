@@ -18,10 +18,19 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/DataDog/datadog-go/statsd",
+			"repository": "https://github.com/DataDog/datadog-go",
+			"vcs": "git",
+			"revision": "6fa3e39b86f8cbb638a971f2a90b9ebd98074c6b",
+			"branch": "master",
+			"path": "/statsd",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/Dataman-Cloud/swan-janitor",
 			"repository": "https://github.com/Dataman-Cloud/swan-janitor",
 			"vcs": "git",
-			"revision": "ae5fbbeb95fd84a5c15e7ab7ecc662c007b380aa",
+			"revision": "a68246cec248a7a981dff34bb0ab9a17460e4702",
 			"branch": "master",
 			"notests": true
 		},
@@ -29,7 +38,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-resolver/nameserver",
 			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
 			"vcs": "git",
-			"revision": "fb87bad3c7caa7d79e9a2ee2ba4f73d09cbcbc53",
+			"revision": "2b94b99127044740c4619f76079815f6c16568f2",
 			"branch": "master",
 			"path": "/nameserver",
 			"notests": true
@@ -95,6 +104,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/armon/go-metrics",
+			"repository": "https://github.com/armon/go-metrics",
+			"vcs": "git",
+			"revision": "93f237eba9b0602f3e73710416558854a81d9337",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/beorn7/perks/quantile",
 			"repository": "https://github.com/beorn7/perks",
 			"vcs": "git",
@@ -108,6 +125,22 @@
 			"repository": "https://github.com/boltdb/bolt",
 			"vcs": "git",
 			"revision": "4b1ebc1869ad66568b313d0dc410e2be72670dda",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/circonus-labs/circonus-gometrics",
+			"repository": "https://github.com/circonus-labs/circonus-gometrics",
+			"vcs": "git",
+			"revision": "55add91cfb689b0fd6e9fa67c58c7a948310a80e",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/circonus-labs/circonusllhist",
+			"repository": "https://github.com/circonus-labs/circonusllhist",
+			"vcs": "git",
+			"revision": "7d649b46cdc2cd2ed102d350688a75a4fd7778c6",
 			"branch": "master",
 			"notests": true
 		},
@@ -435,6 +468,153 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/hashicorp/errwrap",
+			"repository": "https://github.com/hashicorp/errwrap",
+			"vcs": "git",
+			"revision": "7554cd9344cec97297fa6649b055a8c98c2a1e55",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/go-cleanhttp",
+			"repository": "https://github.com/hashicorp/go-cleanhttp",
+			"vcs": "git",
+			"revision": "3573b8b52aa7b37b9358d966a898feb387f62437",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/go-msgpack/codec",
+			"repository": "https://github.com/hashicorp/go-msgpack",
+			"vcs": "git",
+			"revision": "fa3f63826f7c23912c15263591e65d54d080b458",
+			"branch": "master",
+			"path": "/codec",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/go-multierror",
+			"repository": "https://github.com/hashicorp/go-multierror",
+			"vcs": "git",
+			"revision": "ed905158d87462226a13fe39ddf685ea65f1c11f",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/go-retryablehttp",
+			"repository": "https://github.com/hashicorp/go-retryablehttp",
+			"vcs": "git",
+			"revision": "6e85be8fee1dcaa02c0eaaac2df5a8fbecf94145",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/go-sockaddr",
+			"repository": "https://github.com/hashicorp/go-sockaddr",
+			"vcs": "git",
+			"revision": "acd314c5781ea706c710d9ea70069fd2e110d61d",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/memberlist",
+			"repository": "https://github.com/hashicorp/memberlist",
+			"vcs": "git",
+			"revision": "6cc6075ba9fba1915fa0416f00d2b4efa9dc2262",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/coordinate",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "coordinate",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/serf",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "/serf",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/armon/go-metrics",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/armon/go-metrics",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/hashicorp/errwrap",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/hashicorp/errwrap",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/hashicorp/go-msgpack/codec",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/hashicorp/go-msgpack/codec",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/hashicorp/go-multierror",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/hashicorp/go-multierror",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/hashicorp/go-sockaddr",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/hashicorp/go-sockaddr",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/hashicorp/memberlist",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/hashicorp/memberlist",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/miekg/dns",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/miekg/dns",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/hashicorp/serf/vendor/github.com/sean-/seed",
+			"repository": "https://github.com/hashicorp/serf",
+			"vcs": "git",
+			"revision": "19f2c401e122352c047a84d6584dd51e2fb8fcc4",
+			"branch": "master",
+			"path": "vendor/github.com/sean-/seed",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/manucorporat/sse",
 			"repository": "https://github.com/manucorporat/sse",
 			"vcs": "git",
@@ -550,6 +730,14 @@
 			"repository": "https://github.com/satori/go.uuid",
 			"vcs": "git",
 			"revision": "b061729afc07e77a8aa4fad0a2fd840958f1942a",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/sean-/seed",
+			"repository": "https://github.com/sean-/seed",
+			"vcs": "git",
+			"revision": "e2103e2c35297fb7e17febb81e49b312087a2372",
 			"branch": "master",
 			"notests": true
 		},

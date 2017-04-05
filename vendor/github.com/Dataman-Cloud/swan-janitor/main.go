@@ -6,6 +6,7 @@ import (
 
 	janitor "github.com/Dataman-Cloud/swan-janitor/src"
 	log "github.com/Sirupsen/logrus"
+	"golang.org/x/net/context"
 )
 
 func SetupLogger() {
@@ -21,19 +22,18 @@ func SetupLogger() {
 
 func main() {
 	janitorConfig := janitor.DefaultConfig()
-	//enable multi_port mode
-	//janitorConfig.Listener.Mode = config.MULTIPORT_LISTENER_MODE
-
-	//TuneGolangProcess()
 	SetupLogger()
 
 	server := janitor.NewJanitorServer(janitorConfig)
-	err := server.Init()
-	if err != nil {
-		os.Exit(1)
-	}
 
-	go server.Run()
+	go func() {
+		staredCh := make(chan bool)
+		err := server.Start(context.Background(), staredCh)
+		if err != nil {
+			log.Errorf("server start go error: %v", err)
+			os.Exit(1)
+		}
+	}()
 
 	ticker := time.NewTicker(time.Second * 10)
 	for {
@@ -60,7 +60,7 @@ func main() {
 		}
 
 		for _, targetChangeEvent := range targetChangeEvents {
-			server.SwanEventChan() <- targetChangeEvent
+			server.EventChan <- targetChangeEvent
 		}
 		time.Sleep(time.Second * 10)
 		targetChangeEvents = []*janitor.TargetChangeEvent{
@@ -82,7 +82,7 @@ func main() {
 			},
 		}
 		for _, targetChangeEvent := range targetChangeEvents {
-			server.SwanEventChan() <- targetChangeEvent
+			server.EventChan <- targetChangeEvent
 		}
 	}
 }

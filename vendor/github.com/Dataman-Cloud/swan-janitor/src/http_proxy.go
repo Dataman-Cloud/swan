@@ -35,23 +35,23 @@ func (m *meteredRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 
 // httpProxy is a dynamic reverse proxy for HTTP and HTTPS protocols.
 type httpProxy struct {
-	tr                 http.RoundTripper
-	handlerCfg         HttpHandlerCfg
-	listenAddr         string
-	swanUpstreamLoader *SwanUpstreamLoader
+	tr             http.RoundTripper
+	handlerCfg     HttpHandlerCfg
+	listenAddr     string
+	UpstreamLoader *UpstreamLoader
 }
 
-func NewHTTPProxy(tr http.RoundTripper, handlerCfg HttpHandlerCfg, listenAddr string, swanUpstreamLoader *SwanUpstreamLoader) http.Handler {
+func NewHTTPProxy(tr http.RoundTripper, handlerCfg HttpHandlerCfg, listenAddr string, UpstreamLoader *UpstreamLoader) http.Handler {
 	return &httpProxy{
-		tr:                 tr,
-		listenAddr:         listenAddr,
-		handlerCfg:         handlerCfg,
-		swanUpstreamLoader: swanUpstreamLoader,
+		tr:             tr,
+		listenAddr:     listenAddr,
+		handlerCfg:     handlerCfg,
+		UpstreamLoader: UpstreamLoader,
 	}
 }
 
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	log.Debugf("hostname: %s", r.Host)
+	log.Debugf("got request for hostname: %s", r.Host)
 
 	var targetEntry *url.URL
 	if len(r.Host) == 0 {
@@ -87,7 +87,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(slices) == 4 {
 		taskID := strings.Join(slices, "-")
 		appID := strings.Join(slices[1:], "-")
-		upstream := p.swanUpstreamLoader.Get(appID)
+		upstream := p.UpstreamLoader.Get(appID)
 		if upstream == nil {
 			log.Debugf("fail to found any upstream for %s", host)
 			w.WriteHeader(http.StatusNotFound)
@@ -106,7 +106,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if len(slices) == 3 {
 		appID := strings.Join(slices, "-")
-		upstream := p.swanUpstreamLoader.Get(appID)
+		upstream := p.UpstreamLoader.Get(appID)
 		if upstream == nil {
 			log.Debugf("fail to found any upstream for %s", host)
 			w.WriteHeader(http.StatusNotFound)
