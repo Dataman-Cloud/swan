@@ -37,12 +37,13 @@ func main() {
 	app.Name = "swan"
 	app.Usage = "swan [ROLE] [COMMAND] [ARG...]"
 	app.Description = "A general purpose Mesos framework which facility long running docker application management."
-	app.Version = version.Version
+	app.Version = version.GetVersion().Version
 
 	app.Commands = []cli.Command{}
 
 	app.Commands = append(app.Commands, AgentJoinCmd())
 	app.Commands = append(app.Commands, ManagerCmd())
+	app.Commands = append(app.Commands, VersionCmd())
 
 	if err := app.Run(os.Args); err != nil {
 		logrus.Errorf("%s", err.Error())
@@ -347,4 +348,15 @@ func StartManager(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func VersionCmd() cli.Command {
+	return cli.Command{
+		Name:        "version",
+		Usage:       "[COMMAND] [ARG...]",
+		Description: "show version",
+		Action: func(c *cli.Context) error {
+			return version.TextFormatTo(os.Stdout)
+		},
+	}
 }
