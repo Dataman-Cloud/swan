@@ -221,17 +221,11 @@ func AgentJoinCmd() cli.Command {
 
 func JoinAndStartAgent(c *cli.Context) error {
 	conf := config.NewAgentConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)
@@ -287,17 +281,11 @@ func ManagerJoinCmd() cli.Command {
 
 func JoinAndStartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)
@@ -338,17 +326,11 @@ func ManagerInitCmd() cli.Command {
 
 func StartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)

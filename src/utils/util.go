@@ -1,53 +1,38 @@
 package utils
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/coreos/etcd/pkg/fileutil"
 	"github.com/twinj/uuid"
 )
 
+// LoadNodeID load or create id in local id file
 func LoadNodeID(filePath string) (string, error) {
-	if !fileutil.Exist(filePath) {
-		return "", errors.New("ID file was not found")
+	filePath = filepath.Clean(filePath)
+
+	_, err := os.Stat(filePath)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(filepath.Dir(filePath), 0700)
+		if err != nil {
+			return "", err
+		}
+		nodeID := uuid.NewV4().String()
+		return nodeID, ioutil.WriteFile(filePath, []byte(nodeID), os.FileMode(0400))
 	}
 
-	idFile, err := os.Open(filePath)
+	bs, err := ioutil.ReadFile(filePath)
 	if err != nil {
 		return "", err
 	}
-
-	nodeID, err := ioutil.ReadAll(idFile)
-	if err != nil {
-		return "", err
-	}
-
-	logrus.Infof("starting swan node, ID file was found started with ID: %s", string(nodeID))
-
-	return string(nodeID), nil
-}
-
-func CreateNodeID(filePath string) (string, error) {
-	nodeID := uuid.NewV4().String()
-	idFile, err := os.OpenFile(filePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
-	if err != nil {
-		return "", err
-	}
-
-	if _, err = idFile.WriteString(nodeID); err != nil {
-		return "", err
-	}
-
-	logrus.Infof("starting swan node, ID file was not found started with  new ID: %s", nodeID)
-
-	return nodeID, nil
+	return string(bytes.TrimSpace(bs)), nil
 }
 
 func SetField(obj interface{}, name string, value interface{}) error {
