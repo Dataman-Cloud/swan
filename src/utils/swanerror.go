@@ -1,8 +1,6 @@
 package utils
 
-import (
-	"errors"
-)
+import "fmt"
 
 type SwanErrorSeverity int
 
@@ -14,23 +12,22 @@ const (
 
 type SwanError struct {
 	Severity SwanErrorSeverity `json:"Severity"`
-	Err      error             `json:"Err"`
+	Err      string            `json:"Err"`
 }
 
-func NewError(severity SwanErrorSeverity, err error) error {
-	return &SwanError{
-		Severity: severity,
-		Err:      err,
+func NewError(severity SwanErrorSeverity, err interface{}) error {
+	var finalError string
+	switch v := err.(type) {
+	case string:
+		finalError = v
+	case error:
+		finalError = v.Error()
+	default:
+		finalError = fmt.Sprintf("%v", v)
 	}
-}
-
-func NewErrorFromString(severity SwanErrorSeverity, message string) error {
-	return &SwanError{
-		Severity: severity,
-		Err:      errors.New(message),
-	}
+	return &SwanError{severity, finalError}
 }
 
 func (e *SwanError) Error() string {
-	return e.Err.Error()
+	return e.Err
 }

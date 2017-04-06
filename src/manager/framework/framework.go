@@ -16,6 +16,7 @@ type Framework struct {
 	EventsApi    *api.EventsService
 	HealthApi    *api.HealthyService
 	FrameworkApi *api.FrameworkService
+	VersionApi   *api.VersionService
 
 	StopC chan struct{}
 }
@@ -31,6 +32,7 @@ func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) 
 	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler)
 	f.HealthApi = api.NewAndInstallHealthyService(apiServer, f.Scheduler)
 	f.FrameworkApi = api.NewAndInstallFrameworkService(apiServer, f.Scheduler)
+	f.VersionApi = api.NewAndInstallVersionService(apiServer, f.Scheduler)
 	return f, nil
 }
 

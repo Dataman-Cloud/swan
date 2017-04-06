@@ -8,15 +8,23 @@ export GO15VENDOREXPERIMENT=1
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
-GO_LDFLAGS=-ldflags "-X `go list ./src/version`.Version=$(VERSION) -X `go list ./src/version`.BuildTime=$(BUILD_TIME)"
+PKG=$(shell go list .)
+gitCommit=$(shell git describe --tags)
+gitDirty=$(shell git status --porcelain --untracked-files=no)
+GIT_COMMIT=$(gitCommit)
+ifneq ($(gitDirty),"")
+GIT_COMMIT=$(gitCommit)-dirty
+endif
+GO_LDFLAGS=-X $(PKG)/src/version.version=$(VERSION) -X $(PKG)/src/version.gitCommit=$(GIT_COMMIT) -X $(PKG)/src/version.buildTime=$(BUILD_TIME) -w
+
 
 default: build
 
 docker-build:
-	docker run --rm -w /go/src/github.com/Dataman-Cloud/swan -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine sh -c 'go build ${GO_LDFLAGS} -v -o bin/swan main.go' 
+	docker run --rm -w /go/src/github.com/Dataman-Cloud/swan -e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  -v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan golang:1.6.3-alpine sh -c 'go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go'
 
 build: fmt
-	go build ${GO_LDFLAGS} -v -o bin/swan main.go
+	go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go
 
 install:
 	install -v bin/swan /usr/local/bin

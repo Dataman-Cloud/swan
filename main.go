@@ -6,6 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
+	_ "github.com/Dataman-Cloud/swan/src/debug"
 	"github.com/Dataman-Cloud/swan/src/manager"
 	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/version"
@@ -37,12 +38,13 @@ func main() {
 	app.Name = "swan"
 	app.Usage = "swan [ROLE] [COMMAND] [ARG...]"
 	app.Description = "A general purpose Mesos framework which facility long running docker application management."
-	app.Version = version.Version
+	app.Version = version.GetVersion().Version
 
 	app.Commands = []cli.Command{}
 
 	app.Commands = append(app.Commands, AgentJoinCmd())
 	app.Commands = append(app.Commands, ManagerCmd())
+	app.Commands = append(app.Commands, VersionCmd())
 
 	if err := app.Run(os.Args); err != nil {
 		logrus.Errorf("%s", err.Error())
@@ -221,17 +223,11 @@ func AgentJoinCmd() cli.Command {
 
 func JoinAndStartAgent(c *cli.Context) error {
 	conf := config.NewAgentConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)
@@ -287,17 +283,11 @@ func ManagerJoinCmd() cli.Command {
 
 func JoinAndStartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)
@@ -338,17 +328,11 @@ func ManagerInitCmd() cli.Command {
 
 func StartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
+
 	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
 	ID, err := utils.LoadNodeID(IDFilePath)
 	if err != nil {
-		if err := os.MkdirAll(conf.DataDir, 0700); err != nil {
-			return err
-		}
-
-		ID, err = utils.CreateNodeID(IDFilePath)
-		if err != nil {
-			return err
-		}
+		return err
 	}
 
 	setupLogger(conf.LogLevel)
@@ -365,4 +349,15 @@ func StartManager(c *cli.Context) error {
 	}
 
 	return nil
+}
+
+func VersionCmd() cli.Command {
+	return cli.Command{
+		Name:        "version",
+		Usage:       "[COMMAND] [ARG...]",
+		Description: "show version",
+		Action: func(c *cli.Context) error {
+			return version.TextFormatTo(os.Stdout)
+		},
+	}
 }

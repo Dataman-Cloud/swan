@@ -6,14 +6,13 @@ import (
 
 func SliceUnique(slice []string) bool {
 	m := make(map[string]int)
-
-	sliceLen := len(slice)
-
 	for _, s := range slice {
+		if _, ok := m[s]; ok {
+			return true
+		}
 		m[s] = 1
 	}
-
-	return sliceLen == len(m)
+	return false
 }
 
 func SliceContains(slice []string, value string) bool {
