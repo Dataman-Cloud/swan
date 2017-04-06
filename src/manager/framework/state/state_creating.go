@@ -55,7 +55,7 @@ func (creating *StateCreating) Step() {
 
 		creating.lock.Unlock()
 	} else {
-		logrus.Info("state creating step, do nothing")
+		logrus.Debug("state creating step, do nothing")
 	}
 }
 
