@@ -59,7 +59,7 @@ func Instance() *Connector {
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
-				FailoverTimeout: proto.Float64(60 * 10),
+				FailoverTimeout: proto.Float64(60 * 60 * 3),
 				Checkpoint:      proto.Bool(false),
 				Hostname:        proto.String(hostname),
 				Capabilities: []*mesos.FrameworkInfo_Capability{
@@ -262,7 +262,7 @@ func (s *Connector) Start(ctx context.Context, errorChan chan error) {
 			s.StreamCancelFun() // stop stream goroutine
 			return
 		case call := <-s.SendChan:
-			logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
+			//logrus.WithFields(logrus.Fields{"sending-call": sched.Call_Type_name[int32(*call.Type)]}).Debugf("%+v", call)
 			resp, err := s.Send(call)
 			if err != nil {
 				logrus.Errorf("send call to master got err: %s", err)

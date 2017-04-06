@@ -55,7 +55,6 @@ func (deleting *StateDeleting) Step() {
 
 	if deleting.SlotSafeToRemoveFromApp(deleting.CurrentSlot) && deleting.CurrentSlotIndex == deleting.TargetSlotIndex {
 		deleting.App.RemoveSlot(deleting.CurrentSlotIndex)
-
 		deleting.App.Remove() // remove self from boltdb store
 
 		deleting.App.UserEventChan <- &event.UserEvent{ // signal scheduler in-memory store to remove this app

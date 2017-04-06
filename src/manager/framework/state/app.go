@@ -223,6 +223,10 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 		return errors.New(fmt.Sprintf("only %d tasks left need to be updated now", len(app.GetSlots())-updatedCount))
 	}
 
+	if slot, ok := app.Slots[updatedCount-1]; !ok || !slot.Healthy() {
+		return errors.New("previous update not completed, abort")
+	}
+
 	return app.TransitTo(APP_STATE_UPDATING, instances)
 }
 
