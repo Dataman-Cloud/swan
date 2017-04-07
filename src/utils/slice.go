@@ -8,11 +8,12 @@ func SliceUnique(slice []string) bool {
 	m := make(map[string]int)
 	for _, s := range slice {
 		if _, ok := m[s]; ok {
-			return true
+			return false
 		}
 		m[s] = 1
 	}
-	return false
+
+	return true
 }
 
 func SliceContains(slice []string, value string) bool {
