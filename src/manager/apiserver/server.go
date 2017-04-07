@@ -2,9 +2,9 @@ package apiserver
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
-	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -168,18 +168,19 @@ func (apiServer *ApiServer) Proxy() restful.FilterFunction {
 		}
 
 		r := req.Request
-
-		leaderUrl, err := url.Parse(apiServer.leaderAddr + r.URL.Path)
-		if err != nil {
-			http.Error(resp, err.Error(), http.StatusInternalServerError)
-			return
+		leaderAddr := apiServer.leaderAddr
+		if !strings.HasPrefix(leaderAddr, "http://") {
+			leaderAddr = "http://" + leaderAddr
 		}
 
-		if leaderUrl.Scheme == "" {
-			leaderUrl.Scheme = "http"
+		forgedRequestURL := ""
+		if r.URL.RawQuery != "" {
+			forgedRequestURL = fmt.Sprintf("%s%s?%s", leaderAddr, r.URL.Path, r.URL.RawQuery)
+		} else {
+			forgedRequestURL = fmt.Sprintf("%s%s", leaderAddr, r.URL.Path)
 		}
 
-		rr, err := http.NewRequest(r.Method, leaderUrl.String(), r.Body)
+		rr, err := http.NewRequest(r.Method, forgedRequestURL, r.Body)
 		if err != nil {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
