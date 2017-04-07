@@ -1,6 +1,6 @@
 {
   "appName": "nginx",
-  "appVersion": "version5",
+  "appVersion": "version1",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
@@ -50,12 +50,12 @@
     {
       "protocol": "http",
       "path": "/",
-      "delaySeconds": 2,
-      "gracePeriodSeconds": 5,
+      "delaySeconds": 1,
+      "gracePeriodSeconds": 1,
       "intervalSeconds": 1,
       "portName": "web",
-      "timeoutSeconds": 4,
-      "consecutiveFailures": 500
+      "timeoutSeconds": 2,
+      "consecutiveFailures": 10
     }
  ,
   "mode": "replicates"
