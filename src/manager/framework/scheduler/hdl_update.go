@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -30,6 +31,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	source := taskStatus.GetSource()
 	message := taskStatus.GetMessage()
 	healthy := taskStatus.GetHealthy()
+	data := taskStatus.GetData()
 
 	slotIndex_, appId_, userName_, clusterName_ := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1], strings.Split(slotName, "-")[2], strings.Split(slotName, "-")[3]
 	logrus.Debugf("got user name %s", userName_)
@@ -50,7 +52,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 
 	slot, found := app.GetSlot(int(slotIndex))
 	if !found {
-		logrus.Errorf("slot not found: %s", slotIndex)
+		logrus.Errorf("slot not found: %d", slotIndex)
 		return h, nil
 	}
 	logrus.Debugf("found slot %s", slot.ID)
@@ -64,6 +66,10 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		slot.SetState(state.SLOT_STATE_TASK_STARTING)
 	case mesos.TaskState_TASK_RUNNING:
 		if !slot.StateIs(state.SLOT_STATE_TASK_RUNNING) { // set state to running only if is not previously marked as running
+			slot.CurrentTask.ContainerId = parseValue(`"Id": "(?P<value>\w+)`, string(data))
+			fmt.Println(string(data))
+			slot.CurrentTask.ContainerName = parseValue(`"Name": "(?P<value>/mesos-[\w\.-]+)`, string(data))
+
 			slot.SetState(state.SLOT_STATE_TASK_RUNNING)
 		}
 
@@ -113,6 +119,24 @@ func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
 
 		h.Response.Calls = append(h.Response.Calls, call)
 	}
+}
+
+func parseValue(regEx, data string) string {
+	var compRegEx = regexp.MustCompile(regEx)
+	match := compRegEx.FindStringSubmatch(data)
+
+	paramsMap := make(map[string]string)
+	for i, name := range compRegEx.SubexpNames() {
+		if i > 0 && i <= len(match) {
+			paramsMap[name] = match[i]
+		}
+	}
+
+	if value, ok := paramsMap["value"]; ok {
+		return value
+	}
+
+	return ""
 }
 
 //     	TaskState_TASK_STAGING  TaskState = 6

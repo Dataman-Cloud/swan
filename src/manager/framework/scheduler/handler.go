@@ -42,7 +42,7 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 		for _, fun := range funcs {
 			h, err := fun(h)
 			if err != nil {
-				logrus.Errorf("%s, %s", h, err)
+				logrus.Errorf("%v, %s", h, err)
 			}
 		}
 

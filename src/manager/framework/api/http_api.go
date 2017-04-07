@@ -176,6 +176,7 @@ func (api *AppService) Register(container *restful.Container) {
 	ws.Filter(api.apiServer.Proxy())
 
 	container.Add(ws)
+
 }
 
 func (api *AppService) CreateApp(request *restful.Request, response *restful.Response) {
@@ -652,6 +653,8 @@ func FormTaskHistory(v *state.Task) *types.TaskHistory {
 		AgentID:       v.AgentID,
 		AgentHostname: v.AgentHostName,
 		VersionID:     v.Version.ID,
+		ContainerId:   v.ContainerId,
+		ContainerName: v.ContainerName,
 
 		CPU:  v.Version.CPUs,
 		Mem:  v.Version.Mem,
@@ -684,6 +687,8 @@ func FormTask(slot *state.Slot) *types.Task {
 		Ports:         slot.CurrentTask.HostPorts,
 		Created:       slot.CurrentTask.Created,
 		Image:         slot.Version.Container.Docker.Image,
+		ContainerId:   slot.CurrentTask.ContainerId,
+		ContainerName: slot.CurrentTask.ContainerName,
 	}
 	return task
 }

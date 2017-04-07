@@ -390,6 +390,8 @@ func TaskToRaft(task *Task) *rafttypes.Task {
 		Message:       task.Message,
 		CreatedAt:     task.Created.UnixNano(),
 		ArchivedAt:    task.ArchivedAt.UnixNano(),
+		ContainerId:   task.ContainerId,
+		ContainerName: task.ContainerName,
 	}
 }
 
@@ -407,6 +409,8 @@ func TaskFromRaft(raftTask *rafttypes.Task, app *App) *Task {
 		Reason:        raftTask.Reason,
 		Message:       raftTask.Message,
 		Created:       time.Unix(0, raftTask.CreatedAt),
+		ContainerId:   raftTask.ContainerId,
+		ContainerName: raftTask.ContainerName,
 	}
 
 	for _, version := range app.Versions {
