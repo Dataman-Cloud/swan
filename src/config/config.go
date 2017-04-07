@@ -190,10 +190,6 @@ func NewManagerConfig(c *cli.Context) ManagerConfig {
 		managerConfig.RaftListenAddr = c.String("raft-listen-addr")
 	}
 
-	if strings.Index(managerConfig.RaftListenAddr, "//") == 0 {
-		// Leading double slashes (any scheme). Force http.
-		managerConfig.RaftListenAddr = "http:" + managerConfig.RaftListenAddr
-	}
 	if strings.Index(managerConfig.RaftListenAddr, "://") == -1 {
 		// Missing scheme. Force http.
 		managerConfig.RaftListenAddr = "http://" + managerConfig.RaftListenAddr
@@ -205,6 +201,11 @@ func NewManagerConfig(c *cli.Context) ManagerConfig {
 
 	if managerConfig.RaftAdvertiseAddr == "" {
 		managerConfig.RaftAdvertiseAddr = managerConfig.RaftListenAddr
+	}
+
+	if strings.Index(managerConfig.RaftAdvertiseAddr, "://") == -1 {
+		// Missing scheme. Force http.
+		managerConfig.RaftAdvertiseAddr = "http://" + managerConfig.RaftAdvertiseAddr
 	}
 
 	if c.String("join-addrs") != "" {
