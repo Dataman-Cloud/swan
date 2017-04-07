@@ -71,6 +71,9 @@ type Task struct {
 
 	Image   string `json:"image"`
 	Healthy bool   `json:"healthy"`
+
+	ContainerId   string `json:"containerId"`
+	ContainerName string `json:"containerName"`
 }
 
 type TaskHistory struct {
@@ -94,6 +97,9 @@ type TaskHistory struct {
 	Stderr  string `json:"stderr,omitempty"`
 
 	ArchivedAt time.Time `json:"archivedAt, omitempty"`
+
+	ContainerId   string `json:"containerId"`
+	ContainerName string `json:"containerName"`
 }
 
 type Stats struct {

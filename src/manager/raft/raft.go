@@ -788,7 +788,7 @@ func (n *Node) publishSnapshot(snapshotToSave raftpb.Snapshot) {
 	}
 
 	log.L.Printf("publishing snapshot at index %d", n.snapshotIndex)
-	defer log.L.Printf("finished publish snapshot at index", n.snapshotIndex)
+	defer log.L.Printf("finished publish snapshot at index: %d", n.snapshotIndex)
 
 	if snapshotToSave.Metadata.Index >= n.appliedIndex {
 		log.L.Errorf("publish snapshot: snapshot index [%d] should > progress.appliedIndex [%d] + 1",

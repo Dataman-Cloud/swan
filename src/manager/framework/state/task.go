@@ -35,6 +35,9 @@ type Task struct {
 	Message string // mesos updateStatus field
 	Source  string // mesos updateStatus field
 
+	ContainerId   string
+	ContainerName string
+
 	Created     time.Time
 	ArchivedAt  time.Time
 	taskBuilder *TaskBuilder

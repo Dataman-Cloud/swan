@@ -144,6 +144,8 @@ message Task {
     string message = 14;
     int64 createdAt = 15;
     int64 archivedAt = 16;
+    string containerId = 17;
+    string containerName = 18;
 }
 
 message OfferAllocatorItem {

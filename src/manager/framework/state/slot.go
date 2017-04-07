@@ -128,6 +128,7 @@ func (slot *Slot) KillTask() {
 		slot.CurrentTask.Kill()
 	} else {
 		slot.SetState(SLOT_STATE_REAP)
+		slot.App.Step()
 	}
 
 	slot.Touch()

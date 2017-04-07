@@ -80,7 +80,7 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 	frameworkStore := fstore.NewStore(boltDB.DB, raftNode)
 	framework, err := framework.New(frameworkStore, managerServer)
 	if err != nil {
-		logrus.Errorf("init framework failed. Error: ", err.Error())
+		logrus.Errorf("init framework failed. Error: %s", err.Error())
 		return nil, err
 	}
 
