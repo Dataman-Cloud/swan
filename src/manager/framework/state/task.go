@@ -57,8 +57,11 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	defaultLabels := make(map[string]string)
 	defaultLabels["DM_USER"] = task.Slot.Version.RunAs
 	defaultLabels["DM_CLUSTER"] = task.Slot.App.ClusterID
-	defaultLabels["DM_SLOT"] = strconv.Itoa(task.Slot.Index)
-	defaultLabels["DM_APP"] = task.Slot.App.Name
+	defaultLabels["DM_SLOT_INDEX"] = strconv.Itoa(task.Slot.Index)
+	defaultLabels["DM_SLOT_ID"] = task.Slot.ID
+	defaultLabels["DM_TASK_ID"] = task.ID
+	defaultLabels["DM_APP_NAME"] = task.Slot.App.Name
+	defaultLabels["DM_APP_ID"] = task.Slot.App.ID
 
 	offer := ow.Offer
 	logrus.Infof("Prepared task %s for launch with offer %s", task.Slot.ID, *offer.GetId().Value)
