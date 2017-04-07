@@ -67,7 +67,6 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	case mesos.TaskState_TASK_RUNNING:
 		if !slot.StateIs(state.SLOT_STATE_TASK_RUNNING) { // set state to running only if is not previously marked as running
 			slot.CurrentTask.ContainerId = parseValue(`"Id": "(?P<value>\w+)`, string(data))
-			fmt.Println(string(data))
 			slot.CurrentTask.ContainerName = parseValue(`"Name": "(?P<value>/mesos-[\w\.-]+)`, string(data))
 
 			slot.SetState(state.SLOT_STATE_TASK_RUNNING)
