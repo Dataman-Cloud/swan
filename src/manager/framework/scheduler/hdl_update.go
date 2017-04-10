@@ -25,7 +25,7 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	taskStatus := e.GetUpdate().GetStatus()
 	AckUpdateEvent(h, taskStatus)
 
-	slotName := taskStatus.TaskId.GetValue()
+	taskId := taskStatus.TaskId.GetValue()
 	taskState := taskStatus.GetState()
 	reason := taskStatus.GetReason()
 	source := taskStatus.GetSource()
@@ -33,14 +33,15 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	healthy := taskStatus.GetHealthy()
 	data := taskStatus.GetData()
 
-	slotIndex_, appId_, userName_, clusterName_ := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1], strings.Split(slotName, "-")[2], strings.Split(slotName, "-")[3]
+	nameSplit := strings.Split(taskId, ".")
+	slotIndex_, appId_, userName_, clusterName_ := nameSplit[0], nameSplit[1], nameSplit[2], nameSplit[3]
 	logrus.Debugf("got user name %s", userName_)
 	logrus.Debugf("got cluster name %s", clusterName_)
 	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
 
-	appId := fmt.Sprintf("%s-%s-%s", appId_, userName_, clusterName_)
+	appId := fmt.Sprintf("%s.%s.%s", appId_, userName_, clusterName_)
 
-	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)
+	logrus.Debugf("got healthy report for task %s => %+v", taskId, healthy)
 	logrus.Debugf("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)
 
 	app := h.Manager.SchedulerRef.AppStorage.Get(appId)

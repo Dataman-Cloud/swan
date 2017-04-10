@@ -96,7 +96,7 @@ func BuildResolverEvent(e *Event) (*nameserver.RecordGeneratorChangeEvent, error
 		resolverEvent.Type = "a"
 	}
 
-	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(payload.TaskID, "-", ".", -1))
+	resolverEvent.DomainPrefix = strings.ToLower(payload.TaskID)
 
 	return resolverEvent, nil
 }

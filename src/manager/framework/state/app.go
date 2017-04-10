@@ -66,7 +66,7 @@ func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Upda
 
 func NewApp(version *types.Version,
 	userEventChan chan *event.UserEvent) (*App, error) {
-	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
+	appID := fmt.Sprintf("%s.%s.%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
 	existingApp, _ := persistentStore.GetApp(appID)
 	if existingApp != nil {
 		return nil, errors.New("app already exists")
@@ -244,7 +244,7 @@ func (app *App) CancelUpdate() error {
 }
 
 func (app *App) ServiceDiscoveryURL() string {
-	return strings.ToLower(strings.Replace(app.ID, "-", ".", -1))
+	return strings.ToLower(app.ID)
 }
 
 func (app *App) IsReplicates() bool {

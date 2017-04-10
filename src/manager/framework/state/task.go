@@ -3,7 +3,6 @@ package state
 import (
 	"fmt"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
@@ -13,7 +12,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
-	uuid "github.com/satori/go.uuid"
 )
 
 type Task struct {
@@ -45,7 +43,7 @@ type Task struct {
 
 func NewTask(version *types.Version, slot *Slot) *Task {
 	task := &Task{
-		ID:        fmt.Sprintf("%s-%s", slot.ID, strings.Replace(uuid.NewV4().String(), "-", "", -1)),
+		ID:        slot.ID,
 		Version:   version,
 		Slot:      slot,
 		Ip:        slot.Ip,

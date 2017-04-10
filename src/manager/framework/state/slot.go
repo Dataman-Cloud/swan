@@ -91,7 +91,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		App:         app,
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
-		ID:          fmt.Sprintf("%d-%s", index, app.ID),
+		ID:          fmt.Sprintf("%d.%s", index, app.ID),
 
 		resourceReservationLock: sync.Mutex{},
 	}
@@ -404,7 +404,7 @@ func (slot *Slot) Touch() {
 }
 
 func (slot *Slot) ServiceDiscoveryURL() string {
-	return strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
+	return strings.ToLower(slot.ID)
 }
 
 func (slot *Slot) update() {

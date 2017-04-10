@@ -118,7 +118,7 @@ func (us *UniqueStatment) Eval() bool {
 	if us.What == "hostname" {
 		slotsOnHost := OfferAllocatorInstance().SlotsByHostname(us.Offer.GetHostname())
 		for _, slotOnHost := range slotsOnHost { // slots belongs to same app on same host
-			if strings.SplitN(slotOnHost, "-", 2)[1] == strings.SplitN(us.Slot.ID, "-", 2)[1] {
+			if strings.SplitN(slotOnHost, ".", 2)[1] == strings.SplitN(us.Slot.ID, ".", 2)[1] {
 				return false
 			}
 		}
