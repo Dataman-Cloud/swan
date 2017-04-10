@@ -10,44 +10,32 @@ import (
 )
 
 type Framework struct {
-	Scheduler    *scheduler.Scheduler
-	RestApi      *api.AppService
-	StatsApi     *api.StatsService
-	EventsApi    *api.EventsService
-	HealthApi    *api.HealthyService
-	FrameworkApi *api.FrameworkService
-	VersionApi   *api.VersionService
-
-	StopC chan struct{}
+	Scheduler *scheduler.Scheduler
 }
 
 func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) {
-	f := &Framework{
-		StopC: make(chan struct{}),
-	}
+	f := &Framework{}
 
 	f.Scheduler = scheduler.NewScheduler(store)
-	f.RestApi = api.NewAndInstallAppService(apiServer, f.Scheduler)
-	f.StatsApi = api.NewAndInstallStatsService(apiServer, f.Scheduler)
-	f.EventsApi = api.NewAndInstallEventsService(apiServer, f.Scheduler)
-	f.HealthApi = api.NewAndInstallHealthyService(apiServer, f.Scheduler)
-	f.FrameworkApi = api.NewAndInstallFrameworkService(apiServer, f.Scheduler)
-	f.VersionApi = api.NewAndInstallVersionService(apiServer, f.Scheduler)
+	api.NewAndInstallAppService(apiServer, f.Scheduler)
+	api.NewAndInstallStatsService(apiServer, f.Scheduler)
+	api.NewAndInstallEventsService(apiServer, f.Scheduler)
+	api.NewAndInstallHealthyService(apiServer, f.Scheduler)
+	api.NewAndInstallFrameworkService(apiServer, f.Scheduler)
+	api.NewAndInstallVersionService(apiServer, f.Scheduler)
+
 	return f, nil
 }
 
 func (f *Framework) Start(ctx context.Context) error {
-	errChan := make(chan error, 1)
+	errChan := make(chan error)
 	go func() { errChan <- f.Scheduler.Start(ctx) }()
-
-	for {
-		select {
-		case err := <-errChan:
-			return err
-		case <-ctx.Done():
-			f.StopC <- struct{}{}
-		}
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
 	}
+	return nil
 }
 
 func (f *Framework) Stop() {
