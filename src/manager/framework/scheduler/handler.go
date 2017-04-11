@@ -47,7 +47,7 @@ func (h *Handler) Process(timeoutCtx context.Context) {
 		}
 
 		for _, c := range h.Response.Calls {
-			h.Manager.SchedulerRef.MesosConnector.SendChan <- c
+			h.Manager.SchedulerRef.MesosConnector.SendCall(c)
 		}
 
 		return
