@@ -126,6 +126,15 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", types.Task{}).
 		Returns(404, "NotFound", nil))
 
+	ws.Route(ws.PATCH("/{app_id}/tasks/{task_id}/weight").To(metrics.InstrumentRouteFunc("GET", "AppTask", api.UpdateAppTaskWeight)).
+		// docs
+		Doc("Update weight of a task").
+		Operation("updateAppTaskWeight").
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")).
+		Param(ws.PathParameter("task_id", "identifier of the task").DataType("int")).
+		Returns(200, "OK", types.Task{}).
+		Returns(404, "NotFound", nil))
+
 	ws.Route(ws.GET("/{app_id}/versions").To(metrics.InstrumentRouteFunc("GET", "AppVersions", api.GetAppVersions)).
 		// docs
 		Doc("Get all versions in the given App").
@@ -359,6 +368,48 @@ func (api *AppService) GetAppTask(request *restful.Request, response *restful.Re
 		response.WriteErrorString(http.StatusBadRequest, "Get task index err: "+err.Error())
 		return
 	}
+
+	appTaskRet, err := GetTaskFromApp(app, task_index)
+	if err != nil {
+		logrus.Errorf("Get task err: %s", err.Error())
+		response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
+		return
+	}
+
+	response.WriteEntity(appTaskRet)
+}
+
+func (api *AppService) UpdateAppTaskWeight(request *restful.Request, response *restful.Response) {
+	var param types.UpdateWeightParam
+
+	err := request.ReadEntity(&param)
+	if err != nil {
+		logrus.Errorf("update weight for a app error: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+	}
+
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app task error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	task_id := request.PathParameter("task_id")
+	task_index, err := strconv.Atoi(task_id)
+	if err != nil {
+		logrus.Errorf("Get task index err: %s", err.Error())
+		response.WriteErrorString(http.StatusBadRequest, "Get task index err: "+err.Error())
+		return
+	}
+
+	slots := app.GetSlots()
+	if task_index > len(slots)-1 || task_index < 0 {
+		logrus.Errorf("slot not found: %d", task_index)
+		response.WriteErrorString(http.StatusBadRequest, "Get task err: "+err.Error())
+	}
+
+	slot := slots[task_index]
+	slot.SetWeight(param.Weight)
 
 	appTaskRet, err := GetTaskFromApp(app, task_index)
 	if err != nil {
@@ -689,6 +740,7 @@ func FormTask(slot *state.Slot) *types.Task {
 		Image:         slot.Version.Container.Docker.Image,
 		ContainerId:   slot.CurrentTask.ContainerId,
 		ContainerName: slot.CurrentTask.ContainerName,
+		Weight:        slot.GetWeight(),
 	}
 	return task
 }

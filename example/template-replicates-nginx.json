@@ -3,16 +3,16 @@
   "appVersion": "version1",
   "cmd": null,
   "args": null,
-  "cpus": 0.01,
-  "mem": 6,
+  "cpus": 0.1,
+  "mem": 300,
   "disk": 100,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 3,
+  "instances": 1,
   "constraints":"" ,
   "container": {
     "docker": {
-      "image": "nginx:1.10",
+      "image": "rails-app",
       "network": "bridge",
       "forcePullImage": false,
       "privileged": true,
@@ -24,7 +24,7 @@
       ],
       "portMappings": [
         {
-          "containerPort": 80,
+          "containerPort": 3000,
           "protocol": "tcp",
           "name": "web"
         }
@@ -50,11 +50,13 @@
     {
       "protocol": "http",
       "path": "/",
-      "delaySeconds": 1,
+      "delaySeconds": 10,
       "gracePeriodSeconds": 1,
       "intervalSeconds": 1,
       "portName": "web",
       "timeoutSeconds": 2,
       "consecutiveFailures": 10
     }
+  "cmd": "rails server -b 0.0.0.0"
 }
+

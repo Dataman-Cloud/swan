@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"time"
 
@@ -20,8 +21,14 @@ func SetupLogger() {
 	log.SetLevel(log.DebugLevel)
 }
 
+var listenaddr = flag.String("listenaddr", "0.0.0.0:80", "")
+var domain = flag.String("domain", "lvh.me", "")
+
 func main() {
+	flag.Parse()
 	janitorConfig := janitor.DefaultConfig()
+	janitorConfig.ListenAddr = *listenaddr
+	janitorConfig.Domain = *domain
 	SetupLogger()
 
 	server := janitor.NewJanitorServer(janitorConfig)

@@ -335,6 +335,7 @@ func SlotToRaft(slot *Slot) *rafttypes.Slot {
 		VersionID: slot.Version.ID,
 		Healthy:   slot.Healthy(),
 		State:     slot.State,
+		Weight:    slot.GetWeight(),
 	}
 
 	if slot.CurrentTask != nil {
@@ -357,6 +358,7 @@ func SlotFromRaft(raftSlot *rafttypes.Slot, app *App) *Slot {
 		Ip:            raftSlot.CurrentTask.Ip,
 		AgentHostName: raftSlot.CurrentTask.AgentHostName,
 		healthy:       raftSlot.Healthy,
+		weight:        raftSlot.Weight,
 	}
 
 	for _, version := range app.Versions {

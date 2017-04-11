@@ -72,8 +72,9 @@ type Task struct {
 	Image   string `json:"image"`
 	Healthy bool   `json:"healthy"`
 
-	ContainerId   string `json:"containerId"`
-	ContainerName string `json:"containerName"`
+	ContainerId   string  `json:"containerId"`
+	ContainerName string  `json:"containerName"`
+	Weight        float64 `json:"weight"`
 }
 
 type TaskHistory struct {
@@ -96,10 +97,10 @@ type TaskHistory struct {
 	Stdout  string `json:"stdout,omitempty"`
 	Stderr  string `json:"stderr,omitempty"`
 
-	ArchivedAt time.Time `json:"archivedAt, omitempty"`
-
-	ContainerId   string `json:"containerId"`
-	ContainerName string `json:"containerName"`
+	ArchivedAt    time.Time `json:"archivedAt, omitempty"`
+	ContainerId   string    `json:"containerId"`
+	ContainerName string    `json:"containerName"`
+	Weight        float64   `json:"weight,omitempty"`
 }
 
 type Stats struct {
@@ -141,4 +142,8 @@ type ScaleUpParam struct {
 
 type ScaleDownParam struct {
 	Instances int `json:"instances"`
+}
+
+type UpdateWeightParam struct {
+	Weight float64 `json:"weight"`
 }
