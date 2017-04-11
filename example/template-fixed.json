@@ -1,5 +1,5 @@
 {
-  "appName": "mysql",
+  "appName": "mysql2",
   "appVersion": "version1",
   "cmd": null,
   "cpus": 0.4,
@@ -8,8 +8,7 @@
   "runAs": "xcm",
   "priority": 100,
   "instances": 1,
-  "constraints": [
-  ],
+  "constraints": "",
   "container": {
     "docker": {
       "image": "mysql",

@@ -88,12 +88,6 @@ func NewApp(version *types.Version,
 		Updated:        time.Now(),
 		UserEventChan:  userEventChan,
 	}
-
-	//if version.Mode == "fixed" {
-	//	app.Mode = APP_MODE_FIXED
-	//} else { // if no mode specified, default should be replicates
-	//	app.Mode = APP_MODE_REPLICATES
-	//}
 	network := strings.ToLower(version.Container.Docker.Network)
 	if network != "host" && network != "bridge" {
 		app.Mode = APP_MODE_FIXED
@@ -379,6 +373,11 @@ func (app *App) Step() {
 
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
+	if version.Container.Docker.Network != app.CurrentVersion.Container.Docker.Network {
+		return fmt.Errorf("network can not change when update app, current network is %s",
+			app.CurrentVersion.Container.Docker.Network)
+	}
+
 	// runAs can not change
 	if version.RunAs != app.CurrentVersion.RunAs {
 		return fmt.Errorf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs)
