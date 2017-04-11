@@ -57,6 +57,4 @@
       "timeoutSeconds": 2,
       "consecutiveFailures": 10
     }
- ,
-  "mode": "replicates"
 }

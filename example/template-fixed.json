@@ -46,6 +46,5 @@
       "consecutiveFailures": 500
     }
  ,
-  "mode": "fixed",
   "ip": ["192.168.1.210"]
 }

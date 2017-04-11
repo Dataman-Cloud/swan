@@ -89,9 +89,15 @@ func NewApp(version *types.Version,
 		UserEventChan:  userEventChan,
 	}
 
-	if version.Mode == "fixed" {
+	//if version.Mode == "fixed" {
+	//	app.Mode = APP_MODE_FIXED
+	//} else { // if no mode specified, default should be replicates
+	//	app.Mode = APP_MODE_REPLICATES
+	//}
+	network := strings.ToLower(version.Container.Docker.Network)
+	if network != "host" && network != "bridge" {
 		app.Mode = APP_MODE_FIXED
-	} else { // if no mode specified, default should be replicates
+	} else {
 		app.Mode = APP_MODE_REPLICATES
 	}
 
@@ -373,10 +379,6 @@ func (app *App) Step() {
 
 // make sure proposed version is valid then applied it to field ProposedVersion
 func (app *App) checkProposedVersionValid(version *types.Version) error {
-	// mode can not change
-	if version.Mode != app.CurrentVersion.Mode {
-		return fmt.Errorf("mode can not change when update app, current version is %s", app.CurrentVersion.Mode)
-	}
 	// runAs can not change
 	if version.RunAs != app.CurrentVersion.RunAs {
 		return fmt.Errorf("runAs can not change when update app, current version is %s", app.CurrentVersion.RunAs)
@@ -451,12 +453,9 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New("runAs should not empty")
 	}
 
-	if len(version.Mode) == 0 {
-		version.Mode = string(APP_MODE_REPLICATES)
-	}
+	network := strings.ToLower(version.Container.Docker.Network)
 
-	switch version.Mode {
-	case string(APP_MODE_FIXED): // validation for fixed mode application
+	if network != "host" && network != "bridge" {
 		if len(version.IP) != int(version.Instances) {
 			return fmt.Errorf("should provide exactly %d ip for FIXED type app", version.Instances)
 		}
@@ -481,7 +480,7 @@ func validateAndFormatVersion(version *types.Version) error {
 				return fmt.Errorf("no value provided for health check with %s", protocol)
 			}
 		}
-	case string(APP_MODE_REPLICATES): // validation for replicates mode app
+	} else {
 		// the only network driver should be **bridge**
 		if !utils.SliceContains([]string{"bridge", "host"}, strings.ToLower(version.Container.Docker.Network)) {
 			return errors.New("replicates mode app suppose the only network driver should be bridge or host")
@@ -538,8 +537,6 @@ func validateAndFormatVersion(version *types.Version) error {
 				}
 			}
 		}
-	default:
-		return fmt.Errorf("enrecognized app mode %s", version.Mode)
 	}
 
 	// validate constraints are all valid
