@@ -19,8 +19,7 @@ type ManagerApi struct {
 
 func (api *ManagerApi) Register(container *restful.Container) {
 	ws := new(restful.WebService)
-	ws.
-		ApiVersion(config.API_PREFIX).
+	ws.ApiVersion(config.API_PREFIX).
 		Path(config.API_PREFIX + "/nodes").
 		Doc("manager server api").
 		Consumes(restful.MIME_JSON).
