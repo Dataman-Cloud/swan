@@ -21,6 +21,9 @@ type TargetChangeEvent struct {
 	TaskPort uint32
 	PortName string
 
+	VersionID  string
+	AppVersion string
+
 	Weight float64
 }
 
@@ -144,12 +147,14 @@ func (loader *UpstreamLoader) Get(appID string) *Upstream {
 
 func targetFromChangeEvent(targetChangeEvent *TargetChangeEvent) *Target {
 	return &Target{
-		AppID:    targetChangeEvent.AppID,
-		TaskID:   targetChangeEvent.TaskID,
-		TaskIP:   targetChangeEvent.TaskIP,
-		TaskPort: targetChangeEvent.TaskPort,
-		PortName: targetChangeEvent.PortName,
-		Weight:   targetChangeEvent.Weight,
+		AppID:      targetChangeEvent.AppID,
+		TaskID:     targetChangeEvent.TaskID,
+		TaskIP:     targetChangeEvent.TaskIP,
+		TaskPort:   targetChangeEvent.TaskPort,
+		PortName:   targetChangeEvent.PortName,
+		VersionID:  targetChangeEvent.VersionID,
+		AppVersion: targetChangeEvent.AppVersion,
+		Weight:     targetChangeEvent.Weight,
 	}
 }
 

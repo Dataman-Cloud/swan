@@ -52,7 +52,14 @@ func (updating *StateUpdating) OnEnter() {
 	updating.TargetSlotIndex = updating.CurrentSlotIndex + updating.SlotCountNeedUpdate - 1
 
 	updating.CurrentSlot, _ = updating.App.GetSlot(updating.CurrentSlotIndex)
-	updating.CurrentSlot.KillTask()
+	// rolling update on the first slot
+
+	if updating.CurrentSlot != nil {
+		if updating.CurrentSlotIndex == 0 {
+			updating.CurrentSlot.SetWeight(0)
+		}
+		updating.CurrentSlot.KillTask()
+	}
 }
 
 func (updating *StateUpdating) OnExit() {

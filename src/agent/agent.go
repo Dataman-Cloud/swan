@@ -177,8 +177,10 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 				} else {
 					logrus.Debugf("%+v", janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent))
 
-					agent.Resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					agent.Janitor.EventChan <- janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
+					if userEvent.Name == eventbus.EventTypeTaskHealthy || userEvent.Name == eventbus.EventTypeTaskUnhealthy { // Resolver only recongnize these two events
+						agent.Resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
+					}
 				}
 			}
 		}
@@ -301,5 +303,7 @@ func janitorTargetgChangeEventFromTaskInfoEvent(eventType string,
 	janitorEvent.TaskPort = taskInfoEvent.Port
 	janitorEvent.Weight = taskInfoEvent.Weight
 	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
+	janitorEvent.AppVersion = taskInfoEvent.AppVersion
+	janitorEvent.VersionID = taskInfoEvent.VersionID
 	return janitorEvent
 }
