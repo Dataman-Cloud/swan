@@ -61,7 +61,6 @@ const yyErrCode = 2
 const yyInitialStackSize = 16
 
 //line ./constraints_parser.y:62
-
 type ConstraintParser struct {
 	scanner.Scanner
 	result    Statement

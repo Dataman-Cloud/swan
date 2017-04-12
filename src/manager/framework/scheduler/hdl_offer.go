@@ -24,7 +24,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 		nonMatchedSlots := make([]*state.Slot, 0)
 		for {
 			// loop through all pending offer slots
-			slot := state.OfferAllocatorInstance().PopNextPendingOffer()
+			slot := state.OfferAllocatorInstance().ShiftNextPendingOffer()
 			if slot == nil {
 				break
 			}
