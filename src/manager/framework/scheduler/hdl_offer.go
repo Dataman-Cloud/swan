@@ -7,7 +7,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 )
 
@@ -18,7 +17,6 @@ func OfferHandler(s *Scheduler, ev event.Event) error {
 	}
 
 	for _, offer := range e.Offers.Offers {
-		//logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("OfferHandler got offerId: %s", *offer.GetId().Value)
 		// when no pending offer slot
 		offerWrapper := state.NewOfferWrapper(offer)
 		taskInfos := make([]*mesos.TaskInfo, 0)

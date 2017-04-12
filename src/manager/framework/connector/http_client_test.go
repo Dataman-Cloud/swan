@@ -37,7 +37,7 @@ func TestSendPayload(t *testing.T) {
 	assert.NotNil(t, urlParsed)
 	client := NewHTTPClient(urlParsed.Host, urlParsed.RawQuery)
 	assert.NotNil(t, client)
-	resp, err := client.Send([]byte("foobar"))
+	resp, err := client.send([]byte("foobar"))
 	assert.NotNil(t, resp)
 	assert.Nil(t, err)
 
