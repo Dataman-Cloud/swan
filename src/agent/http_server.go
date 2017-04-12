@@ -28,6 +28,10 @@ func NewHttpServer(listener string, a *Agent) *HttpServer {
 		c.JSON(http.StatusOK, gin.H{"agents": aas.agentRef.SerfServer.SerfNode.Members()})
 	})
 
+	aas.engine.GET("/info", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"upstreams": aas.agentRef.Janitor.UpstreamLoader.Upstreams})
+	})
+
 	return aas
 }
 
