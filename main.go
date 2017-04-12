@@ -7,6 +7,7 @@ import (
 	"github.com/urfave/cli"
 
 	"github.com/Dataman-Cloud/swan/src/cmd"
+	_ "github.com/Dataman-Cloud/swan/src/debug"
 	"github.com/Dataman-Cloud/swan/src/version"
 )
 
