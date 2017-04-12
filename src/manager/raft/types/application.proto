@@ -122,6 +122,7 @@ message Slot {
     bool healthy = 8;
     Task CurrentTask = 9;
     RestartPolicy restartPolicy = 10;
+    double weight = 11;
 }
 
 message RestartPolicy {
@@ -146,6 +147,7 @@ message Task {
     int64 archivedAt = 16;
     string containerId = 17;
     string containerName = 18;
+    double weight = 19;
 }
 
 message OfferAllocatorItem {

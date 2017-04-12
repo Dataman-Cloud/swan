@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"time"
 
 	"github.com/armon/go-proxyproto"
 )
@@ -11,7 +12,7 @@ import (
 // http://www.hydrogen18.com/blog/stop-listening-http-server-go.html
 // listener was not shutting down gracefully
 
-func ListenAndServeHTTP(h http.Handler, ConfigProxy ProxyCfg) {
+func ListenAndServeHTTP(h http.Handler, config Config) {
 	srv := &http.Server{
 		Handler: h,
 		Addr:    "",
@@ -48,11 +49,11 @@ func (ln TcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err != nil {
 		return
 	}
-	//if err = tc.SetKeepAlive(true); err != nil {
-	//return
-	//}
-	//if err = tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
-	//return
-	//}
+	if err = tc.SetKeepAlive(true); err != nil {
+		return
+	}
+	if err = tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+		return
+	}
 	return tc, nil
 }

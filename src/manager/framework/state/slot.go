@@ -51,12 +51,18 @@ const (
 	SLOT_STATE_TASK_UNKNOWN          = "slot_task_unknown"
 )
 
+const (
+	DEFUALT_WEIGHT = float64(100)
+)
+
 type Slot struct {
 	Index   int
 	ID      string
 	App     *App
 	Version *types.Version
 	State   string
+
+	weight float64
 
 	CurrentTask *Task
 	TaskHistory []*Task
@@ -92,6 +98,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
 		ID:          fmt.Sprintf("%d-%s", index, app.ID),
+		weight:      DEFUALT_WEIGHT,
 
 		resourceReservationLock: sync.Mutex{},
 	}
@@ -354,6 +361,7 @@ func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
 		Healthy:        slot.healthy,
 		ClusterID:      slot.App.ClusterID,
 		RunAs:          slot.Version.RunAs,
+		Weight:         slot.weight,
 	}
 
 	if slot.App.IsFixed() {
@@ -393,6 +401,15 @@ func (slot *Slot) SetHealthy(healthy bool) {
 			slot.EmitTaskEvent(eventbus.EventTypeTaskUnhealthy)
 		}
 	}
+}
+
+func (slot *Slot) SetWeight(newWeight float64) {
+	slot.weight = newWeight
+	slot.EmitTaskEvent(eventbus.EventTypeTaskWeightChange)
+}
+
+func (slot *Slot) GetWeight() float64 {
+	return slot.weight
 }
 
 func (slot *Slot) Remove() {

@@ -25,6 +25,13 @@ func NewResolver(config *Config) *Resolver {
 		stopC:  make(chan struct{}),
 	}
 
+	level, err := logrus.ParseLevel(config.LogLevel)
+	if err != nil {
+		logrus.SetLevel(logrus.DebugLevel)
+	} else {
+		logrus.SetLevel(level)
+	}
+
 	rr := RecordGenerator{
 		RecordGeneratorChangeChan: make(chan *RecordGeneratorChangeEvent, 1),
 	}

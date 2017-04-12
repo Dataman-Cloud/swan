@@ -4,6 +4,7 @@ import (
 	"net"
 	"net/http"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/armon/go-proxyproto"
 	"golang.org/x/net/context"
 )
@@ -18,34 +19,37 @@ type JanitorServer struct {
 }
 
 func NewJanitorServer(Config Config) *JanitorServer {
-	server := &JanitorServer{
+	s := &JanitorServer{
 		config: Config,
 	}
 
-	server.EventChan = make(chan *TargetChangeEvent, 1024)
-	server.UpstreamLoader = NewUpstreamLoader(server.EventChan)
+	s.EventChan = make(chan *TargetChangeEvent, 1024)
+	s.UpstreamLoader = NewUpstreamLoader(s.EventChan)
 
-	server.httpServer = &http.Server{Handler: NewHTTPProxy(&http.Transport{},
-		server.config.HttpHandler,
-		server.config.ListenAddr,
-		server.UpstreamLoader)}
+	s.httpServer = &http.Server{Handler: NewLayer7Proxy(&http.Transport{},
+		s.config,
+		s.UpstreamLoader)}
 
-	return server
+	level, _ := logrus.ParseLevel(Config.LogLevel)
+	logrus.SetLevel(level)
+
+	return s
 }
 
-func (server *JanitorServer) Start(ctx context.Context, started chan bool) error {
-	ln, err := net.Listen("tcp", server.config.ListenAddr)
+func (s *JanitorServer) Start(ctx context.Context, started chan bool) error {
+	ln, err := net.Listen("tcp", s.config.ListenAddr)
 	if err != nil {
 		return err
 	}
 
 	errCh := make(chan error)
 	go func() {
-		errCh <- server.UpstreamLoader.Start(ctx)
+		errCh <- s.UpstreamLoader.Start(ctx)
 	}()
 
 	go func() {
-		errCh <- server.httpServer.Serve(&proxyproto.Listener{Listener: TcpKeepAliveListener{ln.(*net.TCPListener)}})
+		defer s.httpServer.Close()
+		errCh <- s.httpServer.Serve(&proxyproto.Listener{Listener: TcpKeepAliveListener{ln.(*net.TCPListener)}})
 	}()
 
 	go func() {

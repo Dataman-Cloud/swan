@@ -12,6 +12,7 @@ type Config struct {
 	ListenAddr      string        `json:"listen-addr"`
 	Resolvers       []string      `json:"resolvers"`
 	ExchangeTimeout time.Duration `json:"exchange-timeout"`
+	LogLevel        string        `json:"log-level"`
 
 	SOAname    string `json:"soaname"`
 	SOARname   string `json:"soarname"`

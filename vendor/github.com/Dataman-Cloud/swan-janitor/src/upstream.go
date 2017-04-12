@@ -1,25 +1,21 @@
 package janitor
 
 import (
-	"net/url"
 	"sync"
 )
 
 type Upstream struct {
-	AppID string
+	AppID string `json:"appID"`
 
-	Targets     []*Target
-	LoadBalance *RoundRobinLoadBalancer
+	Targets      []*Target `json:"targets"`
+	loadBalancer LoadBalancer
 
 	mu sync.RWMutex
 }
 
 func NewUpstream() *Upstream {
-	lb := NewRoundRobinLoadBalancer()
-	lb.Seed()
-
 	return &Upstream{
-		LoadBalance: lb,
+		loadBalancer: NewWeightLoadBalancer(),
 	}
 }
 
@@ -38,6 +34,13 @@ func (u *Upstream) AddTarget(target *Target) {
 	u.Targets = append(u.Targets, target)
 }
 
+func (u *Upstream) UpdateTargetWeight(taskID string, newWeight float64) {
+	target := u.GetTarget(taskID)
+	if target != nil {
+		target.Weight = newWeight
+	}
+}
+
 func (u *Upstream) RemoveTarget(target *Target) {
 	index := -1
 	for k, v := range u.Targets {
@@ -54,15 +57,8 @@ func (u *Upstream) RemoveTarget(target *Target) {
 	}
 }
 
-func (u *Upstream) NextTargetEntry() *url.URL {
-	u.mu.RLock()
-	defer u.mu.RUnlock()
-
-	rr := u.LoadBalance
-	current := u.Targets[rr.NextIndex]
-	rr.NextIndex = (rr.NextIndex + 1) % len(u.Targets)
-
-	return current.Entry()
+func (u *Upstream) NextTargetEntry() *Target {
+	return u.loadBalancer.Seed(u.Targets)
 }
 
 func (u *Upstream) GetTarget(taskID string) *Target {

@@ -8,13 +8,13 @@ import (
 )
 
 type Target struct {
-	AppID    string
-	TaskID   string
-	TaskIP   string
-	TaskPort uint32
-	PortName string
+	AppID    string `json:"appID"`
+	TaskID   string `json:"taskID"`
+	TaskIP   string `json:"taskIP"`
+	TaskPort uint32 `json:"taskPort"`
+	PortName string `json:"portName"`
 
-	Weight float64
+	Weight float64 `json:"weihgt"`
 }
 
 func (t *Target) Equal(t1 *Target) bool {
@@ -26,7 +26,7 @@ func (t *Target) Equal(t1 *Target) bool {
 }
 
 func (t *Target) ToString() string {
-	return fmt.Sprintf("%s %s %s %s %s %s\n", t.AppID, t.TaskID, t.TaskIP, t.TaskPort, t.PortName)
+	return fmt.Sprintf("%s %s %s %d %s with weight is %f\n", t.AppID, t.TaskID, t.TaskIP, t.TaskPort, t.PortName, t.Weight)
 }
 
 func (t Target) Entry() *url.URL {

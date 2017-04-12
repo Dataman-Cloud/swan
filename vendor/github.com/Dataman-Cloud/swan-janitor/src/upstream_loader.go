@@ -13,20 +13,22 @@ const (
 )
 
 type TargetChangeEvent struct {
-	Change string // "add" or "del"
+	Change string // "add" or "del" or "update"
 
 	AppID    string
 	TaskID   string
 	TaskIP   string
 	TaskPort uint32
 	PortName string
+
+	Weight float64
 }
 
 type UpstreamLoader struct {
-	Upstreams []*Upstream
-	eventChan chan *TargetChangeEvent
+	Upstreams []*Upstream `json:"upstreams"`
 
-	mu sync.RWMutex
+	eventChan chan *TargetChangeEvent
+	mu        sync.RWMutex
 }
 
 func NewUpstreamLoader(eventChan chan *TargetChangeEvent) *UpstreamLoader {
@@ -46,9 +48,9 @@ func (loader *UpstreamLoader) Start(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case targetChangeEvent := <-loader.eventChan:
-			log.Debugf("upstreamLoader receive app event:%s", targetChangeEvent)
+			log.Debugf("upstreamLoader receive app event: %+v", targetChangeEvent)
 
-			upstream := UpstreamFromChangeEvent(targetChangeEvent)
+			upstream := upstreamFromChangeEvent(targetChangeEvent)
 			target := targetFromChangeEvent(targetChangeEvent)
 
 			if strings.ToLower(targetChangeEvent.Change) == "add" {
@@ -72,6 +74,25 @@ func (loader *UpstreamLoader) Start(ctx context.Context) error {
 					if len(u.Targets) == 0 { // remove upstream after last target was removed
 						loader.RemoveUpstream(upstream)
 					}
+				}
+			}
+
+			// targetChangeEvent update, weight only for the time present
+			if strings.ToLower(targetChangeEvent.Change) == "change" {
+				if loader.Contains(upstream) {
+					u := loader.Get(upstream.AppID)
+					if u == nil {
+						log.Errorf("failed to find upstream %s from loader", upstream.AppID)
+						break
+					}
+
+					t := u.GetTarget(target.TaskID)
+					if t == nil {
+						log.Errorf("failed to find target %s from upstream", target.TaskID)
+						break
+					}
+
+					u.UpdateTargetWeight(target.TaskID, target.Weight)
 				}
 			}
 		}
@@ -128,10 +149,11 @@ func targetFromChangeEvent(targetChangeEvent *TargetChangeEvent) *Target {
 		TaskIP:   targetChangeEvent.TaskIP,
 		TaskPort: targetChangeEvent.TaskPort,
 		PortName: targetChangeEvent.PortName,
+		Weight:   targetChangeEvent.Weight,
 	}
 }
 
-func UpstreamFromChangeEvent(targetChangeEvent *TargetChangeEvent) *Upstream {
+func upstreamFromChangeEvent(targetChangeEvent *TargetChangeEvent) *Upstream {
 	up := NewUpstream()
 	up.Targets = make([]*Target, 0)
 	up.AppID = targetChangeEvent.AppID

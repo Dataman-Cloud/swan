@@ -54,6 +54,7 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 	resolverConfig := &nameserver.Config{
 		Domain:     agentConf.DNS.Domain,
 		ListenAddr: agentConf.DNS.ListenAddr,
+		LogLevel:   agentConf.LogLevel,
 
 		Resolvers:       agentConf.DNS.Resolvers,
 		ExchangeTimeout: agentConf.DNS.ExchangeTimeout,
@@ -70,7 +71,8 @@ func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
 
 	jConfig := janitor.DefaultConfig()
 	jConfig.ListenAddr = agentConf.Janitor.ListenAddr
-	jConfig.HttpHandler.Domain = agentConf.Janitor.Domain
+	jConfig.Domain = agentConf.Janitor.Domain
+	jConfig.LogLevel = agentConf.LogLevel
 	agent.Janitor = janitor.NewJanitorServer(jConfig)
 
 	agent.HttpServer = NewHttpServer(agentConf.ListenAddr, agent)
@@ -173,6 +175,8 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 				if err != nil {
 					logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
 				} else {
+					logrus.Debugf("%+v", janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent))
+
 					agent.Resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					agent.Janitor.EventChan <- janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 				}
@@ -212,6 +216,7 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 	eventsDoesMatter := []string{
 		eventbus.EventTypeTaskUnhealthy,
 		eventbus.EventTypeTaskHealthy,
+		eventbus.EventTypeTaskWeightChange,
 	}
 
 	eventsPath := fmt.Sprintf("http://%s/events?catchUp=true", leaderAddr)
@@ -278,10 +283,15 @@ func janitorTargetgChangeEventFromTaskInfoEvent(eventType string,
 	taskInfoEvent *types.TaskInfoEvent) *janitor.TargetChangeEvent {
 
 	janitorEvent := &janitor.TargetChangeEvent{}
-	if eventType == eventbus.EventTypeTaskHealthy {
+	switch eventType {
+	case eventbus.EventTypeTaskHealthy:
 		janitorEvent.Change = "add"
-	} else {
+	case eventbus.EventTypeTaskUnhealthy:
 		janitorEvent.Change = "del"
+	case eventbus.EventTypeTaskWeightChange:
+		janitorEvent.Change = "change"
+	default:
+		return nil
 	}
 
 	janitorEvent.TaskIP = taskInfoEvent.IP
@@ -289,6 +299,7 @@ func janitorTargetgChangeEventFromTaskInfoEvent(eventType string,
 	janitorEvent.AppID = taskInfoEvent.AppID
 	janitorEvent.PortName = taskInfoEvent.PortName
 	janitorEvent.TaskPort = taskInfoEvent.Port
+	janitorEvent.Weight = taskInfoEvent.Weight
 	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
 	return janitorEvent
 }
