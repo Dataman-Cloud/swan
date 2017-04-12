@@ -21,7 +21,6 @@ type Version struct {
 	Constraints  string            `json:"constraints,omitempty"`
 	URIs         []string          `json:"uris,omitempty"`
 	IP           []string          `json:"ip,omitempty"`
-	Mode         string            `json:"mode"`
 }
 
 type Container struct {

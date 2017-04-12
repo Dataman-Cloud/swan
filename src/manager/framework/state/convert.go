@@ -47,7 +47,6 @@ func VersionToRaft(version *types.Version, appID string) *rafttypes.Version {
 		Constraints: version.Constraints,
 		Uris:        version.URIs,
 		Ip:          version.IP,
-		Mode:        version.Mode,
 		AppName:     version.AppName,
 		AppID:       appID,
 		AppVersion:  version.AppVersion,
@@ -89,7 +88,6 @@ func VersionFromRaft(raftVersion *rafttypes.Version) *types.Version {
 		Constraints: raftVersion.Constraints,
 		URIs:        raftVersion.Uris,
 		IP:          raftVersion.Ip,
-		Mode:        raftVersion.Mode,
 		AppVersion:  raftVersion.AppVersion,
 	}
 

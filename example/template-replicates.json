@@ -13,7 +13,7 @@
   "container": {
     "docker": {
       "image": "wordpress",
-      "network": "HOST",
+      "network": "host",
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
@@ -60,6 +60,4 @@
       "timeoutSeconds": 1,
       "consecutiveFailures": 500
     }
- ,
-  "mode": "replicates"
 }
