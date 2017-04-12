@@ -32,7 +32,7 @@ func (api *VersionService) Register(container *restful.Container) {
 	ws.Route(ws.GET("/").To(metrics.InstrumentRouteFunc("GET", "Version", api.Version)).
 		Doc("Version").
 		Operation("version").
-		Returns(200, "OK", ""))
+		Returns(200, "OK", version.Version{}))
 
 	container.Add(ws)
 }

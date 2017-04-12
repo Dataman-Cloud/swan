@@ -34,6 +34,7 @@ type Scheduler struct {
 
 func NewScheduler(store store.Store) *Scheduler {
 	scheduler := &Scheduler{
+		stopC:          make(chan struct{}),
 		MesosConnector: connector.Instance(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
@@ -43,21 +44,7 @@ func NewScheduler(store store.Store) *Scheduler {
 		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
-	RegisterHandler := func(m *HandlerManager) {
-		m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
-		m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_RESCIND, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
-
-		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
-	}
-
-	scheduler.handlerManager = NewHandlerManager(scheduler, RegisterHandler)
-
+	scheduler.handlerManager = NewHandlerManager(scheduler)
 	state.SetStore(store)
 
 	return scheduler

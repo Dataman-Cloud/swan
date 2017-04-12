@@ -1,6 +1,8 @@
 package event
 
 import (
+	"encoding/json"
+
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 )
 
@@ -34,4 +36,8 @@ func (me *MesosEvent) GetEventType() string {
 
 func (me *MesosEvent) GetEvent() interface{} {
 	return me.Event
+}
+func (me *MesosEvent) String() string {
+	bs, _ := json.Marshal(me.Event)
+	return string(bs)
 }

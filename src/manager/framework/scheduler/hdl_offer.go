@@ -1,6 +1,8 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
@@ -9,11 +11,10 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
-func OfferHandler(h *Handler) (*Handler, error) {
-	e, ok := h.Event.GetEvent().(*sched.Event)
+func OfferHandler(s *Scheduler, ev event.Event) error {
+	e, ok := ev.GetEvent().(*sched.Event)
 	if !ok {
-		logrus.Errorf("event conversion error %+v", h.Event)
-		return h, nil
+		return errUnexpectedEventType
 	}
 
 	for _, offer := range e.Offers.Offers {
@@ -47,18 +48,18 @@ func OfferHandler(h *Handler) (*Handler, error) {
 		}
 
 		if len(taskInfos) > 0 {
-			LaunchTaskInfos(h, offer, taskInfos)
+			LaunchTaskInfos(offer, taskInfos)
 		} else { // reject offer here
-			RejectOffer(h, offer)
+			RejectOffer(offer)
 		}
 	}
 
-	return h, nil
+	return nil
 }
 
-func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo) {
+func LaunchTaskInfos(offer *mesos.Offer, taskInfos []*mesos.TaskInfo) {
 	call := &sched.Call{
-		FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
+		FrameworkId: connector.Instance().FrameworkInfo.GetId(),
 		Type:        sched.Call_ACCEPT.Enum(),
 		Accept: &sched.Call_Accept{
 			OfferIds: []*mesos.OfferID{
@@ -76,12 +77,12 @@ func LaunchTaskInfos(h *Handler, offer *mesos.Offer, taskInfos []*mesos.TaskInfo
 		},
 	}
 
-	h.Response.Calls = append(h.Response.Calls, call)
+	connector.Instance().SendCall(call)
 }
 
-func RejectOffer(h *Handler, offer *mesos.Offer) {
+func RejectOffer(offer *mesos.Offer) {
 	call := &sched.Call{
-		FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
+		FrameworkId: connector.Instance().FrameworkInfo.GetId(),
 		Type:        sched.Call_DECLINE.Enum(),
 		Decline: &sched.Call_Decline{
 			OfferIds: []*mesos.OfferID{
@@ -95,5 +96,5 @@ func RejectOffer(h *Handler, offer *mesos.Offer) {
 		},
 	}
 
-	h.Response.Calls = append(h.Response.Calls, call)
+	connector.Instance().SendCall(call)
 }

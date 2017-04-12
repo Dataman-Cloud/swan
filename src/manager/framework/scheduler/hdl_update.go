@@ -6,6 +6,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Dataman-Cloud/swan/src/manager/framework/connector"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/state"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
@@ -13,17 +15,17 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-func UpdateHandler(h *Handler) (*Handler, error) {
-	logrus.WithFields(logrus.Fields{"handler": "update"}).Debugf("logger handler report got event type: %s", h.Event.GetEventType())
+func UpdateHandler(s *Scheduler, ev event.Event) error {
+	logrus.WithFields(logrus.Fields{"handler": "update"}).
+		Debugf("logger handler report got event type: %s", ev.GetEventType())
 
-	e, ok := h.Event.GetEvent().(*sched.Event)
+	e, ok := ev.GetEvent().(*sched.Event)
 	if !ok {
-		logrus.Errorf("event conversion error %+v", h.Event)
-		return h, nil
+		return errUnexpectedEventType
 	}
 
 	taskStatus := e.GetUpdate().GetStatus()
-	AckUpdateEvent(h, taskStatus)
+	AckUpdateEvent(taskStatus)
 
 	slotName := taskStatus.TaskId.GetValue()
 	taskState := taskStatus.GetState()
@@ -43,17 +45,15 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)
 	logrus.Debugf("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)
 
-	app := h.Manager.SchedulerRef.AppStorage.Get(appId)
+	app := s.AppStorage.Get(appId)
 	if app == nil {
-		logrus.Errorf("app not found: %s", appId)
-		return h, nil
+		return fmt.Errorf("app not found: %s", appId)
 	}
 	logrus.Debugf("found app %s", app.ID)
 
 	slot, found := app.GetSlot(int(slotIndex))
 	if !found {
-		logrus.Errorf("slot not found: %d", slotIndex)
-		return h, nil
+		return fmt.Errorf("slot not found: %d", slotIndex)
 	}
 	logrus.Debugf("found slot %s", slot.ID)
 
@@ -101,13 +101,13 @@ func UpdateHandler(h *Handler) (*Handler, error) {
 		slot.SetState(state.SLOT_STATE_TASK_LOST)
 	}
 
-	return h, nil
+	return nil
 }
 
-func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
+func AckUpdateEvent(taskStatus *mesos.TaskStatus) {
 	if taskStatus.GetUuid() != nil {
 		call := &sched.Call{
-			FrameworkId: h.Manager.SchedulerRef.MesosConnector.FrameworkInfo.GetId(),
+			FrameworkId: connector.Instance().FrameworkInfo.GetId(),
 			Type:        sched.Call_ACKNOWLEDGE.Enum(),
 			Acknowledge: &sched.Call_Acknowledge{
 				AgentId: taskStatus.GetAgentId(),
@@ -116,7 +116,7 @@ func AckUpdateEvent(h *Handler, taskStatus *mesos.TaskStatus) {
 			},
 		}
 
-		h.Response.Calls = append(h.Response.Calls, call)
+		connector.Instance().SendCall(call)
 	}
 }
 

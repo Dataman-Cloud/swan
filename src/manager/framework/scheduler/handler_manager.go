@@ -1,68 +1,77 @@
 package scheduler
 
 import (
-	"sync"
+	"errors"
+	"reflect"
+	"runtime"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+	"github.com/Sirupsen/logrus"
 
-	"github.com/satori/go.uuid"
 	"golang.org/x/net/context"
 )
 
-var once sync.Once
+var (
+	errUnexpectedEventType = errors.New("unexpected event type")
+)
 
-type HandlerFunc func(s *Handler) (*Handler, error)
+type HandlerFunc func(s *Scheduler, e event.Event) error
 
-type HandlerFuncs []HandlerFunc
-
-type HandlerManager struct {
-	lock       sync.Mutex
-	handlers   map[string]*Handler
-	handlerMap map[string]HandlerFuncs
-
-	SchedulerRef *Scheduler
+func (hf HandlerFunc) Name() string {
+	v := reflect.ValueOf(hf)
+	return runtime.FuncForPC(v.Pointer()).Name()
 }
 
-func NewHandlerManager(scheduler *Scheduler, installHandler func(*HandlerManager)) *HandlerManager {
-	manager := &HandlerManager{
-		handlers:     make(map[string]*Handler),
-		handlerMap:   make(map[string]HandlerFuncs),
-		lock:         sync.Mutex{},
-		SchedulerRef: scheduler,
-	}
-	once.Do(func() {
-		installHandler(manager)
-	})
+type HandlerManager struct {
+	handlerMap   map[string][]HandlerFunc // etype -> handlers...
+	SchedulerRef *Scheduler               // FIX THIS Later
+}
 
-	return manager
+func NewHandlerManager(SchedulerRef *Scheduler) *HandlerManager {
+	m := &HandlerManager{
+		handlerMap:   make(map[string][]HandlerFunc),
+		SchedulerRef: SchedulerRef,
+	}
+
+	m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
+	m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_RESCIND, LoggerHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
+	m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
+
+	return m
 }
 
 func (m *HandlerManager) Register(eType string, funcs ...HandlerFunc) {
-	m.handlerMap[eType] = HandlerFuncs(funcs)
+	m.handlerMap[eType] = funcs
 }
 
-func (m *HandlerManager) HandlerFuncs(eType string) HandlerFuncs {
+func (m *HandlerManager) HandlerFuncs(eType string) []HandlerFunc {
 	return m.handlerMap[eType]
 }
 
-func (m *HandlerManager) Handle(e event.Event) *Handler {
-	handlerId := uuid.NewV4().String()
-	h := NewHandler(handlerId, m, e)
-
-	m.lock.Lock()
-	defer m.lock.Unlock()
-	m.handlers[handlerId] = h
-
+func (m *HandlerManager) Handle(e event.Event) {
 	timeoutCtx, _ := context.WithTimeout(context.Background(), 10*time.Second)
-	go h.Process(timeoutCtx) // process a mesos event in seperated goroutine
-
-	return h
+	go m.Process(timeoutCtx, e)
 }
 
-func (m *HandlerManager) RemoveHandler(handlerId string) {
-	m.lock.Lock()
-	defer m.lock.Unlock() // protect mutual access to m.handlers
+func (m *HandlerManager) Process(timeoutCtx context.Context, e event.Event) {
+	select {
+	case <-timeoutCtx.Done(): // abort early
+		logrus.Errorf("%s", timeoutCtx.Err())
 
-	delete(m.handlers, handlerId)
+	default:
+		funcs := m.HandlerFuncs(e.GetEventType())
+		for _, fun := range funcs {
+			if err := fun(m.SchedulerRef, e); err != nil {
+				logrus.Errorf("handler [%v] process event [%v] got error [%v]",
+					HandlerFunc(fun).Name(), e, err)
+			}
+		}
+	}
 }

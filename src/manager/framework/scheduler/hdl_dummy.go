@@ -1,7 +1,7 @@
 package scheduler
 
-import ()
+import "github.com/Dataman-Cloud/swan/src/manager/framework/event"
 
-func DummyHandler(h *Handler) (*Handler, error) {
-	return h, nil
+func DummyHandler(s *Scheduler, ev event.Event) error {
+	return nil
 }
