@@ -34,9 +34,9 @@ func (m *memoryStore) Add(id string, app *state.App) {
 // Get returns an app from the store by id
 func (m *memoryStore) Get(id string) *state.App {
 	var res *state.App
-	m.Lock()
+	m.RLock()
 	res = m.s[id]
-	m.Unlock()
+	m.RUnlock()
 	return res
 }
 
@@ -48,11 +48,16 @@ func (m *memoryStore) Delete(id string) {
 }
 
 func (m *memoryStore) Data() map[string]*state.App {
+	m.RLock()
+	defer m.RUnlock()
 	return m.s
 }
 
 func (m *memoryStore) Filter(options types.AppFilterOptions) []*state.App {
 	var apps []*state.App
+
+	m.RLock()
+	defer m.RUnlock()
 
 	for _, app := range m.s {
 		if !filterByLabelsSelectors(options.LabelsSelector, app.CurrentVersion.Labels) {
