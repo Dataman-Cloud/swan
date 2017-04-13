@@ -25,33 +25,30 @@ type OfferAllocator struct {
 	PendingOfferSlots  []*Slot
 	pendingOfferRWLock sync.RWMutex
 
+	// slotid -> offerinfo
 	AllocatedOffer     map[string]*OfferInfo // we store every offer that are occupied by running slot
-	allocatedOfferLock sync.Mutex
+	allocatedOfferLock sync.RWMutex
 }
 
 func OfferAllocatorInstance() *OfferAllocator {
 	once.Do(func() {
 		instance = &OfferAllocator{
-			PendingOfferSlots:  make([]*Slot, 0),
-			pendingOfferRWLock: sync.RWMutex{},
-
-			AllocatedOffer:     make(map[string]*OfferInfo),
-			allocatedOfferLock: sync.Mutex{},
+			PendingOfferSlots: make([]*Slot, 0),
+			AllocatedOffer:    make(map[string]*OfferInfo),
 		}
 	})
 
 	return instance
 }
 
-func (allocator *OfferAllocator) PopNextPendingOffer() *Slot {
+func (allocator *OfferAllocator) ShiftNextPendingOffer() *Slot {
 	if len(allocator.PendingOfferSlots) == 0 {
 		return nil
 	}
 
-	slot := allocator.PendingOfferSlots[0]
+	var slot *Slot
 	allocator.pendingOfferRWLock.Lock()
-	pendingOfferSize := len(allocator.PendingOfferSlots)
-	allocator.PendingOfferSlots = allocator.PendingOfferSlots[1:pendingOfferSize]
+	slot, allocator.PendingOfferSlots = allocator.PendingOfferSlots[0], allocator.PendingOfferSlots[1:]
 	allocator.pendingOfferRWLock.Unlock()
 
 	return slot
@@ -64,6 +61,9 @@ func (allocator *OfferAllocator) PutSlotBackToPendingQueue(slot *Slot) {
 }
 
 func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
+	allocator.pendingOfferRWLock.Lock()
+	defer allocator.pendingOfferRWLock.Unlock()
+
 	slotIndex := -1
 
 	for index, pendingOfferSlot := range allocator.PendingOfferSlots {
@@ -76,12 +76,11 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 	if slotIndex == -1 {
 		return
 	}
-	allocator.pendingOfferRWLock.Lock()
-	defer allocator.pendingOfferRWLock.Unlock()
 
 	allocator.PendingOfferSlots = append(allocator.PendingOfferSlots[:slotIndex], allocator.PendingOfferSlots[slotIndex+1:]...)
 }
 
+// NOTE Lock & raft write may cause performance problems
 func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
 	info := &OfferInfo{
@@ -89,24 +88,28 @@ func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot)
 		AgentID:  *offer.GetAgentId().Value,
 		Hostname: offer.GetHostname(),
 	}
+	allocator.create(slot.ID, info) // TODO error dealing
 	allocator.AllocatedOffer[slot.ID] = info
-	allocator.create(slot.ID, info)
-
 	allocator.allocatedOfferLock.Unlock()
 }
 
+// NOTE Lock & raft write may cause performance problems
 func (allocator *OfferAllocator) RemoveOfferSlotMapBySlot(slot *Slot) {
 	allocator.allocatedOfferLock.Lock()
+	allocator.remove(slot.ID)
 	delete(allocator.AllocatedOffer, slot.ID)
 	allocator.allocatedOfferLock.Unlock()
-	allocator.remove(slot.ID)
 }
 
 func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId string) {
+	allocator.allocatedOfferLock.Lock()
+	defer allocator.allocatedOfferLock.Unlock()
+
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
 		if v.OfferID == offerId {
 			key = k
+			break
 		}
 	}
 
@@ -115,16 +118,18 @@ func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId string) {
 		return
 	}
 
-	allocator.allocatedOfferLock.Lock()
 	delete(allocator.AllocatedOffer, key)
-	allocator.allocatedOfferLock.Unlock()
 }
 
-func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId string) (string, error) {
+func (allocator *OfferAllocator) RetrieveSlotIdByOfferId(offerId string) (string, error) {
+	allocator.allocatedOfferLock.RLock()
+	defer allocator.allocatedOfferLock.RUnlock()
+
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
 		if v.OfferID == offerId {
 			key = k
+			break
 		}
 	}
 
@@ -136,6 +141,9 @@ func (allocator *OfferAllocator) RetrieveSlotIdWithOfferId(offerId string) (stri
 }
 
 func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
+	allocator.allocatedOfferLock.RLock()
+	defer allocator.allocatedOfferLock.RUnlock()
+
 	slots := make([]string, 0)
 	for slotID, info := range allocator.AllocatedOffer {
 		if info.AgentID == agentID {
@@ -147,6 +155,9 @@ func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
 }
 
 func (allocator *OfferAllocator) SlotsByHostname(hostname string) []string {
+	allocator.allocatedOfferLock.RLock()
+	defer allocator.allocatedOfferLock.RUnlock()
+
 	slots := make([]string, 0)
 	for slotID, info := range allocator.AllocatedOffer {
 		if info.Hostname == hostname {
