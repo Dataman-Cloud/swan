@@ -282,12 +282,10 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_TASK_KILLING:
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilling)
 	case SLOT_STATE_TASK_FINISHED:
-		slot.StopRestartPolicy()
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFailed)
 	case SLOT_STATE_TASK_KILLED:
-		slot.StopRestartPolicy()
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilled)
 	case SLOT_STATE_TASK_ERROR:
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateError)

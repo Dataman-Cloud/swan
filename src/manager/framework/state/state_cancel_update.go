@@ -49,7 +49,6 @@ func (cancelUpdate *StateCancelUpdate) Step() {
 
 	// when slot down but not the last one
 	if (cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_REAP) ||
-		cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
 		cancelUpdate.CurrentSlot.Abnormal()) &&
 		cancelUpdate.CurrentSlotIndex > cancelUpdate.TargetSlotIndex {
 
@@ -68,7 +67,6 @@ func (cancelUpdate *StateCancelUpdate) Step() {
 
 		// when last slot got killed
 	} else if (cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_REAP) ||
-		cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
 		cancelUpdate.CurrentSlot.Abnormal()) &&
 		cancelUpdate.CurrentSlotIndex == cancelUpdate.TargetSlotIndex {
 
