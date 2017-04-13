@@ -1,19 +1,19 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
 
 	"github.com/Sirupsen/logrus"
 )
 
-func RecindHandler(h *Handler) (*Handler, error) {
-	logrus.WithFields(logrus.Fields{"handler": "recind"}).Debugf("logger handler report got event type: %s", h.Event.GetEventType())
+func RecindHandler(s *Scheduler, ev event.Event) error {
+	logrus.WithFields(logrus.Fields{"handler": "recind"}).
+		Debugf("logger handler report got event type: %s", ev.GetEventType())
 
-	_, ok := h.Event.GetEvent().(*sched.Event)
-	if !ok {
-		logrus.Errorf("event conversion error %+v", h.Event)
-		return h, nil
+	if _, ok := ev.GetEvent().(*sched.Event); !ok {
+		return errUnexpectedEventType
 	}
 
-	return h, nil
+	return nil
 }

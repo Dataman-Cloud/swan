@@ -24,7 +24,6 @@ import (
 type AppService struct {
 	Scheduler *scheduler.Scheduler
 	apiServer *apiserver.ApiServer
-	apiserver.ApiRegister
 }
 
 func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *AppService {

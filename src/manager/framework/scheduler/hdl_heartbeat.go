@@ -1,7 +1,7 @@
 package scheduler
 
-import ()
+import "github.com/Dataman-Cloud/swan/src/manager/framework/event"
 
-func HeartbeatHandler(h *Handler) (*Handler, error) {
-	return h, nil
+func HeartbeatHandler(s *Scheduler, ev event.Event) error {
+	return nil
 }

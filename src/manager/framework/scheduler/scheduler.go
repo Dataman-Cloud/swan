@@ -20,45 +20,31 @@ const (
 
 type Scheduler struct {
 	heartbeater *time.Ticker
-	errorChan   chan error
 	stopC       chan struct{}
 
 	handlerManager          *HandlerManager
 	mesosConnectorCancelFun context.CancelFunc
 	store                   store.Store
 
+	userEventChan chan *event.UserEvent
+
 	AppStorage     *memoryStore
-	UserEventChan  chan *event.UserEvent
 	MesosConnector *connector.Connector
 }
 
 func NewScheduler(store store.Store) *Scheduler {
 	scheduler := &Scheduler{
-		MesosConnector: connector.NewConnector(),
+		stopC:          make(chan struct{}),
+		MesosConnector: connector.Instance(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
 		store:      store,
 
-		errorChan:     make(chan error, 1),
-		UserEventChan: make(chan *event.UserEvent, 1024),
+		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
-	RegisterHandler := func(m *HandlerManager) {
-		m.Register(event.EVENT_TYPE_MESOS_SUBSCRIBED, LoggerHandler, SubscribedHandler)
-		m.Register(event.EVENT_TYPE_MESOS_HEARTBEAT, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_OFFERS, LoggerHandler, OfferHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_RESCIND, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_UPDATE, LoggerHandler, UpdateHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_FAILURE, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_MESSAGE, LoggerHandler, DummyHandler)
-		m.Register(event.EVENT_TYPE_MESOS_ERROR, LoggerHandler, DummyHandler)
-
-		m.Register(event.EVENT_TYPE_USER_INVALID_APPS, LoggerHandler, InvalidAppHandler)
-	}
-
-	scheduler.handlerManager = NewHandlerManager(scheduler, RegisterHandler)
-
+	scheduler.handlerManager = NewHandlerManager(scheduler)
 	state.SetStore(store)
 
 	return scheduler
@@ -66,12 +52,12 @@ func NewScheduler(store store.Store) *Scheduler {
 
 // shutdown main scheduler and related
 func (scheduler *Scheduler) Stop() {
-	scheduler.stopC <- struct{}{}
+	close(scheduler.stopC)
 }
 
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
-	apps, err := state.LoadAppData(scheduler.UserEventChan)
+	apps, err := state.LoadAppData(scheduler.userEventChan)
 	if err != nil {
 		return err
 	}
@@ -101,7 +87,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
-		scheduler.MesosConnector.Start(c, scheduler.errorChan)
+		scheduler.MesosConnector.Start(c)
 	}()
 
 	return scheduler.Run(context.Background()) // context as a placeholder
@@ -111,36 +97,36 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 func (scheduler *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
-		case e := <-scheduler.MesosConnector.ReceiveChan:
-			//logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
-			scheduler.handleEvent(e)
-
-		case e := <-scheduler.UserEventChan:
+		case e := <-scheduler.userEventChan:
 			logrus.WithFields(logrus.Fields{"event": "user"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
-		case e := <-scheduler.errorChan:
-			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Debugf("%s", e)
+		case e := <-scheduler.MesosConnector.MesosEvent(): // subcribe connector's mesos-events
+			logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
+			scheduler.handleEvent(e)
+
+		// TODO: make the connector self-contains rejoin logic
+		case e := <-scheduler.MesosConnector.ErrEvent(): // subcribe connector's failures events
+			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Errorf("%s", e)
 			swanErr, ok := e.(*utils.SwanError)
 			if ok && swanErr.Severity == utils.SeverityLow {
 				for {
 					time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-
-					err := scheduler.MesosConnector.Reregister()
+					err := scheduler.MesosConnector.Reregister() // CAUTION
 					if err == nil {
 						break
 					}
 				}
 			} else {
-				scheduler.mesosConnectorCancelFun()
+				scheduler.mesosConnectorCancelFun() // CAUTION
 				return e
 			}
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
-			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugf("")
+			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("I'm alive")
 
 		case <-scheduler.stopC:
-			logrus.WithFields(logrus.Fields{"event": "stopC"}).Debugf("")
+			logrus.WithFields(logrus.Fields{"event": "stopC"}).Infoln("scheduler stopped")
 			return nil
 		}
 	}
@@ -148,10 +134,6 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 
 func (scheduler *Scheduler) handleEvent(e event.Event) {
 	scheduler.handlerManager.Handle(e)
-}
-
-func (scheduler *Scheduler) EmitEvent(e *eventbus.Event) {
-	eventbus.WriteEvent(e)
 }
 
 func (scheduler *Scheduler) HealthyTaskEvents() []*eventbus.Event {

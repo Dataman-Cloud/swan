@@ -7,15 +7,11 @@ import (
 )
 
 func TestNewConnector(t *testing.T) {
-	c := NewConnector()
+	c := Instance()
 	assert.NotNil(t, c)
 }
 
 func TestInstance(t *testing.T) {
 	c := Instance()
-	assert.Equal(t, c, NewConnector())
-}
-
-func TestInstanceTwice(t *testing.T) {
-	assert.Equal(t, Instance(), Instance())
+	assert.Equal(t, c, Instance())
 }

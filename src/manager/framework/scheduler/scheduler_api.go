@@ -8,7 +8,7 @@ import (
 )
 
 func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
-	app, err := state.NewApp(version, scheduler.UserEventChan)
+	app, err := state.NewApp(version, scheduler.userEventChan)
 	if err != nil {
 		return nil, err
 	}

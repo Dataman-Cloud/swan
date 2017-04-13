@@ -36,7 +36,7 @@ func NewHTTPClient(addr, path string) *HttpClient {
 	}
 }
 
-func (c *HttpClient) Send(payload []byte) (*http.Response, error) {
+func (c *HttpClient) send(payload []byte) (*http.Response, error) {
 	httpReq, err := http.NewRequest("POST", c.url, bytes.NewReader(payload))
 	if err != nil {
 		return nil, err

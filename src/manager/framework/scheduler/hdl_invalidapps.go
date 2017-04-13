@@ -1,16 +1,18 @@
 package scheduler
 
 import (
+	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+
 	"github.com/Sirupsen/logrus"
 )
 
-func InvalidAppHandler(h *Handler) (*Handler, error) {
-	logrus.WithFields(logrus.Fields{"handler": "InvalidAppHandler"}).Debugf("logger handler report got event type: %s", h.Event.GetEventType())
+func InvalidAppHandler(s *Scheduler, ev event.Event) error {
+	logrus.WithFields(logrus.Fields{"handler": "InvalidAppHandler"}).
+		Debugf("logger handler report got event type: %s", ev.GetEventType())
 
-	appID, ok := h.Event.GetEvent().(string)
-
+	appID, ok := ev.GetEvent().(string)
 	if ok {
-		h.Manager.SchedulerRef.AppStorage.Delete(appID)
+		s.AppStorage.Delete(appID)
 	}
-	return h, nil
+	return nil
 }

@@ -138,5 +138,5 @@ func (task *Task) Kill() {
 		}
 	}
 
-	connector.Instance().SendChan <- call
+	connector.Instance().SendCall(call)
 }

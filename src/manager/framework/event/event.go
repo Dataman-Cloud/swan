@@ -16,4 +16,5 @@ const (
 type Event interface {
 	GetEventType() string
 	GetEvent() interface{}
+	String() string
 }

@@ -1,5 +1,7 @@
 package scheduler
 
-func FailureHandler(h *Handler) (*Handler, error) {
-	return h, nil
+import "github.com/Dataman-Cloud/swan/src/manager/framework/event"
+
+func FailureHandler(s *Scheduler, ev event.Event) error {
+	return nil
 }
