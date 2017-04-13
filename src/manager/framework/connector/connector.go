@@ -138,24 +138,11 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response) {
 				return
 			}
 
-			switch event.GetType() {
-			case sched.Event_SUBSCRIBED:
-				logrus.Infof("subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
-				s.addEvent(sched.Event_SUBSCRIBED, event)
-			case sched.Event_OFFERS:
-				s.addEvent(sched.Event_OFFERS, event)
-			case sched.Event_RESCIND:
-				s.addEvent(sched.Event_RESCIND, event)
-			case sched.Event_UPDATE:
-				s.addEvent(sched.Event_UPDATE, event)
-			case sched.Event_MESSAGE:
-				s.addEvent(sched.Event_MESSAGE, event)
-			case sched.Event_FAILURE:
-				s.addEvent(sched.Event_FAILURE, event)
-			case sched.Event_ERROR:
-				s.addEvent(sched.Event_ERROR, event)
-			case sched.Event_HEARTBEAT:
-				s.addEvent(sched.Event_HEARTBEAT, event)
+			s.addEvent(event.GetType(), event)
+
+			if event.GetType() == sched.Event_SUBSCRIBED {
+				frameworkId := event.GetSubscribed().FrameworkId.GetValue()
+				logrus.Infof("subscribed successful with ID %s", frameworkId)
 			}
 		}
 	}
