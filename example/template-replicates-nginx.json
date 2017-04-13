@@ -1,14 +1,14 @@
 {
   "appName": "nginx",
-  "appVersion": "version1",
+  "appVersion": "version2",
   "cmd": null,
   "args": null,
-  "cpus": 0.1,
+  "cpus": 0.2,
   "mem": 300,
   "disk": 100,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 1,
+  "instances": 6,
   "constraints":"" ,
   "container": {
     "docker": {
@@ -56,7 +56,7 @@
       "portName": "web",
       "timeoutSeconds": 2,
       "consecutiveFailures": 10
-    }
+    },
   "cmd": "rails server -b 0.0.0.0"
 }
 

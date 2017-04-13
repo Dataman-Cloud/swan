@@ -17,7 +17,7 @@ func OfferHandler(h *Handler) (*Handler, error) {
 	}
 
 	for _, offer := range e.Offers.Offers {
-		logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("OfferHandler got offerId: %s", *offer.GetId().Value)
+		//logrus.WithFields(logrus.Fields{"handler": "offer"}).Debugf("OfferHandler got offerId: %s", *offer.GetId().Value)
 		// when no pending offer slot
 		offerWrapper := state.NewOfferWrapper(offer)
 		taskInfos := make([]*mesos.TaskInfo, 0)

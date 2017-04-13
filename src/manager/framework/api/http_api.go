@@ -335,7 +335,7 @@ func (api *AppService) ProceedUpdate(request *restful.Request, response *restful
 		return
 	}
 
-	err = api.Scheduler.ProceedUpdate(request.PathParameter("app_id"), param.Instances)
+	err = api.Scheduler.ProceedUpdate(request.PathParameter("app_id"), param.Instances, param.NewWeights)
 	if err != nil {
 		logrus.Errorf("Proceed update error: %s", err.Error())
 		response.WriteError(http.StatusBadRequest, err)

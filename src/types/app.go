@@ -132,7 +132,8 @@ type Stats struct {
 }
 
 type ProceedUpdateParam struct {
-	Instances int `json:"instances"`
+	Instances  int             `json:"instances"`
+	NewWeights map[int]float64 `json:"weights"`
 }
 
 type ScaleUpParam struct {

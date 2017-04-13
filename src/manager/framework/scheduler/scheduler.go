@@ -112,7 +112,7 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case e := <-scheduler.MesosConnector.ReceiveChan:
-			logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
+			//logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
 			scheduler.handleEvent(e)
 
 		case e := <-scheduler.UserEventChan:

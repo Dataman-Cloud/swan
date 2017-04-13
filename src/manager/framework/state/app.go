@@ -197,7 +197,7 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 	return app.TransitTo(APP_STATE_UPDATING, 1)
 }
 
-func (app *App) ProceedingRollingUpdate(instances int) error {
+func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float64) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion == nil {
 		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
@@ -225,6 +225,12 @@ func (app *App) ProceedingRollingUpdate(instances int) error {
 
 	if slot, ok := app.Slots[updatedCount-1]; !ok || !slot.Healthy() {
 		return errors.New("previous update not completed, abort")
+	}
+
+	for index, newWeight := range newWeights {
+		if slot, ok := app.Slots[index]; ok {
+			slot.SetWeight(newWeight)
+		}
 	}
 
 	return app.TransitTo(APP_STATE_UPDATING, instances)

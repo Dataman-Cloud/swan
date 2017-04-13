@@ -40,7 +40,12 @@ curl -X PUT -H "Content-Type: application/json"  http://localhost:9999/v_beta/ap
 
 + application rolling update - proceed
 ```
-curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d '{"instances":1}'
+curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d '{"instances":1, "weights": {"1": 100,"2":200 }}'
+```
+
++ update weight number for single slot
+```
+curl -X PATCH -H "Content-Type: application/json"  http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/tasks/1/weight -d '{ "weight": 1}'
 ```
 
 `instances` -1 means updating all instances left, other value means updating the specified instances at one time.

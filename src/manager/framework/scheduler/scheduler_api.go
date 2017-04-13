@@ -80,11 +80,11 @@ func (scheduler *Scheduler) CancelUpdate(appId string) error {
 	return app.CancelUpdate()
 }
 
-func (scheduler *Scheduler) ProceedUpdate(appId string, instances int) error {
+func (scheduler *Scheduler) ProceedUpdate(appId string, instances int, newWeights map[int]float64) error {
 	app := scheduler.AppStorage.Get(appId)
 	if app == nil {
 		return errors.New("app not exists")
 	}
 
-	return app.ProceedingRollingUpdate(instances)
+	return app.ProceedingRollingUpdate(instances, newWeights)
 }

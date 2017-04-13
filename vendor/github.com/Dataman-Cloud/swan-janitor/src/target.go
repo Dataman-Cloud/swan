@@ -8,11 +8,13 @@ import (
 )
 
 type Target struct {
-	AppID    string `json:"appID"`
-	TaskID   string `json:"taskID"`
-	TaskIP   string `json:"taskIP"`
-	TaskPort uint32 `json:"taskPort"`
-	PortName string `json:"portName"`
+	AppID      string `json:"appID"`
+	VersionID  string `json:"versionID"`
+	AppVersion string `json:"appVersion"`
+	TaskID     string `json:"taskID"`
+	TaskIP     string `json:"taskIP"`
+	TaskPort   uint32 `json:"taskPort"`
+	PortName   string `json:"portName"`
 
 	Weight float64 `json:"weihgt"`
 }
