@@ -1,6 +1,6 @@
 {
   "appName": "nginx",
-  "appVersion": "version2",
+  "appVersion": "version1",
   "cmd": null,
   "args": null,
   "cpus": 0.2,
@@ -8,7 +8,7 @@
   "disk": 100,
   "runAs": "xcm",
   "priority": 100,
-  "instances": 6,
+  "instances": 5,
   "constraints":"" ,
   "container": {
     "docker": {

@@ -30,7 +30,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-janitor",
 			"repository": "https://github.com/Dataman-Cloud/swan-janitor",
 			"vcs": "git",
-			"revision": "50355e80c5b89065bd25b603974b48502aa1fb44",
+			"revision": "9332d187eda1c623b9016d8132ce758f116b6079",
 			"branch": "master",
 			"notests": true
 		},
@@ -664,12 +664,11 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/prometheus/client_golang/prometheus",
+			"importpath": "github.com/prometheus/client_golang",
 			"repository": "https://github.com/prometheus/client_golang",
 			"vcs": "git",
-			"revision": "7993aa4cbec0531b926db082b0d589ad2e4d5e33",
+			"revision": "08fd2e12372a66e68e30523c7642e0cbc3e4fbde",
 			"branch": "master",
-			"path": "/prometheus",
 			"notests": true
 		},
 		{
