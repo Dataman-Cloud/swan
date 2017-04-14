@@ -21,7 +21,7 @@ func (s *FrameworkStore) UpdateTask(ctx context.Context, task *types.Task, cb fu
 	}
 
 	if slot == nil {
-		return ErrTaskNotFound
+		return errTaskNotFound
 	}
 
 	var storeActions []*types.StoreAction

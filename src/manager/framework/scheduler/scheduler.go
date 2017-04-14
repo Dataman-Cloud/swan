@@ -32,20 +32,19 @@ type Scheduler struct {
 	MesosConnector *connector.Connector
 }
 
-func NewScheduler(store store.Store) *Scheduler {
+func NewScheduler() *Scheduler {
 	scheduler := &Scheduler{
 		stopC:          make(chan struct{}),
 		MesosConnector: connector.Instance(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
-		store:      store,
+		store:      store.DB(),
 
 		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
 	scheduler.handlerManager = NewHandlerManager(scheduler)
-	state.SetStore(store)
 
 	return scheduler
 }

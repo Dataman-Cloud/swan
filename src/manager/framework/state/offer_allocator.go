@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 
@@ -175,7 +176,7 @@ func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 
 func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
 	logrus.Debugf("create offer allocator item %s => %s", slotID, offerInfo.OfferID)
-	persistentStore.CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{
+	store.DB().CreateOfferAllocatorItem(context.TODO(), &rafttypes.OfferAllocatorItem{
 		OfferID:  offerInfo.OfferID,
 		SlotID:   slotID,
 		AgentID:  offerInfo.AgentID,
@@ -184,5 +185,5 @@ func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
 
 func (allocator *OfferAllocator) remove(slotID string) {
 	logrus.Debugf("remove offer allocator item  %s", slotID)
-	persistentStore.DeleteOfferAllocatorItem(context.TODO(), slotID, nil)
+	store.DB().DeleteOfferAllocatorItem(context.TODO(), slotID, nil)
 }

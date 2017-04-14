@@ -28,12 +28,6 @@ var (
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
 
-var persistentStore store.Store
-
-func SetStore(newStore store.Store) {
-	persistentStore = newStore
-}
-
 type App struct {
 	ID       string           `json:"id"`
 	Name     string           `json:"name"`
@@ -67,7 +61,7 @@ func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Upda
 func NewApp(version *types.Version,
 	userEventChan chan *event.UserEvent) (*App, error) {
 	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
-	existingApp, _ := persistentStore.GetApp(appID)
+	existingApp, _ := store.DB().GetApp(appID)
 	if existingApp != nil {
 		return nil, errors.New("app already exists")
 	}
@@ -562,7 +556,7 @@ func validateAndFormatVersion(version *types.Version) error {
 
 func (app *App) SaveVersion(version *types.Version) {
 	app.Versions = append(app.Versions, version)
-	WithConvertVersion(context.TODO(), app.ID, version, nil, persistentStore.CreateVersion)
+	WithConvertVersion(context.TODO(), app.ID, version, nil, store.DB().CreateVersion)
 }
 
 // 1, remove app from persisted storage
@@ -578,15 +572,15 @@ func (app *App) Touch() {
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
-	WithConvertApp(context.TODO(), app, nil, persistentStore.UpdateApp)
+	WithConvertApp(context.TODO(), app, nil, store.DB().UpdateApp)
 }
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	WithConvertApp(context.TODO(), app, nil, persistentStore.CreateApp)
+	WithConvertApp(context.TODO(), app, nil, store.DB().CreateApp)
 }
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.ID)
-	persistentStore.DeleteApp(context.TODO(), app.ID, nil)
+	store.DB().DeleteApp(context.TODO(), app.ID, nil)
 }
