@@ -29,12 +29,16 @@ var SPECIAL_CHARACTER = regexp.MustCompile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\
 var instance *Connector
 var once sync.Once
 
+// Connector create a persistent connection against mesos master to subscribe mesos event.
+// caller could use:
+// MesosEvent() to subscribe mesos events
+// ErrEvent()   to subscribe connnector's failures
+// SendCall()   to emit request against mesos master
 type Connector struct {
 	ClusterID             string
 	MesosLeader           string
 	MesosLeaderHttpClient *HttpClient
 
-	SendChan  chan *sched.Call
 	EventChan chan *event.MesosEvent
 	ErrorChan chan error
 
@@ -63,7 +67,6 @@ func Instance() *Connector {
 			}
 
 			instance = &Connector{
-				SendChan:      make(chan *sched.Call, 1024),
 				EventChan:     make(chan *event.MesosEvent, 1024),
 				ErrorChan:     make(chan error, 1024),
 				FrameworkInfo: info,
@@ -190,7 +193,16 @@ func stateFromMasters(masters []string) (*megos.State, error) {
 }
 
 func (s *Connector) SendCall(call *sched.Call) {
-	s.SendChan <- call
+	resp, err := s.send(call)
+	if err != nil {
+		logrus.Errorf("send call to master got err: %s", err)
+		s.emitError(utils.SeverityLow, err)
+		return
+	}
+	if code := resp.StatusCode; code != 202 {
+		logrus.Errorf("send call to master, expect 202, got %d", code)
+		s.emitError(utils.SeverityLow, "sending call response status code not 202")
+	}
 }
 
 func (s *Connector) send(call *sched.Call) (*http.Response, error) {
@@ -246,26 +258,6 @@ func (s *Connector) Start(ctx context.Context) {
 
 	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
 	go s.subscribe(s.StreamCtx)
-
-	for {
-		select {
-		case <-ctx.Done():
-			logrus.Infof("connector got done signal: %v", ctx.Err())
-			s.StreamCancelFun() // stop stream goroutine
-			return
-		case call := <-s.SendChan:
-			resp, err := s.send(call)
-			if err != nil {
-				logrus.Errorf("send call to master got err: %s", err)
-				s.emitError(utils.SeverityLow, err)
-				continue
-			}
-			if code := resp.StatusCode; code != 202 {
-				logrus.Errorf("send call to master, expect 202, got %d", code)
-				s.emitError(utils.SeverityLow, "sending call response status code not 202")
-			}
-		}
-	}
 }
 
 func (s *Connector) leaderDetect() error {
