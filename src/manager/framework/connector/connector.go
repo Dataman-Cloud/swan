@@ -128,11 +128,7 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response) {
 				return
 			}
 
-			ev := event.GetType()
-			if ev == sched.Event_SUBSCRIBED {
-				logrus.Infof("subscribed successful with ID %s", event.GetSubscribed().FrameworkId.GetValue())
-			}
-			s.emitEvent(ev, event)
+			s.emitEvent(event.GetType(), event)
 		}
 	}
 }
