@@ -42,9 +42,8 @@ func (machine *StateMachine) CanTransitTo(targetStateString string) bool {
 func (machine *StateMachine) ReadableState() string {
 	if machine != nil && machine.state != nil {
 		return machine.state.StateName()
-	} else {
-		return ""
 	}
+	return ""
 }
 
 // test machine.state is stateExpected
@@ -64,9 +63,9 @@ func (machine *StateMachine) TransitTo(targetState State) error {
 		machine.state.OnEnter()
 
 		return nil
-	} else {
-		return fmt.Errorf("can't transit from state: %s to state: %s", machine.state.StateName(), targetState.StateName())
 	}
+
+	return fmt.Errorf("can't transit from state: %s to state: %s", machine.state.StateName(), targetState.StateName())
 }
 
 // move state machine step foward

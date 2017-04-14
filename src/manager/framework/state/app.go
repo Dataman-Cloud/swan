@@ -58,8 +58,7 @@ func (a AppsByUpdated) Len() int           { return len(a) }
 func (a AppsByUpdated) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Updated) } // NOTE(xychu): Desc order
 
-func NewApp(version *types.Version,
-	userEventChan chan *event.UserEvent) (*App, error) {
+func NewApp(version *types.Version, userEventChan chan *event.UserEvent) (*App, error) {
 	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
 	existingApp, _ := store.DB().GetApp(appID)
 	if existingApp != nil {
@@ -107,8 +106,8 @@ func NewApp(version *types.Version,
 // also need user pass ip here
 func (app *App) ScaleUp(newInstances int, newIps []string) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_SCALE_UP) {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_SCALE_UP))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_SCALE_UP)
 	}
 
 	if newInstances <= 0 {
@@ -130,8 +129,8 @@ func (app *App) ScaleUp(newInstances int, newIps []string) error {
 
 func (app *App) ScaleDown(removeInstances int) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_SCALE_DOWN) {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_SCALE_DOWN))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_SCALE_DOWN)
 	}
 
 	if removeInstances <= 0 {
@@ -153,8 +152,8 @@ func (app *App) ScaleDown(removeInstances int) error {
 // delete a application and all related objects: versions, tasks, slots, proxies, dns record
 func (app *App) Delete() error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_DELETING) {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_DELETING))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_DELETING)
 	}
 
 	return app.TransitTo(APP_STATE_DELETING)
@@ -162,8 +161,8 @@ func (app *App) Delete() error {
 
 func (app *App) Update(version *types.Version, store store.Store) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion != nil {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_UPDATING)
 	}
 
 	if err := validateAndFormatVersion(version); err != nil {
@@ -193,8 +192,8 @@ func (app *App) Update(version *types.Version, store store.Store) error {
 
 func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float64) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion == nil {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_UPDATING))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_UPDATING)
 	}
 
 	updatedCount := 0
@@ -214,7 +213,7 @@ func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float6
 	}
 
 	if updatedCount+instances > len(app.GetSlots()) {
-		return errors.New(fmt.Sprintf("only %d tasks left need to be updated now", len(app.GetSlots())-updatedCount))
+		return fmt.Errorf("only %d tasks left need to be updated now", len(app.GetSlots())-updatedCount)
 	}
 
 	if slot, ok := app.Slots[updatedCount-1]; !ok || !slot.Healthy() {
@@ -232,8 +231,8 @@ func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float6
 
 func (app *App) CancelUpdate() error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_CANCEL_UPDATE) || app.ProposedVersion == nil {
-		return errors.New(fmt.Sprintf("state machine can not transit from state: %s to state: %s",
-			app.StateMachine.ReadableState(), APP_STATE_CANCEL_UPDATE))
+		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
+			app.StateMachine.ReadableState(), APP_STATE_CANCEL_UPDATE)
 	}
 
 	if app.CurrentVersion == nil {
