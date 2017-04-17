@@ -1,36 +1,77 @@
 package janitor
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 const (
 	RESERVED_API_GATEWAY_DOMAIN = "gateway"
 )
 
-func newHTTPProxy(t *url.URL, tr http.RoundTripper, flush time.Duration) http.Handler {
+func newHTTPProxy(t *url.URL,
+	tr http.RoundTripper,
+	flush time.Duration,
+	P *Prometheus,
+	taskId string,
+) http.Handler {
 	rp := httputil.NewSingleHostReverseProxy(t)
-	rp.Transport = tr
 	rp.FlushInterval = flush
-	rp.Transport = &meteredRoundTripper{tr}
+	rp.Transport = &meteredRoundTripper{tr, P, taskId}
 	return rp
 }
 
 type meteredRoundTripper struct {
-	tr http.RoundTripper
+	tr     http.RoundTripper
+	P      *Prometheus
+	taskId string
 }
 
 func (m *meteredRoundTripper) RoundTrip(r *http.Request) (*http.Response, error) {
+	backendBegin := time.Now()
 	resp, err := m.tr.RoundTrip(r)
+
+	if r.Header.Get("X-Forwarded-Proto") == "http" {
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return nil, err
+		}
+
+		err = resp.Body.Close()
+		if err != nil {
+			return nil, err
+		}
+
+		resp.ContentLength = int64(len(b))
+		resp.Header.Set("Content-Length", strconv.Itoa(len(b)))
+
+		m.P.ResponseSize.Observe(float64(resp.ContentLength))
+
+		resp.Body = ioutil.NopCloser(bytes.NewReader(b))
+	}
+
+	m.P.BackendDuration.Observe(time.Now().Sub(backendBegin).Seconds())
+
+	m.P.RequestCounter.With(prometheus.Labels{
+		"source": "UserApp",
+		"code":   fmt.Sprintf("%d", resp.StatusCode),
+		"method": r.Method,
+		"path":   r.URL.RawPath,
+		"taskId": m.taskId,
+		"reason": "nomral",
+	}).Inc()
 	return resp, err
 }
 
@@ -39,49 +80,61 @@ type layer7Proxy struct {
 	tr             http.RoundTripper
 	config         Config
 	UpstreamLoader *UpstreamLoader
+	P              *Prometheus
 }
 
 func NewLayer7Proxy(tr http.RoundTripper,
 	Config Config,
-	UpstreamLoader *UpstreamLoader) http.Handler {
+	UpstreamLoader *UpstreamLoader,
+	P *Prometheus) http.Handler {
+
 	return &layer7Proxy{
 		tr:             tr,
 		config:         Config,
 		UpstreamLoader: UpstreamLoader,
+		P:              P,
 	}
 }
 
+func (p *layer7Proxy) FailByGateway(w http.ResponseWriter, r *http.Request, httpCode int, reason string) {
+	log.Debugf(reason)
+	p.P.RequestCounter.With(prometheus.Labels{
+		"source": "GATEWAY",
+		"code":   fmt.Sprintf("%d", httpCode),
+		"method": r.Method,
+		"path":   r.URL.RawPath,
+		"reason": reason,
+		"taskId": "",
+	}).Inc()
+}
+
 func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestDurationBegin := time.Now()
 	log.Debugf("got request for hostname: %s", r.Host)
 
 	var selectedTarget *Target
 	if len(r.Host) == 0 {
-		log.Debugf("header HOST is null")
-		w.WriteHeader(http.StatusBadGateway)
+		p.FailByGateway(w, r, http.StatusBadGateway, "header host blank")
 		return
 	}
 
 	host := strings.Split(r.Host, ":")[0]
-	log.Debugf("host [%s] is requested", host)
 
 	if !strings.HasSuffix(host, p.config.Domain) {
-		log.Debugf("header host doesn't end with %s, abort", p.config.Domain)
-		w.WriteHeader(http.StatusBadRequest)
+		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("header host doesn't end with %s, abort", p.config.Domain))
 		return
 	}
 
 	domainIndex := strings.Index(host, RESERVED_API_GATEWAY_DOMAIN+"."+p.config.Domain)
 	if domainIndex == 0 {
-		log.Debugf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host)
-		w.WriteHeader(http.StatusBadRequest)
+		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host))
 		return
 	}
 
 	wildcardDomain := host[0 : domainIndex-1]
 	slices := strings.Split(wildcardDomain, ".")
 	if !(len(slices) == 3 || len(slices) == 4) {
-		log.Debugf("slices is %s, header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", slices, host)
-		w.WriteHeader(http.StatusBadRequest)
+		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("slices is %s, header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", slices, host))
 		return
 	}
 
@@ -90,15 +143,13 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		appID := strings.Join(slices[1:], "-")
 		upstream := p.UpstreamLoader.Get(appID)
 		if upstream == nil {
-			log.Debugf("fail to found any upstream for %s", host)
-			w.WriteHeader(http.StatusNotFound)
+			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
 			return
 		}
 
 		target := upstream.GetTarget(taskID)
 		if target == nil {
-			log.Debugf("fail to found any target for %s", host)
-			w.WriteHeader(http.StatusNotFound)
+			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any target for %s", host))
 			return
 		}
 
@@ -109,22 +160,20 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		appID := strings.Join(slices, "-")
 		upstream := p.UpstreamLoader.Get(appID)
 		if upstream == nil {
-			log.Debugf("fail to found any upstream for %s", host)
-			w.WriteHeader(http.StatusNotFound)
+			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
 			return
 		}
 
 		selectedTarget = upstream.NextTargetEntry()
 	}
 
-	log.Debugf("selectedTarget [%s] was found", selectedTarget.Entry())
 	if selectedTarget == nil {
-		w.WriteHeader(http.StatusBadGateway)
+		p.FailByGateway(w, r, http.StatusBadGateway, fmt.Sprintf("selectedTarget [%s] was found", selectedTarget.Entry()))
 		return
 	}
 
 	if err := p.AddHeaders(r, selectedTarget); err != nil {
-		http.Error(w, "cannot parse "+r.RemoteAddr, http.StatusInternalServerError)
+		p.FailByGateway(w, r, http.StatusInternalServerError, err.Error())
 		return
 	}
 
@@ -133,20 +182,15 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case r.Header.Get("Upgrade") == "websocket":
 		h = newRawProxy(selectedTarget.Entry())
 
-		// To use the filtered proxy use
-		// h = newWSProxy(t.URL)
-
 	case r.Header.Get("Accept") == "text/event-stream":
-		// use the flush interval for SSE (server-sent events)
-		// must be > 0s to be effective
-		h = newHTTPProxy(selectedTarget.Entry(), p.tr, p.config.FlushInterval)
+		h = newHTTPProxy(selectedTarget.Entry(), p.tr, p.config.FlushInterval, p.P, selectedTarget.TaskID)
 
 	default:
-		h = newHTTPProxy(selectedTarget.Entry(), p.tr, time.Duration(0))
+		h = newHTTPProxy(selectedTarget.Entry(), p.tr, time.Duration(0), p.P, selectedTarget.TaskID)
 	}
 
-	//start := time.Now()
 	h.ServeHTTP(w, r)
+	p.P.RequestDuration.Observe(time.Now().Sub(requestDurationBegin).Seconds())
 }
 
 func (proxy *layer7Proxy) AddHeaders(r *http.Request, t *Target) error {

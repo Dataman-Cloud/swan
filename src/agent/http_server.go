@@ -5,6 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"golang.org/x/net/context"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 type HttpServer struct {
@@ -13,12 +15,21 @@ type HttpServer struct {
 	engine   *gin.Engine
 }
 
+func prometheusHandler() gin.HandlerFunc {
+	h := prometheus.UninstrumentedHandler()
+	return func(c *gin.Context) {
+		h.ServeHTTP(c.Writer, c.Request)
+	}
+}
+
 func NewHttpServer(listener string, a *Agent) *HttpServer {
 	aas := &HttpServer{
 		listener: listener,
 		agentRef: a,
 	}
 	aas.engine = gin.Default()
+
+	aas.engine.GET(aas.agentRef.Janitor.P.MetricsPath, prometheusHandler())
 
 	aas.engine.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
