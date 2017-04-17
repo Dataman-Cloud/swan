@@ -31,8 +31,6 @@ func (scaleDown *StateScaleDown) OnEnter() {
 	scaleDown.CurrentSlotIndex = len(scaleDown.App.GetSlots()) - 1
 	scaleDown.TargetSlotIndex = int(scaleDown.App.CurrentVersion.Instances)
 
-	scaleDown.CurrentSlot = NewSlot(scaleDown.App, scaleDown.App.CurrentVersion, scaleDown.CurrentSlotIndex)
-
 	scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
 	scaleDown.CurrentSlot.KillTask()
 }
