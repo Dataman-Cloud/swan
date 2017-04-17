@@ -2,6 +2,7 @@ package config
 
 import (
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -17,6 +18,7 @@ type ManagerConfig struct {
 	ListenAddr        string   `json:"listenAddr"`
 	AdvertiseAddr     string   `json:"advertiseAddr"`
 	JoinAddrs         []string `json:"joinAddrs"`
+	ZkPath            *url.URL `json:"zkPath"`
 
 	Scheduler Scheduler `json:"scheduler"`
 }
@@ -148,12 +150,14 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 }
 
 func NewManagerConfig(c *cli.Context) ManagerConfig {
+	zkPath, _ := url.Parse("zk://114.55.130.152:2181/swan")
 	managerConfig := ManagerConfig{
 		LogLevel:       "info",
 		DataDir:        "./data/",
 		ListenAddr:     "0.0.0.0:9999",
 		RaftListenAddr: "0.0.0.0:2111",
 		JoinAddrs:      []string{"0.0.0.0:9999"},
+		ZkPath:         zkPath,
 
 		Scheduler: Scheduler{
 			ZkPath:             "0.0.0.0:2181",

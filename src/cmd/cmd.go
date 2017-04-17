@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"os"
 	"path"
 
@@ -118,7 +119,7 @@ func ManagerInitCmd() cli.Command {
 		Usage:       "init [ARG...]",
 		Description: "start a manager and init a new swan cluster",
 		Flags:       []cli.Flag{},
-		Action:      StartManager,
+		Action:      JoinAndStartManager,
 	}
 
 	managerInitCmd.Flags = append(managerInitCmd.Flags, FlagListenAddr())
@@ -145,22 +146,17 @@ func VersionCmd() cli.Command {
 
 func JoinAndStartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
-
-	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
-	ID, err := utils.LoadNodeID(IDFilePath)
-	if err != nil {
-		return err
-	}
-
 	setupLogger(conf.LogLevel)
 
-	managerNode, err := manager.New(ID, conf)
+	managerNode, err := manager.NewZK(conf)
 	if err != nil {
 		logrus.Error("Node initialization failed")
 		return err
 	}
 
-	if err := managerNode.JoinAndStart(context.TODO()); err != nil {
+	fmt.Println("xxxxxxxxxxxxxxxx")
+
+	if err := managerNode.InitAndStart(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}
