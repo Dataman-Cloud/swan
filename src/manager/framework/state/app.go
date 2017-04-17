@@ -142,6 +142,11 @@ func (app *App) ScaleDown(removeInstances int) error {
 	}
 
 	app.CurrentVersion.Instances = int32(len(app.Slots) - removeInstances)
+
+	if app.IsFixed() {
+		app.CurrentVersion.IP = app.CurrentVersion.IP[:app.CurrentVersion.Instances]
+	}
+
 	app.Updated = time.Now()
 
 	app.Touch()
