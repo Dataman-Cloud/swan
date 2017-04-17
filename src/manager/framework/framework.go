@@ -4,7 +4,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/api"
 	"github.com/Dataman-Cloud/swan/src/manager/framework/scheduler"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 
 	"golang.org/x/net/context"
 )
@@ -13,10 +12,10 @@ type Framework struct {
 	Scheduler *scheduler.Scheduler
 }
 
-func New(store store.Store, apiServer *apiserver.ApiServer) (*Framework, error) {
+func New(apiServer *apiserver.ApiServer) (*Framework, error) {
 	f := &Framework{}
 
-	f.Scheduler = scheduler.NewScheduler(store)
+	f.Scheduler = scheduler.NewScheduler()
 	api.NewAndInstallAppService(apiServer, f.Scheduler)
 	api.NewAndInstallStatsService(apiServer, f.Scheduler)
 	api.NewAndInstallEventsService(apiServer, f.Scheduler)

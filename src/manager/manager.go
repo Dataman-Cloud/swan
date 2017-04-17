@@ -77,8 +77,8 @@ func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
 
 	managerServer := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
 
-	frameworkStore := fstore.NewStore(boltDB.DB, raftNode)
-	framework, err := framework.New(frameworkStore, managerServer)
+	fstore.InitStore(boltDB.DB, raftNode)
+	framework, err := framework.New(managerServer)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: %s", err.Error())
 		return nil, err

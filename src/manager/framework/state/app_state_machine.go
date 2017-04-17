@@ -1,7 +1,6 @@
 package state
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 )
@@ -18,7 +17,7 @@ const (
 
 type StateMachine struct {
 	state State
-	lock  sync.Mutex
+	sync.Mutex
 }
 
 // default state for a new statemachine is creating
@@ -43,9 +42,8 @@ func (machine *StateMachine) CanTransitTo(targetStateString string) bool {
 func (machine *StateMachine) ReadableState() string {
 	if machine != nil && machine.state != nil {
 		return machine.state.StateName()
-	} else {
-		return ""
 	}
+	return ""
 }
 
 // test machine.state is stateExpected
@@ -57,17 +55,17 @@ func (machine *StateMachine) Is(stateExpected string) bool {
 // transtion condition
 func (machine *StateMachine) TransitTo(targetState State) error {
 	if machine.state.CanTransitTo(targetState.StateName()) {
-		defer machine.lock.Unlock()
-		machine.lock.Lock()
+		defer machine.Unlock()
+		machine.Lock()
 
 		machine.state.OnExit()
 		machine.state = targetState
 		machine.state.OnEnter()
 
 		return nil
-	} else {
-		return errors.New(fmt.Sprintf("cann't transit from state: %s to state: %s", machine.state.StateName(), targetState.StateName()))
 	}
+
+	return fmt.Errorf("can't transit from state: %s to state: %s", machine.state.StateName(), targetState.StateName())
 }
 
 // move state machine step foward

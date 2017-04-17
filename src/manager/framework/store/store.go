@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/raft"
 
@@ -9,8 +10,13 @@ import (
 )
 
 var (
-	ErrAppNotFound  = errors.New("Update app failed: target app was not found")
-	ErrTaskNotFound = errors.New("Update task failed: target task was not found")
+	errAppNotFound  = errors.New("Update app failed: target app was not found")
+	errTaskNotFound = errors.New("Update task failed: target task was not found")
+)
+
+var (
+	fs   *FrameworkStore
+	once sync.Once
 )
 
 type FrameworkStore struct {
@@ -18,9 +24,18 @@ type FrameworkStore struct {
 	RaftNode *raft.Node
 }
 
-func NewStore(db *bolt.DB, raftNode *raft.Node) *FrameworkStore {
-	return &FrameworkStore{
-		BoltbDb:  db,
-		RaftNode: raftNode,
+func InitStore(db *bolt.DB, raftNode *raft.Node) {
+	if db == nil || raftNode == nil {
+		panic("db or raftnode not initialized yet")
 	}
+	once.Do(func() {
+		fs = &FrameworkStore{
+			BoltbDb:  db,
+			RaftNode: raftNode,
+		}
+	})
+}
+
+func DB() *FrameworkStore {
+	return fs
 }

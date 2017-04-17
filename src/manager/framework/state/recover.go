@@ -4,6 +4,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/Sirupsen/logrus"
@@ -11,7 +12,7 @@ import (
 
 // load app data frm persistent data
 func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
-	raftApps, err := persistentStore.ListApps()
+	raftApps, err := store.DB().ListApps()
 	if err != nil {
 		return nil, err
 	}
@@ -43,7 +44,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
 		}
 
-		raftVersions, err := persistentStore.ListVersions(raftApp.ID)
+		raftVersions, err := store.DB().ListVersions(raftApp.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +76,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
 }
 
 func LoadAppSlots(app *App) ([]*Slot, error) {
-	raftSlots, err := persistentStore.ListSlots(app.ID)
+	raftSlots, err := store.DB().ListSlots(app.ID)
 	if err != nil {
 		return nil, err
 	}
@@ -84,7 +85,7 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 	for _, raftSlot := range raftSlots {
 		slot := SlotFromRaft(raftSlot, app)
 
-		raftTasks, err := persistentStore.ListTasks(app.ID, slot.ID)
+		raftTasks, err := store.DB().ListTasks(app.ID, slot.ID)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +106,7 @@ func LoadAppSlots(app *App) ([]*Slot, error) {
 
 func LoadOfferAllocatorMap() (map[string]*OfferInfo, error) {
 	m := make(map[string]*OfferInfo)
-	if list, err := persistentStore.ListOfferallocatorItems(); err == nil {
+	if list, err := store.DB().ListOfferallocatorItems(); err == nil {
 		for _, item := range list {
 			slotId, offerInfo := OfferAllocatorItemFromRaft(item)
 			m[slotId] = offerInfo

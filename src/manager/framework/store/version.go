@@ -21,7 +21,7 @@ func (s *FrameworkStore) CreateVersion(ctx context.Context, appId string, versio
 	}
 
 	if app == nil {
-		return ErrAppNotFound
+		return errAppNotFound
 	}
 
 	var storeActions []*types.StoreAction

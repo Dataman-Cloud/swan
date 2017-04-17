@@ -7,6 +7,7 @@ import (
 	"time"
 
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -144,7 +145,7 @@ func (slot *Slot) KillTask() {
 func (slot *Slot) Archive() {
 	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
-	WithConvertTask(context.TODO(), slot.CurrentTask, nil, persistentStore.UpdateTask)
+	WithConvertTask(context.TODO(), slot.CurrentTask, nil, store.DB().UpdateTask)
 
 	slot.Touch()
 }
@@ -219,7 +220,7 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 	slot.AgentHostName = offer.GetHostname()
 	slot.CurrentTask.AgentHostName = offer.GetHostname()
 
-	return WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
+	return WithConvertSlot(context.TODO(), slot, nil, store.DB().UpdateSlot)
 }
 
 func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
@@ -424,17 +425,17 @@ func (slot *Slot) ServiceDiscoveryURL() string {
 
 func (slot *Slot) update() {
 	logrus.Debugf("update slot %s", slot.ID)
-	WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
+	WithConvertSlot(context.TODO(), slot, nil, store.DB().UpdateSlot)
 }
 
 func (slot *Slot) create() {
 	logrus.Debugf("create slot %s", slot.ID)
-	WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
+	WithConvertSlot(context.TODO(), slot, nil, store.DB().CreateSlot)
 }
 
 func (slot *Slot) remove() {
 	logrus.Debugf("remove slot %s", slot.ID)
-	persistentStore.DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
+	store.DB().DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
 }
 
 func buildScalarResource(name string, value float64) *mesos.Resource {
