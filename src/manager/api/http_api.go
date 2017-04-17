@@ -26,13 +26,12 @@ type AppService struct {
 	apiServer *apiserver.ApiServer
 }
 
-func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *AppService {
+func NewAndInstallAppService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) {
 	appService := &AppService{
 		Scheduler: eng,
 		apiServer: apiServer,
 	}
 	apiserver.Install(apiServer, appService)
-	return appService
 }
 
 // NOTE(xychu): Every service need to registed to ApiServer need to impl

@@ -16,15 +16,13 @@ import (
 
 type EventsService struct {
 	Scheduler *scheduler.Scheduler
-	apiserver.ApiRegister
 }
 
-func NewAndInstallEventsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *EventsService {
+func NewAndInstallEventsService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) {
 	statsService := &EventsService{
 		Scheduler: eng,
 	}
 	apiserver.Install(apiServer, statsService)
-	return statsService
 }
 
 func (api *EventsService) Register(container *restful.Container) {

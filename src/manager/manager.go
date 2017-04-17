@@ -81,9 +81,9 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 	api.NewAndInstallAppService(route, sched)
 	api.NewAndInstallStatsService(route, sched)
 	api.NewAndInstallEventsService(route, sched)
-	api.NewAndInstallHealthyService(route, sched)
-	api.NewAndInstallFrameworkService(route, sched)
-	api.NewAndInstallVersionService(route, sched)
+	api.NewAndInstallHealthyService(route)
+	api.NewAndInstallFrameworkService(route)
+	api.NewAndInstallVersionService(route)
 
 	return &Manager{
 		apiServer:          route,

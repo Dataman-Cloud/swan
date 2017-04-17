@@ -6,22 +6,14 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 
 	"github.com/emicklei/go-restful"
 )
 
-type HealthyService struct {
-	Scheduler *scheduler.Scheduler
-	apiserver.ApiRegister
-}
+type HealthyService struct{}
 
-func NewAndInstallHealthyService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *HealthyService {
-	healthyService := &HealthyService{
-		Scheduler: eng,
-	}
-	apiserver.Install(apiServer, healthyService)
-	return healthyService
+func NewAndInstallHealthyService(apiServer *apiserver.ApiServer) {
+	apiserver.Install(apiServer, new(HealthyService))
 }
 
 func (api *HealthyService) Register(container *restful.Container) {
