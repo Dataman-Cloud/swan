@@ -145,7 +145,7 @@ func (slot *Slot) KillTask() {
 func (slot *Slot) Archive() {
 	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
-	WithConvertTask(context.TODO(), slot.CurrentTask, nil, store.DB().UpdateTask)
+	store.DB().UpdateTask(context.TODO(), TaskToRaft(slot.CurrentTask), nil)
 
 	slot.Touch()
 }
@@ -220,7 +220,7 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 	slot.AgentHostName = offer.GetHostname()
 	slot.CurrentTask.AgentHostName = offer.GetHostname()
 
-	return WithConvertSlot(context.TODO(), slot, nil, store.DB().UpdateSlot)
+	return store.DB().UpdateSlot(context.TODO(), SlotToRaft(slot), nil)
 }
 
 func (slot *Slot) ResourcesNeeded() []*mesos.Resource {
@@ -425,12 +425,12 @@ func (slot *Slot) ServiceDiscoveryURL() string {
 
 func (slot *Slot) update() {
 	logrus.Debugf("update slot %s", slot.ID)
-	WithConvertSlot(context.TODO(), slot, nil, store.DB().UpdateSlot)
+	store.DB().UpdateSlot(context.TODO(), SlotToRaft(slot), nil)
 }
 
 func (slot *Slot) create() {
 	logrus.Debugf("create slot %s", slot.ID)
-	WithConvertSlot(context.TODO(), slot, nil, store.DB().CreateSlot)
+	store.DB().CreateSlot(context.TODO(), SlotToRaft(slot), nil)
 }
 
 func (slot *Slot) remove() {

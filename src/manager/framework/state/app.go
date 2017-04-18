@@ -555,7 +555,7 @@ func validateAndFormatVersion(version *types.Version) error {
 
 func (app *App) SaveVersion(version *types.Version) {
 	app.Versions = append(app.Versions, version)
-	WithConvertVersion(context.TODO(), app.ID, version, nil, store.DB().CreateVersion)
+	store.DB().CreateVersion(context.TODO(), app.ID, VersionToRaft(version, app.ID), nil)
 }
 
 // 1, remove app from persisted storage
@@ -571,12 +571,12 @@ func (app *App) Touch() {
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
-	WithConvertApp(context.TODO(), app, nil, store.DB().UpdateApp)
+	store.DB().UpdateApp(context.TODO(), AppToRaft(app), nil)
 }
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	WithConvertApp(context.TODO(), app, nil, store.DB().CreateApp)
+	store.DB().CreateApp(context.TODO(), AppToRaft(app), nil)
 }
 
 func (app *App) remove() {
