@@ -96,6 +96,7 @@ func (manager *ZkManager) InitAndStart(ctx context.Context) error {
 	zkNodesPath := []string{
 		manager.zkPath,
 		filepath.Join(manager.zkPath, "leader-election"),
+		filepath.Join(manager.zkPath, "store-op"),
 	}
 
 	nodeExists, _, err := manager.zkConn.Exists(manager.zkPath)

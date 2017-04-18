@@ -92,10 +92,10 @@ func NewApp(version *types.Version, userEventChan chan *event.UserEvent) (*App, 
 		version.AppVersion = version.ID
 	}
 
+	app.create()
+
 	app.StateMachine = NewStateMachine()
 	app.StateMachine.Start(NewStateCreating(app))
-
-	app.create()
 
 	app.SaveVersion(app.CurrentVersion)
 
@@ -554,33 +554,37 @@ func validateAndFormatVersion(version *types.Version) error {
 
 func (app *App) SaveVersion(version *types.Version) {
 	app.Versions = append(app.Versions, version)
-	WithConvertVersion(context.TODO(), app.ID, version, nil, store.DB().CreateVersion)
-	//persistentStore.CreateVersion(version)
+	persistentStore.CreateVersion(app.ID, VersionToRaft(version, app.ID))
 }
 
-// 1, remove app from persisted storage
-// 2, other cleanup process
 func (app *App) Remove() {
 	app.remove()
 }
 
-// storage related
 func (app *App) Touch() {
 	app.update()
 }
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
-	//TODO
-	persistentStore.UpdateApp(AppToRaft(app))
+	err := persistentStore.UpdateApp(AppToRaft(app))
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	persistentStore.CreateApp(AppToRaft(app))
+	err := persistentStore.CreateApp(AppToRaft(app))
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.ID)
-	persistentStore.DeleteApp(app.ID)
+	err := persistentStore.DeleteApp(app.ID)
+	if err != nil {
+		logrus.Error(err)
+	}
 }

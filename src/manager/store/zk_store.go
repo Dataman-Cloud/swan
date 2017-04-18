@@ -2,17 +2,17 @@ package store
 
 import (
 	"bytes"
-	"encoding/gob"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"sync"
 	"time"
 
-	"github.com/samuel/go-zookeeper/zk"
+	zookeeper "github.com/samuel/go-zookeeper/zk"
 )
 
 var (
-	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
+	ZK_DEFAULT_ACL = zookeeper.WorldACL(zookeeper.PermAll)
 )
 
 const (
@@ -22,7 +22,7 @@ const (
 )
 
 const (
-	ENTITY_APP = 1
+	ENTITY_APP = iota
 	ENTITY_SLOT
 	ENTITY_VERSION
 	ENTITY_CURRENT_TASK
@@ -31,8 +31,11 @@ const (
 )
 
 var (
-	ErrAppNotFound  = errors.New("app not found")
-	ErrSlotNotFound = errors.New("slot not found")
+	ErrAppNotFound          = errors.New("app not found")
+	ErrAppAlreadyExists     = errors.New("app already exists")
+	ErrSlotNotFound         = errors.New("slot not found")
+	ErrSlotAlreadyExists    = errors.New("slot already exists")
+	ErrVersionAlreadyExists = errors.New("version already exists")
 )
 
 type StoreOp struct {
@@ -55,7 +58,7 @@ type slotStorage struct {
 type appStorage struct {
 	App      *Application
 	Versions map[string]*Version
-	Slots    map[string]slotStorage
+	Slots    map[string]*slotStorage
 }
 
 type ZkStore struct {
@@ -64,11 +67,11 @@ type ZkStore struct {
 	FrameworkId    string
 
 	mu   sync.RWMutex
-	conn *zk.Conn
+	conn *zookeeper.Conn
 }
 
 func NewZkStore() *ZkStore {
-	conn, _, err := zk.Connect([]string{"114.55.130.152:2181"}, 5*time.Second)
+	conn, _, err := zookeeper.Connect([]string{"114.55.130.152:2181"}, 5*time.Second)
 	if err != nil {
 		panic(err)
 	}
@@ -80,221 +83,121 @@ func NewZkStore() *ZkStore {
 	}
 }
 
-func (zkStore *ZkStore) Apply(op *StoreOp) error {
+func (zk *ZkStore) Apply(op *StoreOp) error {
 	//zk.Storage.Apply(op)
 
 	var buf bytes.Buffer
-	enc := gob.NewEncoder(&buf)
+	enc := json.NewEncoder(&buf)
 	err := enc.Encode(op)
 	if err != nil {
 		return err
 	}
 
 	fmt.Println(op.Op, "  ", op.Entity)
+
+	switch op.Entity {
+	case ENTITY_FRAMEWORKID:
+		zk.applyFrameworkId(op.Op, op)
+	case ENTITY_APP:
+		zk.applyApp(op.Op, op)
+	case ENTITY_SLOT:
+		zk.applySlot(op.Op, op)
+	case ENTITY_VERSION:
+		zk.applyVersion(op.Op, op)
+	case ENTITY_CURRENT_TASK:
+		zk.applyCurrentTask(op.Op, op)
+	case ENTITY_OFFER_ALLOCATOR_ITEM:
+		zk.applyOfferAllocatorItem(op.Op, op)
+	default:
+		panic("invalid entity type")
+	}
+
+	//foo, err := zk.conn.Create("/swan/store-op/fsysy", buf.Bytes(), zookeeper.FlagSequence, ZK_DEFAULT_ACL)
+	//fmt.Println("foooooooooooooooooooooooooooooo")
+	//fmt.Println(foo)
 	return nil
-	//op.ZkPath, err = zkStore.conn.Create("/foobar-test/fsysy", buf.Bytes(), zk.FlagSequence, ZK_DEFAULT_ACL)
-	//return err
 }
 
-func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
-	op := &StoreOp{
-		Op:      OP_REMOVE,
-		Entity:  ENTITY_APP,
-		Param1:  appId,
-		Param2:  version.ID,
-		Payload: version,
+func (zk *ZkStore) applyOfferAllocatorItem(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_ADD:
+		zk.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
+	case OP_REMOVE:
+		delete(zk.OfferAllocator, op.Param1)
+	case OP_UPDATE:
+		delete(zk.OfferAllocator, op.Param1)
+		zk.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
+	default:
+		panic("applyFrameworkId not supportted operation")
 	}
-
-	return zk.Apply(op)
 }
 
-func (zk *ZkStore) GetVersion(appId, versionId string) *Version {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return nil
+func (zk *ZkStore) applyCurrentTask(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_UPDATE:
+		zk.Apps[op.Param1].Slots[op.Param2].CurrentTask = op.Payload.(*Task)
+	default:
+		panic("applySlot not supportted operation")
 	}
-
-	version, found := appStore.Versions[versionId]
-	if !found {
-		return nil
-	}
-
-	return version
 }
 
-func (zk *ZkStore) ListVersions(appId string) []*Version {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return nil
+func (zk *ZkStore) applySlot(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_ADD:
+		zk.Apps[op.Param1].Slots[op.Param2] = &slotStorage{Slot: op.Payload.(*Slot)}
+	case OP_REMOVE:
+		delete(zk.Apps[op.Param1].Slots, op.Param2)
+	case OP_UPDATE:
+		delete(zk.Apps[op.Param1].Slots, op.Param2)
+		zk.Apps[op.Param1].Slots[op.Param2] = &slotStorage{Slot: op.Payload.(*Slot)}
+	default:
+		panic("applySlot not supportted operation")
 	}
-
-	versions := make([]*Version, 0)
-	for _, version := range appStore.Versions {
-		versions = append(versions, version)
-	}
-
-	return versions
 }
 
-func (zk *ZkStore) CreateSlot(slot *Slot) error {
-	op := &StoreOp{
-		Op:      OP_ADD,
-		Entity:  ENTITY_SLOT,
-		Param1:  slot.AppID,
-		Param2:  slot.ID,
-		Payload: slot,
+func (zk *ZkStore) applyVersion(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_ADD:
+		zk.Apps[op.Param1].Versions[op.Param2] = op.Payload.(*Version)
+	default:
+		panic("applyVersion not supportted operation")
 	}
-
-	return zk.Apply(op)
 }
 
-func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return nil
+func (zk *ZkStore) applyFrameworkId(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_ADD:
+		zk.FrameworkId = op.Payload.(string)
+	case OP_REMOVE:
+		zk.FrameworkId = ""
+	case OP_UPDATE:
+		zk.FrameworkId = op.Payload.(string)
+	default:
+		panic("applyFrameworkId not supportted operation")
 	}
-
-	slot, found := appStore.Slots[slotId]
-	if !found {
-		return nil
-	}
-
-	return slot.Slot
 }
 
-func (zk *ZkStore) ListSlots(appId string) []*Slot {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return nil
+func (zk *ZkStore) applyApp(operation uint8, op *StoreOp) {
+	switch operation {
+	case OP_ADD:
+		zk.Apps[op.Param1] = &appStorage{
+			App:      op.Payload.(*Application),
+			Versions: make(map[string]*Version, 0),
+			Slots:    make(map[string]*slotStorage),
+		}
+	case OP_REMOVE:
+		delete(zk.Apps, op.Param1)
+
+	case OP_UPDATE:
+		if _, found := zk.Apps[op.Param1]; found {
+			zk.Apps[op.Param1] = &appStorage{
+				App:      op.Payload.(*Application),
+				Versions: make(map[string]*Version, 0),
+				Slots:    make(map[string]*slotStorage),
+			}
+		}
+
+	default:
+		panic("applyApp not supportted operation")
 	}
-
-	slots := make([]*Slot, 0)
-	for _, slotStore := range appStore.Slots {
-		slots = append(slots, slotStore.Slot)
-	}
-
-	return slots
-}
-
-func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	op := &StoreOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_SLOT,
-		Param1:  slot.AppID,
-		Param2:  slot.ID,
-		Payload: slot,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	op := &StoreOp{
-		Op:     OP_REMOVE,
-		Entity: ENTITY_SLOT,
-		Param1: appId,
-		Param2: slotId,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	op := &StoreOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_CURRENT_TASK,
-		Param1:  appId,
-		Param2:  slotId,
-		Payload: task,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) ListTaskHistory(appId, slotId string) []*Task {
-	appStore, found := zk.Apps[appId]
-	if !found {
-		return nil
-	}
-
-	slotStore, found := appStore.Slots[slotId]
-	if !found {
-		return nil
-	}
-
-	return slotStore.TaskHistory
-}
-
-func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
-	op := &StoreOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_FRAMEWORKID,
-		Payload: frameworkId,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) GetFrameworkId() string {
-	return zk.FrameworkId
-}
-
-func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
-	op := &StoreOp{
-		Op:      OP_ADD,
-		Entity:  ENTITY_OFFER_ALLOCATOR_ITEM,
-		Param1:  item.OfferID,
-		Payload: item,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
-	op := &StoreOp{
-		Op:     OP_REMOVE,
-		Entity: ENTITY_OFFER_ALLOCATOR_ITEM,
-		Param1: offerId,
-	}
-
-	return zk.Apply(op)
-}
-
-func (zk *ZkStore) ListOfferallocatorItems() []*OfferAllocatorItem {
-	items := make([]*OfferAllocatorItem, 0)
-	for _, item := range zk.OfferAllocator {
-		items = append(items, item)
-	}
-
-	return items
 }

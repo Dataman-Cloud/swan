@@ -420,34 +420,23 @@ func (slot *Slot) Touch() {
 	slot.update()
 }
 
-func (slot *Slot) ServiceDiscoveryURL() string {
-	return strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
-}
-
 func (slot *Slot) update() {
-	logrus.Debugf("update slot %s", slot.ID)
 	persistentStore.UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
-	//WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 }
 
 func (slot *Slot) create() {
-	logrus.Debugf("create slot %s", slot.ID)
 	persistentStore.CreateSlot(SlotToRaft(slot))
-	//WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
 }
 
 func (slot *Slot) remove() {
-	logrus.Debugf("remove slot %s", slot.ID)
 	persistentStore.DeleteSlot(slot.App.ID, slot.ID)
-	//persistentStore.DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
 }
 
 func buildScalarResource(name string, value float64) *mesos.Resource {
 	return &mesos.Resource{
 		Name:   &name,
 		Type:   mesos.Value_SCALAR.Enum(),
-		Scalar: &mesos.Value_Scalar{Value: &value},
-	}
+		Scalar: &mesos.Value_Scalar{Value: &value}}
 }
 
 func buildRangeResource(name string, begin, end uint64) *mesos.Resource {
@@ -463,4 +452,8 @@ func buildRangeResource(name string, begin, end uint64) *mesos.Resource {
 			},
 		},
 	}
+}
+
+func (slot *Slot) ServiceDiscoveryURL() string {
+	return strings.ToLower(strings.Replace(slot.ID, "-", ".", -1))
 }
