@@ -11,8 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/framework"
-	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
+	fstore "github.com/Dataman-Cloud/swan/src/manager/store"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
@@ -50,7 +49,7 @@ func (a SortableNodePath) Less(i, j int) bool {
 type ZkManager struct {
 	CancelFunc context.CancelFunc
 
-	framework         *framework.Framework
+	framework         *Framework
 	apiServer         *apiserver.ApiServer
 	criticalErrorChan chan error
 	zkConn            *zk.Conn
@@ -61,7 +60,7 @@ func NewZK(managerConf config.ManagerConfig) (*ZkManager, error) {
 	managerServer := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
 
 	frameworkStore := fstore.NewZkStore()
-	framework, err := framework.New(frameworkStore, managerServer)
+	framework, err := New(frameworkStore, managerServer)
 	if err != nil {
 		logrus.Errorf("init framework failed. Error: %s", err.Error())
 		return nil, err

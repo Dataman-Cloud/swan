@@ -164,30 +164,30 @@ func JoinAndStartManager(c *cli.Context) error {
 	return nil
 }
 
-func StartManager(c *cli.Context) error {
-	conf := config.NewManagerConfig(c)
+//func StartManager(c *cli.Context) error {
+//conf := config.NewManagerConfig(c)
 
-	IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
-	ID, err := utils.LoadNodeID(IDFilePath)
-	if err != nil {
-		return err
-	}
+//IDFilePath := path.Join(conf.DataDir, NodeIDFileName)
+//ID, err := utils.LoadNodeID(IDFilePath)
+//if err != nil {
+//return err
+//}
 
-	setupLogger(conf.LogLevel)
+//setupLogger(conf.LogLevel)
 
-	managerNode, err := manager.New(ID, conf)
-	if err != nil {
-		logrus.Error("Node initialization failed")
-		return err
-	}
+//managerNode, err := manager.New(ID, conf)
+//if err != nil {
+//logrus.Error("Node initialization failed")
+//return err
+//}
 
-	if err := managerNode.InitAndStart(context.TODO()); err != nil {
-		logrus.Errorf("start node failed. Error: %s", err.Error())
-		return err
-	}
+//if err := managerNode.InitAndStart(context.TODO()); err != nil {
+//logrus.Errorf("start node failed. Error: %s", err.Error())
+//return err
+//}
 
-	return nil
-}
+//return nil
+//}
 
 func setupLogger(logLevel string) {
 	level, err := logrus.ParseLevel(logLevel)
