@@ -56,6 +56,20 @@ type Version struct {
 	AppVersion   string            `json:"appVersion,omitempty"`
 }
 
+func (version *Version) Bytes() []byte {
+	var buf bytes.Buffer
+	dec := gob.NewEncoder(&buf)
+	dec.Encode(version)
+	return buf.Bytes()
+}
+
+func (version *Version) FromBytes(buf []byte) *Version {
+	dec := gob.NewDecoder(bytes.NewBuffer(buf))
+	dec.Decode(version)
+
+	return version
+}
+
 type Container struct {
 	Type    string    `json:"type,omitempty"`
 	Docker  *Docker   `json:"docker,omitempty"`
@@ -128,6 +142,20 @@ type Slot struct {
 	CurrentTask          *Task          `json:"CurrentTask,omitempty"`
 	RestartPolicy        *RestartPolicy `json:"restartPolicy,omitempty"`
 	Weight               float64        `json:"weight,omitempty"`
+}
+
+func (slot *Slot) Bytes() []byte {
+	var buf bytes.Buffer
+	dec := gob.NewEncoder(&buf)
+	dec.Encode(slot)
+	return buf.Bytes()
+}
+
+func (slot *Slot) FromBytes(buf []byte) *Slot {
+	dec := gob.NewDecoder(bytes.NewBuffer(buf))
+	dec.Decode(slot)
+
+	return slot
 }
 
 type RestartPolicy struct {

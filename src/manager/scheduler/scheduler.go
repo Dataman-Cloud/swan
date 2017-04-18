@@ -79,10 +79,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	state.OfferAllocatorInstance().AllocatedOffer = res
 
 	go func() {
-		//frameworkId, err := scheduler.store.GetFrameworkId()
-		//if err == nil {
-		//scheduler.MesosConnector.SetFrameworkInfoId(frameworkId)
-		//}
+		scheduler.MesosConnector.SetFrameworkInfoId(scheduler.store.GetFrameworkId())
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
@@ -122,7 +119,7 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 			}
 
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
-			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("I'm alive")
+			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("heart beat package")
 
 		case <-scheduler.stopC:
 			logrus.WithFields(logrus.Fields{"event": "stopC"}).Infoln("scheduler stopped")

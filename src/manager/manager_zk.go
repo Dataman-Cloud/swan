@@ -54,6 +54,8 @@ type ZkManager struct {
 	criticalErrorChan chan error
 	zkConn            *zk.Conn
 	zkPath            string
+
+	previousLeadership Leadership
 }
 
 func NewZK(managerConf config.ManagerConfig) (*ZkManager, error) {
@@ -67,13 +69,11 @@ func NewZK(managerConf config.ManagerConfig) (*ZkManager, error) {
 	}
 
 	manager := &ZkManager{
-		framework:         framework,
-		apiServer:         managerServer,
-		criticalErrorChan: make(chan error, 1),
+		framework:          framework,
+		apiServer:          managerServer,
+		criticalErrorChan:  make(chan error, 1),
+		previousLeadership: LeadershipUnknown,
 	}
-
-	//managerApi := &ManagerApi{manager}
-	//apiserver.Install(managerServer, managerApi)
 
 	conn, _, err := zk.Connect(strings.Split(managerConf.ZkPath.Host, ","), 5*time.Second)
 	if err != nil {
@@ -135,22 +135,23 @@ func (manager *ZkManager) start(ctx context.Context) error {
 	for {
 		select {
 		case change := <-leadershipChangeChan:
+			if change == manager.previousLeadership {
+				continue
+			}
+
+			// toggle state
+			manager.previousLeadership = change
+
 			switch change {
 			case LeadershipLeader:
-				fmt.Println("now i am a leader")
 				go func() {
-					logrus.Info("starting eventBus in leader.")
-
 					eventBusStarted = true
 					eventbus.Start(ctx)
 				}()
 
-				frameworkCtx, _ := context.WithCancel(ctx)
 				go func() {
-					logrus.Info("starting framework in leader.")
-
 					frameworkStarted = true
-					manager.criticalErrorChan <- manager.framework.Start(frameworkCtx)
+					manager.criticalErrorChan <- manager.framework.Start(ctx)
 				}()
 
 				go func() {
@@ -158,26 +159,16 @@ func (manager *ZkManager) start(ctx context.Context) error {
 				}()
 
 			case LeadershipUnknown:
-				fmt.Println("now i do not know who am i")
 			case LeadershipFollower:
-				fmt.Println("now i am a follower")
-
 				if eventBusStarted {
 					eventbus.Stop()
 					eventBusStarted = false
-
-					logrus.Info("eventBus has been stopped")
-
 				}
 
 				if frameworkStarted {
-					logrus.Info("framework has been stopped")
-
 					manager.framework.Stop()
 					frameworkStarted = false
 				}
-			default:
-
 			}
 		case err := <-manager.criticalErrorChan:
 			return err

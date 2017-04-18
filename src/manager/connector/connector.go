@@ -196,7 +196,7 @@ func (s *Connector) SendCall(call *sched.Call) {
 		return
 	}
 	if code := resp.StatusCode; code != 202 {
-		logrus.Errorf("send call to master, expect 202, got %d", code)
+		logrus.Errorf("send call %+v to master, expect 202, got %d", call, code)
 		s.emitError(utils.SeverityLow, "sending call response status code not 202")
 	}
 }

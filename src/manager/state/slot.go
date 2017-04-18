@@ -426,16 +426,19 @@ func (slot *Slot) ServiceDiscoveryURL() string {
 
 func (slot *Slot) update() {
 	logrus.Debugf("update slot %s", slot.ID)
+	persistentStore.UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
 	//WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
 }
 
 func (slot *Slot) create() {
 	logrus.Debugf("create slot %s", slot.ID)
+	persistentStore.CreateSlot(SlotToRaft(slot))
 	//WithConvertSlot(context.TODO(), slot, nil, persistentStore.CreateSlot)
 }
 
 func (slot *Slot) remove() {
 	logrus.Debugf("remove slot %s", slot.ID)
+	persistentStore.DeleteSlot(slot.App.ID, slot.ID)
 	//persistentStore.DeleteSlot(context.TODO(), slot.App.ID, slot.ID, nil)
 }
 

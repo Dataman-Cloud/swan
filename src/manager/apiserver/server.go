@@ -2,8 +2,6 @@ package apiserver
 
 import (
 	"encoding/json"
-	"fmt"
-	"io/ioutil"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -150,72 +148,5 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 			resp.StatusCode(),
 			resp.ContentLength(),
 		)
-	}
-}
-
-func (apiServer *ApiServer) Proxy() restful.FilterFunction {
-	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
-		// NOTICE: this function is use for proxy the follower's request to leader, so if the leader is
-		// losted or have not been produced return error
-		if apiServer.leaderAddr == "" {
-			http.Error(resp, "leader state has been losted", http.StatusInternalServerError)
-			return
-		}
-
-		if apiServer.leaderAddr == apiServer.advertiseAddr {
-			chain.ProcessFilter(req, resp)
-			return
-		}
-
-		r := req.Request
-		leaderAddr := apiServer.leaderAddr
-		if !strings.HasPrefix(leaderAddr, "http://") {
-			leaderAddr = "http://" + leaderAddr
-		}
-
-		forgedRequestURL := ""
-		if r.URL.RawQuery != "" {
-			forgedRequestURL = fmt.Sprintf("%s%s?%s", leaderAddr, r.URL.Path, r.URL.RawQuery)
-		} else {
-			forgedRequestURL = fmt.Sprintf("%s%s", leaderAddr, r.URL.Path)
-		}
-
-		rr, err := http.NewRequest(r.Method, forgedRequestURL, r.Body)
-		if err != nil {
-			http.Error(resp, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		copyHeader(r.Header, &rr.Header)
-
-		// Create a client and query the target
-		var transport http.Transport
-		leaderResp, err := transport.RoundTrip(rr)
-		if err != nil {
-			http.Error(resp, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		defer leaderResp.Body.Close()
-		body, err := ioutil.ReadAll(leaderResp.Body)
-		if err != nil {
-			http.Error(resp, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		dH := resp.Header()
-		copyHeader(leaderResp.Header, &dH)
-		dH.Add("Requested-Host", rr.Host)
-
-		resp.Write(body)
-		return
-	}
-}
-
-func copyHeader(source http.Header, dest *http.Header) {
-	for n, v := range source {
-		for _, vv := range v {
-			dest.Add(n, vv)
-		}
 	}
 }

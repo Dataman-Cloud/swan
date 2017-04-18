@@ -5,7 +5,7 @@ func (zk *ZkStore) CreateApp(app *Application) error {
 		Op:      OP_ADD,
 		Entity:  ENTITY_APP,
 		Param1:  app.ID,
-		Payload: app.Bytes(),
+		Payload: app,
 	}
 
 	return zk.Apply(op)
@@ -23,7 +23,10 @@ func (zk *ZkStore) UpdateApp(app *Application) error {
 }
 
 func (zk *ZkStore) GetApp(appId string) *Application {
-	appStore, _ := zk.Apps[appId]
+	appStore, found := zk.Apps[appId]
+	if !found {
+		return nil
+	}
 
 	return appStore.App
 }

@@ -572,15 +572,15 @@ func (app *App) Touch() {
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
 	//TODO
-	//persistentStore.UpdateApp)
+	persistentStore.UpdateApp(AppToRaft(app))
 }
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	WithConvertApp(context.TODO(), app, nil, store.DB().CreateApp)
+	persistentStore.CreateApp(AppToRaft(app))
 }
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.ID)
-	store.DB().DeleteApp(context.TODO(), app.ID, nil)
+	persistentStore.DeleteApp(app.ID)
 }

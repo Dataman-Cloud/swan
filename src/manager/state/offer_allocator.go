@@ -2,6 +2,7 @@ package state
 
 import (
 	"errors"
+	"fmt"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
@@ -9,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 
 	"github.com/Sirupsen/logrus"
-	//"golang.org/x/net/context"
 )
 
 var instance *OfferAllocator
@@ -27,8 +27,8 @@ type OfferAllocator struct {
 	pendingOfferRWLock sync.RWMutex
 
 	// slotid -> offerinfo
-	AllocatedOffer     map[string]*OfferInfo // we store every offer that are occupied by running slot
-	allocatedOfferLock sync.RWMutex
+	AllocatedOffer map[string]*OfferInfo // we store every offer that are occupied by running slot
+	mu             sync.RWMutex
 }
 
 func OfferAllocatorInstance() *OfferAllocator {
@@ -83,28 +83,32 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 
 // NOTE Lock & raft write may cause performance problems
 func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot) {
-	allocator.allocatedOfferLock.Lock()
+	//allocator.mu.Lock()
 	info := &OfferInfo{
 		OfferID:  *offer.GetId().Value,
 		AgentID:  *offer.GetAgentId().Value,
 		Hostname: offer.GetHostname(),
 	}
+
 	allocator.create(slot.ID, info) // TODO error dealing
-	allocator.AllocatedOffer[slot.ID] = info
-	allocator.allocatedOfferLock.Unlock()
+	fmt.Println(slot)
+	fmt.Println("xxxxxxxxxxxxxxxxxx")
+	fmt.Println(allocator.AllocatedOffer)
+	//allocator.AllocatedOffer[slot.ID] = info
+	//allocator.mu.Unlock()
 }
 
 // NOTE Lock & raft write may cause performance problems
 func (allocator *OfferAllocator) RemoveOfferSlotMapBySlot(slot *Slot) {
-	allocator.allocatedOfferLock.Lock()
+	allocator.mu.Lock()
 	allocator.remove(slot.ID)
 	delete(allocator.AllocatedOffer, slot.ID)
-	allocator.allocatedOfferLock.Unlock()
+	allocator.mu.Unlock()
 }
 
 func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId string) {
-	allocator.allocatedOfferLock.Lock()
-	defer allocator.allocatedOfferLock.Unlock()
+	allocator.mu.Lock()
+	defer allocator.mu.Unlock()
 
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
@@ -123,8 +127,8 @@ func (allocator *OfferAllocator) RemoveOfferSlotMapByOfferId(offerId string) {
 }
 
 func (allocator *OfferAllocator) RetrieveSlotIdByOfferId(offerId string) (string, error) {
-	allocator.allocatedOfferLock.RLock()
-	defer allocator.allocatedOfferLock.RUnlock()
+	allocator.mu.RLock()
+	defer allocator.mu.RUnlock()
 
 	key := ""
 	for k, v := range allocator.AllocatedOffer {
@@ -142,8 +146,8 @@ func (allocator *OfferAllocator) RetrieveSlotIdByOfferId(offerId string) (string
 }
 
 func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
-	allocator.allocatedOfferLock.RLock()
-	defer allocator.allocatedOfferLock.RUnlock()
+	allocator.mu.RLock()
+	defer allocator.mu.RUnlock()
 
 	slots := make([]string, 0)
 	for slotID, info := range allocator.AllocatedOffer {
@@ -156,8 +160,8 @@ func (allocator *OfferAllocator) SlotsByAgentID(agentID string) []string {
 }
 
 func (allocator *OfferAllocator) SlotsByHostname(hostname string) []string {
-	allocator.allocatedOfferLock.RLock()
-	defer allocator.allocatedOfferLock.RUnlock()
+	allocator.mu.RLock()
+	defer allocator.mu.RUnlock()
 
 	slots := make([]string, 0)
 	for slotID, info := range allocator.AllocatedOffer {
@@ -176,14 +180,10 @@ func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 
 func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
 	logrus.Debugf("create offer allocator item %s => %s", slotID, offerInfo.OfferID)
-	//persistentStore.CreateOfferAllocatorItem(context.TODO(), &store.OfferAllocatorItem{
-	//OfferID:  offerInfo.OfferID,
-	//SlotID:   slotID,
-	//AgentID:  offerInfo.AgentID,
-	//Hostname: offerInfo.Hostname}, nil)
+	persistentStore.CreateOfferAllocatorItem(OfferAllocatorItemToRaft(slotID, offerInfo))
 }
 
 func (allocator *OfferAllocator) remove(slotID string) {
 	logrus.Debugf("remove offer allocator item  %s", slotID)
-	//persistentStore.DeleteOfferAllocatorItem(context.TODO(), slotID, nil)
+	persistentStore.DeleteOfferAllocatorItem(slotID)
 }

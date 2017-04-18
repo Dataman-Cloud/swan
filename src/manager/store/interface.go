@@ -14,11 +14,11 @@ type Store interface {
 	CreateSlot(slot *Slot) error
 	GetSlot(appId, slotId string) *Slot
 	ListSlots(appId string) []*Slot
-	UpdateSlot(slot *Slot) error
+	UpdateSlot(appId, slotId string, slot *Slot) error
 	DeleteSlot(appId, slotId string) error
 
-	UpdateTask(task *Task) error
-	ListTasks(appId, slotId string) []*Task
+	UpdateCurrentTask(appId, slotId string, task *Task) error
+	ListTaskHistory(appId, slotId string) []*Task
 
 	UpdateFrameworkId(frameworkId string) error
 	GetFrameworkId() string

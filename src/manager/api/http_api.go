@@ -181,8 +181,6 @@ func (api *AppService) Register(container *restful.Container) {
 		Returns(200, "OK", "").
 		Returns(404, "NotFound", nil))
 
-	ws.Filter(api.apiServer.Proxy())
-
 	container.Add(ws)
 
 }
