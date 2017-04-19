@@ -55,14 +55,10 @@ type AppsByUpdated []*App
 
 func (a AppsByUpdated) Len() int           { return len(a) }
 func (a AppsByUpdated) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Updated) } // NOTE(xychu): Desc order
+func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Updated) }
 
-func NewApp(version *types.Version, userEventChan chan *event.UserEvent) (*App, error) {
-	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
-	existingApp := persistentStore.GetApp(appID)
-	if existingApp != nil {
-		return nil, errors.New("app already exists")
-	}
+func NewApp(version *types.Version,
+	userEventChan chan *event.UserEvent) (*App, error) {
 
 	err := validateAndFormatVersion(version)
 	if err != nil {
@@ -73,7 +69,7 @@ func NewApp(version *types.Version, userEventChan chan *event.UserEvent) (*App, 
 		Versions:       []*types.Version{},
 		Slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		ID:             appID,
+		ID:             fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID),
 		Name:           version.AppName,
 		ClusterID:      connector.Instance().ClusterID,
 		Created:        time.Now(),
