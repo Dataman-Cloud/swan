@@ -1,7 +1,7 @@
 package store
 
 func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_OFFER_ALLOCATOR_ITEM,
 		Param1:  item.OfferID,
@@ -12,7 +12,7 @@ func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
 }
 
 func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:     OP_REMOVE,
 		Entity: ENTITY_OFFER_ALLOCATOR_ITEM,
 		Param1: offerId,

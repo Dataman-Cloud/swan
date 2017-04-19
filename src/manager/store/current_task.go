@@ -11,7 +11,7 @@ func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 		return ErrSlotNotFound
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_CURRENT_TASK,
 		Param1:  appId,

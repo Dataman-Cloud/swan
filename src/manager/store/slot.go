@@ -5,7 +5,7 @@ func (zk *ZkStore) CreateSlot(slot *Slot) error {
 		return ErrSlotAlreadyExists
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_SLOT,
 		Param1:  slot.AppID,
@@ -55,7 +55,7 @@ func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
 		return ErrSlotNotFound
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_SLOT,
 		Param1:  slot.AppID,
@@ -77,7 +77,7 @@ func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
 		return ErrSlotNotFound
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:     OP_REMOVE,
 		Entity: ENTITY_SLOT,
 		Param1: appId,

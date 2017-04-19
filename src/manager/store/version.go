@@ -5,7 +5,7 @@ func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
 		return ErrVersionAlreadyExists
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_VERSION,
 		Param1:  appId,

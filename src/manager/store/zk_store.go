@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	zookeeper "github.com/samuel/go-zookeeper/zk"
 )
 
@@ -15,20 +15,60 @@ var (
 	ZK_DEFAULT_ACL = zookeeper.WorldACL(zookeeper.PermAll)
 )
 
-const (
-	OP_ADD = iota << 1
-	OP_REMOVE
-	OP_UPDATE
+// represents atomic operation both apply to ZK and intertal
+// storage structure
+type StoreOp uint8
+
+var (
+	OP_ADD    StoreOp = 1
+	OP_REMOVE StoreOp = 2
+	OP_UPDATE StoreOp = 3
 )
 
-const (
-	ENTITY_APP = iota
-	ENTITY_SLOT
-	ENTITY_VERSION
-	ENTITY_CURRENT_TASK
-	ENTITY_FRAMEWORKID
-	ENTITY_OFFER_ALLOCATOR_ITEM
+func (op StoreOp) String() string {
+	switch op {
+	case OP_ADD:
+		return "OP_ADD"
+	case OP_REMOVE:
+		return "OP_REMOVE"
+	case OP_UPDATE:
+		return "OP_UPDATE"
+	}
+
+	return ""
+}
+
+// represents the object type been manipulation by
+// any specfic operation
+type StoreEntity uint8
+
+var (
+	ENTITY_APP                  StoreEntity = 1
+	ENTITY_SLOT                 StoreEntity = 2
+	ENTITY_VERSION              StoreEntity = 3
+	ENTITY_CURRENT_TASK         StoreEntity = 4
+	ENTITY_FRAMEWORKID          StoreEntity = 5
+	ENTITY_OFFER_ALLOCATOR_ITEM StoreEntity = 6
 )
+
+func (entity StoreEntity) String() string {
+	switch entity {
+	case ENTITY_APP:
+		return "ENTITY_APP"
+	case ENTITY_SLOT:
+		return "ENTITY_SLOT"
+	case ENTITY_VERSION:
+		return "ENTITY_VERSION"
+	case ENTITY_CURRENT_TASK:
+		return "ENTITY_CURRENT_TASK"
+	case ENTITY_FRAMEWORKID:
+		return "ENTITY_FRAMEWORKID"
+	case ENTITY_OFFER_ALLOCATOR_ITEM:
+		return "ENTITY_OFFER_ALLOCATOR_ITEM"
+	}
+
+	return ""
+}
 
 var (
 	ErrAppNotFound          = errors.New("app not found")
@@ -38,33 +78,39 @@ var (
 	ErrVersionAlreadyExists = errors.New("version already exists")
 )
 
-type StoreOp struct {
-	Op     uint8
-	Entity uint8
+type AtomicOp struct {
+	// atomic operaiton type, ADD | REMOVE | UPDATE
+	Op StoreOp
+	// which object type been operating
+	Entity StoreEntity
+	// can be explained by any specfic operation & object type operating on  appId/slotId maybe
 	Param1 string
+	// same as Param1
 	Param2 string
+	// same as Param1
 	Param3 string
-
-	ZkPath  string
+	// contains the data that the operation care, mostly object itself like App/Slot/Version
 	Payload interface{}
 }
 
-type slotStorage struct {
+type slotHolder struct {
 	Slot        *Slot
 	CurrentTask *Task
 	TaskHistory []*Task
 }
 
-type appStorage struct {
+type appHolder struct {
 	App      *Application
 	Versions map[string]*Version
-	Slots    map[string]*slotStorage
+	Slots    map[string]*slotHolder
 }
 
 type ZkStore struct {
-	Apps           map[string]*appStorage
+	Apps           map[string]*appHolder
 	OfferAllocator map[string]*OfferAllocatorItem
 	FrameworkId    string
+
+	lastSequentialZkNodePath string
 
 	mu   sync.RWMutex
 	conn *zookeeper.Conn
@@ -78,12 +124,12 @@ func NewZkStore() *ZkStore {
 
 	return &ZkStore{
 		conn:           conn,
-		Apps:           make(map[string]*appStorage),
+		Apps:           make(map[string]*appHolder),
 		OfferAllocator: make(map[string]*OfferAllocatorItem),
 	}
 }
 
-func (zk *ZkStore) Apply(op *StoreOp) error {
+func (zk *ZkStore) Apply(op *AtomicOp) error {
 	//zk.Storage.Apply(op)
 
 	var buf bytes.Buffer
@@ -93,33 +139,39 @@ func (zk *ZkStore) Apply(op *StoreOp) error {
 		return err
 	}
 
-	fmt.Println(op.Op, "  ", op.Entity)
-
+	zk.mu.Lock()
+	defer zk.mu.Unlock()
 	switch op.Entity {
 	case ENTITY_FRAMEWORKID:
-		zk.applyFrameworkId(op.Op, op)
+		zk.applyFrameworkId(op)
 	case ENTITY_APP:
-		zk.applyApp(op.Op, op)
+		zk.applyApp(op)
 	case ENTITY_SLOT:
-		zk.applySlot(op.Op, op)
+		zk.applySlot(op)
 	case ENTITY_VERSION:
-		zk.applyVersion(op.Op, op)
+		zk.applyVersion(op)
 	case ENTITY_CURRENT_TASK:
-		zk.applyCurrentTask(op.Op, op)
+		zk.applyCurrentTask(op)
 	case ENTITY_OFFER_ALLOCATOR_ITEM:
-		zk.applyOfferAllocatorItem(op.Op, op)
+		zk.applyOfferAllocatorItem(op)
 	default:
 		panic("invalid entity type")
 	}
 
-	//foo, err := zk.conn.Create("/swan/store-op/fsysy", buf.Bytes(), zookeeper.FlagSequence, ZK_DEFAULT_ACL)
-	//fmt.Println("foooooooooooooooooooooooooooooo")
-	//fmt.Println(foo)
+	zk.lastSequentialZkNodePath, err = zk.conn.Create("/swan/atomic-store/prefix",
+		buf.Bytes(),
+		zookeeper.FlagSequence,
+		ZK_DEFAULT_ACL)
+	if err != nil {
+		return err
+	}
+
+	logrus.Debugf("create sequence node path is %s", zk.lastSequentialZkNodePath)
 	return nil
 }
 
-func (zk *ZkStore) applyOfferAllocatorItem(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) {
+	switch op.Op {
 	case OP_ADD:
 		zk.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
 	case OP_REMOVE:
@@ -132,8 +184,8 @@ func (zk *ZkStore) applyOfferAllocatorItem(operation uint8, op *StoreOp) {
 	}
 }
 
-func (zk *ZkStore) applyCurrentTask(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applyCurrentTask(op *AtomicOp) {
+	switch op.Op {
 	case OP_UPDATE:
 		zk.Apps[op.Param1].Slots[op.Param2].CurrentTask = op.Payload.(*Task)
 	default:
@@ -141,22 +193,22 @@ func (zk *ZkStore) applyCurrentTask(operation uint8, op *StoreOp) {
 	}
 }
 
-func (zk *ZkStore) applySlot(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applySlot(op *AtomicOp) {
+	switch op.Op {
 	case OP_ADD:
-		zk.Apps[op.Param1].Slots[op.Param2] = &slotStorage{Slot: op.Payload.(*Slot)}
+		zk.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
 	case OP_REMOVE:
 		delete(zk.Apps[op.Param1].Slots, op.Param2)
 	case OP_UPDATE:
 		delete(zk.Apps[op.Param1].Slots, op.Param2)
-		zk.Apps[op.Param1].Slots[op.Param2] = &slotStorage{Slot: op.Payload.(*Slot)}
+		zk.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
 	default:
 		panic("applySlot not supportted operation")
 	}
 }
 
-func (zk *ZkStore) applyVersion(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applyVersion(op *AtomicOp) {
+	switch op.Op {
 	case OP_ADD:
 		zk.Apps[op.Param1].Versions[op.Param2] = op.Payload.(*Version)
 	default:
@@ -164,8 +216,8 @@ func (zk *ZkStore) applyVersion(operation uint8, op *StoreOp) {
 	}
 }
 
-func (zk *ZkStore) applyFrameworkId(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applyFrameworkId(op *AtomicOp) {
+	switch op.Op {
 	case OP_ADD:
 		zk.FrameworkId = op.Payload.(string)
 	case OP_REMOVE:
@@ -177,23 +229,23 @@ func (zk *ZkStore) applyFrameworkId(operation uint8, op *StoreOp) {
 	}
 }
 
-func (zk *ZkStore) applyApp(operation uint8, op *StoreOp) {
-	switch operation {
+func (zk *ZkStore) applyApp(op *AtomicOp) {
+	switch op.Op {
 	case OP_ADD:
-		zk.Apps[op.Param1] = &appStorage{
+		zk.Apps[op.Param1] = &appHolder{
 			App:      op.Payload.(*Application),
 			Versions: make(map[string]*Version, 0),
-			Slots:    make(map[string]*slotStorage),
+			Slots:    make(map[string]*slotHolder),
 		}
 	case OP_REMOVE:
 		delete(zk.Apps, op.Param1)
 
 	case OP_UPDATE:
 		if _, found := zk.Apps[op.Param1]; found {
-			zk.Apps[op.Param1] = &appStorage{
+			zk.Apps[op.Param1] = &appHolder{
 				App:      op.Payload.(*Application),
 				Versions: make(map[string]*Version, 0),
-				Slots:    make(map[string]*slotStorage),
+				Slots:    make(map[string]*slotHolder),
 			}
 		}
 

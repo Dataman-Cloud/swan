@@ -1,143 +1,94 @@
 package manager
 
 import (
+	"errors"
 	"fmt"
-	"math/rand"
-	"os"
 	"path/filepath"
-	"sync"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
-	log "github.com/Dataman-Cloud/swan/src/context_logger"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/api"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/framework"
-	fstore "github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	"github.com/Dataman-Cloud/swan/src/manager/raft"
-	raftstore "github.com/Dataman-Cloud/swan/src/manager/raft/store"
-	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
+	fstore "github.com/Dataman-Cloud/swan/src/manager/store"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/boltdb/bolt"
-	"github.com/coreos/etcd/pkg/fileutil"
-	events "github.com/docker/go-events"
+	"github.com/samuel/go-zookeeper/zk"
 	"golang.org/x/net/context"
 )
 
+const ZK_FLAG_NONE = 0
+
+var (
+	ErrNormalExit = errors.New("normal exit 0")
+)
+
+type Leadership uint8
+
+const (
+	LeadershipUnknown  Leadership = 1
+	LeadershipLeader   Leadership = 2
+	LeadershipFollower Leadership = 3
+)
+
+var (
+	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
+)
+
+// example node path  => /swan/leader-election/_c_c7b2927d40ec05db4d199a804437995c-node0000000023
+// sortable value is node0000000023
+type SortableNodePath []string
+
+func (a SortableNodePath) Len() int      { return len(a) }
+func (a SortableNodePath) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
+func (a SortableNodePath) Less(i, j int) bool {
+	return strings.SplitN(a[i], "-", -1)[1] < strings.SplitN(a[j], "-", -1)[1]
+}
+
 type Manager struct {
-	raftNode   *raft.Node
 	CancelFunc context.CancelFunc
 
-	framework *framework.Framework
-
-	apiServer *apiserver.ApiServer
-
+	scheduler         *scheduler.Scheduler
+	apiServer         *apiserver.ApiServer
 	criticalErrorChan chan error
+	zkConn            *zk.Conn
+	zkPath            string
 
-	NodeInfo types.Node
-
-	JoinAddrs []string
+	previousLeadership Leadership
 }
 
-func New(nodeID string, managerConf config.ManagerConfig) (*Manager, error) {
-	DBDir := filepath.Join(managerConf.DataDir, nodeID)
-	DBPath := filepath.Join(DBDir, "swan.db")
+func New(managerConf config.ManagerConfig) (*Manager, error) {
+	store := fstore.NewZkStore()
+	sched := scheduler.NewScheduler(store)
 
-	var nodeInfo types.Node
-	var boltDB *raftstore.BoltbDb
-	var err error
+	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
 
-	if fileutil.Exist(DBPath) {
-		nodeInfo, boltDB, err = loadNode(nodeID, DBPath)
-	} else {
-		if err := os.MkdirAll(DBDir, 0700); err != nil {
-			return nil, err
-		}
-
-		nodeInfo, boltDB, err = initNode(nodeID, DBPath, managerConf)
-	}
-	if err != nil {
-		return nil, err
-	}
-
-	raftNodeOpts := raft.NodeOptions{
-		RaftID:        nodeInfo.RaftID,
-		SwanNodeID:    nodeID,
-		DataDir:       DBDir,
-		ListenAddr:    nodeInfo.RaftListenAddr,
-		AdvertiseAddr: nodeInfo.RaftAdvertiseAddr,
-		DB:            boltDB,
-	}
-	raftNode, err := raft.NewNode(raftNodeOpts)
-	if err != nil {
-		logrus.Errorf("init raft node failed. Error: %s", err.Error())
-		return nil, err
-	}
-
-	managerServer := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
-
-	fstore.InitStore(boltDB.DB, raftNode)
-	framework, err := framework.New(managerServer)
-	if err != nil {
-		logrus.Errorf("init framework failed. Error: %s", err.Error())
-		return nil, err
-	}
+	api.NewAndInstallAppService(route, sched)
+	api.NewAndInstallStatsService(route, sched)
+	api.NewAndInstallEventsService(route, sched)
+	api.NewAndInstallHealthyService(route, sched)
+	api.NewAndInstallFrameworkService(route, sched)
+	api.NewAndInstallVersionService(route, sched)
 
 	manager := &Manager{
-		raftNode:          raftNode,
-		framework:         framework,
-		NodeInfo:          nodeInfo,
-		apiServer:         managerServer,
-		JoinAddrs:         managerConf.JoinAddrs,
-		criticalErrorChan: make(chan error, 1),
+		apiServer:          route,
+		criticalErrorChan:  make(chan error, 1),
+		previousLeadership: LeadershipUnknown,
+		scheduler:          sched,
 	}
 
-	managerApi := &ManagerApi{manager}
-	apiserver.Install(managerServer, managerApi)
+	conn, _, err := zk.Connect(strings.Split(managerConf.ZkPath.Host, ","), 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	manager.zkConn = conn
+	manager.zkPath = managerConf.ZkPath.Path
 
 	return manager, nil
-}
-
-func loadNode(nodeID string, DBPath string) (types.Node, *raftstore.BoltbDb, error) {
-	var nodeInfo types.Node
-	db, err := bolt.Open(DBPath, 0644, nil)
-	if err != nil {
-		return nodeInfo, nil, err
-	}
-
-	boltDb := raftstore.NewBoltbdStore(db)
-
-	nodeMetadata, err := boltDb.GetNode(nodeID)
-	if err != nil {
-		return nodeInfo, nil, err
-	}
-
-	nodeInfo = converRaftTypeNodeToNode(*nodeMetadata)
-
-	return nodeInfo, boltDb, nil
-}
-
-func initNode(nodeID string, DBPath string, managerConf config.ManagerConfig) (types.Node, *raftstore.BoltbDb, error) {
-	var nodeInfo types.Node
-	boltDB, err := bolt.Open(DBPath, 0644, nil)
-	if err != nil {
-		return nodeInfo, nil, err
-	}
-
-	nodeInfo = types.Node{
-		ID:                nodeID,
-		ListenAddr:        managerConf.ListenAddr,
-		AdvertiseAddr:     managerConf.AdvertiseAddr,
-		RaftListenAddr:    managerConf.RaftListenAddr,
-		RaftAdvertiseAddr: managerConf.RaftAdvertiseAddr,
-		Role:              types.RoleManager,
-		RaftID:            uint64(rand.Int63()) + 1,
-	}
-
-	boltDBStore := raftstore.NewBoltbdStore(boltDB)
-
-	return nodeInfo, boltDBStore, nil
 }
 
 func (manager *Manager) Stop() {
@@ -146,65 +97,85 @@ func (manager *Manager) Stop() {
 	return
 }
 
-func (manager *Manager) JoinAndStart(ctx context.Context) error {
-	managers := manager.GetManagers()
-	if len(managers) != 0 {
-		return manager.start(ctx, managers, false)
-	}
-
-	managers, err := manager.JoinToCluster(manager.NodeInfo)
-	if err != nil {
-		return err
-	}
-
-	return manager.start(ctx, managers, false)
-}
-
 func (manager *Manager) InitAndStart(ctx context.Context) error {
-	managers := manager.GetManagers()
-	if len(managers) != 0 {
-		return manager.start(ctx, managers, true)
+	zkNodesPath := []string{
+		manager.zkPath,
+		filepath.Join(manager.zkPath, "leader-election"),
+		filepath.Join(manager.zkPath, "atomic-store"),
 	}
 
-	managers = append(managers, manager.NodeInfo)
-	return manager.start(ctx, managers, true)
+	nodeExists, _, err := manager.zkConn.Exists(manager.zkPath)
+	if err != nil && !isNodeDoesNotExists(err) {
+		return err
+	}
+
+	if !nodeExists {
+		for _, path := range zkNodesPath {
+			_, err := manager.zkConn.Create(path, []byte(""), ZK_FLAG_NONE, ZK_DEFAULT_ACL)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	return manager.start(ctx)
 }
 
-func (manager *Manager) start(ctx context.Context, raftPeers []types.Node, isNewCluster bool) error {
-	// when follower => leader or leader => follower
-	leadershipCh, cancel := manager.raftNode.SubscribeLeadership()
-	defer cancel()
-
-	leadershipChangeEventCtx, _ := context.WithCancel(ctx)
-	go manager.handleLeadershipEvents(leadershipChangeEventCtx, leadershipCh)
-
-	leaderChangeCh, cancel := manager.raftNode.SubcribeLeaderChange()
-	defer cancel()
-
-	// when new leader was elected within cluster
-	leaderChangeEventCtx, _ := context.WithCancel(ctx)
-	go manager.handleLeaderChangeEvents(leaderChangeEventCtx, leaderChangeCh)
-
-	raftCtx, _ := context.WithCancel(ctx)
-	if err := manager.raftNode.StartRaft(raftCtx, raftPeers, isNewCluster); err != nil {
-		return err
-	}
-
+func (manager *Manager) start(ctx context.Context) error {
+	var eventBusStarted, schedulerStarted bool
 	eventbus.Init()
-
-	// NOTICE: although WaitForLeader is returned, if call propose value as soon
-	// there maybe return error: node losts leader status.
-	// we should do propseValue in the handleLeadershipEvents go become leader event
-	if err := manager.raftNode.WaitForLeader(ctx); err != nil {
-		return err
-	}
+	leadershipChangeChan := make(chan Leadership)
 
 	go func() {
-		manager.criticalErrorChan <- manager.apiServer.Start()
+		for {
+			err := manager.subcribeLeaderChange(ctx, leadershipChangeChan)
+			if err == ErrNormalExit {
+				logrus.Info("subcribeLeaderChange exit normally")
+				return
+			} else {
+				logrus.Errorf("subcribeLeaderChange go error: %+v", err)
+			}
+		}
 	}()
 
 	for {
 		select {
+		case change := <-leadershipChangeChan:
+			if change == manager.previousLeadership {
+				continue
+			}
+
+			// toggle state
+			manager.previousLeadership = change
+
+			switch change {
+			case LeadershipLeader:
+				go func() {
+					eventBusStarted = true
+					eventbus.Start(ctx)
+				}()
+
+				go func() {
+					schedulerStarted = true
+					manager.criticalErrorChan <- manager.scheduler.Start(ctx)
+				}()
+
+				go func() {
+					manager.criticalErrorChan <- manager.apiServer.Start()
+				}()
+
+			case LeadershipUnknown:
+			case LeadershipFollower:
+				if eventBusStarted {
+					eventbus.Stop()
+					eventBusStarted = false
+				}
+
+				if schedulerStarted {
+					manager.scheduler.Stop()
+					schedulerStarted = false
+				}
+			}
 		case err := <-manager.criticalErrorChan:
 			return err
 		case <-ctx.Done():
@@ -213,109 +184,46 @@ func (manager *Manager) start(ctx context.Context, raftPeers []types.Node, isNew
 	}
 }
 
-func (manager *Manager) handleLeadershipEvents(ctx context.Context, leadershipCh chan events.Event) {
-	var eventBusStarted, frameworkStarted bool
-	var once sync.Once
-	for {
-		select {
-		case leadershipEvent := <-leadershipCh:
-			// TODO lock it and if manager stop return
-			newState := leadershipEvent.(raft.LeadershipState)
+func (manager *Manager) subcribeLeaderChange(ctx context.Context, leadershipChangeChan chan Leadership) error {
+	myNode, err := manager.zkConn.CreateProtectedEphemeralSequential(manager.zkPath+"/"+"leader-election/node", []byte(""), ZK_DEFAULT_ACL)
+	if err != nil {
+		return err
+	}
+	_, myNodePath := filepath.Split(myNode)
 
-			ctx = log.WithLogger(ctx, logrus.WithField("raft_id", fmt.Sprintf("%x", manager.raftNode.Config.ID)))
-			if newState == raft.IsLeader {
-				log.G(ctx).Info("Now i become a leader !!!")
+reevaluateLeader:
+	leaderNode, err := manager.minimalValueChild(manager.zkPath + "/" + "leader-election")
+	if myNodePath == leaderNode {
+		leadershipChangeChan <- LeadershipLeader
+	} else {
+		leadershipChangeChan <- LeadershipFollower
+	}
+	_, _, existsWChan, err := manager.zkConn.ExistsW(filepath.Join(manager.zkPath, "leader-election", leaderNode))
+	if err != nil {
+		return err
+	}
 
-				once.Do(func() {
-					// at the first time node become leader add itself to store.
-					// this is use for ensure the first node of cluster can be add to store.
-					if err := manager.presistNodeData(manager.NodeInfo); err != nil {
-						manager.criticalErrorChan <- err
-					}
-				})
-
-				eventBusCtx, _ := context.WithCancel(ctx)
-				go func() {
-					log.G(eventBusCtx).Info("starting eventBus in leader.")
-
-					eventBusStarted = true
-					eventbus.Start(ctx)
-				}()
-
-				frameworkCtx, _ := context.WithCancel(ctx)
-				go func() {
-					log.G(frameworkCtx).Info("starting framework in leader.")
-
-					frameworkStarted = true
-					manager.criticalErrorChan <- manager.framework.Start(frameworkCtx)
-				}()
-
-			} else if newState == raft.IsFollower {
-				log.G(ctx).Info("now i become a follower !!!")
-
-				if eventBusStarted {
-					eventbus.Stop()
-					eventBusStarted = false
-
-					log.G(ctx).Info("eventBus has been stopped")
-
-				}
-
-				if frameworkStarted {
-					log.G(ctx).Info("framework has been stopped")
-
-					manager.framework.Stop()
-					frameworkStarted = false
-				}
-			}
-		case <-ctx.Done():
-			return
-		}
+	select {
+	case <-existsWChan:
+		goto reevaluateLeader
+	case <-ctx.Done():
+		return ErrNormalExit
 	}
 }
 
-func (manager *Manager) handleLeaderChangeEvents(ctx context.Context, leaderChangeCh chan events.Event) {
-	for {
-		select {
-		case leaderChangeEvent := <-leaderChangeCh:
-			leaderRaftID := leaderChangeEvent.(uint64)
-
-			manager.updateLeaderAddr(leaderRaftID)
-		case <-ctx.Done():
-			return
-		}
+func (manager *Manager) minimalValueChild(path string) (string, error) {
+	children, _, err := manager.zkConn.Children(path)
+	if err != nil {
+		return "", err
 	}
+
+	sortablePathes := SortableNodePath(children)
+	sort.Sort(sortablePathes)
+
+	return sortablePathes[0], nil
 }
 
-func (manager *Manager) updateLeaderAddr(leaderRaftID uint64) {
-	var leaderAddr string
-
-	// beacuse of the leader change event maybe published before all data has been sync.
-	// maybe we can't find the leader node at first time, so need this loop for retry.
-	// maintain a cluster membership maybe a better way like swarmkit:
-	// https://github.com/docker/swarmkit/blob/master/manager/state/raft/membership/cluster.go
-	for {
-		// If leader was losted, this value is 0
-		if int(leaderRaftID) == 0 {
-			leaderAddr = ""
-		} else {
-			leaderNode, err := manager.findLeaderByRaftID(leaderRaftID)
-			if err != nil {
-				log.L.Warnf("update leaderAddr failed. Error: %s", err.Error())
-				leaderAddr = ""
-			} else {
-				leaderAddr = leaderNode.AdvertiseAddr
-			}
-
-			manager.apiServer.UpdateLeaderAddr(leaderAddr)
-			log.L.Infof("Now leader is change to %x, leader advertise-addr: %s", leaderRaftID, leaderAddr)
-		}
-
-		// if leader was losted or the leader addresss was found return
-		if int(leaderRaftID) == 0 || leaderAddr != "" {
-			return
-		}
-
-		time.Sleep(time.Second)
-	}
+func isNodeDoesNotExists(err error) bool {
+	fmt.Println(strings.Contains(err.Error(), "node does not exist"))
+	return strings.Contains(err.Error(), "node does not exist")
 }

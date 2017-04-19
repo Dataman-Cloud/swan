@@ -1,7 +1,7 @@
 package store
 
 func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_FRAMEWORKID,
 		Payload: frameworkId,

@@ -148,7 +148,7 @@ func JoinAndStartManager(c *cli.Context) error {
 	conf := config.NewManagerConfig(c)
 	setupLogger(conf.LogLevel)
 
-	managerNode, err := manager.NewZK(conf)
+	managerNode, err := manager.New(conf)
 	if err != nil {
 		logrus.Error("Node initialization failed")
 		return err

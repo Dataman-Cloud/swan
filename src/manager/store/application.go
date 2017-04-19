@@ -1,15 +1,13 @@
 package store
 
-import (
-	"fmt"
-)
+import ()
 
 func (zk *ZkStore) CreateApp(app *Application) error {
 	if zk.GetApp(app.ID) != nil {
 		return ErrAppAlreadyExists
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_APP,
 		Param1:  app.ID,
@@ -20,24 +18,11 @@ func (zk *ZkStore) CreateApp(app *Application) error {
 }
 
 func (zk *ZkStore) UpdateApp(app *Application) error {
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-	fmt.Println("xxxxxxxxxxxxxx")
-
-	fmt.Println(zk.GetApp(app.ID))
-	fmt.Println(zk.Apps)
-	fmt.Println(app.ID)
-
 	if zk.GetApp(app.ID) == nil {
 		return ErrAppNotFound
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_APP,
 		Param1:  app.ID,
@@ -70,7 +55,7 @@ func (zk *ZkStore) DeleteApp(appId string) error {
 		return ErrAppNotFound
 	}
 
-	op := &StoreOp{
+	op := &AtomicOp{
 		Op:     OP_REMOVE,
 		Entity: ENTITY_APP,
 		Param1: appId,
