@@ -17,7 +17,7 @@ func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
 }
 
 func (zk *ZkStore) GetVersion(appId, versionId string) *Version {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (zk *ZkStore) GetVersion(appId, versionId string) *Version {
 }
 
 func (zk *ZkStore) ListVersions(appId string) []*Version {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
 	}

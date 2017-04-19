@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -12,6 +14,10 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	zookeeper "github.com/samuel/go-zookeeper/zk"
+)
+
+const (
+	ZK_SNAPSHOT_PATH = "/swan/snapshot"
 )
 
 var (
@@ -96,12 +102,23 @@ type AtomicOp struct {
 	Payload interface{}
 }
 
-type ZkStore struct {
-	Apps           map[string]*appHolder
-	OfferAllocator map[string]*OfferAllocatorItem
-	FrameworkId    string
+type Storage struct {
+	Apps           map[string]*appHolder          `json:"apps"`
+	OfferAllocator map[string]*OfferAllocatorItem `json:"offerAllocator"`
+	FrameworkId    string                         `json:"frameworkid"`
+}
 
+func NewStorage() *Storage {
+	return &Storage{
+		Apps:           make(map[string]*appHolder),
+		OfferAllocator: make(map[string]*OfferAllocatorItem),
+	}
+}
+
+type ZkStore struct {
+	Storage                  *Storage
 	lastSequentialZkNodePath string
+	lastSnapshotRevision     string
 
 	mu   sync.RWMutex
 	conn *zookeeper.Conn
@@ -112,17 +129,46 @@ func NewZkStore() *ZkStore {
 	if err != nil {
 		panic(err)
 	}
-
-	return &ZkStore{
-		conn:           conn,
-		Apps:           make(map[string]*appHolder),
-		OfferAllocator: make(map[string]*OfferAllocatorItem),
+	zk := &ZkStore{
+		conn:    conn,
+		Storage: NewStorage(),
 	}
+
+	go func() {
+		ticker := time.NewTicker(10 * time.Second)
+		for {
+			select {
+			case <-ticker.C:
+				revisionSnapshotted, err := zk.snapshot()
+				if err != nil {
+					logrus.Error(err)
+				}
+
+				err = zk.removeStaleAtomicOp(revisionSnapshotted)
+				if err != nil {
+					logrus.Error(err)
+				}
+			}
+		}
+	}()
+
+	return zk
 }
 
 func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	zk.mu.Lock()
 	defer zk.mu.Unlock()
+	logrus.Debugf("Appling %s %s", op.Op.String(), op.Entity.String())
+
+	fmt.Println("ffffffffffffffffffffffff")
+	for name, app := range zk.Storage.Apps {
+		fmt.Println("z000000000000000")
+		fmt.Println(name)
+		fmt.Println(app.Slots)
+		fmt.Println(app.Versions)
+	}
+	x, _ := json.Marshal(zk.Storage)
+	fmt.Println(string(x))
 
 	switch op.Entity {
 	case ENTITY_FRAMEWORKID:
@@ -163,12 +209,12 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
+		zk.Storage.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
 	case OP_REMOVE:
-		delete(zk.OfferAllocator, op.Param1)
+		delete(zk.Storage.OfferAllocator, op.Param1)
 	case OP_UPDATE:
-		delete(zk.OfferAllocator, op.Param1)
-		zk.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
+		delete(zk.Storage.OfferAllocator, op.Param1)
+		zk.Storage.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
 	default:
 		panic("applyFrameworkId not supportted operation")
 	}
@@ -177,30 +223,29 @@ func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) {
 func (zk *ZkStore) applyCurrentTask(op *AtomicOp) {
 	switch op.Op {
 	case OP_UPDATE:
-		zk.Apps[op.Param1].Slots[op.Param2].CurrentTask = op.Payload.(*Task)
+		zk.Storage.Apps[op.Param1].Slots[op.Param2].CurrentTask = op.Payload.(*Task)
 	default:
-		panic("applySlot not supportted operation")
+		panic("applyCurrentTask not supportted operation")
 	}
 }
 
 func (zk *ZkStore) applySlot(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
+		zk.Storage.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
 	case OP_REMOVE:
-		delete(zk.Apps[op.Param1].Slots, op.Param2)
+		delete(zk.Storage.Apps[op.Param1].Slots, op.Param2)
 	case OP_UPDATE:
-		delete(zk.Apps[op.Param1].Slots, op.Param2)
-		zk.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
+		zk.Storage.Apps[op.Param1].Slots[op.Param2].Slot = op.Payload.(*Slot)
 	default:
-		panic("applySlot not supportted operation")
+		panic("applySlot not supported operation")
 	}
 }
 
 func (zk *ZkStore) applyVersion(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.Apps[op.Param1].Versions[op.Param2] = op.Payload.(*Version)
+		zk.Storage.Apps[op.Param1].Versions[op.Param2] = op.Payload.(*Version)
 	default:
 		panic("applyVersion not supportted operation")
 	}
@@ -209,11 +254,11 @@ func (zk *ZkStore) applyVersion(op *AtomicOp) {
 func (zk *ZkStore) applyFrameworkId(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.FrameworkId = op.Payload.(string)
+		zk.Storage.FrameworkId = op.Payload.(string)
 	case OP_REMOVE:
-		zk.FrameworkId = ""
+		zk.Storage.FrameworkId = ""
 	case OP_UPDATE:
-		zk.FrameworkId = op.Payload.(string)
+		zk.Storage.FrameworkId = op.Payload.(string)
 	default:
 		panic("applyFrameworkId not supportted operation")
 	}
@@ -222,26 +267,75 @@ func (zk *ZkStore) applyFrameworkId(op *AtomicOp) {
 func (zk *ZkStore) applyApp(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.Apps[op.Param1] = &appHolder{
+		zk.Storage.Apps[op.Param1] = &appHolder{
 			App:      op.Payload.(*Application),
 			Versions: make(map[string]*Version, 0),
 			Slots:    make(map[string]*slotHolder),
 		}
 	case OP_REMOVE:
-		delete(zk.Apps, op.Param1)
+		delete(zk.Storage.Apps, op.Param1)
 
 	case OP_UPDATE:
-		if _, found := zk.Apps[op.Param1]; found {
-			zk.Apps[op.Param1] = &appHolder{
-				App:      op.Payload.(*Application),
-				Versions: make(map[string]*Version, 0),
-				Slots:    make(map[string]*slotHolder),
-			}
+		if _, found := zk.Storage.Apps[op.Param1]; found {
+			zk.Storage.Apps[op.Param1].App = op.Payload.(*Application)
 		}
 
 	default:
 		panic("applyApp not supportted operation")
 	}
+}
+
+// remove any atomic op that are already snapshotted
+func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
+	children, _, err := zk.conn.Children("/swan/atomic-store")
+	if err != nil {
+		return err
+	}
+
+	for _, child := range children {
+		if strings.Compare(snapshotTo, child) != 1 {
+			logrus.Debugf("deleting %s now", child)
+			err := zk.conn.Delete("/swan/atomic-store/"+child, -1)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	logrus.Debugf("revision before %s are cleared", snapshotTo)
+	return nil
+}
+
+func (zk *ZkStore) snapshot() (string, error) {
+	zk.mu.Lock()
+	revision := zk.lastSequentialZkNodePath
+	data, err := json.Marshal(zk.Storage)
+	if err != nil {
+		return "", err
+	}
+	zk.mu.Unlock()
+	logrus.Debugf("snapshot storage to zk with data len: %d", len(data))
+
+	exists, _, err := zk.conn.Exists(ZK_SNAPSHOT_PATH)
+	if err != nil {
+		return "", err
+	}
+
+	if !exists {
+		_, err = zk.conn.Create(ZK_SNAPSHOT_PATH,
+			data, 0, ZK_DEFAULT_ACL)
+	} else {
+		_, err = zk.conn.Set(ZK_SNAPSHOT_PATH,
+			data, -1)
+	}
+	if err != nil {
+		return "", err
+	}
+
+	zk.lastSnapshotRevision = revision
+	logrus.Debugf("snapshot %s to zk success", revision)
+
+	return revision, nil
 }
 
 func (zk *ZkStore) Synchronize() error {
@@ -257,6 +351,30 @@ func (zk *ZkStore) Synchronize() error {
 }
 
 func (zk *ZkStore) syncFromSnapshot() error {
+	logrus.Debugf("syncFromSnapshot now")
+
+	exists, _, err := zk.conn.Exists(ZK_SNAPSHOT_PATH)
+	if err != nil {
+		return err
+	}
+
+	if !exists { // do nothing when fresh start
+		return nil
+	}
+
+	data, _, err := zk.conn.Get(ZK_SNAPSHOT_PATH)
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(data))
+
+	err = json.Unmarshal(data, zk.Storage)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("%+v", zk.Storage)
+
 	return nil
 }
 

@@ -1,7 +1,7 @@
 package store
 
 func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
 	}
@@ -23,7 +23,7 @@ func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 }
 
 func (zk *ZkStore) ListTaskHistory(appId, slotId string) []*Task {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
 	}

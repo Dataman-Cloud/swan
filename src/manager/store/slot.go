@@ -17,7 +17,7 @@ func (zk *ZkStore) CreateSlot(slot *Slot) error {
 }
 
 func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
 	}
@@ -31,7 +31,7 @@ func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
 }
 
 func (zk *ZkStore) ListSlots(appId string) []*Slot {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
 	}
@@ -45,7 +45,7 @@ func (zk *ZkStore) ListSlots(appId string) []*Slot {
 }
 
 func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
 	}
@@ -67,7 +67,7 @@ func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
 }
 
 func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
-	appStore, found := zk.Apps[appId]
+	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
 	}

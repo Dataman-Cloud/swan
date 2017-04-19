@@ -23,7 +23,7 @@ func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
 
 func (zk *ZkStore) ListOfferallocatorItems() []*OfferAllocatorItem {
 	items := make([]*OfferAllocatorItem, 0)
-	for _, item := range zk.OfferAllocator {
+	for _, item := range zk.Storage.OfferAllocator {
 		items = append(items, item)
 	}
 

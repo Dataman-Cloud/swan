@@ -11,5 +11,5 @@ func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
 }
 
 func (zk *ZkStore) GetFrameworkId() string {
-	return zk.FrameworkId
+	return zk.Storage.FrameworkId
 }

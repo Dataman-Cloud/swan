@@ -145,7 +145,7 @@ func (slot *Slot) KillTask() {
 func (slot *Slot) Archive() {
 	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
-	//WithConvertTask(context.TODO(), slot.CurrentTask, nil, persistentStore.UpdateTask)
+	//persistentStore.UpdateTask(TaskToRaft(slot.CurrentTask))
 
 	slot.Touch()
 }
@@ -421,15 +421,24 @@ func (slot *Slot) Touch() {
 }
 
 func (slot *Slot) update() {
-	persistentStore.UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
+	err := persistentStore.UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func (slot *Slot) create() {
-	persistentStore.CreateSlot(SlotToRaft(slot))
+	err := persistentStore.CreateSlot(SlotToRaft(slot))
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func (slot *Slot) remove() {
-	persistentStore.DeleteSlot(slot.App.ID, slot.ID)
+	err := persistentStore.DeleteSlot(slot.App.ID, slot.ID)
+	if err != nil {
+		logrus.Error(err)
+	}
 }
 
 func buildScalarResource(name string, value float64) *mesos.Resource {
