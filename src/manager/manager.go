@@ -14,6 +14,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	fstore "github.com/Dataman-Cloud/swan/src/manager/store"
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
@@ -38,16 +39,6 @@ var (
 	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
 )
 
-// example node path  => /swan/leader-election/_c_c7b2927d40ec05db4d199a804437995c-node0000000023
-// sortable value is node0000000023
-type SortableNodePath []string
-
-func (a SortableNodePath) Len() int      { return len(a) }
-func (a SortableNodePath) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a SortableNodePath) Less(i, j int) bool {
-	return strings.SplitN(a[i], "-", -1)[1] < strings.SplitN(a[j], "-", -1)[1]
-}
-
 type Manager struct {
 	CancelFunc context.CancelFunc
 
@@ -61,7 +52,8 @@ type Manager struct {
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
-	store := fstore.NewDummyStore()
+	store := fstore.NewZkStore()
+	//store := fstore.NewDummyStore()
 	sched := scheduler.NewScheduler(store)
 
 	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
@@ -217,7 +209,7 @@ func (manager *Manager) minimalValueChild(path string) (string, error) {
 		return "", err
 	}
 
-	sortablePathes := SortableNodePath(children)
+	sortablePathes := utils.SortableNodePath(children)
 	sort.Sort(sortablePathes)
 
 	return sortablePathes[0], nil

@@ -14,7 +14,7 @@ func (zk *ZkStore) CreateApp(app *Application) error {
 		Payload: app,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) UpdateApp(app *Application) error {
@@ -29,7 +29,7 @@ func (zk *ZkStore) UpdateApp(app *Application) error {
 		Payload: app,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) GetApp(appId string) *Application {
@@ -61,5 +61,5 @@ func (zk *ZkStore) DeleteApp(appId string) error {
 		Param1: appId,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }

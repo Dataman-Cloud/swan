@@ -19,7 +19,7 @@ func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 		Payload: task,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) ListTaskHistory(appId, slotId string) []*Task {

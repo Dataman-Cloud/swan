@@ -13,7 +13,7 @@ func (zk *ZkStore) CreateSlot(slot *Slot) error {
 		Payload: slot,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
@@ -63,7 +63,7 @@ func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
 		Payload: slot,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
@@ -84,5 +84,5 @@ func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
 		Param2: slotId,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }

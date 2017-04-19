@@ -4,8 +4,11 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"sort"
 	"sync"
 	"time"
+
+	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	zookeeper "github.com/samuel/go-zookeeper/zk"
@@ -117,18 +120,10 @@ func NewZkStore() *ZkStore {
 	}
 }
 
-func (zk *ZkStore) Apply(op *AtomicOp) error {
-	//zk.Storage.Apply(op)
-
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	err := enc.Encode(op)
-	if err != nil {
-		return err
-	}
-
+func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	zk.mu.Lock()
 	defer zk.mu.Unlock()
+
 	switch op.Entity {
 	case ENTITY_FRAMEWORKID:
 		zk.applyFrameworkId(op)
@@ -144,6 +139,13 @@ func (zk *ZkStore) Apply(op *AtomicOp) error {
 		zk.applyOfferAllocatorItem(op)
 	default:
 		panic("invalid entity type")
+	}
+
+	var buf bytes.Buffer
+	enc := json.NewEncoder(&buf)
+	err := enc.Encode(op)
+	if err != nil {
+		return err
 	}
 
 	zk.lastSequentialZkNodePath, err = zk.conn.Create("/swan/atomic-store/prefix",
@@ -240,4 +242,121 @@ func (zk *ZkStore) applyApp(op *AtomicOp) {
 	default:
 		panic("applyApp not supportted operation")
 	}
+}
+
+func (zk *ZkStore) Synchronize() error {
+	if err := zk.syncFromSnapshot(); err != nil {
+		return err
+	}
+
+	if err := zk.syncFromAtomicSequentialSlice(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (zk *ZkStore) syncFromSnapshot() error {
+	return nil
+}
+
+func (zk *ZkStore) syncFromAtomicSequentialSlice() error {
+	children, _, err := zk.conn.Children("/swan/atomic-store")
+	if err != nil {
+		return err
+	}
+
+	sortedPaths := utils.SortableNodePath(children)
+	sort.Sort(sortedPaths)
+
+	for _, child := range sortedPaths {
+		data, _, err := zk.conn.Get("/swan/atomic-store/" + child)
+		if err != nil {
+			return err
+		}
+
+		ao, err := zk.unmarshalAtomicOp(data)
+		if err != nil {
+			return err
+		}
+
+		logrus.Debugf("decode  %s got %+v", child, ao)
+		zk.Apply(ao, false)
+	}
+
+	return nil
+}
+
+func (zk *ZkStore) unmarshalAtomicOp(data []byte) (*AtomicOp, error) {
+	var tmpAo struct {
+		Op     StoreOp
+		Entity StoreEntity
+		Param1 string
+		Param2 string
+		Param3 string
+
+		Payload json.RawMessage
+	}
+
+	err := json.Unmarshal(data, &tmpAo)
+	if err != nil {
+		return nil, err
+	}
+
+	var ao AtomicOp
+	ao.Op = tmpAo.Op
+	ao.Entity = tmpAo.Entity
+	ao.Param1 = tmpAo.Param1
+	ao.Param2 = tmpAo.Param2
+	ao.Param3 = tmpAo.Param3
+
+	if tmpAo.Payload != nil {
+		switch ao.Entity {
+		case ENTITY_APP:
+			var app Application
+			err = json.Unmarshal(tmpAo.Payload, &app)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &app
+		case ENTITY_SLOT:
+			var slot Slot
+			err = json.Unmarshal(tmpAo.Payload, &slot)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &slot
+		case ENTITY_VERSION:
+			var version Version
+			err = json.Unmarshal(tmpAo.Payload, &version)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &version
+		case ENTITY_CURRENT_TASK:
+			var task Task
+			err = json.Unmarshal(tmpAo.Payload, &task)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &task
+
+		case ENTITY_FRAMEWORKID:
+			var frameworkid string
+			err = json.Unmarshal(tmpAo.Payload, &frameworkid)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = frameworkid
+
+		case ENTITY_OFFER_ALLOCATOR_ITEM:
+			var item OfferAllocatorItem
+			err = json.Unmarshal(tmpAo.Payload, &item)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &item
+		}
+	}
+	return &ao, nil
 }

@@ -13,7 +13,7 @@ func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
 		Payload: version,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) GetVersion(appId, versionId string) *Version {

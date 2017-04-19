@@ -7,7 +7,7 @@ func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
 		Payload: frameworkId,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) GetFrameworkId() string {

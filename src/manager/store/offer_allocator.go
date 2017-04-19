@@ -8,7 +8,7 @@ func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
 		Payload: item,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
@@ -18,7 +18,7 @@ func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
 		Param1: offerId,
 	}
 
-	return zk.Apply(op)
+	return zk.Apply(op, true)
 }
 
 func (zk *ZkStore) ListOfferallocatorItems() []*OfferAllocatorItem {
