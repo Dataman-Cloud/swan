@@ -93,18 +93,6 @@ type AtomicOp struct {
 	Payload interface{}
 }
 
-type slotHolder struct {
-	Slot        *Slot
-	CurrentTask *Task
-	TaskHistory []*Task
-}
-
-type appHolder struct {
-	App      *Application
-	Versions map[string]*Version
-	Slots    map[string]*slotHolder
-}
-
 type ZkStore struct {
 	Apps           map[string]*appHolder
 	OfferAllocator map[string]*OfferAllocatorItem

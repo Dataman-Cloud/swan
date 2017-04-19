@@ -1,121 +1,96 @@
 package state
 
 import (
-	//"time"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/event"
-	//"github.com/Dataman-Cloud/swan/src/types"
-	//"github.com/Sirupsen/logrus"
+	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Sirupsen/logrus"
 )
 
 // load app data frm persistent data
-func LoadAppData(userEventChan chan *event.UserEvent) (map[string]*App, error) {
-	//raftApps, err := persistentStore.ListApps()
-	//if err != nil {
-	//return nil, err
-	//}
+func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
+	raftApps := persistentStore.ListApps()
 
-	//apps := make(map[string]*App)
+	apps := make(map[string]*App)
 
-	//for _, raftApp := range raftApps {
-	//app := &App{
-	//ID:      raftApp.ID,
-	//Name:    raftApp.Name,
-	//Created: time.Unix(0, raftApp.CreatedAt),
-	//Updated: time.Unix(0, raftApp.UpdatedAt),
-	//Slots:   make(map[int]*Slot),
-	//}
+	for _, raftApp := range raftApps {
+		app := &App{
+			ID:      raftApp.ID,
+			Name:    raftApp.Name,
+			Created: time.Unix(0, raftApp.CreatedAt),
+			Updated: time.Unix(0, raftApp.UpdatedAt),
+			Slots:   make(map[int]*Slot),
+		}
 
-	//app.UserEventChan = userEventChan
+		app.UserEventChan = userEventChan
 
-	//if raftApp.Version != nil {
-	//app.CurrentVersion = VersionFromRaft(raftApp.Version)
-	//} else {
-	//// TODO raftApp.Version should not be nil but we need more infomation to
-	//// find the reason cause the raftApp.Version nil
-	//logrus.Errorf("app: %s version was nil", app.ID)
-	//}
+		if raftApp.Version != nil {
+			app.CurrentVersion = VersionFromRaft(raftApp.Version)
+		} else {
+			// TODO raftApp.Version should not be nil but we need more infomation to
+			// find the reason cause the raftApp.Version nil
+			logrus.Errorf("app: %s version was nil", app.ID)
+		}
 
-	//app.Mode = AppMode(raftApp.Version.Mode)
+		app.Mode = AppMode(raftApp.Version.Mode)
 
-	//if raftApp.ProposedVersion != nil {
-	//app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
-	//}
+		if raftApp.ProposedVersion != nil {
+			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
+		}
 
-	//raftVersions, err := persistentStore.ListVersions(raftApp.ID)
-	//if err != nil {
-	//return nil, err
-	//}
+		raftVersions := persistentStore.ListVersions(raftApp.ID)
 
-	//var versions []*types.Version
-	//for _, raftVersion := range raftVersions {
-	//versions = append(versions, VersionFromRaft(raftVersion))
-	//}
+		var versions []*types.Version
+		for _, raftVersion := range raftVersions {
+			versions = append(versions, VersionFromRaft(raftVersion))
+		}
 
-	//app.Versions = versions
+		app.Versions = versions
 
-	//slots, err := LoadAppSlots(app)
-	//if err != nil {
-	//return nil, err
-	//}
+		slots := LoadAppSlots(app)
+		for _, slot := range slots {
+			app.Slots[int(slot.Index)] = slot
+		}
 
-	//for _, slot := range slots {
-	//app.Slots[int(slot.Index)] = slot
-	//}
+		if raftApp.StateMachine != nil {
+			app.StateMachine = StateMachineFromRaft(app, raftApp.StateMachine)
+		}
 
-	//if raftApp.StateMachine != nil {
-	//app.StateMachine = StateMachineFromRaft(app, raftApp.StateMachine)
-	//}
+		apps[app.ID] = app
+	}
 
-	//apps[app.ID] = app
-	//}
-
-	//return apps, nil
-
-	return nil, nil
+	return apps
 }
 
-func LoadAppSlots(app *App) ([]*Slot, error) {
-	return nil, nil
-	//raftSlots, err := persistentStore.ListSlots(app.ID)
-	//if err != nil {
-	//return nil, err
-	//}
+func LoadAppSlots(app *App) []*Slot {
+	raftSlots := persistentStore.ListSlots(app.ID)
+	var slots []*Slot
+	for _, raftSlot := range raftSlots {
+		slot := SlotFromRaft(raftSlot, app)
 
-	//var slots []*Slot
-	//for _, raftSlot := range raftSlots {
-	//slot := SlotFromRaft(raftSlot, app)
+		raftTasks := persistentStore.ListTaskHistory(app.ID, slot.ID)
+		var tasks []*Task
+		for _, raftTask := range raftTasks {
+			tasks = append(tasks, TaskFromRaft(raftTask, app))
+		}
+		slot.TaskHistory = tasks
 
-	//raftTasks, err := persistentStore.ListTasks(app.ID, slot.ID)
-	//if err != nil {
-	//return nil, err
-	//}
+		slot.App = app
 
-	//var tasks []*Task
-	//for _, raftTask := range raftTasks {
-	//tasks = append(tasks, TaskFromRaft(raftTask, app))
-	//}
-	//slot.TaskHistory = tasks
+		slots = append(slots, slot)
+	}
 
-	//slot.App = app
-
-	//slots = append(slots, slot)
-	//}
-
-	//return slots, nil
+	return slots
 }
 
 func LoadOfferAllocatorMap() (map[string]*OfferInfo, error) {
-	return nil, nil
-	//m := make(map[string]*OfferInfo)
-	//if list, err := persistentStore.ListOfferallocatorItems(); err == nil {
-	//for _, item := range list {
-	//slotId, offerInfo := OfferAllocatorItemFromRaft(item)
-	//m[slotId] = offerInfo
-	//}
-	//} else {
-	//return m, err
-	//}
+	m := make(map[string]*OfferInfo)
+	list := persistentStore.ListOfferallocatorItems()
+	for _, item := range list {
+		slotId, offerInfo := OfferAllocatorItemFromRaft(item)
+		m[slotId] = offerInfo
+	}
 
-	//return m, nil
+	return m, nil
 }

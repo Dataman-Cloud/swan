@@ -61,7 +61,7 @@ type Manager struct {
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
-	store := fstore.NewZkStore()
+	store := fstore.NewDummyStore()
 	sched := scheduler.NewScheduler(store)
 
 	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)

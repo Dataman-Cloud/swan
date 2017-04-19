@@ -56,11 +56,12 @@ func (scheduler *Scheduler) Stop() {
 
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
-	apps, err := state.LoadAppData(scheduler.userEventChan)
+	err := scheduler.store.Synchronize()
 	if err != nil {
 		return err
 	}
 
+	apps := state.LoadAppData(scheduler.userEventChan)
 	for _, app := range apps {
 		scheduler.AppStorage.Add(app.ID, app)
 
