@@ -33,6 +33,9 @@ func (zk *ZkStore) UpdateApp(app *Application) error {
 }
 
 func (zk *ZkStore) GetApp(appId string) *Application {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
@@ -42,6 +45,9 @@ func (zk *ZkStore) GetApp(appId string) *Application {
 }
 
 func (zk *ZkStore) ListApps() []*Application {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	apps := make([]*Application, 0)
 	for _, app := range zk.Storage.Apps {
 		apps = append(apps, app.App)

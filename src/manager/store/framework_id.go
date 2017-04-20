@@ -11,5 +11,8 @@ func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
 }
 
 func (zk *ZkStore) GetFrameworkId() string {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	return zk.Storage.FrameworkId
 }

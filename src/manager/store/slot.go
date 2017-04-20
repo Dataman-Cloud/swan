@@ -17,6 +17,9 @@ func (zk *ZkStore) CreateSlot(slot *Slot) error {
 }
 
 func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil
@@ -31,6 +34,9 @@ func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
 }
 
 func (zk *ZkStore) ListSlots(appId string) []*Slot {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil

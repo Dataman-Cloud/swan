@@ -18,8 +18,10 @@ import (
 	zookeeper "github.com/samuel/go-zookeeper/zk"
 )
 
-const SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
-const SWAN_SNAPSHOT_PATH = "%s/snapshot"
+const (
+	SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
+	SWAN_SNAPSHOT_PATH          = "%s/snapshot"
+)
 
 var (
 	ZK_DEFAULT_ACL = zookeeper.WorldACL(zookeeper.PermAll)
@@ -101,6 +103,12 @@ type AtomicOp struct {
 	Param3 string
 	// contains the data that the operation care, mostly object itself like App/Slot/Version
 	Payload interface{}
+}
+
+type appHolder struct {
+	App      *Application        `json:"app"`
+	Versions map[string]*Version `json:"versions"`
+	Slots    map[string]*Slot    `json:"slots"`
 }
 
 type Storage struct {
@@ -337,19 +345,22 @@ func (zk *ZkStore) snapshot() (string, error) {
 	return revision, nil
 }
 
-func (zk *ZkStore) Synchronize() error {
-	if err := zk.syncFromSnapshot(); err != nil {
+func (zk *ZkStore) Recover() error {
+	zk.mu.Lock()
+	defer zk.mu.Unlock()
+
+	if err := zk.recoverFromSnapshot(); err != nil {
 		return err
 	}
 
-	if err := zk.syncFromAtomicSequentialSlice(); err != nil {
+	if err := zk.recoverFromAtomicSequentialSlice(); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (zk *ZkStore) syncFromSnapshot() error {
+func (zk *ZkStore) recoverFromSnapshot() error {
 	logrus.Debugf("syncFromSnapshot now")
 
 	snapshotPath := fmt.Sprintf(SWAN_SNAPSHOT_PATH, zk.zkPath.Path)
@@ -375,7 +386,7 @@ func (zk *ZkStore) syncFromSnapshot() error {
 	return nil
 }
 
-func (zk *ZkStore) syncFromAtomicSequentialSlice() error {
+func (zk *ZkStore) recoverFromAtomicSequentialSlice() error {
 	atomicStorePath := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path)
 
 	children, _, err := zk.conn.Children(atomicStorePath)

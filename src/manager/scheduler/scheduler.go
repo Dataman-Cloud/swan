@@ -102,7 +102,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 }
 
 func (scheduler *Scheduler) recoverFromPreviousScene() error {
-	err := scheduler.store.Synchronize()
+	err := scheduler.store.Recover()
 	if err != nil {
 		return err
 	}

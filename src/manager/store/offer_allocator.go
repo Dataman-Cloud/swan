@@ -22,6 +22,9 @@ func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
 }
 
 func (zk *ZkStore) ListOfferallocatorItems() []*OfferAllocatorItem {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	items := make([]*OfferAllocatorItem, 0)
 	for _, item := range zk.Storage.OfferAllocator {
 		items = append(items, item)

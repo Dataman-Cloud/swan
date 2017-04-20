@@ -1,11 +1,5 @@
 package store
 
-type appHolder struct {
-	App      *Application        `json:"app"`
-	Versions map[string]*Version `json:"versions"`
-	Slots    map[string]*Slot    `json:"slots"`
-}
-
 type Store interface {
 	CreateApp(app *Application) error
 	UpdateApp(app *Application) error
@@ -33,5 +27,5 @@ type Store interface {
 	DeleteOfferAllocatorItem(slotId string) error
 	ListOfferallocatorItems() []*OfferAllocatorItem
 
-	Synchronize() error
+	Recover() error
 }
