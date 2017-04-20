@@ -126,14 +126,25 @@ func (apiServer *ApiServer) Start(ctx context.Context) error {
 	logrus.Printf("start listening on %s", apiServer.listenAddr)
 
 	server := &http.Server{Addr: apiServer.listenAddr, Handler: wsContainer}
+	var errChan chan error
 	go func() {
-		select {
-		case <-ctx.Done():
-			server.Close()
-		}
+		errChan <- server.ListenAndServe()
 	}()
 
-	return server.ListenAndServe()
+	select {
+	case e := <-errChan:
+		// normal close, initiated by cancel context
+		// any error not close should popup
+		if !strings.Contains(e.Error(), "http: Server closed") {
+			return e
+		}
+
+	case <-ctx.Done():
+		server.Close()
+		logrus.Info("apiServer shutdown by ctx cancel")
+		return ctx.Err()
+	}
+	return nil
 }
 
 func NCSACommonLogFormatLogger() restful.FilterFunction {

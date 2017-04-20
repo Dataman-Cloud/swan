@@ -1,5 +1,9 @@
 package store
 
+import (
+	"golang.org/x/net/context"
+)
+
 type Store interface {
 	CreateApp(app *Application) error
 	UpdateApp(app *Application) error
@@ -28,4 +32,5 @@ type Store interface {
 	ListOfferallocatorItems() []*OfferAllocatorItem
 
 	Recover() error
+	Start(context.Context) error
 }

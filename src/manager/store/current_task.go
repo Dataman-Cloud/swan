@@ -23,6 +23,9 @@ func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 }
 
 func (zk *ZkStore) ListTaskHistory(appId, slotId string) []*Task {
+	zk.mu.RLock()
+	defer zk.mu.RUnlock()
+
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return nil

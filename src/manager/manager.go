@@ -63,6 +63,7 @@ type Manager struct {
 
 	previousLeadership Leadership
 	conf               config.ManagerConfig
+	store              fstore.Store
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
@@ -93,6 +94,7 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 		scheduler:          sched,
 		zkConn:             conn,
 		conf:               managerConf,
+		store:              store,
 	}, nil
 }
 
@@ -160,6 +162,10 @@ func (manager *Manager) start(ctx context.Context) error {
 
 				go func() {
 					manager.criticalErrorChan <- manager.apiServer.Start(stopCtx)
+				}()
+
+				go func() {
+					manager.criticalErrorChan <- manager.store.Start(stopCtx)
 				}()
 
 			case LeadershipFollower:

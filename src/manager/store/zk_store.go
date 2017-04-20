@@ -16,6 +16,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	zookeeper "github.com/samuel/go-zookeeper/zk"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -129,9 +130,10 @@ type ZkStore struct {
 	lastSequentialZkNodePath string
 	lastSnapshotRevision     string
 
-	mu     sync.RWMutex
-	conn   *zookeeper.Conn
-	zkPath *url.URL
+	readyToSnapshot bool
+	mu              sync.RWMutex
+	conn            *zookeeper.Conn
+	zkPath          *url.URL
 }
 
 func NewZkStore(zkPath *url.URL) (*ZkStore, error) {
@@ -140,16 +142,27 @@ func NewZkStore(zkPath *url.URL) (*ZkStore, error) {
 		return nil, err
 	}
 	zk := &ZkStore{
-		conn:    conn,
-		Storage: NewStorage(),
-		zkPath:  zkPath,
+		conn:            conn,
+		Storage:         NewStorage(),
+		zkPath:          zkPath,
+		readyToSnapshot: false,
 	}
 
 	go func() {
-		ticker := time.NewTicker(10 * time.Second)
 		for {
-			select {
-			case <-ticker.C:
+			select {}
+		}
+	}()
+
+	return zk, nil
+}
+
+func (zk *ZkStore) Start(ctx context.Context) error {
+	ticker := time.NewTicker(2 * time.Second)
+	for {
+		select {
+		case <-ticker.C:
+			if zk.readyToSnapshot {
 				revisionSnapshotted, err := zk.snapshot()
 				if err != nil {
 					logrus.Error(err)
@@ -160,10 +173,12 @@ func NewZkStore(zkPath *url.URL) (*ZkStore, error) {
 					logrus.Error(err)
 				}
 			}
+		case <-ctx.Done():
+			zk.readyToSnapshot = false
+			logrus.Info("store shutdown snapshot goroutine by ctx cancel")
+			return ctx.Err()
 		}
-	}()
-
-	return zk, nil
+	}
 }
 
 func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
@@ -356,6 +371,8 @@ func (zk *ZkStore) Recover() error {
 	if err := zk.recoverFromAtomicSequentialSlice(); err != nil {
 		return err
 	}
+
+	zk.readyToSnapshot = true
 
 	return nil
 }

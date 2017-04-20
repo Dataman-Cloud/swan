@@ -96,6 +96,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("heart beat package")
 
 		case <-ctx.Done():
+			logrus.Info("scheduler shutdown  goroutine by ctx cancel")
 			return ctx.Err()
 		}
 	}

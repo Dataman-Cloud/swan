@@ -53,6 +53,7 @@ func Start(ctx context.Context) error {
 			}
 
 		case <-ctx.Done():
+			logrus.Info("eventbus shutdown goroutine by ctx cancel")
 			return ctx.Err()
 		}
 	}
