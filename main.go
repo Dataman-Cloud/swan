@@ -14,13 +14,13 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
-	app.Usage = "swan [ROLE] [COMMAND] [ARG...]"
+	app.Usage = "swan [COMMAND] [ARGS]"
 	app.Description = "A general purpose Mesos framework which facility long running docker application management."
 	app.Version = version.GetVersion().Version
 
 	app.Commands = []cli.Command{}
 
-	app.Commands = append(app.Commands, cmd.AgentJoinCmd())
+	app.Commands = append(app.Commands, cmd.AgentCmd())
 	app.Commands = append(app.Commands, cmd.ManagerCmd())
 	app.Commands = append(app.Commands, cmd.VersionCmd())
 

@@ -22,24 +22,6 @@ func FlagAdvertiseAddr() cli.Flag {
 	}
 }
 
-func FlagRaftListenAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "raft-listen-addr",
-		Usage:  "swan raft serverlistener address",
-		EnvVar: "SWAN_RAFT_LISTEN_ADDR",
-		Value:  "http://0.0.0.0:2111",
-	}
-}
-
-func FlagRaftAdvertiseAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "raft-advertise-addr",
-		Usage:  "swan raft advertise address, default is the raft-listen-addr",
-		EnvVar: "SWAN_RAFT_ADVERTISE_ADDR",
-		Value:  "",
-	}
-}
-
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",
