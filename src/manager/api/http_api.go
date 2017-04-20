@@ -684,10 +684,6 @@ func GetTaskFromApp(app *state.App, task_index int) (*types.Task, error) {
 		}
 	}
 
-	if slot.CurrentTask != nil {
-		task.CurrentTask = FormTaskHistory(slot.CurrentTask)
-	}
-
 	return task, nil
 }
 

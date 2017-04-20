@@ -2,7 +2,6 @@ package state
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
@@ -83,7 +82,7 @@ func (allocator *OfferAllocator) RemoveSlotFromPendingOfferQueue(slot *Slot) {
 
 // NOTE Lock & raft write may cause performance problems
 func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot) {
-	//allocator.mu.Lock()
+	allocator.mu.Lock()
 	info := &OfferInfo{
 		OfferID:  *offer.GetId().Value,
 		AgentID:  *offer.GetAgentId().Value,
@@ -91,11 +90,8 @@ func (allocator *OfferAllocator) SetOfferSlotMap(offer *mesos.Offer, slot *Slot)
 	}
 
 	allocator.create(slot.ID, info) // TODO error dealing
-	fmt.Println(slot)
-	fmt.Println("xxxxxxxxxxxxxxxxxx")
-	fmt.Println(allocator.AllocatedOffer)
-	//allocator.AllocatedOffer[slot.ID] = info
-	//allocator.mu.Unlock()
+	allocator.AllocatedOffer[slot.ID] = info
+	allocator.mu.Unlock()
 }
 
 // NOTE Lock & raft write may cause performance problems

@@ -2,7 +2,6 @@ package manager
 
 import (
 	"errors"
-	"fmt"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -216,6 +215,5 @@ func (manager *Manager) minimalValueChild(path string) (string, error) {
 }
 
 func isNodeDoesNotExists(err error) bool {
-	fmt.Println(strings.Contains(err.Error(), "node does not exist"))
 	return strings.Contains(err.Error(), "node does not exist")
 }

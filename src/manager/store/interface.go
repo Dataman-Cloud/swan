@@ -1,15 +1,9 @@
 package store
 
-type slotHolder struct {
-	Slot        *Slot   `json:"slot"`
-	CurrentTask *Task   `json:"currentTask"`
-	TaskHistory []*Task `json:"taskhistory"`
-}
-
 type appHolder struct {
-	App      *Application           `json:"app"`
-	Versions map[string]*Version    `json:"versions"`
-	Slots    map[string]*slotHolder `json:"slots"`
+	App      *Application        `json:"app"`
+	Versions map[string]*Version `json:"versions"`
+	Slots    map[string]*Slot    `json:"slots"`
 }
 
 type Store interface {

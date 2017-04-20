@@ -342,7 +342,12 @@ func SlotToRaft(slot *Slot) *store.Slot {
 		raftSlot.CurrentTask = TaskToRaft(slot.CurrentTask)
 	}
 
-	// TODO store slot.restartPolicy
+	if len(slot.TaskHistory) > 0 {
+		raftSlot.TaskHistory = make([]*store.Task, 0)
+		for _, t := range slot.TaskHistory {
+			raftSlot.TaskHistory = append(raftSlot.TaskHistory, TaskToRaft(t))
+		}
+	}
 
 	return raftSlot
 }
@@ -352,13 +357,24 @@ func SlotFromRaft(raftSlot *store.Slot, app *App) *Slot {
 		Index:         int(raftSlot.Index),
 		ID:            raftSlot.ID,
 		State:         raftSlot.State,
-		CurrentTask:   TaskFromRaft(raftSlot.CurrentTask, app),
 		OfferID:       raftSlot.CurrentTask.OfferID,
 		AgentID:       raftSlot.CurrentTask.AgentID,
 		Ip:            raftSlot.CurrentTask.Ip,
 		AgentHostName: raftSlot.CurrentTask.AgentHostName,
 		healthy:       raftSlot.Healthy,
 		weight:        raftSlot.Weight,
+		TaskHistory:   make([]*Task, 0),
+	}
+
+	if raftSlot.CurrentTask != nil {
+		slot.CurrentTask = TaskFromRaft(raftSlot.CurrentTask, app)
+		slot.CurrentTask.Slot = slot
+	}
+
+	if len(raftSlot.TaskHistory) > 0 {
+		for _, t := range raftSlot.TaskHistory {
+			slot.TaskHistory = append(slot.TaskHistory, TaskFromRaft(t, app))
+		}
 	}
 
 	for _, version := range app.Versions {
@@ -366,8 +382,6 @@ func SlotFromRaft(raftSlot *store.Slot, app *App) *Slot {
 			slot.Version = version
 		}
 	}
-
-	slot.CurrentTask.Slot = slot
 
 	return slot
 }

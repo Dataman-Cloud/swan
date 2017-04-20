@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/event"
@@ -12,9 +11,6 @@ import (
 // load app data frm persistent data
 func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 	raftApps := persistentStore.ListApps()
-
-	fmt.Println("yyyyyyyyyyyyyyyyyyyyyyyyy<D-y><D-y>")
-	fmt.Println(raftApps)
 
 	apps := make(map[string]*App)
 
@@ -44,8 +40,6 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 		}
 
 		raftVersions := persistentStore.ListVersions(raftApp.ID)
-		fmt.Println("xxxxxxxxxxxxxxxxxxxxxx")
-		fmt.Println(raftVersions)
 
 		var versions []*types.Version
 		for _, raftVersion := range raftVersions {
@@ -71,8 +65,6 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 
 func LoadAppSlots(app *App) []*Slot {
 	raftSlots := persistentStore.ListSlots(app.ID)
-	fmt.Println("yyyyyyyyyyyyyyyyyyyyyyyyy<D-y><D-y>")
-	fmt.Println(raftSlots)
 	var slots []*Slot
 	for _, raftSlot := range raftSlots {
 		slot := SlotFromRaft(raftSlot, app)

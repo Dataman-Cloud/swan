@@ -160,16 +160,6 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	defer zk.mu.Unlock()
 	logrus.Debugf("Appling %s %s", op.Op.String(), op.Entity.String())
 
-	fmt.Println("ffffffffffffffffffffffff")
-	for name, app := range zk.Storage.Apps {
-		fmt.Println("z000000000000000")
-		fmt.Println(name)
-		fmt.Println(app.Slots)
-		fmt.Println(app.Versions)
-	}
-	x, _ := json.Marshal(zk.Storage)
-	fmt.Println(string(x))
-
 	switch op.Entity {
 	case ENTITY_FRAMEWORKID:
 		zk.applyFrameworkId(op)
@@ -232,11 +222,11 @@ func (zk *ZkStore) applyCurrentTask(op *AtomicOp) {
 func (zk *ZkStore) applySlot(op *AtomicOp) {
 	switch op.Op {
 	case OP_ADD:
-		zk.Storage.Apps[op.Param1].Slots[op.Param2] = &slotHolder{Slot: op.Payload.(*Slot)}
+		zk.Storage.Apps[op.Param1].Slots[op.Param2] = op.Payload.(*Slot)
 	case OP_REMOVE:
 		delete(zk.Storage.Apps[op.Param1].Slots, op.Param2)
 	case OP_UPDATE:
-		zk.Storage.Apps[op.Param1].Slots[op.Param2].Slot = op.Payload.(*Slot)
+		zk.Storage.Apps[op.Param1].Slots[op.Param2] = op.Payload.(*Slot)
 	default:
 		panic("applySlot not supported operation")
 	}
@@ -269,8 +259,8 @@ func (zk *ZkStore) applyApp(op *AtomicOp) {
 	case OP_ADD:
 		zk.Storage.Apps[op.Param1] = &appHolder{
 			App:      op.Payload.(*Application),
-			Versions: make(map[string]*Version, 0),
-			Slots:    make(map[string]*slotHolder),
+			Versions: make(map[string]*Version),
+			Slots:    make(map[string]*Slot),
 		}
 	case OP_REMOVE:
 		delete(zk.Storage.Apps, op.Param1)
@@ -315,6 +305,7 @@ func (zk *ZkStore) snapshot() (string, error) {
 	}
 	zk.mu.Unlock()
 	logrus.Debugf("snapshot storage to zk with data len: %d", len(data))
+	logrus.Debugf(string(data))
 
 	exists, _, err := zk.conn.Exists(ZK_SNAPSHOT_PATH)
 	if err != nil {

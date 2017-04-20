@@ -27,7 +27,7 @@ func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
 		return nil
 	}
 
-	return slot.Slot
+	return slot
 }
 
 func (zk *ZkStore) ListSlots(appId string) []*Slot {
@@ -37,8 +37,8 @@ func (zk *ZkStore) ListSlots(appId string) []*Slot {
 	}
 
 	slots := make([]*Slot, 0)
-	for _, slotStore := range appStore.Slots {
-		slots = append(slots, slotStore.Slot)
+	for _, slot := range appStore.Slots {
+		slots = append(slots, slot)
 	}
 
 	return slots

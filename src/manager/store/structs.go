@@ -140,6 +140,7 @@ type Slot struct {
 	MarkForRollingUpdate bool           `json:"markForRollingUpdate,omitempty"`
 	Healthy              bool           `json:"healthy,omitempty"`
 	CurrentTask          *Task          `json:"CurrentTask,omitempty"`
+	TaskHistory          []*Task        `json:"TaskHistory,omitempty"`
 	RestartPolicy        *RestartPolicy `json:"restartPolicy,omitempty"`
 	Weight               float64        `json:"weight,omitempty"`
 }
