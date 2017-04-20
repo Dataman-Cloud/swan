@@ -15,6 +15,7 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"golang.org/x/net/context"
 )
 
 // RootPaths lists the paths available at root.
@@ -54,7 +55,7 @@ func (apiServer *ApiServer) UpdateLeaderAddr(addr string) {
 	apiServer.leaderAddr = addr
 }
 
-func (apiServer *ApiServer) Start() error {
+func (apiServer *ApiServer) Start(ctx context.Context) error {
 	wsContainer := restful.NewContainer()
 
 	// Register webservices here
@@ -123,10 +124,16 @@ func (apiServer *ApiServer) Start() error {
 	})
 
 	logrus.Printf("start listening on %s", apiServer.listenAddr)
-	server := &http.Server{Addr: apiServer.listenAddr, Handler: wsContainer}
-	logrus.Fatal(server.ListenAndServe())
 
-	return nil
+	server := &http.Server{Addr: apiServer.listenAddr, Handler: wsContainer}
+	go func() {
+		select {
+		case <-ctx.Done():
+			server.Close()
+		}
+	}()
+
+	return server.ListenAndServe()
 }
 
 func NCSACommonLogFormatLogger() restful.FilterFunction {

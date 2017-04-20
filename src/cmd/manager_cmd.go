@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager"
 
@@ -20,6 +23,7 @@ func ManagerCmd() cli.Command {
 	managerCmd.Flags = append(managerCmd.Flags, FlagListenAddr())
 	managerCmd.Flags = append(managerCmd.Flags, FlagAdvertiseAddr())
 	managerCmd.Flags = append(managerCmd.Flags, FlagZkPath())
+	managerCmd.Flags = append(managerCmd.Flags, FlagMesosZkPath())
 	managerCmd.Flags = append(managerCmd.Flags, FlagLogLevel())
 
 	return managerCmd
@@ -38,7 +42,12 @@ func ManagerInitCmd() cli.Command {
 }
 
 func JoinAndStartManager(c *cli.Context) error {
-	conf := config.NewManagerConfig(c)
+	conf, err := config.NewManagerConfig(c)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "[ERR] parse config got error: %s\n", err.Error())
+		os.Exit(1)
+	}
+
 	setupLogger(conf.LogLevel)
 
 	managerNode, err := manager.New(conf)

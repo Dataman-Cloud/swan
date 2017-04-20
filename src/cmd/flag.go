@@ -84,12 +84,19 @@ func FlagDNSResolvers() cli.Flag {
 	}
 }
 
+func FlagMesosZkPath() cli.Flag {
+	return cli.StringFlag{
+		Name:   "mesos-zk-path",
+		Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
+		EnvVar: "SWAN_MESOS_ZKPATH",
+	}
+}
+
 func FlagZkPath() cli.Flag {
 	return cli.StringFlag{
 		Name:   "zk-path",
-		Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
-		EnvVar: "SWAN_MESOS_ZKPATH",
-		Value:  "localhost:2181/mesos",
+		Usage:  "eg. zk://host1:port1,host2:port2,.../swan",
+		EnvVar: "SWAN_ZKPATH",
 	}
 }
 

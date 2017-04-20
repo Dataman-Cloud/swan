@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net/url"
+	"path/filepath"
 	"sort"
 	"strings"
 	"sync"
@@ -16,9 +18,8 @@ import (
 	zookeeper "github.com/samuel/go-zookeeper/zk"
 )
 
-const (
-	ZK_SNAPSHOT_PATH = "/swan/snapshot"
-)
+const SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
+const SWAN_SNAPSHOT_PATH = "%s/snapshot"
 
 var (
 	ZK_DEFAULT_ACL = zookeeper.WorldACL(zookeeper.PermAll)
@@ -120,18 +121,20 @@ type ZkStore struct {
 	lastSequentialZkNodePath string
 	lastSnapshotRevision     string
 
-	mu   sync.RWMutex
-	conn *zookeeper.Conn
+	mu     sync.RWMutex
+	conn   *zookeeper.Conn
+	zkPath *url.URL
 }
 
-func NewZkStore() *ZkStore {
-	conn, _, err := zookeeper.Connect([]string{"114.55.130.152:2181"}, 5*time.Second)
+func NewZkStore(zkPath *url.URL) (*ZkStore, error) {
+	conn, _, err := zookeeper.Connect(strings.Split(zkPath.Host, ","), 5*time.Second)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 	zk := &ZkStore{
 		conn:    conn,
 		Storage: NewStorage(),
+		zkPath:  zkPath,
 	}
 
 	go func() {
@@ -152,7 +155,7 @@ func NewZkStore() *ZkStore {
 		}
 	}()
 
-	return zk
+	return zk, nil
 }
 
 func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
@@ -184,10 +187,13 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 		return err
 	}
 
-	zk.lastSequentialZkNodePath, err = zk.conn.Create("/swan/atomic-store/prefix",
+	nodePath := filepath.Join(fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path), "prefix")
+	zk.lastSequentialZkNodePath, err = zk.conn.Create(
+		nodePath,
 		buf.Bytes(),
 		zookeeper.FlagSequence,
 		ZK_DEFAULT_ACL)
+
 	if err != nil {
 		return err
 	}
@@ -277,7 +283,8 @@ func (zk *ZkStore) applyApp(op *AtomicOp) {
 
 // remove any atomic op that are already snapshotted
 func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
-	children, _, err := zk.conn.Children("/swan/atomic-store")
+	atomicStorePath := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path)
+	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
 		return err
 	}
@@ -285,7 +292,7 @@ func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
 	for _, child := range children {
 		if strings.Compare(snapshotTo, child) != 1 {
 			logrus.Debugf("deleting %s now", child)
-			err := zk.conn.Delete("/swan/atomic-store/"+child, -1)
+			err := zk.conn.Delete(filepath.Join(atomicStorePath, child), -1)
 			if err != nil {
 				return err
 			}
@@ -297,27 +304,28 @@ func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
 }
 
 func (zk *ZkStore) snapshot() (string, error) {
-	zk.mu.Lock()
+	snapshotPath := fmt.Sprintf(SWAN_SNAPSHOT_PATH, zk.zkPath.Path)
 	revision := zk.lastSequentialZkNodePath
+
+	zk.mu.Lock()
 	data, err := json.Marshal(zk.Storage)
 	if err != nil {
 		return "", err
 	}
 	zk.mu.Unlock()
+
 	logrus.Debugf("snapshot storage to zk with data len: %d", len(data))
 	logrus.Debugf(string(data))
 
-	exists, _, err := zk.conn.Exists(ZK_SNAPSHOT_PATH)
+	exists, _, err := zk.conn.Exists(snapshotPath)
 	if err != nil {
 		return "", err
 	}
 
 	if !exists {
-		_, err = zk.conn.Create(ZK_SNAPSHOT_PATH,
-			data, 0, ZK_DEFAULT_ACL)
+		_, err = zk.conn.Create(snapshotPath, data, 0, ZK_DEFAULT_ACL)
 	} else {
-		_, err = zk.conn.Set(ZK_SNAPSHOT_PATH,
-			data, -1)
+		_, err = zk.conn.Set(snapshotPath, data, -1)
 	}
 	if err != nil {
 		return "", err
@@ -344,7 +352,8 @@ func (zk *ZkStore) Synchronize() error {
 func (zk *ZkStore) syncFromSnapshot() error {
 	logrus.Debugf("syncFromSnapshot now")
 
-	exists, _, err := zk.conn.Exists(ZK_SNAPSHOT_PATH)
+	snapshotPath := fmt.Sprintf(SWAN_SNAPSHOT_PATH, zk.zkPath.Path)
+	exists, _, err := zk.conn.Exists(snapshotPath)
 	if err != nil {
 		return err
 	}
@@ -353,24 +362,23 @@ func (zk *ZkStore) syncFromSnapshot() error {
 		return nil
 	}
 
-	data, _, err := zk.conn.Get(ZK_SNAPSHOT_PATH)
+	data, _, err := zk.conn.Get(snapshotPath)
 	if err != nil {
 		return err
 	}
-
-	fmt.Println(string(data))
 
 	err = json.Unmarshal(data, zk.Storage)
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%+v", zk.Storage)
 
 	return nil
 }
 
 func (zk *ZkStore) syncFromAtomicSequentialSlice() error {
-	children, _, err := zk.conn.Children("/swan/atomic-store")
+	atomicStorePath := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path)
+
+	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
 		return err
 	}
@@ -379,7 +387,7 @@ func (zk *ZkStore) syncFromAtomicSequentialSlice() error {
 	sort.Sort(sortedPaths)
 
 	for _, child := range sortedPaths {
-		data, _, err := zk.conn.Get("/swan/atomic-store/" + child)
+		data, _, err := zk.conn.Get(filepath.Join(atomicStorePath, child))
 		if err != nil {
 			return err
 		}

@@ -3,6 +3,7 @@ package scheduler
 import (
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
@@ -20,7 +21,6 @@ const (
 
 type Scheduler struct {
 	heartbeater *time.Ticker
-	stopC       chan struct{}
 
 	handlerManager          *HandlerManager
 	mesosConnectorCancelFun context.CancelFunc
@@ -32,9 +32,10 @@ type Scheduler struct {
 	MesosConnector *connector.Connector
 }
 
-func NewScheduler() *Scheduler {
+func NewScheduler(store store.Store, mConfig config.ManagerConfig) *Scheduler {
+	connector.Init(mConfig.MesosFrameworkUser, mConfig.MesosZkPath)
+
 	scheduler := &Scheduler{
-		stopC:          make(chan struct{}),
 		MesosConnector: connector.Instance(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
@@ -50,34 +51,11 @@ func NewScheduler() *Scheduler {
 }
 
 // shutdown main scheduler and related
-func (scheduler *Scheduler) Stop() {
-	close(scheduler.stopC)
-}
-
 // revive from crash or rotate from leader change
 func (scheduler *Scheduler) Start(ctx context.Context) error {
-	err := scheduler.store.Synchronize()
-	if err != nil {
+	if err := scheduler.recoverFromPreviousScene(); err != nil {
 		return err
 	}
-
-	apps := state.LoadAppData(scheduler.userEventChan)
-	for _, app := range apps {
-		scheduler.AppStorage.Add(app.ID, app)
-
-		for _, slot := range app.GetSlots() {
-			if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
-				state.OfferAllocatorInstance().PutSlotBackToPendingQueue(slot) // push the slot into pending offer queue
-			}
-		}
-	}
-
-	res, err := state.LoadOfferAllocatorMap()
-	if err != nil {
-		return err
-	}
-
-	state.OfferAllocatorInstance().AllocatedOffer = res
 
 	go func() {
 		scheduler.MesosConnector.SetFrameworkInfoId(scheduler.store.GetFrameworkId())
@@ -87,11 +65,6 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 		scheduler.MesosConnector.Start(c)
 	}()
 
-	return scheduler.Run(context.Background()) // context as a placeholder
-}
-
-// main loop
-func (scheduler *Scheduler) Run(ctx context.Context) error {
 	for {
 		select {
 		case e := <-scheduler.userEventChan:
@@ -122,11 +95,35 @@ func (scheduler *Scheduler) Run(ctx context.Context) error {
 		case <-scheduler.heartbeater.C: // heartbeat timeout for now
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("heart beat package")
 
-		case <-scheduler.stopC:
-			logrus.WithFields(logrus.Fields{"event": "stopC"}).Infoln("scheduler stopped")
-			return nil
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
+}
+
+func (scheduler *Scheduler) recoverFromPreviousScene() error {
+	err := scheduler.store.Synchronize()
+	if err != nil {
+		return err
+	}
+
+	apps := state.LoadAppData(scheduler.userEventChan)
+	for _, app := range apps {
+		scheduler.AppStorage.Add(app.ID, app)
+
+		for _, slot := range app.GetSlots() {
+			if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
+				state.OfferAllocatorInstance().PutSlotBackToPendingQueue(slot) // push the slot into pending offer queue
+			}
+		}
+	}
+
+	state.OfferAllocatorInstance().AllocatedOffer, err = state.LoadOfferAllocatorMap()
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (scheduler *Scheduler) handleEvent(e event.Event) {

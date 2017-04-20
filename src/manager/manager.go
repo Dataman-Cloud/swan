@@ -2,6 +2,8 @@ package manager
 
 import (
 	"errors"
+	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -21,6 +23,8 @@ import (
 )
 
 const ZK_FLAG_NONE = 0
+const SWAN_LEADER_ELECTION_NODE_PATH = "%s/leader-election"
+const SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
 
 var (
 	ErrNormalExit = errors.New("normal exit 0")
@@ -34,29 +38,47 @@ const (
 	LeadershipFollower Leadership = 3
 )
 
+func (l Leadership) String() string {
+	switch l {
+	case LeadershipUnknown:
+		return "LeadershipUnknown"
+	case LeadershipFollower:
+		return "LeadershipFollower"
+	case LeadershipLeader:
+		return "LeadershipLeader"
+	}
+	return ""
+}
+
 var (
 	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
 )
 
 type Manager struct {
-	CancelFunc context.CancelFunc
+	scheduler *scheduler.Scheduler
+	apiServer *apiserver.ApiServer
+	zkConn    *zk.Conn
 
-	scheduler         *scheduler.Scheduler
-	apiServer         *apiserver.ApiServer
 	criticalErrorChan chan error
-	zkConn            *zk.Conn
-	zkPath            string
 
 	previousLeadership Leadership
+	conf               config.ManagerConfig
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
-	store := fstore.NewZkStore()
+	conn, _, err := zk.Connect(strings.Split(managerConf.ZkPath.Host, ","), 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	store, err := fstore.NewZkStore(managerConf.ZkPath)
+	if err != nil {
+		return nil, err
+	}
+
 	//store := fstore.NewDummyStore()
-	sched := scheduler.NewScheduler(store)
-
+	sched := scheduler.NewScheduler(store, managerConf)
 	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
-
 	api.NewAndInstallAppService(route, sched)
 	api.NewAndInstallStatsService(route, sched)
 	api.NewAndInstallEventsService(route, sched)
@@ -64,38 +86,24 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 	api.NewAndInstallFrameworkService(route, sched)
 	api.NewAndInstallVersionService(route, sched)
 
-	manager := &Manager{
+	return &Manager{
 		apiServer:          route,
 		criticalErrorChan:  make(chan error, 1),
 		previousLeadership: LeadershipUnknown,
 		scheduler:          sched,
-	}
-
-	conn, _, err := zk.Connect(strings.Split(managerConf.ZkPath.Host, ","), 5*time.Second)
-	if err != nil {
-		return nil, err
-	}
-
-	manager.zkConn = conn
-	manager.zkPath = managerConf.ZkPath.Path
-
-	return manager, nil
-}
-
-func (manager *Manager) Stop() {
-	manager.CancelFunc()
-
-	return
+		zkConn:             conn,
+		conf:               managerConf,
+	}, nil
 }
 
 func (manager *Manager) InitAndStart(ctx context.Context) error {
 	zkNodesPath := []string{
-		manager.zkPath,
-		filepath.Join(manager.zkPath, "leader-election"),
-		filepath.Join(manager.zkPath, "atomic-store"),
+		manager.conf.ZkPath.Path,
+		fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path),
+		fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, manager.conf.ZkPath.Path),
 	}
 
-	nodeExists, _, err := manager.zkConn.Exists(manager.zkPath)
+	nodeExists, _, err := manager.zkConn.Exists(manager.conf.ZkPath.Path)
 	if err != nil && !isNodeDoesNotExists(err) {
 		return err
 	}
@@ -113,83 +121,91 @@ func (manager *Manager) InitAndStart(ctx context.Context) error {
 }
 
 func (manager *Manager) start(ctx context.Context) error {
-	var eventBusStarted, schedulerStarted bool
-	eventbus.Init()
 	leadershipChangeChan := make(chan Leadership)
+	eventbus.Init()
 
 	go func() {
 		for {
-			err := manager.subcribeLeaderChange(ctx, leadershipChangeChan)
+			err := manager.watchLeaderChange(ctx, leadershipChangeChan)
 			if err == ErrNormalExit {
-				logrus.Info("subcribeLeaderChange exit normally")
+				logrus.Info("watchLeaderChange exit normally")
 				return
 			} else {
-				logrus.Errorf("subcribeLeaderChange go error: %+v", err)
+				logrus.Errorf("watchLeaderChange go error: %+v", err)
 			}
 		}
 	}()
 
+	var stopFunc context.CancelFunc
 	for {
 		select {
 		case change := <-leadershipChangeChan:
+			// do nothing when leadership not change
 			if change == manager.previousLeadership {
 				continue
 			}
-
-			// toggle state
 			manager.previousLeadership = change
 
 			switch change {
 			case LeadershipLeader:
+				var stopCtx context.Context
+				stopCtx, stopFunc = context.WithCancel(ctx)
 				go func() {
-					eventBusStarted = true
-					eventbus.Start(ctx)
+					manager.criticalErrorChan <- eventbus.Start(stopCtx)
 				}()
 
 				go func() {
-					schedulerStarted = true
-					manager.criticalErrorChan <- manager.scheduler.Start(ctx)
+					manager.criticalErrorChan <- manager.scheduler.Start(stopCtx)
 				}()
 
 				go func() {
-					manager.criticalErrorChan <- manager.apiServer.Start()
+					manager.criticalErrorChan <- manager.apiServer.Start(stopCtx)
 				}()
+
+			case LeadershipFollower:
+				if stopFunc != nil {
+					stopFunc()
+				}
 
 			case LeadershipUnknown:
-			case LeadershipFollower:
-				if eventBusStarted {
-					eventbus.Stop()
-					eventBusStarted = false
-				}
-
-				if schedulerStarted {
-					manager.scheduler.Stop()
-					schedulerStarted = false
-				}
+				// do nothing
 			}
+
 		case err := <-manager.criticalErrorChan:
-			return err
+			// for any error contains `context canceled` should be
+			// those caused by leadership changed to LeadershipFollower
+			logrus.Error(err)
+			if !strings.Contains(err.Error(), "context canceled") {
+				return err
+			}
+
 		case <-ctx.Done():
-			return ctx.Err()
+			if stopFunc != nil {
+				stopFunc()
+			}
+			os.Exit(0)
 		}
 	}
+
 }
 
-func (manager *Manager) subcribeLeaderChange(ctx context.Context, leadershipChangeChan chan Leadership) error {
-	myNode, err := manager.zkConn.CreateProtectedEphemeralSequential(manager.zkPath+"/"+"leader-election/node", []byte(""), ZK_DEFAULT_ACL)
+func (manager *Manager) watchLeaderChange(ctx context.Context, leadershipChangeChan chan Leadership) error {
+	leaderPath := filepath.Join(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path), "node")
+	myNode, err := manager.zkConn.CreateProtectedEphemeralSequential(leaderPath, []byte(""), ZK_DEFAULT_ACL)
 	if err != nil {
 		return err
 	}
 	_, myNodePath := filepath.Split(myNode)
 
 reevaluateLeader:
-	leaderNode, err := manager.minimalValueChild(manager.zkPath + "/" + "leader-election")
+	leaderNode, err := manager.minimalValueChild(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path))
 	if myNodePath == leaderNode {
 		leadershipChangeChan <- LeadershipLeader
 	} else {
 		leadershipChangeChan <- LeadershipFollower
 	}
-	_, _, existsWChan, err := manager.zkConn.ExistsW(filepath.Join(manager.zkPath, "leader-election", leaderNode))
+	_, _, existsWChan, err := manager.zkConn.ExistsW(filepath.Join(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH,
+		manager.conf.ZkPath.Path), leaderNode))
 	if err != nil {
 		return err
 	}

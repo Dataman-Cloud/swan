@@ -11,7 +11,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/sched"
@@ -35,6 +34,7 @@ var once sync.Once
 // ErrEvent()   to subscribe connnector's failures
 // SendCall()   to emit request against mesos master
 type Connector struct {
+	MesosZkPath           *url.URL
 	ClusterID             string
 	MesosLeader           string
 	MesosLeaderHttpClient *HttpClient
@@ -49,11 +49,15 @@ type Connector struct {
 }
 
 func Instance() *Connector {
+	return instance
+}
+
+func Init(user string, mesosZkPath *url.URL) {
 	once.Do(
 		func() {
 			hostname, _ := os.Hostname()
 			info := &mesos.FrameworkInfo{
-				User:      proto.String(config.SchedulerConfig.MesosFrameworkUser),
+				User:      proto.String(user),
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
@@ -67,12 +71,12 @@ func Instance() *Connector {
 			}
 
 			instance = &Connector{
+				MesosZkPath:   mesosZkPath,
 				EventChan:     make(chan *event.MesosEvent, 1024),
 				ErrorChan:     make(chan error, 1024),
 				FrameworkInfo: info,
 			}
 		})
-	return instance
 }
 
 func (s *Connector) subscribe(ctx context.Context) {
@@ -137,24 +141,15 @@ func (s *Connector) SetFrameworkInfoId(id string) {
 	s.FrameworkInfo.Id = &mesos.FrameworkID{Value: proto.String(id)}
 }
 
-func getMastersFromZK(zkPath string) ([]string, error) {
+func getMastersFromZK(zkPath *url.URL) ([]string, error) {
 	masterInfo := new(mesos.MasterInfo)
-
-	if !strings.HasPrefix(zkPath, "zk://") {
-		zkPath = fmt.Sprintf("zk://%s", zkPath)
-	}
-	url, err := url.Parse(zkPath)
-	if err != nil {
-		return nil, err
-	}
-
-	conn, _, err := zk.Connect(strings.Split(url.Host, ","), 5*time.Second)
+	conn, _, err := zk.Connect(strings.Split(zkPath.Host, ","), 5*time.Second)
 	if err != nil {
 		return nil, err
 	}
 	defer conn.Close()
 
-	children, _, err := conn.Children(url.Path)
+	children, _, err := conn.Children(zkPath.Path)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +157,7 @@ func getMastersFromZK(zkPath string) ([]string, error) {
 	masters := make([]string, 0)
 	for _, node := range children {
 		if strings.HasPrefix(node, "json.info") {
-			data, _, err := conn.Get(url.Path + "/" + node)
+			data, _, err := conn.Get(zkPath.Path + "/" + node)
 			if err != nil {
 				return nil, err
 			}
@@ -257,7 +252,7 @@ func (s *Connector) Start(ctx context.Context) {
 }
 
 func (s *Connector) leaderDetect() error {
-	masters, err := getMastersFromZK(config.SchedulerConfig.ZkPath)
+	masters, err := getMastersFromZK(instance.MesosZkPath)
 	if err != nil {
 		return err
 	}
