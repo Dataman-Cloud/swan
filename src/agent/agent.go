@@ -34,22 +34,13 @@ type Agent struct {
 	HttpServer *HttpServer
 	SerfServer *SerfServer
 
-	NodeInfo types.Node
-	Config   config.AgentConfig
+	Config config.AgentConfig
 }
 
-func New(nodeID string, agentConf config.AgentConfig) (*Agent, error) {
+func New(agentConf config.AgentConfig) (*Agent, error) {
 	agent := &Agent{
 		Config: agentConf,
 	}
-
-	nodeInfo := types.Node{
-		ID:            nodeID,
-		AdvertiseAddr: agentConf.AdvertiseAddr,
-		ListenAddr:    agentConf.ListenAddr,
-		Role:          types.RoleAgent,
-	}
-	agent.NodeInfo = nodeInfo
 
 	resolverConfig := &nameserver.Config{
 		Domain:     agentConf.DNS.Domain,
@@ -94,9 +85,9 @@ func (agent *Agent) StartAndJoin(ctx context.Context) error {
 		<-agentStartedCh
 		for {
 		JOIN_AGAIN:
-			leaderAddr, err := agent.join(ctx)
+			leaderAddr, err := agent.detectManagerLeader(ctx)
 			if err != nil {
-				logrus.Errorf("join to manager got error: %s", err.Error())
+				logrus.Errorf("detect manager leader got error: %s", err.Error())
 				time.Sleep(REJOIN_BACKOFF)
 				goto JOIN_AGAIN
 			}
@@ -199,10 +190,11 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 	}
 }
 
-func (agent *Agent) join(ctx context.Context) (leaderAddr string, err error) {
+// todo
+func (agent *Agent) detectManagerLeader(ctx context.Context) (leaderAddr string, err error) {
 	for _, managerAddr := range agent.Config.JoinAddrs {
-		nodeRegistrationPath := managerAddr + config.API_PREFIX + "/nodes"
-		_, err := httpclient.NewDefaultClient().POST(context.TODO(), nodeRegistrationPath, nil, agent.NodeInfo, nil)
+		nodeRegistrationPath := managerAddr + "/ping"
+		_, err := httpclient.NewDefaultClient().GET(context.TODO(), nodeRegistrationPath, nil, nil)
 		if err != nil {
 			logrus.Infof("register to %s got error: %s", nodeRegistrationPath, err.Error())
 			continue

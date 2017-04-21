@@ -1,7 +1,6 @@
 package event
 
 import (
-	"errors"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -14,10 +13,8 @@ const (
 
 type EventBus struct {
 	listeners map[string]EventListener
-
 	eventChan chan *Event
 
-	stopC chan struct{}
 	sync.RWMutex
 }
 
@@ -33,7 +30,6 @@ func Init() *EventBus {
 		eventBusInstance = &EventBus{
 			listeners: make(map[string]EventListener),
 			eventChan: make(chan *Event, 1024),
-			stopC:     make(chan struct{}),
 		}
 	})
 
@@ -56,17 +52,11 @@ func Start(ctx context.Context) error {
 				}
 			}
 
-		case <-eventBusInstance.stopC:
-			return errors.New("eventBusInstance bye")
-
 		case <-ctx.Done():
+			logrus.Info("eventbus shutdown goroutine by ctx cancel")
 			return ctx.Err()
 		}
 	}
-}
-
-func Stop() {
-	close(eventBusInstance.stopC)
 }
 
 func WriteEvent(e *Event) {

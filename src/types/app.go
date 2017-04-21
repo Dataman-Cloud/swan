@@ -45,12 +45,11 @@ type AppFilterOptions struct {
 // use task for compatability now, should be slot here
 // and together with task history
 type Task struct {
-	ID          string       `json:"id,omitempty"`
-	AppID       string       `json:"appID"`
-	SlotID      string       `json:"slotID"`
-	VersionID   string       `json:"versionID"`
-	AppVersion  string       `json:"appVersion"`
-	CurrentTask *TaskHistory `json:"currentTask"`
+	ID         string `json:"id,omitempty"`
+	AppID      string `json:"appID"`
+	SlotID     string `json:"slotID"`
+	VersionID  string `json:"versionID"`
+	AppVersion string `json:"appVersion"`
 
 	Status string `json:"status,omitempty"`
 

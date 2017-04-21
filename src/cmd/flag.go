@@ -22,24 +22,6 @@ func FlagAdvertiseAddr() cli.Flag {
 	}
 }
 
-func FlagRaftListenAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "raft-listen-addr",
-		Usage:  "swan raft serverlistener address",
-		EnvVar: "SWAN_RAFT_LISTEN_ADDR",
-		Value:  "http://0.0.0.0:2111",
-	}
-}
-
-func FlagRaftAdvertiseAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "raft-advertise-addr",
-		Usage:  "swan raft advertise address, default is the raft-listen-addr",
-		EnvVar: "SWAN_RAFT_ADVERTISE_ADDR",
-		Value:  "",
-	}
-}
-
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",
@@ -102,12 +84,19 @@ func FlagDNSResolvers() cli.Flag {
 	}
 }
 
+func FlagMesosZkPath() cli.Flag {
+	return cli.StringFlag{
+		Name:   "mesos-zk-path",
+		Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
+		EnvVar: "SWAN_MESOS_ZKPATH",
+	}
+}
+
 func FlagZkPath() cli.Flag {
 	return cli.StringFlag{
 		Name:   "zk-path",
-		Usage:  "zookeeper mesos paths. eg. zk://host1:port1,host2:port2,.../path",
-		EnvVar: "SWAN_MESOS_ZKPATH",
-		Value:  "localhost:2181/mesos",
+		Usage:  "eg. zk://host1:port1,host2:port2,.../swan",
+		EnvVar: "SWAN_ZKPATH",
 	}
 }
 
@@ -117,15 +106,6 @@ func FlagLogLevel() cli.Flag {
 		Usage:  "customize log level [debug|info|error]",
 		EnvVar: "SWAN_LOG_LEVEL",
 		Value:  "info",
-	}
-}
-
-func FlagDataDir() cli.Flag {
-	return cli.StringFlag{
-		Name:   "data-dir,d",
-		Usage:  "swan data store dir",
-		EnvVar: "SWAN_DATA_DIR",
-		Value:  "./data",
 	}
 }
 

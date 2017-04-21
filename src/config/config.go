@@ -1,7 +1,10 @@
 package config
 
 import (
+	"errors"
+	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -10,15 +13,14 @@ import (
 )
 
 type ManagerConfig struct {
-	LogLevel          string   `json:"logLevel"`
-	DataDir           string   `json:"dataDir"`
-	RaftAdvertiseAddr string   `json:"raftAdvertiseAddr"`
-	RaftListenAddr    string   `json:"raftListenAddr"`
-	ListenAddr        string   `json:"listenAddr"`
-	AdvertiseAddr     string   `json:"advertiseAddr"`
-	JoinAddrs         []string `json:"joinAddrs"`
+	LogLevel           string `json:"logLevel"`
+	ListenAddr         string `json:"listenAddr"`
+	AdvertiseAddr      string `json:"advertiseAddr"`
+	MesosFrameworkUser string `json:"mesosFrameworkUser"`
+	Hostname           string `json:"hostname"`
 
-	Scheduler Scheduler `json:"scheduler"`
+	MesosZkPath *url.URL `json:"mesosZkPath"`
+	ZkPath      *url.URL `json:"zkPath"`
 }
 
 type AgentConfig struct {
@@ -33,15 +35,9 @@ type AgentConfig struct {
 	Janitor          Janitor  `json:"janitor"`
 }
 
-type Scheduler struct {
-	ZkPath             string `json:"zkpath"`
-	MesosFrameworkUser string `json:"mesos-framwork-user"`
-	Hostname           string `json:"hostname"`
-}
-
 type DNS struct {
 	Domain     string `json:"domain"`
-	RecurseOn  bool   `json:"recurse_on"`
+	RecurseOn  bool   `json:"recurseOn"`
 	ListenAddr string `json:"listenAddr"`
 
 	SOARname   string `json:"soarname"`
@@ -54,7 +50,7 @@ type DNS struct {
 	TTL int `json:"ttl"`
 
 	Resolvers       []string      `json:"resolvers"`
-	ExchangeTimeout time.Duration `json:"exchange_timeout"`
+	ExchangeTimeout time.Duration `json:"exchangeTimeout"`
 }
 
 type Janitor struct {
@@ -147,38 +143,43 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 	return agentConfig
 }
 
-func NewManagerConfig(c *cli.Context) ManagerConfig {
+func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
+	var err error
 	managerConfig := ManagerConfig{
-		LogLevel:       "info",
-		DataDir:        "./data/",
-		ListenAddr:     "0.0.0.0:9999",
-		RaftListenAddr: "0.0.0.0:2111",
-		JoinAddrs:      []string{"0.0.0.0:9999"},
-
-		Scheduler: Scheduler{
-			ZkPath:             "0.0.0.0:2181",
-			MesosFrameworkUser: "root",
-			Hostname:           Hostname(),
-		},
+		LogLevel:           "info",
+		ListenAddr:         "0.0.0.0:9999",
+		AdvertiseAddr:      "0.0.0.0:9999",
+		MesosFrameworkUser: "root",
+		Hostname:           Hostname(),
 	}
 
-	if c.String("log-level") != "" {
-		managerConfig.LogLevel = c.String("log-level")
+	managerConfig.MesosZkPath, err = url.Parse(c.String("mesos-zk-path"))
+	if err != nil {
+		return managerConfig, err
+	}
+	if err := validZkURL("MesosZkPath", managerConfig.MesosZkPath); err != nil {
+		return managerConfig, err
 	}
 
-	if c.String("data-dir") != "" {
-		managerConfig.DataDir = c.String("data-dir")
-		if !strings.HasSuffix(managerConfig.DataDir, "/") {
-			managerConfig.DataDir = managerConfig.DataDir + "/"
-		}
+	managerConfig.ZkPath, err = url.Parse(c.String("zk-path"))
+	if err != nil {
+		return managerConfig, err
+	}
+	if err := validZkURL("ZkPath", managerConfig.ZkPath); err != nil {
+		return managerConfig, err
 	}
 
-	if c.String("zk-path") != "" {
-		managerConfig.Scheduler.ZkPath = c.String("zk-path")
+	if (managerConfig.MesosZkPath.Path == managerConfig.ZkPath.Path) &&
+		(managerConfig.MesosZkPath.Host == managerConfig.ZkPath.Host) {
+		return managerConfig, errors.New("ZkPath shouldn't be same as MesosZkPath")
 	}
 
 	if c.String("listen-addr") != "" {
 		managerConfig.ListenAddr = c.String("listen-addr")
+	}
+
+	if c.String("log-level") != "" {
+		managerConfig.LogLevel = c.String("log-level")
 	}
 
 	managerConfig.AdvertiseAddr = c.String("advertise-addr")
@@ -186,35 +187,7 @@ func NewManagerConfig(c *cli.Context) ManagerConfig {
 		managerConfig.AdvertiseAddr = managerConfig.ListenAddr
 	}
 
-	if c.String("raft-listen-addr") != "" {
-		managerConfig.RaftListenAddr = c.String("raft-listen-addr")
-	}
-
-	if strings.Index(managerConfig.RaftListenAddr, "://") == -1 {
-		// Missing scheme. Force http.
-		managerConfig.RaftListenAddr = "http://" + managerConfig.RaftListenAddr
-	}
-
-	if c.String("raft-advertise-addr") != "" {
-		managerConfig.RaftAdvertiseAddr = c.String("raft-advertise-addr")
-	}
-
-	if managerConfig.RaftAdvertiseAddr == "" {
-		managerConfig.RaftAdvertiseAddr = managerConfig.RaftListenAddr
-	}
-
-	if strings.Index(managerConfig.RaftAdvertiseAddr, "://") == -1 {
-		// Missing scheme. Force http.
-		managerConfig.RaftAdvertiseAddr = "http://" + managerConfig.RaftAdvertiseAddr
-	}
-
-	if c.String("join-addrs") != "" {
-		managerConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
-	}
-
-	SchedulerConfig = managerConfig.Scheduler
-
-	return managerConfig
+	return managerConfig, nil
 }
 
 func Hostname() string {
@@ -226,4 +199,18 @@ func Hostname() string {
 	return hostname
 }
 
-var SchedulerConfig Scheduler
+func validZkURL(which string, zkUrl *url.URL) error {
+	if zkUrl.Host == "" {
+		return errors.New(fmt.Sprintf("%s not present", which))
+	}
+
+	if zkUrl.Scheme != "zk" {
+		return errors.New(fmt.Sprintf("%s should have valid scheme, default should be zk://", which))
+	}
+
+	if len(zkUrl.Path) == 0 {
+		return errors.New(fmt.Sprintf("%s should provide meaningful path.   eg. swan", which))
+	}
+
+	return nil
+}
