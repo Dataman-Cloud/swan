@@ -24,7 +24,6 @@ func AgentCmd() cli.Command {
 	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGossipJoinAddr())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGossipListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDataDir())
 	agentCmd.Flags = append(agentCmd.Flags, FlagJanitorAdvertiseIp())
 	agentCmd.Flags = append(agentCmd.Flags, FlagJanitorListenAddr())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDNSListenAddr())

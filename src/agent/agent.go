@@ -193,7 +193,7 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 // todo
 func (agent *Agent) detectManagerLeader(ctx context.Context) (leaderAddr string, err error) {
 	for _, managerAddr := range agent.Config.JoinAddrs {
-		nodeRegistrationPath := managerAddr + config.API_PREFIX + "/nodes"
+		nodeRegistrationPath := managerAddr + "/ping"
 		_, err := httpclient.NewDefaultClient().GET(context.TODO(), nodeRegistrationPath, nil, nil)
 		if err != nil {
 			logrus.Infof("register to %s got error: %s", nodeRegistrationPath, err.Error())

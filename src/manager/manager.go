@@ -230,6 +230,10 @@ func (manager *Manager) minimalValueChild(path string) (string, error) {
 		return "", err
 	}
 
+	if len(children) == 0 {
+		return "", errors.New("empty children in minimalValueChild")
+	}
+
 	sortablePathes := utils.SortableNodePath(children)
 	sort.Sort(sortablePathes)
 

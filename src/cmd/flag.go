@@ -109,15 +109,6 @@ func FlagLogLevel() cli.Flag {
 	}
 }
 
-func FlagDataDir() cli.Flag {
-	return cli.StringFlag{
-		Name:   "data-dir,d",
-		Usage:  "swan data store dir",
-		EnvVar: "SWAN_DATA_DIR",
-		Value:  "./data",
-	}
-}
-
 func FlagDomain() cli.Flag {
 	return cli.StringFlag{
 		Name:   "domain",
