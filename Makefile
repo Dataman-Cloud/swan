@@ -67,15 +67,11 @@ build-docker-image:
 
 docker-run-manager-init:
 	docker rm -f swan-manager 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager_init --name swan-manager  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/data swan:$(VERSION) manager init
-
-docker-run-manager-join:
-	docker rm -f swan-manager 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager_join --name swan-manager  --rm  -p 9999:9999 -p 2111:2111 -v `pwd`/data:/data swan:$(VERSION) manager join
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager  --rm  -p 9999:9999 swan:$(VERSION) manager
 
 docker-run-agent:
 	docker rm -f swan-agent 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent  --rm  -p 9998:9998 -p 53:53/udp -p 80:80  swan:$(VERSION) agent join
+	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent  --rm  -p 9998:9998 -p 53:53/udp -p 80:80 -p 5000:5000 swan:$(VERSION) agent
 
 
 

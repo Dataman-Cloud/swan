@@ -7,7 +7,7 @@ import (
 func FlagListenAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "listen-addr",
-		Usage:  "listener address for agent",
+		Usage:  "http listener address",
 		EnvVar: "SWAN_LISTEN_ADDR",
 		Value:  "0.0.0.0:9999",
 	}
@@ -16,7 +16,7 @@ func FlagListenAddr() cli.Flag {
 func FlagAdvertiseAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "advertise-addr",
-		Usage:  "advertise address for agent, default is the listen-addr",
+		Usage:  "http advertised address, default is the listen-addr, used when in docker env",
 		EnvVar: "SWAN_ADVERTISE_ADDR",
 		Value:  "",
 	}
@@ -25,7 +25,7 @@ func FlagAdvertiseAddr() cli.Flag {
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",
-		Usage:  "the addrs new node join to. Splited by ','",
+		Usage:  "the manager addresses that supposed to join in, splited by ','",
 		EnvVar: "SWAN_JOIN_ADDRS",
 		Value:  "0.0.0.0:9999",
 	}
@@ -34,7 +34,7 @@ func FlagJoinAddrs() cli.Flag {
 func FlagGossipListenAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "gossip-listen-addr",
-		Usage:  "swan gossip node listen address",
+		Usage:  "swan gossip node listener address",
 		EnvVar: "SWAN_GOSSIP_LISTEN_ADDR",
 		Value:  "0.0.0.0:5000",
 	}
@@ -43,26 +43,26 @@ func FlagGossipListenAddr() cli.Flag {
 func FlagGossipJoinAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "gossip-join-addr",
-		Usage:  "swan gossip node join address",
+		Usage:  "any agent in the cluster",
 		EnvVar: "SWAN_GOSSIP_JOIN_ADDR",
 	}
 }
 
-func FlagJanitorAdvertiseIp() cli.Flag {
+func FlagGatewayAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
-		Name:   "janitor-advertise-ip",
-		Usage:  "janitor gateway advertise ip",
-		EnvVar: "SWAN_JANITOR_ADVERTISE_IP",
+		Name:   "gateway-advertise-ip",
+		Usage:  "gateway advertise ip",
+		EnvVar: "SWAN_GATEWAY_ADVERTISE_IP",
 		Value:  "",
 	}
 }
 
-func FlagJanitorListenAddr() cli.Flag {
+func FlagGatewayListenAddr() cli.Flag {
 	return cli.StringFlag{
-		Name:   "janitor-listen-addr",
-		Usage:  "janitor gateway listen addr",
+		Name:   "gateway-listen-addr",
+		Usage:  "gateway listen addr",
 		Value:  "0.0.0.0:80",
-		EnvVar: "SWAN_JANITOR_LISTEN_ADDR",
+		EnvVar: "SWAN_GATEWAY_LISTEN_ADDR",
 	}
 }
 
@@ -112,7 +112,7 @@ func FlagLogLevel() cli.Flag {
 func FlagDomain() cli.Flag {
 	return cli.StringFlag{
 		Name:   "domain",
-		Usage:  "domain which resolve to proxies. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.swan.com",
+		Usage:  "domain which resolve to gateway. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.gateway.swan.com",
 		EnvVar: "SWAN_DOMAIN",
 		Value:  "swan.com",
 	}
