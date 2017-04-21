@@ -3,7 +3,7 @@ package scheduler
 import (
 	"testing"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/event"
+	"github.com/Dataman-Cloud/swan/src/manager/event"
 
 	"github.com/stretchr/testify/assert"
 )

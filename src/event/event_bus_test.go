@@ -69,7 +69,6 @@ func TestStop(t *testing.T) {
 	}()
 
 	time.Sleep(time.Second * 1)
-	Stop()
 	<-done
 }
 

@@ -280,7 +280,7 @@ func TestNewAgentConfig(t *testing.T) {
 func TestNewManagerConfig(t *testing.T) {
 	app := PrepareApp()
 	app.Run([]string{"swan", "manager", "init", "--zk-path=132"})
-	managerConfig := NewManagerConfig(gc)
+	managerConfig, _ := NewManagerConfig(gc)
 	assert.Equal(t, managerConfig.LogLevel, "info")
 	assert.Equal(t, "132", gc.String("zk-path"))
 }
