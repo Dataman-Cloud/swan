@@ -154,6 +154,7 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 		rgEvent.Change = "add"
 		rgEvent.Type = "a"
 		rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
+
 		rgEvent.DomainPrefix = ""
 		rgEvent.IsProxy = true
 		agent.Resolver.RecordGeneratorChangeChan() <- rgEvent

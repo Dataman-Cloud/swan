@@ -108,12 +108,12 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		agentConfig.AdvertiseAddr = agentConfig.ListenAddr
 	}
 
-	if c.String("janitor-advertise-ip") != "" {
-		agentConfig.Janitor.AdvertiseIP = c.String("janitor-advertise-ip")
+	if c.String("gateway-advertise-ip") != "" {
+		agentConfig.Janitor.AdvertiseIP = c.String("gateway-advertise-ip")
 	}
 
-	if c.String("janitor-listen-addr") != "" {
-		agentConfig.Janitor.ListenAddr = c.String("janitor-listen-addr")
+	if c.String("gateway-listen-addr") != "" {
+		agentConfig.Janitor.ListenAddr = c.String("gateway-listen-addr")
 
 		if agentConfig.Janitor.AdvertiseIP == "" {
 			agentConfig.Janitor.AdvertiseIP, _, _ = net.SplitHostPort(agentConfig.Janitor.ListenAddr)
