@@ -27,6 +27,12 @@ var (
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
 
+var persistentStore store.Store
+
+func SetStore(newStore store.Store) {
+	persistentStore = newStore
+}
+
 type App struct {
 	ID       string           `json:"id"`
 	Name     string           `json:"name"`

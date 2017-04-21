@@ -7,7 +7,6 @@ import (
 	"time"
 
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
-	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 

@@ -40,12 +40,14 @@ func NewScheduler(store store.Store, mConfig config.ManagerConfig) *Scheduler {
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
-		store:      store.DB(),
+		store:      store,
 
 		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
 	scheduler.handlerManager = NewHandlerManager(scheduler)
+
+	state.SetStore(store)
 
 	return scheduler
 }

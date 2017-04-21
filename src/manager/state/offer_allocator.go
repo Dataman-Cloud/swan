@@ -4,8 +4,6 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/Dataman-Cloud/swan/src/manager/framework/store"
-	rafttypes "github.com/Dataman-Cloud/swan/src/manager/raft/types"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 
 	"github.com/Sirupsen/logrus"

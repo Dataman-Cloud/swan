@@ -121,14 +121,6 @@
 			"notests": true
 		},
 		{
-			"importpath": "github.com/boltdb/bolt",
-			"repository": "https://github.com/boltdb/bolt",
-			"vcs": "git",
-			"revision": "4b1ebc1869ad66568b313d0dc410e2be72670dda",
-			"branch": "master",
-			"notests": true
-		},
-		{
 			"importpath": "github.com/circonus-labs/circonus-gometrics",
 			"repository": "https://github.com/circonus-labs/circonus-gometrics",
 			"vcs": "git",
@@ -232,15 +224,6 @@
 			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
 			"branch": "master",
 			"path": "pkg/types",
-			"notests": true
-		},
-		{
-			"importpath": "github.com/coreos/etcd/raft",
-			"repository": "https://github.com/coreos/etcd",
-			"vcs": "git",
-			"revision": "aea9c6668fdc95fecacfabdc46e9c3f9b840ac94",
-			"branch": "master",
-			"path": "raft",
 			"notests": true
 		},
 		{
