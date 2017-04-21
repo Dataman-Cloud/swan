@@ -20,8 +20,8 @@ func main() {
 
 	app.Commands = []cli.Command{}
 
-	app.Commands = append(app.Commands, cmd.AgentCmd())
 	app.Commands = append(app.Commands, cmd.ManagerCmd())
+	app.Commands = append(app.Commands, cmd.AgentCmd())
 	app.Commands = append(app.Commands, cmd.VersionCmd())
 
 	if err := app.Run(os.Args); err != nil {
