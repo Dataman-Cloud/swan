@@ -125,6 +125,11 @@ func NewStorage() *Storage {
 	}
 }
 
+var (
+	zs   *ZkStore
+	once sync.Once
+)
+
 type ZkStore struct {
 	Storage                  *Storage
 	lastSequentialZkNodePath string
@@ -136,25 +141,26 @@ type ZkStore struct {
 	zkPath          *url.URL
 }
 
-func NewZkStore(zkPath *url.URL) (*ZkStore, error) {
+func DB() *ZkStore {
+	return zs
+}
+
+func InitZkStore(zkPath *url.URL) error {
 	conn, _, err := zookeeper.Connect(strings.Split(zkPath.Host, ","), 5*time.Second)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	zk := &ZkStore{
-		conn:            conn,
-		Storage:         NewStorage(),
-		zkPath:          zkPath,
-		readyToSnapshot: false,
-	}
+	// TODO seems lack of re-connecting logic
 
-	go func() {
-		for {
-			select {}
+	once.Do(func() {
+		zs = &ZkStore{
+			conn:            conn,
+			Storage:         NewStorage(),
+			zkPath:          zkPath,
+			readyToSnapshot: false,
 		}
-	}()
-
-	return zk, nil
+	})
+	return nil
 }
 
 func (zk *ZkStore) Start(ctx context.Context) error {

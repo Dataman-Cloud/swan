@@ -4,13 +4,14 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/event"
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Sirupsen/logrus"
 )
 
 // load app data frm persistent data
 func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
-	raftApps := persistentStore.ListApps()
+	raftApps := store.DB().ListApps()
 
 	apps := make(map[string]*App)
 
@@ -39,7 +40,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
 		}
 
-		raftVersions := persistentStore.ListVersions(raftApp.ID)
+		raftVersions := store.DB().ListVersions(raftApp.ID)
 
 		var versions []*types.Version
 		for _, raftVersion := range raftVersions {
@@ -64,12 +65,12 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 }
 
 func LoadAppSlots(app *App) []*Slot {
-	raftSlots := persistentStore.ListSlots(app.ID)
+	raftSlots := store.DB().ListSlots(app.ID)
 	var slots []*Slot
 	for _, raftSlot := range raftSlots {
 		slot := SlotFromRaft(raftSlot, app)
 
-		raftTasks := persistentStore.ListTaskHistory(app.ID, slot.ID)
+		raftTasks := store.DB().ListTaskHistory(app.ID, slot.ID)
 		var tasks []*Task
 		for _, raftTask := range raftTasks {
 			tasks = append(tasks, TaskFromRaft(raftTask, app))
@@ -86,7 +87,7 @@ func LoadAppSlots(app *App) []*Slot {
 
 func LoadOfferAllocatorMap() (map[string]*OfferInfo, error) {
 	m := make(map[string]*OfferInfo)
-	list := persistentStore.ListOfferallocatorItems()
+	list := store.DB().ListOfferallocatorItems()
 	for _, item := range list {
 		slotId, offerInfo := OfferAllocatorItemFromRaft(item)
 		m[slotId] = offerInfo
