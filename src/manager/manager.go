@@ -14,7 +14,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/api"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
-	fstore "github.com/Dataman-Cloud/swan/src/manager/store"
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
@@ -63,7 +63,6 @@ type Manager struct {
 
 	previousLeadership Leadership
 	conf               config.ManagerConfig
-	store              fstore.Store
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
@@ -72,13 +71,12 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 		return nil, err
 	}
 
-	store, err := fstore.NewZkStore(managerConf.ZkPath)
+	err = store.InitZkStore(managerConf.ZkPath)
 	if err != nil {
-		return nil, err
+		logrus.Fatalln(err)
 	}
 
-	//store := fstore.NewDummyStore()
-	sched := scheduler.NewScheduler(store, managerConf)
+	sched := scheduler.NewScheduler(managerConf)
 	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
 	api.NewAndInstallAppService(route, sched)
 	api.NewAndInstallStatsService(route, sched)
@@ -94,7 +92,6 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 		scheduler:          sched,
 		zkConn:             conn,
 		conf:               managerConf,
-		store:              store,
 	}, nil
 }
 
@@ -165,7 +162,7 @@ func (manager *Manager) start(ctx context.Context) error {
 				}()
 
 				go func() {
-					manager.criticalErrorChan <- manager.store.Start(stopCtx)
+					manager.criticalErrorChan <- store.DB().Start(stopCtx)
 				}()
 
 			case LeadershipFollower:

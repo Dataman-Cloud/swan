@@ -24,7 +24,6 @@ type Scheduler struct {
 
 	handlerManager          *HandlerManager
 	mesosConnectorCancelFun context.CancelFunc
-	store                   store.Store
 
 	userEventChan chan *event.UserEvent
 
@@ -32,7 +31,7 @@ type Scheduler struct {
 	MesosConnector *connector.Connector
 }
 
-func NewScheduler(store store.Store, mConfig config.ManagerConfig) *Scheduler {
+func NewScheduler(mConfig config.ManagerConfig) *Scheduler {
 	connector.Init(mConfig.MesosFrameworkUser, mConfig.MesosZkPath)
 
 	scheduler := &Scheduler{
@@ -40,14 +39,11 @@ func NewScheduler(store store.Store, mConfig config.ManagerConfig) *Scheduler {
 		heartbeater:    time.NewTicker(10 * time.Second),
 
 		AppStorage: NewMemoryStore(),
-		store:      store,
 
 		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
 	scheduler.handlerManager = NewHandlerManager(scheduler)
-
-	state.SetStore(store)
 
 	return scheduler
 }
@@ -60,7 +56,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		scheduler.MesosConnector.SetFrameworkInfoId(scheduler.store.GetFrameworkId())
+		scheduler.MesosConnector.SetFrameworkInfoId(store.DB().GetFrameworkId())
 
 		var c context.Context
 		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
@@ -105,7 +101,7 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 }
 
 func (scheduler *Scheduler) recoverFromPreviousScene() error {
-	err := scheduler.store.Recover()
+	err := store.DB().Recover()
 	if err != nil {
 		return err
 	}

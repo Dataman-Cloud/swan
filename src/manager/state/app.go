@@ -27,12 +27,6 @@ var (
 	APP_MODE_REPLICATES AppMode = "replicates"
 )
 
-var persistentStore store.Store
-
-func SetStore(newStore store.Store) {
-	persistentStore = newStore
-}
-
 type App struct {
 	ID       string           `json:"id"`
 	Name     string           `json:"name"`
@@ -160,7 +154,7 @@ func (app *App) Delete() error {
 	return app.TransitTo(APP_STATE_DELETING)
 }
 
-func (app *App) Update(version *types.Version, store store.Store) error {
+func (app *App) Update(version *types.Version) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion != nil {
 		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING)
@@ -556,7 +550,7 @@ func validateAndFormatVersion(version *types.Version) error {
 
 func (app *App) SaveVersion(version *types.Version) {
 	app.Versions = append(app.Versions, version)
-	persistentStore.CreateVersion(app.ID, VersionToRaft(version, app.ID))
+	store.DB().CreateVersion(app.ID, VersionToRaft(version, app.ID))
 }
 
 func (app *App) Remove() {
@@ -569,7 +563,7 @@ func (app *App) Touch() {
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
-	err := persistentStore.UpdateApp(AppToRaft(app))
+	err := store.DB().UpdateApp(AppToRaft(app))
 	if err != nil {
 		logrus.Error(err)
 	}
@@ -577,7 +571,7 @@ func (app *App) update() {
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	err := persistentStore.CreateApp(AppToRaft(app))
+	err := store.DB().CreateApp(AppToRaft(app))
 	if err != nil {
 		logrus.Error(err)
 	}
@@ -585,7 +579,7 @@ func (app *App) create() {
 
 func (app *App) remove() {
 	logrus.Debugf("remove app %s", app.ID)
-	err := persistentStore.DeleteApp(app.ID)
+	err := store.DB().DeleteApp(app.ID)
 	if err != nil {
 		logrus.Error(err)
 	}

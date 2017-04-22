@@ -7,6 +7,7 @@ import (
 	"time"
 
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 	"github.com/Dataman-Cloud/swan/src/types"
 
@@ -144,7 +145,7 @@ func (slot *Slot) KillTask() {
 func (slot *Slot) Archive() {
 	slot.CurrentTask.ArchivedAt = time.Now()
 	slot.TaskHistory = append(slot.TaskHistory, slot.CurrentTask)
-	//persistentStore.UpdateTask(TaskToRaft(slot.CurrentTask))
+	//store.DB().UpdateTask(TaskToRaft(slot.CurrentTask))
 
 	slot.Touch()
 }
@@ -219,7 +220,7 @@ func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
 	slot.AgentHostName = offer.GetHostname()
 	slot.CurrentTask.AgentHostName = offer.GetHostname()
 
-	//return WithConvertSlot(context.TODO(), slot, nil, persistentStore.UpdateSlot)
+	//return WithConvertSlot(context.TODO(), slot, nil, store.DB().UpdateSlot)
 	return nil
 }
 
@@ -420,21 +421,21 @@ func (slot *Slot) Touch() {
 }
 
 func (slot *Slot) update() {
-	err := persistentStore.UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
+	err := store.DB().UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
 	if err != nil {
 		logrus.Error(err)
 	}
 }
 
 func (slot *Slot) create() {
-	err := persistentStore.CreateSlot(SlotToRaft(slot))
+	err := store.DB().CreateSlot(SlotToRaft(slot))
 	if err != nil {
 		logrus.Error(err)
 	}
 }
 
 func (slot *Slot) remove() {
-	err := persistentStore.DeleteSlot(slot.App.ID, slot.ID)
+	err := store.DB().DeleteSlot(slot.App.ID, slot.ID)
 	if err != nil {
 		logrus.Error(err)
 	}

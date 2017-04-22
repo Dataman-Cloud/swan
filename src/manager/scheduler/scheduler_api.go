@@ -75,7 +75,7 @@ func (scheduler *Scheduler) UpdateApp(appId string, version *types.Version) erro
 		return errors.New("app not exists")
 	}
 
-	return app.Update(version, scheduler.store)
+	return app.Update(version)
 }
 
 func (scheduler *Scheduler) CancelUpdate(appId string) error {

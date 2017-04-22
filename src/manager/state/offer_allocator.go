@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sync"
 
+	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/mesosproto/mesos"
 
 	"github.com/Sirupsen/logrus"
@@ -174,10 +175,10 @@ func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 
 func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
 	logrus.Debugf("create offer allocator item %s => %s", slotID, offerInfo.OfferID)
-	persistentStore.CreateOfferAllocatorItem(OfferAllocatorItemToRaft(slotID, offerInfo))
+	store.DB().CreateOfferAllocatorItem(OfferAllocatorItemToRaft(slotID, offerInfo))
 }
 
 func (allocator *OfferAllocator) remove(slotID string) {
 	logrus.Debugf("remove offer allocator item  %s", slotID)
-	persistentStore.DeleteOfferAllocatorItem(slotID)
+	store.DB().DeleteOfferAllocatorItem(slotID)
 }
