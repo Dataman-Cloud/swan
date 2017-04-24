@@ -6,7 +6,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/version"
 
 	restful "github.com/emicklei/go-restful"
@@ -15,10 +14,8 @@ import (
 type VersionService struct {
 }
 
-func NewAndInstallVersionService(apiServer *apiserver.ApiServer, eng *scheduler.Scheduler) *VersionService {
-	vs := &VersionService{}
-	apiserver.Install(apiServer, vs)
-	return vs
+func NewAndInstallVersionService(apiServer *apiserver.ApiServer) {
+	apiserver.Install(apiServer, new(VersionService))
 }
 
 func (api *VersionService) Register(container *restful.Container) {

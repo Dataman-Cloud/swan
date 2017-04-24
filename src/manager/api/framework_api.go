@@ -6,23 +6,17 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
-	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
+	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/types"
 
 	"github.com/emicklei/go-restful"
 )
 
 type FrameworkService struct {
-	sched *scheduler.Scheduler
-	apiserver.ApiRegister
 }
 
-func NewAndInstallFrameworkService(apiServer *apiserver.ApiServer, sched *scheduler.Scheduler) *FrameworkService {
-	frameworkService := &FrameworkService{
-		sched: sched,
-	}
-	apiserver.Install(apiServer, frameworkService)
-	return frameworkService
+func NewAndInstallFrameworkService(apiServer *apiserver.ApiServer) {
+	apiserver.Install(apiServer, new(FrameworkService))
 }
 
 func (fs *FrameworkService) Register(container *restful.Container) {
@@ -43,8 +37,8 @@ func (fs *FrameworkService) Register(container *restful.Container) {
 
 func (fs *FrameworkService) Info(req *restful.Request, resp *restful.Response) {
 	info := new(types.FrameworkInfo)
-	if fs.sched.MesosConnector != nil {
-		info.ID = fs.sched.MesosConnector.FrameworkInfo.GetId().GetValue()
+	if c := connector.Instance(); c != nil {
+		info.ID = c.FrameworkInfo.GetId().GetValue()
 	} else {
 		info.ID = ""
 	}
