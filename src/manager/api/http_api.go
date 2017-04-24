@@ -101,6 +101,14 @@ func (api *AppService) Register(container *restful.Container) {
 		Reads(types.Version{}).
 		Writes(types.App{}).
 		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
+	ws.Route(ws.PATCH("/{app_id}/weights").To(metrics.InstrumentRouteFunc("PATCH", "App", api.UpdateWeights)).
+		// docs
+		Doc("Update Slot Weight").
+		Operation("updateWeight").
+		Returns(400, "BadRequest", nil).
+		Returns(200, "OK", types.App{}).
+		Reads(types.UpdateWeightsParam{}).
+		Param(ws.PathParameter("app_id", "identifier of the app").DataType("string")))
 	ws.Route(ws.PATCH("/{app_id}/proceed-update").To(metrics.InstrumentRouteFunc("PATCH", "App", api.ProceedUpdate)).
 		// docs
 		Doc("Proceed Update App").
@@ -320,6 +328,30 @@ func (api *AppService) UpdateApp(request *restful.Request, response *restful.Res
 	}
 	response.WriteEntity(FormAppRetWithVersions(app))
 	return
+}
+
+func (api *AppService) UpdateWeights(request *restful.Request, response *restful.Response) {
+	var param types.UpdateWeightsParam
+
+	err := request.ReadEntity(&param)
+	if err != nil {
+		logrus.Errorf("Fails to read param, error: %s", err.Error())
+		response.WriteError(http.StatusBadRequest, err)
+		return
+	}
+	app, err := api.Scheduler.InspectApp(request.PathParameter("app_id"))
+	if err != nil {
+		logrus.Errorf("Get app error: %s", err.Error())
+		response.WriteError(http.StatusNotFound, err)
+		return
+	}
+	for index, weight := range param.Weights {
+		if slot, ok := app.Slots[index]; ok {
+			slot.SetWeight(weight)
+		}
+	}
+	response.WriteEntity(FormAppRetWithVersions(app))
+
 }
 
 func (api *AppService) ProceedUpdate(request *restful.Request, response *restful.Response) {

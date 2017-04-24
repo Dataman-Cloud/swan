@@ -147,3 +147,7 @@ type ScaleDownParam struct {
 type UpdateWeightParam struct {
 	Weight float64 `json:"weight"`
 }
+
+type UpdateWeightsParam struct {
+	Weights map[int]float64 `json:"weights"`
+}
