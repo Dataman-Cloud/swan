@@ -4,7 +4,7 @@ func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
 	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_OFFER_ALLOCATOR_ITEM,
-		Param1:  item.OfferID,
+		Param1:  item.SlotID,
 		Payload: item,
 	}
 

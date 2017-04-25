@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/Sirupsen/logrus"
@@ -29,12 +30,22 @@ func (scaleDown *StateScaleDown) OnEnter() {
 	scaleDown.App.EmitAppEvent(scaleDown.Name)
 
 	scaleDown.CurrentSlotIndex = len(scaleDown.App.GetSlots()) - 1
+
+	fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+	fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+	fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+	fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+	fmt.Println(scaleDown.App.IsFixed())
+	if scaleDown.App.IsFixed() {
+		scaleDown.App.CurrentVersion.IP = scaleDown.App.CurrentVersion.IP[:scaleDown.CurrentSlotIndex]
+	}
+	fmt.Println(scaleDown.App.CurrentVersion.IP)
 	scaleDown.TargetSlotIndex = int(scaleDown.App.CurrentVersion.Instances)
 
-	scaleDown.CurrentSlot = NewSlot(scaleDown.App, scaleDown.App.CurrentVersion, scaleDown.CurrentSlotIndex)
-
 	scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
-	scaleDown.CurrentSlot.KillTask()
+	if scaleDown.CurrentSlot != nil {
+		scaleDown.CurrentSlot.KillTask()
+	}
 }
 
 func (scaleDown *StateScaleDown) OnExit() {
@@ -52,6 +63,15 @@ func (scaleDown *StateScaleDown) Step() {
 
 		scaleDown.App.RemoveSlot(scaleDown.CurrentSlotIndex)
 		scaleDown.CurrentSlotIndex -= 1
+		fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+		fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+		fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+		fmt.Println("xxxxxxxxxxxxxxxxxxxxx")
+		fmt.Println(scaleDown.App.IsFixed())
+		if scaleDown.App.IsFixed() {
+			scaleDown.App.CurrentVersion.IP = scaleDown.App.CurrentVersion.IP[:scaleDown.CurrentSlotIndex]
+		}
+		fmt.Println(scaleDown.App.CurrentVersion.IP)
 		scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
 		scaleDown.CurrentSlot.KillTask()
 
