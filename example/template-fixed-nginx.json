@@ -1,0 +1,45 @@
+{
+  "appVersion": "version1",
+  "appName": "nginx",
+  "cmd": null,
+  "args": null,
+  "cpus": 0.2,
+  "mem": 300,
+  "disk": 100,
+  "runAs": "xcm",
+  "priority": 100,
+  "instances": 3,
+  "constraints":"" ,
+  "container": {
+    "docker": {
+      "image": "rails-app",
+      "network": "foobar",
+      "forcePullImage": false,
+      "privileged": true,
+      "parameters": [
+        {
+            "key": "label",
+	    "value": "APP_ID=nginx"
+        }
+      ]
+    },
+    "type": "DOCKER",
+    "volumes": [
+      {
+        "hostPath": "/home",
+        "containerPath": "/data",
+        "mode": "RW"
+      }
+    ]
+  },
+  "env": {
+  },
+  "uris": [
+  ],
+  "label": {
+    "USER_ID": "1"
+  },
+  "ip": ["10.0.0.2", "10.0.0.3", "10.0.0.4"]
+}
+
+
