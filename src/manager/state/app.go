@@ -6,6 +6,7 @@ import (
 	"net"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -185,7 +186,7 @@ func (app *App) Update(version *types.Version) error {
 	return app.TransitTo(APP_STATE_UPDATING, 1)
 }
 
-func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float64) error {
+func (app *App) ProceedingRollingUpdate(instances int, newWeights map[string]float64) error {
 	if !app.StateMachine.CanTransitTo(APP_STATE_UPDATING) || app.ProposedVersion == nil {
 		return fmt.Errorf("state machine can not transit from state: %s to state: %s",
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING)
@@ -216,7 +217,11 @@ func (app *App) ProceedingRollingUpdate(instances int, newWeights map[int]float6
 	}
 
 	for index, newWeight := range newWeights {
-		if slot, ok := app.Slots[index]; ok {
+		indexInt, err := strconv.Atoi(index)
+		if err != nil {
+			return errors.New(fmt.Sprintf("fails to update weight, error:%s", err.Error()))
+		}
+		if slot, ok := app.Slots[indexInt]; ok {
 			slot.SetWeight(newWeight)
 		}
 	}
