@@ -345,7 +345,13 @@ func (api *AppService) UpdateWeights(request *restful.Request, response *restful
 		return
 	}
 	for index, weight := range param.Weights {
-		if slot, ok := app.Slots[index]; ok {
+		indexInt, err := strconv.Atoi(index)
+		if err != nil {
+			logrus.Errorf("fails to update weight", err.Error())
+			response.WriteError(http.StatusBadRequest, err)
+			return
+		}
+		if slot, ok := app.Slots[indexInt]; ok {
 			slot.SetWeight(weight)
 		}
 	}
