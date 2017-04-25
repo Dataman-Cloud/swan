@@ -168,7 +168,7 @@ func (zk *ZkStore) Start(ctx context.Context) error {
 	for {
 		select {
 		case <-ticker.C:
-			if zk.readyToSnapshot {
+			if zk.readyToSnapshot && zk.lastSnapshotRevision != zk.lastSequentialZkNodePath {
 				revisionSnapshotted, err := zk.snapshot()
 				if err != nil {
 					logrus.Error(err)
