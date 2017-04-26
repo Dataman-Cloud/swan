@@ -1,6 +1,7 @@
 package janitor
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -63,10 +64,14 @@ func (u *Upstream) NextTargetEntry() *Target {
 
 func (u *Upstream) GetTarget(taskID string) *Target {
 	for _, t := range u.Targets {
-		if t.TaskID == taskID {
+		if formattedTaksId(t.TaskID) == formattedTaksId(taskID) {
 			return t
 		}
 	}
 
 	return nil
+}
+
+func formattedTaksId(taskId string) string {
+	return strings.ToLower(strings.Replace(taskId, "-", ".", -1))
 }

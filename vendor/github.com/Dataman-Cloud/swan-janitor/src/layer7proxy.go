@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -132,33 +133,29 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wildcardDomain := host[0 : domainIndex-1]
-	slices := strings.Split(wildcardDomain, ".")
-	if !(len(slices) == 3 || len(slices) == 4) {
-		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("slices is %s, header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", slices, host))
+	slices := strings.SplitN(wildcardDomain, ".", 2)
+	if len(slices) != 2 {
+		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host))
 		return
 	}
 
-	if len(slices) == 4 {
-		taskID := strings.Join(slices, "-")
-		appID := strings.Join(slices[1:], "-")
-		upstream := p.UpstreamLoader.Get(appID)
+	digitRegexp := regexp.MustCompile("[0-9]+")
+	if digitRegexp.MatchString(slices[0]) {
+		upstream := p.UpstreamLoader.Get(slices[1])
 		if upstream == nil {
 			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
 			return
 		}
 
-		target := upstream.GetTarget(taskID)
+		target := upstream.GetTarget(wildcardDomain)
 		if target == nil {
 			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any target for %s", host))
 			return
 		}
 
 		selectedTarget = target
-	}
-
-	if len(slices) == 3 {
-		appID := strings.Join(slices, "-")
-		upstream := p.UpstreamLoader.Get(appID)
+	} else {
+		upstream := p.UpstreamLoader.Get(wildcardDomain)
 		if upstream == nil {
 			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
 			return
