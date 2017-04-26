@@ -19,12 +19,16 @@ const (
 	RESERVED_API_GATEWAY_DOMAIN = "gateway"
 )
 
-func NewResolver(config *Config) *Resolver {
-	res := &Resolver{
-		config: config,
-		stopC:  make(chan struct{}),
-	}
+type Resolver struct {
+	config *Config
 
+	rg         *RecordGenerator
+	defaultFwd Forwarder
+	stopC      chan struct{}
+	startedC   chan struct{}
+}
+
+func NewResolver(config *Config) *Resolver {
 	level, err := logrus.ParseLevel(config.LogLevel)
 	if err != nil {
 		logrus.SetLevel(logrus.DebugLevel)
@@ -34,15 +38,22 @@ func NewResolver(config *Config) *Resolver {
 
 	rr := RecordGenerator{
 		RecordGeneratorChangeChan: make(chan *RecordGeneratorChangeEvent, 1),
+		As:        make(map[string][]string),
+		SRVs:      make(map[string][]string),
+		ProxiesAs: make(map[string][]string),
+		Domain:    config.Domain,
 	}
 
-	rr.Domain = res.config.Domain
-	rr.As = make(map[string][]string)
-	rr.SRVs = make(map[string][]string)
-	rr.ProxiesAs = make(map[string][]string)
+	if !strings.HasSuffix(rr.Domain, ".") {
+		rr.Domain = rr.Domain + "."
+	}
 
-	res.rg = &rr
-	res.defaultFwd = NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp"))
+	res := &Resolver{
+		config:     config,
+		stopC:      make(chan struct{}),
+		defaultFwd: NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp")),
+		rg:         &rr,
+	}
 
 	go func() {
 		res.rg.WatchEvent(context.Background())
@@ -60,15 +71,6 @@ func (res *Resolver) Start(ctx context.Context, started chan bool) error {
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
 	return res.Serve(ctx, started)
-}
-
-type Resolver struct {
-	config *Config
-
-	rg         *RecordGenerator
-	defaultFwd Forwarder
-	stopC      chan struct{}
-	startedC   chan struct{}
 }
 
 func (res *Resolver) HandleSwan(w dns.ResponseWriter, r *dns.Msg) {
@@ -117,41 +119,42 @@ func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) 
 	srvs, ok := rs.SRVs[name]
 	if !ok {
 		errs.Add(errors.New("srvs not found"))
-	} else {
-		for _, srv := range srvs {
-			//get srv resource record
-			srvRR, err := res.formatSRV(r.Question[0].Name, srv)
+		return errs
+	}
+
+	for _, srv := range srvs {
+		//get srv resource record
+		srvRR, err := res.formatSRV(r.Question[0].Name, srv)
+		if err != nil {
+			errs.Add(err)
+			continue
+		}
+
+		m.Answer = append(m.Answer, srvRR)
+
+		//get ip
+		name := strings.Split(srv, ":")[0]
+		if _, found := added[name]; found {
+			continue
+		}
+
+		hosts, ok := rs.As[name]
+		if !ok {
+			errs.Add(errors.New(fmt.Sprintf("%s is not found in rrs", name)))
+			continue
+		}
+
+		if len(hosts) == 0 {
+			continue
+		}
+		for _, host := range hosts {
+			aRR, err := res.formatA(name, host)
 			if err != nil {
 				errs.Add(err)
 				continue
 			}
-
-			m.Answer = append(m.Answer, srvRR)
-
-			//get ip
-			name := strings.Split(srv, ":")[0]
-			if _, found := added[name]; found {
-				continue
-			}
-
-			hosts, ok := rs.As[name]
-			if !ok {
-				errs.Add(errors.New(fmt.Sprintf("%s is not found in rrs", name)))
-				continue
-			}
-
-			if len(hosts) == 0 {
-				continue
-			}
-			for _, host := range hosts {
-				aRR, err := res.formatA(name, host)
-				if err != nil {
-					errs.Add(err)
-					continue
-				}
-				m.Extra = append(m.Extra, aRR)
-				added[name] = struct{}{}
-			}
+			m.Extra = append(m.Extra, aRR)
+			added[name] = struct{}{}
 		}
 	}
 
@@ -162,25 +165,24 @@ func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error
 	var errs multiError
 	var records = make([]string, 0)
 	var isDigit = regexp.MustCompile("\\d+")
-	tokens := strings.Split(strings.TrimRight(name, res.rg.Domain), ".")
+	tokens := strings.Split(strings.TrimSuffix(name, "."+res.rg.Domain), ".")
 
 	if tokens[len(tokens)-1] == RESERVED_API_GATEWAY_DOMAIN { // api gateway resolve with higher priority
 		for k, hosts := range rs.ProxiesAs {
-			ok := strings.HasSuffix(k, res.rg.Domain+".")
-			if ok {
+			if strings.HasSuffix(k, res.rg.Domain) {
 				records = append(records, hosts...)
 			}
 		}
 	} else {
-		if len(tokens) == 4 && isDigit.MatchString(tokens[0]) {
+		if isDigit.MatchString(tokens[0]) {
 			for k, hosts := range rs.As {
 				if name == k {
 					records = append(records, hosts...)
 				}
 			}
-		} else if len(tokens) == 3 { // nginx.xcm.foobar  -  .swan.com
+		} else { // nginx.xcm.foobar  -  .swan.com
 			for k, hosts := range rs.As {
-				if sliceEqual(strings.Split(strings.TrimRight(k, res.rg.Domain), ".")[1:], tokens) {
+				if sliceEqual(strings.Split(strings.TrimSuffix(k, res.rg.Domain), "."), tokens) {
 					records = append(records, hosts...)
 				}
 			}

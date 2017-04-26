@@ -137,7 +137,7 @@ func (loader *UpstreamLoader) Get(appID string) *Upstream {
 	defer loader.mu.RUnlock()
 
 	for _, u := range loader.Upstreams {
-		if u.AppID == appID {
+		if formattedAppId(u.AppID) == formattedAppId(appID) {
 			return u
 		}
 	}
@@ -164,4 +164,8 @@ func upstreamFromChangeEvent(targetChangeEvent *TargetChangeEvent) *Upstream {
 	up.AppID = targetChangeEvent.AppID
 
 	return up
+}
+
+func formattedAppId(appID string) string {
+	return strings.ToLower(strings.Replace(appID, "-", ".", -1))
 }

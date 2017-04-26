@@ -5,8 +5,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-// RecordGenerator contains DNS records and methods to access and manipulate
-// them. TODO(kozyraki): Refactor when discovery id is available.
 type RecordGenerator struct {
 	Domain                    string
 	As                        rrs
@@ -20,6 +18,7 @@ type rrs map[string][]string
 
 func (r rrs) del(name string, host string) bool {
 	logrus.Debugf("del new record for %s %s ", name, host)
+
 	if host != "" {
 		// remove one host in target r[name]
 		hosts, ok := r[name]
@@ -81,35 +80,38 @@ func (rg *RecordGenerator) WatchEvent(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case e := <-rg.RecordGeneratorChangeChan:
-			if !e.IsProxy && e.Change == "add" {
-				aDomain := e.DomainPrefix + "." + rg.Domain + "."
-				if e.Type == "srv" {
-					rg.As.add(aDomain, e.Ip)
-					rg.SRVs.add(aDomain, aDomain+":"+e.Port)
-				}
-				if e.Type == "a" {
-					rg.As.add(aDomain, e.Ip)
-				}
-			}
-
-			if !e.IsProxy && e.Change == "del" {
-				aDomain := e.DomainPrefix + "." + rg.Domain + "."
-				if e.Type == "srv" {
-					rg.As.del(aDomain, "")
-					rg.SRVs.del(aDomain, "")
+			if e.IsProxy {
+				if e.Change == "del" {
+					rg.ProxiesAs.del(rg.Domain, e.Ip)
 				}
 
-				if e.Type == "a" {
-					rg.As.del(aDomain, e.Ip)
+				if e.Change == "add" {
+					rg.ProxiesAs.add(rg.Domain, e.Ip)
 				}
-			}
+			} else {
+				if e.Change == "add" {
+					aDomain := e.DomainPrefix + "." + rg.Domain
+					if e.Type == "srv" {
+						rg.As.add(aDomain, e.Ip)
+						rg.SRVs.add(aDomain, aDomain+":"+e.Port)
+					}
+					if e.Type == "a" {
+						rg.As.add(aDomain, e.Ip)
+					}
+				}
 
-			if e.IsProxy && e.Change == "del" {
-				rg.ProxiesAs.del(rg.Domain+".", e.Ip)
-			}
+				if e.Change == "del" {
+					aDomain := e.DomainPrefix + "." + rg.Domain
+					if e.Type == "srv" {
+						rg.As.del(aDomain, "")
+						rg.SRVs.del(aDomain, "")
+					}
 
-			if e.IsProxy && e.Change == "add" {
-				rg.ProxiesAs.add(rg.Domain+".", e.Ip)
+					if e.Type == "a" {
+						rg.As.del(aDomain, e.Ip)
+					}
+				}
+
 			}
 		}
 	}

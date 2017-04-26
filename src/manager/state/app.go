@@ -410,7 +410,7 @@ func validateAndFormatVersion(version *types.Version) error {
 		return errors.New("image field required")
 	}
 
-	if n := len(version.AppName); n == 0 || n > 48 {
+	if n := len(version.AppName); n == 0 {
 		return errors.New("invalid appName: appName empty or too long")
 	}
 
@@ -427,8 +427,8 @@ func validateAndFormatVersion(version *types.Version) error {
 
 	version.AppName = strings.TrimSpace(version.AppName)
 
-	r := regexp.MustCompile("([A-Z]+)|([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
-	errMsg := errors.New(`must be lower case characters and should not contain following special characters "-.$*?{}()[]|"`)
+	r := regexp.MustCompile("([0-9]+)|([A-Z]+)|([\\-\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	errMsg := errors.New(`must be lower case characters`)
 
 	//validation of AppId
 	match := r.MatchString(version.AppName)
@@ -436,10 +436,12 @@ func validateAndFormatVersion(version *types.Version) error {
 		return fmt.Errorf("invalid app id [%s]: %s", version.AppName, errMsg)
 	}
 
+	r1 := regexp.MustCompile("([A-Z]+)|([\\.\\-\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	errMsg1 := errors.New(`must be lower case characters`)
 	//validation of RunAs
-	match = r.MatchString(version.RunAs)
+	match = r1.MatchString(version.RunAs)
 	if match {
-		return fmt.Errorf("invalid runAs [%s]: %s", version.RunAs, errMsg)
+		return fmt.Errorf("invalid runAs [%s]: %s", version.RunAs, errMsg1)
 	}
 
 	match = r.MatchString(version.Container.Docker.Network)
@@ -455,7 +457,7 @@ func validateAndFormatVersion(version *types.Version) error {
 
 	if network != "host" && network != "bridge" {
 		if len(version.IP) != int(version.Instances) {
-			return fmt.Errorf("should provide exactly %d ip for FIXED type app", version.Instances)
+			return fmt.Errorf("should provide exactly %d ip for fixed type app", version.Instances)
 		}
 
 		if len(version.Container.Docker.PortMappings) > 0 {
