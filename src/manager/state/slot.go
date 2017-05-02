@@ -362,6 +362,8 @@ func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
 		ClusterID:  slot.App.ClusterID,
 		RunAs:      slot.Version.RunAs,
 		Weight:     slot.weight,
+		AppName:    slot.App.Name,
+		SlotIndex:  slot.Index,
 	}
 
 	if slot.App.IsFixed() {

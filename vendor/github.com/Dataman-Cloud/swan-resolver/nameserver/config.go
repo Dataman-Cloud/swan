@@ -40,6 +40,10 @@ func NewConfig(ctx *cli.Context) *Config {
 		config.Resolvers = []string{"114.114.114.114"}
 	}
 
+	if ctx.IsSet("exchange-timeout") {
+		config.ExchangeTimeout = time.Second * 2
+	}
+
 	if ctx.IsSet("soarname") {
 		config.SOARname = ctx.String("soarname")
 	} else {
