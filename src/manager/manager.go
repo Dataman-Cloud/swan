@@ -77,7 +77,7 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 	}
 
 	sched := scheduler.NewScheduler(managerConf)
-	route := apiserver.NewApiServer(managerConf.ListenAddr, managerConf.AdvertiseAddr)
+	route := apiserver.NewApiServer(managerConf.ListenAddr)
 	api.NewAndInstallAppService(route, sched)
 	api.NewAndInstallStatsService(route, sched)
 	api.NewAndInstallEventsService(route, sched)

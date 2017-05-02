@@ -15,7 +15,6 @@ import (
 type ManagerConfig struct {
 	LogLevel           string `json:"logLevel"`
 	ListenAddr         string `json:"listenAddr"`
-	AdvertiseAddr      string `json:"advertiseAddr"`
 	MesosFrameworkUser string `json:"mesosFrameworkUser"`
 	Hostname           string `json:"hostname"`
 
@@ -148,7 +147,6 @@ func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
 	managerConfig := ManagerConfig{
 		LogLevel:           "info",
 		ListenAddr:         "0.0.0.0:9999",
-		AdvertiseAddr:      "0.0.0.0:9999",
 		MesosFrameworkUser: "root",
 		Hostname:           Hostname(),
 	}
@@ -180,11 +178,6 @@ func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
 
 	if c.String("log-level") != "" {
 		managerConfig.LogLevel = c.String("log-level")
-	}
-
-	managerConfig.AdvertiseAddr = c.String("advertise-addr")
-	if managerConfig.AdvertiseAddr == "" {
-		managerConfig.AdvertiseAddr = managerConfig.ListenAddr
 	}
 
 	return managerConfig, nil

@@ -40,10 +40,9 @@ func init() {
 	metrics.Register()
 }
 
-func NewApiServer(listenAddr, advertiseAddr string) *ApiServer {
+func NewApiServer(listenAddr string) *ApiServer {
 	return &ApiServer{
-		listenAddr:    listenAddr,
-		advertiseAddr: advertiseAddr,
+		listenAddr: listenAddr,
 	}
 }
 
