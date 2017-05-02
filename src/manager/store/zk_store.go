@@ -367,9 +367,6 @@ func (zk *ZkStore) snapshot() (string, error) {
 }
 
 func (zk *ZkStore) Recover() error {
-	zk.mu.Lock()
-	defer zk.mu.Unlock()
-
 	if err := zk.recoverFromSnapshot(); err != nil {
 		return err
 	}
