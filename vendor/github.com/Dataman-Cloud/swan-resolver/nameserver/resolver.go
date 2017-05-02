@@ -2,12 +2,9 @@ package nameserver
 
 import (
 	"errors"
-	"fmt"
 	"net"
-	"regexp"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/Sirupsen/logrus"
@@ -20,12 +17,12 @@ const (
 )
 
 type Resolver struct {
-	config *Config
+	RecordChangeChan chan *RecordChangeEvent
 
-	rg         *RecordGenerator
-	defaultFwd Forwarder
-	stopC      chan struct{}
-	startedC   chan struct{}
+	recordHolder *RecordHolder
+	config       *Config
+	defaultFwd   Forwarder
+	domain       string
 }
 
 func NewResolver(config *Config) *Resolver {
@@ -36,167 +33,100 @@ func NewResolver(config *Config) *Resolver {
 		logrus.SetLevel(level)
 	}
 
-	rr := RecordGenerator{
-		RecordGeneratorChangeChan: make(chan *RecordGeneratorChangeEvent, 1),
-		As:        make(map[string][]string),
-		SRVs:      make(map[string][]string),
-		ProxiesAs: make(map[string][]string),
-		Domain:    config.Domain,
-	}
+	resolver := &Resolver{
+		RecordChangeChan: make(chan *RecordChangeEvent, 1),
 
-	if !strings.HasSuffix(rr.Domain, ".") {
-		rr.Domain = rr.Domain + "."
-	}
-
-	res := &Resolver{
-		config:     config,
-		stopC:      make(chan struct{}),
-		defaultFwd: NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp")),
-		rg:         &rr,
+		config:       config,
+		defaultFwd:   NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp")),
+		recordHolder: NewRecordHolder(config.Domain),
 	}
 
 	go func() {
-		res.rg.WatchEvent(context.Background())
-	}()
+		resolver.WatchEvent(context.Background())
 
-	return res
+	}()
+	return resolver
 }
 
-func (res *Resolver) RecordGeneratorChangeChan() chan *RecordGeneratorChangeEvent {
-	return res.rg.RecordGeneratorChangeChan
+func (resolver *Resolver) WatchEvent(ctx context.Context) {
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case e := <-resolver.RecordChangeChan:
+			if e.Change == "del" {
+				resolver.recordHolder.Del(RecordFromRecordChangeEvent(e))
+			}
+
+			if e.Change == "add" {
+				resolver.recordHolder.Add(RecordFromRecordChangeEvent(e))
+			}
+
+		}
+	}
 }
 
 func (res *Resolver) Start(ctx context.Context, started chan bool) error {
-	dns.HandleFunc(res.rg.Domain, res.HandleSwan)
+	dns.HandleFunc("swan.com.", res.HandleSwan)
+	//dns.HandleFunc(res.config.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
 	return res.Serve(ctx, started)
 }
 
-func (res *Resolver) HandleSwan(w dns.ResponseWriter, r *dns.Msg) {
-	m := &dns.Msg{MsgHdr: dns.MsgHdr{
+func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
+	msg := &dns.Msg{MsgHdr: dns.MsgHdr{
 		Authoritative:      true,
 		RecursionAvailable: res.config.RecurseOn,
 	}}
-	m.SetReply(r)
+	msg.SetReply(req)
 
 	var errs multiError
-	rs := res.records()
-	name := strings.ToLower(cleanWild(r.Question[0].Name))
+	name := strings.ToLower(req.Question[0].Name)
 
 	logrus.Debugf("resolve dns hostname %s", name)
 
-	switch r.Question[0].Qtype {
+	switch req.Question[0].Qtype {
 	case dns.TypeSRV:
-		errs.Add(res.handleSRV(rs, name, m, r))
+		errs.Add(res.handleSRV(name, msg, req))
 	case dns.TypeA:
-		errs.Add(res.handleA(rs, name, m))
+		errs.Add(res.handleA(name, msg))
 	case dns.TypeANY:
 		errs.Add(
-			res.handleSRV(rs, name, m, r),
-			res.handleA(rs, name, m),
+			res.handleSRV(name, msg, req),
+			res.handleA(name, msg),
 		)
 	}
 
-	if len(m.Answer) == 0 {
+	if len(msg.Answer) == 0 {
 		errs.Add(errors.New("no record found"))
 	}
 
 	if !errs.Nil() {
-		logrus.Errorf(errs.Error())
+		logrus.Debugf(errs.Error())
 	}
 
-	reply(w, m)
+	reply(w, msg)
 }
 
-func (res *Resolver) records() *RecordGenerator {
-	return res.rg
-}
-
-func (res *Resolver) handleSRV(rs *RecordGenerator, name string, m, r *dns.Msg) error {
+func (res *Resolver) handleSRV(name string, m, r *dns.Msg) error {
 	var errs multiError
-	added := map[string]struct{}{} // track the A RR's we've already added, avoid dups
-	srvs, ok := rs.SRVs[name]
-	if !ok {
-		errs.Add(errors.New("srvs not found"))
-		return errs
-	}
-
-	for _, srv := range srvs {
-		//get srv resource record
-		srvRR, err := res.formatSRV(r.Question[0].Name, srv)
+	for _, record := range res.recordHolder.GetSRV(name) {
+		rr, err := res.buildSRV(name, record)
 		if err != nil {
 			errs.Add(err)
-			continue
-		}
-
-		m.Answer = append(m.Answer, srvRR)
-
-		//get ip
-		name := strings.Split(srv, ":")[0]
-		if _, found := added[name]; found {
-			continue
-		}
-
-		hosts, ok := rs.As[name]
-		if !ok {
-			errs.Add(errors.New(fmt.Sprintf("%s is not found in rrs", name)))
-			continue
-		}
-
-		if len(hosts) == 0 {
-			continue
-		}
-		for _, host := range hosts {
-			aRR, err := res.formatA(name, host)
-			if err != nil {
-				errs.Add(err)
-				continue
-			}
-			m.Extra = append(m.Extra, aRR)
-			added[name] = struct{}{}
+		} else {
+			m.Answer = append(m.Answer, rr)
 		}
 	}
 
 	return errs
 }
 
-func (res *Resolver) handleA(rs *RecordGenerator, name string, m *dns.Msg) error {
+func (res *Resolver) handleA(name string, m *dns.Msg) error {
 	var errs multiError
-	var records = make([]string, 0)
-	var isDigit = regexp.MustCompile("\\d+")
-	tokens := strings.Split(strings.TrimSuffix(name, "."+res.rg.Domain), ".")
-
-	if tokens[len(tokens)-1] == RESERVED_API_GATEWAY_DOMAIN { // api gateway resolve with higher priority
-		for k, hosts := range rs.ProxiesAs {
-			if strings.HasSuffix(k, res.rg.Domain) {
-				records = append(records, hosts...)
-			}
-		}
-	} else {
-		if isDigit.MatchString(tokens[0]) {
-			for k, hosts := range rs.As {
-				if name == k {
-					records = append(records, hosts...)
-				}
-			}
-		} else { // nginx.xcm.foobar  -  .swan.com
-			for k, hosts := range rs.As {
-				if sliceEqual(strings.Split(strings.TrimSuffix(k, res.rg.Domain), "."), tokens) {
-					records = append(records, hosts...)
-				}
-			}
-		}
-	}
-
-	recordsAdded := make([]string, 0)
-	for _, host := range records {
-		if stringInSlice(host, recordsAdded) { // make sure no duplicated record added to A
-			continue
-		}
-		recordsAdded = append(recordsAdded, host)
-
-		rr, err := res.formatA(name, host)
+	for _, record := range res.recordHolder.GetA(name) {
+		rr, err := res.buildA(name, record)
 		if err != nil {
 			errs.Add(err)
 		} else {
@@ -213,7 +143,7 @@ func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.
 		if err != nil {
 			m = new(dns.Msg).SetRcode(r, rcode(err))
 		} else if len(m.Answer) == 0 {
-			//logrus.Debugf("no answer found")
+			logrus.Debugf("no answer found")
 		}
 		reply(w, m)
 	}
@@ -227,13 +157,6 @@ func reply(w dns.ResponseWriter, m *dns.Msg) {
 	if err := w.WriteMsg(m); err != nil {
 		logrus.Errorf("%s", err)
 	}
-}
-
-func cleanWild(name string) string {
-	if strings.Contains(name, ".*") {
-		return strings.Replace(name, ".*", "", -1)
-	}
-	return name
 }
 
 func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
@@ -259,7 +182,7 @@ func (res *Resolver) Serve(ctx context.Context, started chan bool) (err error) {
 		NotifyStartedFunc: func() { started <- true },
 	}
 
-	errCh := make(chan error)
+	errCh := make(chan error, 1)
 	go func() {
 		errCh <- server.ListenAndServe()
 	}()
@@ -303,14 +226,10 @@ func (e multiError) Nil() bool {
 	return true
 }
 
-func (res *Resolver) formatSRV(name string, target string) (*dns.SRV, error) {
+func (res *Resolver) buildSRV(name string, record *Record) (*dns.SRV, error) {
 	ttl := uint32(res.config.TTL)
 
-	h, port, err := net.SplitHostPort(target)
-	if err != nil {
-		return nil, errors.New("invalid target")
-	}
-	p, err := strconv.Atoi(port)
+	p, err := strconv.Atoi(record.Port)
 	if err != nil {
 		return nil, errors.New("invalid target port")
 	}
@@ -325,46 +244,26 @@ func (res *Resolver) formatSRV(name string, target string) (*dns.SRV, error) {
 		Priority: 0,
 		Weight:   0,
 		Port:     uint16(p),
-		Target:   h,
+		Target:   record.WithSlotDomain() + "." + res.config.Domain + ".",
 	}, nil
 }
 
-func (res *Resolver) formatA(dom string, target string) (*dns.A, error) {
+func (res *Resolver) buildA(name string, record *Record) (*dns.A, error) {
 	ttl := uint32(res.config.TTL)
 
-	a := net.ParseIP(target)
+	a := net.ParseIP(record.Ip)
 	if a == nil {
 		return nil, errors.New("invalid target")
 	}
 
 	return &dns.A{
 		Hdr: dns.RR_Header{
-			Name:   dom,
+			Name:   name,
 			Rrtype: dns.TypeA,
 			Class:  dns.ClassINET,
 			Ttl:    ttl},
 		A: a.To4(),
 	}, nil
-}
-
-func (res *Resolver) formatSOA(dom string) *dns.SOA {
-	ttl := uint32(res.config.TTL)
-
-	return &dns.SOA{
-		Hdr: dns.RR_Header{
-			Name:   dom,
-			Rrtype: dns.TypeSOA,
-			Class:  dns.ClassINET,
-			Ttl:    ttl,
-		},
-		Ns:      res.config.SOARname,
-		Mbox:    res.config.SOAMname,
-		Serial:  atomic.LoadUint32(&res.config.SOASerial),
-		Refresh: res.config.SOARefresh,
-		Retry:   res.config.SOARetry,
-		Expire:  res.config.SOAExpire,
-		Minttl:  ttl,
-	}
 }
 
 func rcode(err error) int {

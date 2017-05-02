@@ -14,6 +14,8 @@ type TaskInfoEvent struct {
 	RunAs      string  `json:"runAs"`
 	Mode       string  `json:"mode"`
 	Weight     float64 `json:"weight"`
+	AppName    string  `json:"appName"`
+	SlotIndex  int     `json:"slotIndex"`
 }
 
 type AppInfoEvent struct {

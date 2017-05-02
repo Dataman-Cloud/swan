@@ -150,14 +150,13 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 		wg.Wait()
 		started <- true
 		// send proxy info to dns proxy listener
-		rgEvent := &nameserver.RecordGeneratorChangeEvent{}
+		rgEvent := &nameserver.RecordChangeEvent{}
 		rgEvent.Change = "add"
-		rgEvent.Type = "a"
+		rgEvent.Type = nameserver.A
 		rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
 
-		rgEvent.DomainPrefix = ""
 		rgEvent.IsProxy = true
-		agent.Resolver.RecordGeneratorChangeChan() <- rgEvent
+		agent.Resolver.RecordChangeChan <- rgEvent
 
 		for event := range agent.SerfServer.EventCh {
 			userEvent, ok := event.(serf.UserEvent)
@@ -171,7 +170,7 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 
 					agent.Janitor.EventChan <- janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					if userEvent.Name == eventbus.EventTypeTaskHealthy || userEvent.Name == eventbus.EventTypeTaskUnhealthy { // Resolver only recongnize these two events
-						agent.Resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
+						agent.Resolver.RecordChangeChan <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					}
 				}
 			}
@@ -254,8 +253,8 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 	}
 }
 
-func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *nameserver.RecordGeneratorChangeEvent {
-	resolverEvent := &nameserver.RecordGeneratorChangeEvent{}
+func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *nameserver.RecordChangeEvent {
+	resolverEvent := &nameserver.RecordChangeEvent{}
 	if eventType == eventbus.EventTypeTaskHealthy {
 		resolverEvent.Change = "add"
 	} else {
@@ -265,12 +264,16 @@ func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent
 	resolverEvent.Ip = taskInfoEvent.IP
 
 	if taskInfoEvent.Mode == "replicates" {
-		resolverEvent.Type = "srv"
+		resolverEvent.Type = nameserver.SRV ^ nameserver.A
 		resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
 	} else {
-		resolverEvent.Type = "a"
+		resolverEvent.Type = nameserver.A
 	}
-	resolverEvent.DomainPrefix = strings.ToLower(strings.Replace(taskInfoEvent.TaskID, "-", ".", -1))
+	resolverEvent.Cluster = taskInfoEvent.ClusterID
+	resolverEvent.RunAs = taskInfoEvent.RunAs
+	resolverEvent.AppName = taskInfoEvent.AppName
+	resolverEvent.SlotID = fmt.Sprintf("%d", taskInfoEvent.SlotIndex)
+
 	return resolverEvent
 }
 
