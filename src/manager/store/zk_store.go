@@ -192,46 +192,50 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	defer zk.mu.Unlock()
 	logrus.Debugf("Appling %s %s", op.Op.String(), op.Entity.String())
 
+	var applyOk bool
 	switch op.Entity {
 	case ENTITY_FRAMEWORKID:
-		zk.applyFrameworkId(op)
+		applyOk = zk.applyFrameworkId(op)
 	case ENTITY_APP:
-		zk.applyApp(op)
+		applyOk = zk.applyApp(op)
 	case ENTITY_SLOT:
-		zk.applySlot(op)
+		applyOk = zk.applySlot(op)
 	case ENTITY_VERSION:
-		zk.applyVersion(op)
+		applyOk = zk.applyVersion(op)
 	case ENTITY_CURRENT_TASK:
-		zk.applyCurrentTask(op)
+		applyOk = zk.applyCurrentTask(op)
 	case ENTITY_OFFER_ALLOCATOR_ITEM:
-		zk.applyOfferAllocatorItem(op)
+		applyOk = zk.applyOfferAllocatorItem(op)
 	default:
 		panic("invalid entity type")
 	}
 
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	err := enc.Encode(op)
-	if err != nil {
-		return err
+	if zkPersistNeeded && applyOk {
+		var buf bytes.Buffer
+		enc := json.NewEncoder(&buf)
+		err := enc.Encode(op)
+		if err != nil {
+			return err
+		}
+
+		nodePath := filepath.Join(fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path), "prefix")
+		zk.lastSequentialZkNodePath, err = zk.conn.Create(
+			nodePath,
+			buf.Bytes(),
+			zookeeper.FlagSequence,
+			ZK_DEFAULT_ACL)
+
+		if err != nil {
+			return err
+		}
+
+		logrus.Debugf("create sequence node path is %s", zk.lastSequentialZkNodePath)
 	}
 
-	nodePath := filepath.Join(fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path), "prefix")
-	zk.lastSequentialZkNodePath, err = zk.conn.Create(
-		nodePath,
-		buf.Bytes(),
-		zookeeper.FlagSequence,
-		ZK_DEFAULT_ACL)
-
-	if err != nil {
-		return err
-	}
-
-	logrus.Debugf("create sequence node path is %s", zk.lastSequentialZkNodePath)
 	return nil
 }
 
-func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) {
+func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
@@ -243,18 +247,37 @@ func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) {
 	default:
 		panic("applyFrameworkId not supportted operation")
 	}
+
+	return true
 }
 
-func (zk *ZkStore) applyCurrentTask(op *AtomicOp) {
+func (zk *ZkStore) applyCurrentTask(op *AtomicOp) bool {
+	_, ok := zk.Storage.Apps[op.Param1]
+	if !ok {
+		return false
+	}
+
+	_, ok = zk.Storage.Apps[op.Param1].Slots[op.Param2]
+	if !ok {
+		return false
+	}
+
 	switch op.Op {
 	case OP_UPDATE:
 		zk.Storage.Apps[op.Param1].Slots[op.Param2].CurrentTask = op.Payload.(*Task)
 	default:
 		panic("applyCurrentTask not supportted operation")
 	}
+
+	return true
 }
 
-func (zk *ZkStore) applySlot(op *AtomicOp) {
+func (zk *ZkStore) applySlot(op *AtomicOp) bool {
+	_, ok := zk.Storage.Apps[op.Param1]
+	if !ok {
+		return false
+	}
+
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.Apps[op.Param1].Slots[op.Param2] = op.Payload.(*Slot)
@@ -265,18 +288,27 @@ func (zk *ZkStore) applySlot(op *AtomicOp) {
 	default:
 		panic("applySlot not supported operation")
 	}
+
+	return true
 }
 
-func (zk *ZkStore) applyVersion(op *AtomicOp) {
+func (zk *ZkStore) applyVersion(op *AtomicOp) bool {
+	_, ok := zk.Storage.Apps[op.Param1]
+	if !ok {
+		return false
+	}
+
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.Apps[op.Param1].Versions[op.Param2] = op.Payload.(*Version)
 	default:
 		panic("applyVersion not supportted operation")
 	}
+
+	return true
 }
 
-func (zk *ZkStore) applyFrameworkId(op *AtomicOp) {
+func (zk *ZkStore) applyFrameworkId(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.FrameworkId = op.Payload.(string)
@@ -287,9 +319,11 @@ func (zk *ZkStore) applyFrameworkId(op *AtomicOp) {
 	default:
 		panic("applyFrameworkId not supportted operation")
 	}
+
+	return true
 }
 
-func (zk *ZkStore) applyApp(op *AtomicOp) {
+func (zk *ZkStore) applyApp(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.Apps[op.Param1] = &appHolder{
@@ -308,6 +342,7 @@ func (zk *ZkStore) applyApp(op *AtomicOp) {
 	default:
 		panic("applyApp not supportted operation")
 	}
+	return true
 }
 
 // remove any atomic op that are already snapshotted
