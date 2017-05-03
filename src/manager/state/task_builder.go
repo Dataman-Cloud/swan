@@ -60,12 +60,11 @@ func (builder *TaskBuilder) SetResources(resources []*mesos.Resource) *TaskBuild
 	return builder
 }
 
-func (builder *TaskBuilder) SetCommand(cmd string, args []string) *TaskBuilder {
+func (builder *TaskBuilder) SetCommand(cmd string) *TaskBuilder {
 	if len(cmd) > 0 {
 		builder.taskInfo.Command = &mesos.CommandInfo{
-			Shell:     proto.Bool(true),
-			Arguments: args,
-			Value:     proto.String(cmd),
+			Shell: proto.Bool(true), // sh -c "cmd"
+			Value: proto.String(cmd),
 		}
 	} else {
 		builder.taskInfo.Command = &mesos.CommandInfo{

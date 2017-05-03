@@ -35,12 +35,23 @@ func UpdateHandler(s *Scheduler, ev event.Event) error {
 	healthy := taskStatus.GetHealthy()
 	data := taskStatus.GetData()
 
-	slotIndex_, appId_, userName_, clusterName_ := strings.Split(slotName, "-")[0], strings.Split(slotName, "-")[1], strings.Split(slotName, "-")[2], strings.Split(slotName, "-")[3]
-	logrus.Debugf("got user name %s", userName_)
-	logrus.Debugf("got cluster name %s", clusterName_)
-	slotIndex, _ := strconv.ParseInt(slotIndex_, 10, 32)
+	ss := strings.Split(slotName, "-")
 
-	appId := fmt.Sprintf("%s-%s-%s", appId_, userName_, clusterName_)
+	var (
+		appId     string
+		slotIndex int64
+	)
+	switch n := len(ss); n {
+	case 5: // for compitable
+		slotIndex, _ = strconv.ParseInt(ss[0], 10, 32)
+		appId = fmt.Sprintf("%s-%s-%s", ss[1], ss[2], ss[3])
+	case 6:
+		slotIndex, _ = strconv.ParseInt(ss[0], 10, 32)
+		appId = fmt.Sprintf("%s-%s-%s-%s", ss[1], ss[2], ss[3], ss[4])
+	default:
+		logrus.Warnln("update handler skip invalid task name:", slotName)
+		return nil
+	}
 
 	logrus.Debugf("got healthy report for task %s => %+v", slotName, healthy)
 	logrus.Debugf("preparing set app %s slot %d to state %s", appId, slotIndex, taskState)

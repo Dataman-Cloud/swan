@@ -34,7 +34,7 @@ type App struct {
 	Versions []*types.Version `json:"versions"`
 
 	slotsLock sync.Mutex
-	Slots     map[int]*Slot `json:"slots"`
+	Slots     map[int]*Slot `json:"slots"` // NOTE: app -> slot -> app loop, lead to json.Marshal OOM
 
 	// app run with CurrentVersion config
 	CurrentVersion *types.Version `json:"current_version"`
@@ -58,10 +58,10 @@ func (a AppsByUpdated) Len() int           { return len(a) }
 func (a AppsByUpdated) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Updated) }
 
-func NewApp(version *types.Version,
+func NewApp(version *types.Version, appID string,
 	userEventChan chan *event.UserEvent) (*App, error) {
 
-	err := validateAndFormatVersion(version)
+	err := ValidateAndFormatVersion(version)
 	if err != nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func NewApp(version *types.Version,
 		Versions:       []*types.Version{},
 		Slots:          make(map[int]*Slot),
 		CurrentVersion: version,
-		ID:             fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID),
+		ID:             appID, // use given app id
 		Name:           version.AppName,
 		ClusterID:      connector.Instance().ClusterID,
 		Created:        time.Now(),
@@ -161,7 +161,7 @@ func (app *App) Update(version *types.Version) error {
 			app.StateMachine.ReadableState(), APP_STATE_UPDATING)
 	}
 
-	if err := validateAndFormatVersion(version); err != nil {
+	if err := ValidateAndFormatVersion(version); err != nil {
 		return err
 	}
 
@@ -397,7 +397,7 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 	return nil
 }
 
-func validateAndFormatVersion(version *types.Version) error {
+func ValidateAndFormatVersion(version *types.Version) error {
 	if version.Container == nil {
 		return errors.New("swan only support mesos docker containerization, no container found")
 	}

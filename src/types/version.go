@@ -5,7 +5,6 @@ type Version struct {
 	AppName      string            `json:"appName,omitempty"`
 	AppVersion   string            `json:"appVersion,omitempty"`
 	Command      string            `json:"cmd,omitempty"`
-	Args         []string          `json:"args,omitempty"`
 	CPUs         float64           `json:"cpus"`
 	Mem          float64           `json:"mem"`
 	Disk         float64           `json:"disk"`

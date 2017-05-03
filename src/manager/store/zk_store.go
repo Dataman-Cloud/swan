@@ -62,6 +62,7 @@ var (
 	ENTITY_CURRENT_TASK         StoreEntity = 4
 	ENTITY_FRAMEWORKID          StoreEntity = 5
 	ENTITY_OFFER_ALLOCATOR_ITEM StoreEntity = 6
+	ENTITY_INSTANCE             StoreEntity = 7
 )
 
 func (entity StoreEntity) String() string {
@@ -78,6 +79,8 @@ func (entity StoreEntity) String() string {
 		return "ENTITY_FRAMEWORKID"
 	case ENTITY_OFFER_ALLOCATOR_ITEM:
 		return "ENTITY_OFFER_ALLOCATOR_ITEM"
+	case ENTITY_INSTANCE:
+		return "ENTITY_INSTANCE"
 	}
 
 	return ""
@@ -115,6 +118,7 @@ type appHolder struct {
 type Storage struct {
 	Apps           map[string]*appHolder          `json:"apps"`
 	OfferAllocator map[string]*OfferAllocatorItem `json:"offerAllocator"`
+	Instances      map[string]*Instance           `json:"instances"`
 	FrameworkId    string                         `json:"frameworkid"`
 }
 
@@ -122,6 +126,7 @@ func NewStorage() *Storage {
 	return &Storage{
 		Apps:           make(map[string]*appHolder),
 		OfferAllocator: make(map[string]*OfferAllocatorItem),
+		Instances:      make(map[string]*Instance),
 	}
 }
 
@@ -136,7 +141,7 @@ type ZkStore struct {
 	lastSnapshotRevision     string
 
 	readyToSnapshot bool
-	mu              sync.RWMutex
+	mu              sync.RWMutex // protect Storage
 	conn            *zookeeper.Conn
 	zkPath          *url.URL
 }
@@ -206,6 +211,8 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 		applyOk = zk.applyCurrentTask(op)
 	case ENTITY_OFFER_ALLOCATOR_ITEM:
 		applyOk = zk.applyOfferAllocatorItem(op)
+	case ENTITY_INSTANCE:
+		applyOk = zk.applyInstance(op)
 	default:
 		panic("invalid entity type")
 	}
@@ -233,6 +240,17 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	}
 
 	return nil
+}
+func (zk *ZkStore) applyInstance(op *AtomicOp) bool {
+	switch op.Op {
+	case OP_ADD:
+		zk.Storage.Instances[op.Param1] = op.Payload.(*Instance)
+	case OP_REMOVE:
+		delete(zk.Storage.Instances, op.Param1)
+	default:
+		panic("applyInstance not supportted operation")
+	}
+	return true
 }
 
 func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) bool {

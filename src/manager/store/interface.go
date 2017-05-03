@@ -33,4 +33,9 @@ type Store interface {
 
 	Recover() error
 	Start(context.Context) error
+
+	CreateInstance(ins *Instance) error
+	DeleteInstance(idOrName string) error
+	GetInstance(idOrName string) (*Instance, error)
+	ListInstances() ([]*Instance, error)
 }

@@ -9,13 +9,16 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
-func (scheduler *Scheduler) CreateApp(version *types.Version) (*state.App, error) {
-	appID := fmt.Sprintf("%s-%s-%s", version.AppName, version.RunAs, connector.Instance().ClusterID)
+func (scheduler *Scheduler) CreateApp(version *types.Version, insName string) (*state.App, error) {
+	if insName == "" {
+		insName = "default"
+	}
+	appID := fmt.Sprintf("%s-%s-%s-%s", version.AppName, insName, version.RunAs, connector.Instance().ClusterID)
 	if scheduler.AppStorage.Get(appID) != nil {
 		return nil, errors.New("app already exists")
 	}
 
-	app, err := state.NewApp(version, scheduler.userEventChan)
+	app, err := state.NewApp(version, appID, scheduler.userEventChan)
 	if err != nil {
 		return nil, err
 	}

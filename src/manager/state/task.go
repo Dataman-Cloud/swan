@@ -76,7 +76,7 @@ func (task *Task) PrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	task.taskBuilder = NewTaskBuilder(task)
 	task.taskBuilder.SetName(task.Slot.ID).SetTaskId(task.ID).SetAgentId(*offer.GetAgentId().Value)
 	task.taskBuilder.SetResources(task.Slot.ResourcesNeeded())
-	task.taskBuilder.SetCommand(task.Slot.Version.Command, task.Slot.Version.Args)
+	task.taskBuilder.SetCommand(task.Slot.Version.Command)
 
 	task.taskBuilder.SetContainerType("docker").SetContainerDockerImage(dockerSpec.Image).
 		SetContainerDockerPrivileged(dockerSpec.Privileged).

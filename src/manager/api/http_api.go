@@ -202,7 +202,7 @@ func (api *AppService) CreateApp(request *restful.Request, response *restful.Res
 		return
 	}
 
-	app, err := api.Scheduler.CreateApp(&version)
+	app, err := api.Scheduler.CreateApp(&version, "")
 	if err != nil {
 		logrus.Errorf("Create app error: %s", err.Error())
 		response.WriteError(http.StatusInternalServerError, err)
