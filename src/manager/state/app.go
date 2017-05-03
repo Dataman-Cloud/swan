@@ -394,6 +394,12 @@ func (app *App) checkProposedVersionValid(version *types.Version) error {
 	if app.IsFixed() && int32(len(version.IP)) != app.CurrentVersion.Instances {
 		return fmt.Errorf("Fixed mode App IP length can not change when update app, current version is %d", app.CurrentVersion.Instances)
 	}
+
+	// fixed app IP length should be same as current instances
+	if version.Gateway != nil && app.CurrentVersion.Gateway != nil && version.Gateway.Enabled != app.CurrentVersion.Gateway.Enabled {
+		return fmt.Errorf("gateway can't change between versions")
+	}
+
 	return nil
 }
 
