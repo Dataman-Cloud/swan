@@ -88,6 +88,51 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/aanand/compose-file/interpolation",
+			"repository": "https://github.com/aanand/compose-file",
+			"vcs": "git",
+			"revision": "8b762b24ea40ea5ceda5aac2dd1cd465d0fe6d42",
+			"branch": "master",
+			"path": "interpolation",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/aanand/compose-file/loader",
+			"repository": "https://github.com/aanand/compose-file",
+			"vcs": "git",
+			"revision": "8b762b24ea40ea5ceda5aac2dd1cd465d0fe6d42",
+			"branch": "master",
+			"path": "/loader",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/aanand/compose-file/schema",
+			"repository": "https://github.com/aanand/compose-file",
+			"vcs": "git",
+			"revision": "8b762b24ea40ea5ceda5aac2dd1cd465d0fe6d42",
+			"branch": "master",
+			"path": "schema",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/aanand/compose-file/template",
+			"repository": "https://github.com/aanand/compose-file",
+			"vcs": "git",
+			"revision": "8b762b24ea40ea5ceda5aac2dd1cd465d0fe6d42",
+			"branch": "master",
+			"path": "template",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/aanand/compose-file/types",
+			"repository": "https://github.com/aanand/compose-file",
+			"vcs": "git",
+			"revision": "8b762b24ea40ea5ceda5aac2dd1cd465d0fe6d42",
+			"branch": "master",
+			"path": "types",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/alediaferia/stackgo",
 			"repository": "https://github.com/alediaferia/stackgo",
 			"vcs": "git",
@@ -281,10 +326,81 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/docker/docker/api/types/blkiodev",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "api/types/blkiodev",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/api/types/container",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "api/types/container",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/api/types/mount",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "api/types/mount",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/api/types/strslice",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "api/types/strslice",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/runconfig/opts",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "/runconfig/opts",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/vendor/github.com/docker/go-connections/nat",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "vendor/github.com/docker/go-connections/nat",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/docker/vendor/github.com/docker/go-units",
+			"repository": "https://github.com/docker/docker",
+			"vcs": "git",
+			"revision": "f3dfcfd307d9881cd281b28cd56bb2851472afb3",
+			"branch": "master",
+			"path": "vendor/github.com/docker/go-units",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/docker/go-events",
 			"repository": "https://github.com/docker/go-events",
 			"vcs": "git",
 			"revision": "aa2e3b613fbbfdddbe055a7b9e3ce271cfd83eca",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/docker/go-units",
+			"repository": "https://github.com/docker/go-units",
+			"vcs": "git",
+			"revision": "0dadbb0345b35ec7ef35e228dabb8de89a65bf52",
 			"branch": "master",
 			"notests": true
 		},
@@ -622,6 +738,14 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/mattn/go-shellwords",
+			"repository": "https://github.com/mattn/go-shellwords",
+			"vcs": "git",
+			"revision": "02e3cf038dcea8290e44424da473dd12be796a8a",
+			"branch": "master",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/matttproud/golang_protobuf_extensions/pbutil",
 			"repository": "https://github.com/matttproud/golang_protobuf_extensions",
 			"vcs": "git",
@@ -635,6 +759,14 @@
 			"repository": "https://github.com/miekg/dns",
 			"vcs": "git",
 			"revision": "271c58e0c14f552178ea321a545ff9af38930f39",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/mitchellh/mapstructure",
+			"repository": "https://github.com/mitchellh/mapstructure",
+			"vcs": "git",
+			"revision": "cc8532a8e9a55ea36402aa21efdf403a60d34096",
 			"branch": "master",
 			"notests": true
 		},
@@ -763,6 +895,30 @@
 			"repository": "https://github.com/urfave/cli",
 			"vcs": "git",
 			"revision": "0bdeddeeb0f650497d603c4ad7b20cfe685682f6",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/xeipuuv/gojsonpointer",
+			"repository": "https://github.com/xeipuuv/gojsonpointer",
+			"vcs": "git",
+			"revision": "6fe8760cad3569743d51ddbb243b26f8456742dc",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/xeipuuv/gojsonreference",
+			"repository": "https://github.com/xeipuuv/gojsonreference",
+			"vcs": "git",
+			"revision": "e02fc20de94c78484cd5ffb007f8af96be030a45",
+			"branch": "master",
+			"notests": true
+		},
+		{
+			"importpath": "github.com/xeipuuv/gojsonschema",
+			"repository": "https://github.com/xeipuuv/gojsonschema",
+			"vcs": "git",
+			"revision": "a55c211c418162597a32c74c7230f81adb5ad616",
 			"branch": "master",
 			"notests": true
 		},
