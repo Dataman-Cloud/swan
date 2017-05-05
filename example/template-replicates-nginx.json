@@ -46,6 +46,10 @@
   "label": {
     "USER_ID": "1"
   },
+  "gateway": {
+    "enabled": false,
+    "weight": 10
+  },
   "healthCheck":
     {
       "protocol": "http",

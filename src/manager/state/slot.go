@@ -99,9 +99,14 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		Version:     version,
 		TaskHistory: make([]*Task, 0),
 		ID:          fmt.Sprintf("%d-%s", index, app.ID),
-		weight:      DEFUALT_WEIGHT,
 
 		resourceReservationLock: sync.Mutex{},
+	}
+
+	if version.Gateway != nil && version.Gateway.Weight > 0 {
+		slot.weight = version.Gateway.Weight
+	} else {
+		slot.weight = DEFUALT_WEIGHT
 	}
 
 	if slot.App.IsFixed() {
@@ -352,18 +357,23 @@ func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
 		AppMode: string(slot.App.Mode),
 	}
 
+	gatewayEnabled := true
+	if slot.Version.Gateway != nil {
+		gatewayEnabled = slot.Version.Gateway.Enabled
+	}
 	payload := &types.TaskInfoEvent{
-		TaskID:     slot.ID,
-		AppID:      slot.App.ID,
-		VersionID:  slot.Version.ID,
-		AppVersion: slot.Version.AppVersion,
-		State:      slot.State,
-		Healthy:    slot.healthy,
-		ClusterID:  slot.App.ClusterID,
-		RunAs:      slot.Version.RunAs,
-		Weight:     slot.weight,
-		AppName:    slot.App.Name,
-		SlotIndex:  slot.Index,
+		TaskID:         slot.ID,
+		AppID:          slot.App.ID,
+		VersionID:      slot.Version.ID,
+		AppVersion:     slot.Version.AppVersion,
+		State:          slot.State,
+		Healthy:        slot.healthy,
+		ClusterID:      slot.App.ClusterID,
+		RunAs:          slot.Version.RunAs,
+		Weight:         slot.weight,
+		AppName:        slot.App.Name,
+		SlotIndex:      slot.Index,
+		GatewayEnabled: gatewayEnabled,
 	}
 
 	if slot.App.IsFixed() {
