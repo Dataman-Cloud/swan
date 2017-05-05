@@ -1,6 +1,7 @@
 package janitor
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -56,6 +57,8 @@ func (m *meteredRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 		if err != nil {
 			return nil, err
 		}
+		body := ioutil.NopCloser(bytes.NewReader(b))
+		resp.Body = body
 
 		resp.ContentLength = int64(len(b))
 		resp.Header.Set("Content-Length", strconv.Itoa(len(b)))

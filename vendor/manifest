@@ -30,7 +30,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-janitor",
 			"repository": "https://github.com/Dataman-Cloud/swan-janitor",
 			"vcs": "git",
-			"revision": "be2d19b018b3d2c8ccbb79e98fa9250afe2397cd",
+			"revision": "b8f30a75831d7d9c8c291676b6425926299e887c",
 			"branch": "master",
 			"notests": true
 		},
@@ -38,7 +38,7 @@
 			"importpath": "github.com/Dataman-Cloud/swan-resolver/nameserver",
 			"repository": "https://github.com/Dataman-Cloud/swan-resolver",
 			"vcs": "git",
-			"revision": "0b6d4fd9bb4c4e82a4053bc537c2b018adde2e1b",
+			"revision": "f041fbdfefe614bb7c25637e36f9838cfceb349f",
 			"branch": "master",
 			"path": "/nameserver",
 			"notests": true

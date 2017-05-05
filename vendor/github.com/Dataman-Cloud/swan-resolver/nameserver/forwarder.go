@@ -25,7 +25,6 @@ func NewForwarder(addrs []string, exs map[string]Exchanger) Forwarder {
 		normalized[i] = net.JoinHostPort(host, port)
 	}
 	return func(m *dns.Msg, proto string) (r *dns.Msg, err error) {
-		fmt.Println(m)
 		ex, ok := exs[proto]
 		if !ok || len(addrs) == 0 {
 			return nil, &ForwardError{Addrs: addrs, Proto: proto}

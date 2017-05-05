@@ -109,10 +109,5 @@ func (rh *RecordHolder) GetSRV(name string) []*Record {
 		}
 	}
 
-	for _, e := range results {
-		fmt.Println(e.Key())
-		fmt.Println(e.Port)
-	}
-
 	return results
 }
