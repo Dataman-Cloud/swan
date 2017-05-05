@@ -15,7 +15,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
 	app.Usage = "swan [COMMAND] [ARGS]"
-	app.Description = "A general purpose Mesos framework which facility long running docker application management."
+	app.Description = "A Distributed, Highly Available Mesos Scheduler, Inspired by the design of Google Borg."
 	app.Version = version.GetVersion().Version
 
 	app.Commands = []cli.Command{}
