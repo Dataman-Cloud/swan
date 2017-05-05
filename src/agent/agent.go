@@ -166,11 +166,12 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 				if err != nil {
 					logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
 				} else {
-					logrus.Debugf("%+v", janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent))
+					if taskInfoEvent.GatewayEnabled {
+						agent.Janitor.EventChan <- janitorTargetChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
+					}
 
-					agent.Janitor.EventChan <- janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					if userEvent.Name == eventbus.EventTypeTaskHealthy || userEvent.Name == eventbus.EventTypeTaskUnhealthy { // Resolver only recongnize these two events
-						agent.Resolver.RecordChangeChan <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
+						agent.Resolver.RecordChangeChan <- recordChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
 					}
 				}
 			}
@@ -253,7 +254,7 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 	}
 }
 
-func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *nameserver.RecordChangeEvent {
+func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *nameserver.RecordChangeEvent {
 	resolverEvent := &nameserver.RecordChangeEvent{}
 	if eventType == eventbus.EventTypeTaskHealthy {
 		resolverEvent.Change = "add"
@@ -277,7 +278,7 @@ func recordGeneratorChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent
 	return resolverEvent
 }
 
-func janitorTargetgChangeEventFromTaskInfoEvent(eventType string,
+func janitorTargetChangeEventFromTaskInfoEvent(eventType string,
 	taskInfoEvent *types.TaskInfoEvent) *janitor.TargetChangeEvent {
 
 	janitorEvent := &janitor.TargetChangeEvent{}

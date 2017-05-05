@@ -69,6 +69,10 @@ func VersionToRaft(version *types.Version, appID string) *store.Version {
 		raftVersion.HealthCheck = HealthCheckToRaft(version.HealthCheck)
 	}
 
+	if version.Gateway != nil {
+		raftVersion.Gateway = GatewayToRaft(version.Gateway)
+	}
+
 	return raftVersion
 }
 
@@ -106,6 +110,10 @@ func VersionFromRaft(raftVersion *store.Version) *types.Version {
 
 	if raftVersion.HealthCheck != nil {
 		version.HealthCheck = HealthCheckFromRaft(raftVersion.HealthCheck)
+	}
+
+	if raftVersion.Gateway != nil {
+		version.Gateway = GatewayFromRaft(raftVersion.Gateway)
 	}
 
 	return version
@@ -326,6 +334,24 @@ func HealthCheckFromRaft(raftHealthCheck *store.HealthCheck) *types.HealthCheck 
 	}
 
 	return healthCheck
+}
+
+func GatewayToRaft(gateway *types.Gateway) *store.Gateway {
+	raftGateway := &store.Gateway{
+		Weight:  gateway.Weight,
+		Enabled: gateway.Enabled,
+	}
+
+	return raftGateway
+}
+
+func GatewayFromRaft(raftGateway *store.Gateway) *types.Gateway {
+	gateway := &types.Gateway{
+		Weight:  raftGateway.Weight,
+		Enabled: raftGateway.Enabled,
+	}
+
+	return gateway
 }
 
 func SlotToRaft(slot *Slot) *store.Slot {

@@ -45,6 +45,7 @@ type Version struct {
 	Env          map[string]string `protobuf_val:"bytes,2,opt,name=value,proto3"`
 	KillPolicy   *KillPolicy       `json:"killPolicy,omitempty"`
 	UpdatePolicy *UpdatePolicy     `json:"updatePolicy,omitempty"`
+	Gateway      *Gateway          `json:"gateway,omitempty"`
 	Constraints  string            `json:"constraints,omitempty"`
 	Uris         []string          `json:"uris,omitempty"`
 	Ip           []string          `json:"ip,omitempty"`
@@ -112,6 +113,11 @@ type UpdatePolicy struct {
 	MaxRetries   int32  `json:"maxRetries,omitempty"`
 	MaxFailovers int32  `json:"maxFailovers,omitempty"`
 	Action       string `json:"action,omitempty"`
+}
+
+type Gateway struct {
+	Enabled bool    `json:"enabled,omitempty"`
+	Weight  float64 `json:"weight,omitempty"`
 }
 
 type HealthCheck struct {

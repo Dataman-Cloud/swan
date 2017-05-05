@@ -18,6 +18,7 @@ type Version struct {
 	Env          map[string]string `json:"env,omitempty"`
 	KillPolicy   *KillPolicy       `json:"killPolicy,omitempty"`
 	UpdatePolicy *UpdatePolicy     `json:"updatPolicy,omitempty"`
+	Gateway      *Gateway          `json:"gateway,omitempty"`
 	Constraints  string            `json:"constraints,omitempty"`
 	URIs         []string          `json:"uris,omitempty"`
 	IP           []string          `json:"ip,omitempty"`
@@ -81,6 +82,11 @@ type HealthCheck struct {
 	IntervalSeconds     float64 `json:"intervalSeconds,omitempty"`
 	TimeoutSeconds      float64 `json:"timeoutSeconds,omitempty"`
 	DelaySeconds        float64 `json:"delaySeconds,omitempty"`
+}
+
+type Gateway struct {
+	Enabled bool    `json:"enabled,omitempty"`
+	Weight  float64 `json:"weight,omitempty"`
 }
 
 // AddLabel adds a label to the application

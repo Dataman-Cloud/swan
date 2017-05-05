@@ -1,5 +1,5 @@
 {
-  "appName": "foo.bar",
+  "appName": "foobar.nginx",
   "appVersion": "version1",
   "cmd": null,
   "args": null,
@@ -45,6 +45,10 @@
   ],
   "label": {
     "USER_ID": "1"
+  },
+  "gateway": {
+    "enabled": false,
+    "weight": 10
   },
   "healthCheck":
     {
