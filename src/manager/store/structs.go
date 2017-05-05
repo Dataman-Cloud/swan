@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/utils/dfs"
 	"github.com/aanand/compose-file/types"
 )
 
@@ -238,11 +239,12 @@ func (ins *Instance) Valid() error {
 	if ins.Name == "default" {
 		return errors.New(`name 'default' is reserved`)
 	}
+
 	if ins.RevisionID == "" {
 		return errors.New("instance revision required")
 	}
-	if len(ins.ServiceGroup) > 0 {
-		return ins.ServiceGroup.Valid()
+	if sg := ins.ServiceGroup; len(sg) > 0 {
+		return sg.Valid()
 	}
 	if ins.YAMLRaw == "" {
 		return errors.New("at least one of ServiceGroup or YamlRaw required")
@@ -288,7 +290,30 @@ func (sg ServiceGroup) Valid() error {
 			return fmt.Errorf("validate service %s error: %v", name, err)
 		}
 	}
+	return sg.circled()
+}
+
+func (sg ServiceGroup) PrioritySort() []string {
+	m := sg.dependMap()
+	o := dfs.NewDfsOrder(m)
+	return o.PostOrder()
+}
+
+func (sg ServiceGroup) circled() error {
+	m := sg.dependMap()
+	c := dfs.NewDirectedCycle(m)
+	if cs := c.Cycle(); len(cs) > 0 {
+		return fmt.Errorf("dependency circled: %v", cs)
+	}
 	return nil
+}
+
+func (sg ServiceGroup) dependMap() map[string][]string {
+	ret := make(map[string][]string)
+	for name, svr := range sg {
+		ret[name] = svr.Service.DependsOn
+	}
+	return ret
 }
 
 type DockerService struct {

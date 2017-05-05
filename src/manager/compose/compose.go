@@ -34,10 +34,13 @@ func LaunchInstance(ins *store.Instance, sched *scheduler.Scheduler, jid string)
 		}
 	}()
 
-	for name := range ins.ServiceGroup {
-		sp := newSvrPack(ins, sched, name, jid)
+	svrOrders := ins.ServiceGroup.PrioritySort()
+	logrus.Printf("deploy instance with order: %v", svrOrders)
+
+	for _, svr := range svrOrders {
+		sp := newSvrPack(ins, sched, svr, jid)
 		if err := sp.create(); err != nil {
-			return InsErr{op, name, err.Error()}
+			return InsErr{op, svr, err.Error()}
 		}
 	}
 

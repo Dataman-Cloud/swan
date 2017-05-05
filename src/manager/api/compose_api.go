@@ -94,13 +94,13 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 			ins.YAMLExtra,       // extra compose settings
 		)
 		if err != nil {
-			w.WriteError(400, err)
+			w.WriteError(400, fmt.Errorf("yaml convert: %v", err))
 			return
 		}
 	}
 
 	// verify
-	if ins.Valid(); err != nil {
+	if err := ins.Valid(); err != nil {
 		w.WriteError(400, err)
 		return
 	}
