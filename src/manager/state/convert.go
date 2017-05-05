@@ -12,6 +12,7 @@ func AppToRaft(app *App) *store.Application {
 	raftApp := &store.Application{
 		ID:        app.ID,
 		Name:      app.Name,
+		ClusterID: app.ClusterID,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
 	}

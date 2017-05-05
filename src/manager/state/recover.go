@@ -17,11 +17,12 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 
 	for _, raftApp := range raftApps {
 		app := &App{
-			ID:      raftApp.ID,
-			Name:    raftApp.Name,
-			Created: time.Unix(0, raftApp.CreatedAt),
-			Updated: time.Unix(0, raftApp.UpdatedAt),
-			Slots:   make(map[int]*Slot),
+			ID:        raftApp.ID,
+			Name:      raftApp.Name,
+			ClusterID: raftApp.ClusterID,
+			Created:   time.Unix(0, raftApp.CreatedAt),
+			Updated:   time.Unix(0, raftApp.UpdatedAt),
+			Slots:     make(map[int]*Slot),
 		}
 
 		app.UserEventChan = userEventChan

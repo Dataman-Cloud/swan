@@ -1,5 +1,5 @@
 {
-  "appName": "nginx",
+  "appName": "foo.bar",
   "appVersion": "version1",
   "cmd": null,
   "args": null,
