@@ -129,9 +129,9 @@ func (manager *Manager) start(ctx context.Context) error {
 			if err == ErrNormalExit {
 				logrus.Info("watchLeaderChange exit normally")
 				return
-			} else {
-				logrus.Errorf("watchLeaderChange go error: %+v", err)
 			}
+
+			logrus.Errorf("watchLeaderChange go error: %+v", err)
 		}
 	}()
 
