@@ -5,7 +5,6 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -211,13 +210,14 @@ type State struct {
 
 // compose instance
 type Instance struct {
-	ID         string    `json:"id"`
-	Name       string    `json:"name"`
-	Desc       string    `json:"desc"`
-	RevisionID string    `json:"revision_id"`
-	Status     string    `json:"status"` // op status
-	ErrMsg     string    `json:"errmsg"`
-	CreatedAt  time.Time `json:"created_at"`
+	ID        string    `json:"id"`
+	Name      string    `json:"name"`
+	Desc      string    `json:"desc"`
+	VersionID string    `json:"version_id"`
+	Status    string    `json:"status"` // op status
+	ErrMsg    string    `json:"errmsg"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
 	// request settings
 	ServiceGroup ServiceGroup          `json:"service_group"`
@@ -240,8 +240,8 @@ func (ins *Instance) Valid() error {
 		return errors.New(`name 'default' is reserved`)
 	}
 
-	if ins.RevisionID == "" {
-		return errors.New("instance revision required")
+	if ins.VersionID == "" {
+		return errors.New("instance version required")
 	}
 	if sg := ins.ServiceGroup; len(sg) > 0 {
 		return sg.Valid()
@@ -293,14 +293,20 @@ func (sg ServiceGroup) Valid() error {
 	return sg.circled()
 }
 
-func (sg ServiceGroup) PrioritySort() []string {
-	m := sg.dependMap()
+func (sg ServiceGroup) PrioritySort() ([]string, error) {
+	m, err := sg.dependMap()
+	if err != nil {
+		return nil, err
+	}
 	o := dfs.NewDfsOrder(m)
-	return o.PostOrder()
+	return o.PostOrder(), nil
 }
 
 func (sg ServiceGroup) circled() error {
-	m := sg.dependMap()
+	m, err := sg.dependMap()
+	if err != nil {
+		return err
+	}
 	c := dfs.NewDirectedCycle(m)
 	if cs := c.Cycle(); len(cs) > 0 {
 		return fmt.Errorf("dependency circled: %v", cs)
@@ -308,12 +314,18 @@ func (sg ServiceGroup) circled() error {
 	return nil
 }
 
-func (sg ServiceGroup) dependMap() map[string][]string {
+func (sg ServiceGroup) dependMap() (map[string][]string, error) {
 	ret := make(map[string][]string)
 	for name, svr := range sg {
+		// ensure exists
+		for _, d := range svr.Service.DependsOn {
+			if _, ok := sg[d]; !ok {
+				return nil, fmt.Errorf("missing dependency: %s -> %s", name, d)
+			}
+		}
 		ret[name] = svr.Service.DependsOn
 	}
-	return ret
+	return ret, nil
 }
 
 type DockerService struct {
@@ -326,26 +338,4 @@ type DockerService struct {
 
 func (s *DockerService) Valid() error {
 	return nil
-}
-
-func (s *DockerService) PortMaps() ([][2]uint64, error) {
-	ret := make([][2]uint64, 0, 0)
-
-	// TODO ensure uniq host port
-	for _, pair := range s.Service.Ports {
-		set := strings.SplitN(pair, ":", 2)
-		if len(set) < 2 {
-			return nil, fmt.Errorf("invalid port mapping %s", pair)
-		}
-
-		hp, err1 := strconv.ParseUint(set[0], 10, 32)
-		cp, err2 := strconv.ParseUint(set[1], 10, 32)
-		if err1 != nil || err2 != nil {
-			return nil, fmt.Errorf("invalid port mapping %s", pair)
-		}
-
-		ret = append(ret, [2]uint64{hp, cp})
-	}
-
-	return ret, nil
 }

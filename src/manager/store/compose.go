@@ -28,6 +28,17 @@ func (zk *ZkStore) DeleteInstance(idOrName string) error {
 	return zk.Apply(op, true)
 }
 
+func (zk *ZkStore) UpdateInstance(ins *Instance) error {
+	op := &AtomicOp{
+		Op:      OP_UPDATE,
+		Entity:  ENTITY_INSTANCE,
+		Param1:  ins.ID,
+		Payload: ins,
+	}
+
+	return zk.Apply(op, true)
+}
+
 func (zk *ZkStore) GetInstance(idOrName string) (*Instance, error) {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()

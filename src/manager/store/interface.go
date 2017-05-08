@@ -36,6 +36,7 @@ type Store interface {
 
 	CreateInstance(ins *Instance) error
 	DeleteInstance(idOrName string) error
+	UpdateInstance(ins *Instance) error // status, errmsg, updateAt
 	GetInstance(idOrName string) (*Instance, error)
 	ListInstances() ([]*Instance, error)
 }

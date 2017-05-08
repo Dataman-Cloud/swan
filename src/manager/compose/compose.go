@@ -3,6 +3,7 @@ package compose
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"time"
 
@@ -12,35 +13,29 @@ import (
 	"github.com/Sirupsen/logrus"
 )
 
-type InsErr struct {
-	Operation string `json:"operation"`
-	Service   string `json:"service"`
-	ErrMsg    string `json:"errmsg"`
-}
-
-func (ie InsErr) Error() string {
-	bs, _ := json.Marshal(ie)
-	return string(bs)
-}
-
-func LaunchInstance(ins *store.Instance, sched *scheduler.Scheduler, jid string) (err error) {
-	var (
-		op = "launch"
-	)
-
+func LaunchInstance(ins *store.Instance, sched *scheduler.Scheduler) (err error) {
 	defer func() {
+		ins.Status = "ready"
+		ins.UpdatedAt = time.Now()
+		ins.ErrMsg = ""
+
 		if err != nil {
-			logrus.Errorln(err)
+			ins.ErrMsg = err.Error()
 		}
+
+		memo(ins)
 	}()
 
-	svrOrders := ins.ServiceGroup.PrioritySort()
-	logrus.Printf("deploy instance with order: %v", svrOrders)
+	svrOrders, err := ins.ServiceGroup.PrioritySort()
+	if err != nil {
+		return err
+	}
+	logrus.Printf("launch instance with order: %v", svrOrders)
 
 	for _, svr := range svrOrders {
-		sp := newSvrPack(ins, sched, svr, jid)
+		sp := newSvrPack(ins, sched, svr)
 		if err := sp.create(); err != nil {
-			return InsErr{op, svr, err.Error()}
+			return fmt.Errorf("launch service %s error: %v", svr, err)
 		}
 	}
 
@@ -54,15 +49,13 @@ type svrPack struct {
 	ins   *store.Instance
 	svr   *store.DockerService
 	sched *scheduler.Scheduler
-	jid   string
 }
 
-func newSvrPack(ins *store.Instance, sched *scheduler.Scheduler, svr, jid string) *svrPack {
+func newSvrPack(ins *store.Instance, sched *scheduler.Scheduler, svr string) *svrPack {
 	return &svrPack{
 		ins:   ins,
 		svr:   ins.ServiceGroup[svr],
 		sched: sched,
-		jid:   jid,
 	}
 }
 
@@ -75,11 +68,13 @@ func (sp *svrPack) svrName() string {
 }
 
 func (sp *svrPack) create() error {
-	ver, _ := SvrToVersion(sp.svr, sp.insName())
+	ver, _ := SvrToVersion(sp.svr, sp.insName(), sp.ins.VersionID)
 
+	// just for debug
 	logrus.Println("----------------> create app:", sp.insName(), sp.svrName())
 	json.NewEncoder(os.Stdout).Encode(ver)
 	logrus.Println("<----------------")
+	//return nil
 
 	app, err := sp.sched.CreateApp(ver, sp.insName())
 	if err != nil {
@@ -111,4 +106,8 @@ func (sp *svrPack) create() error {
 	// wait delay
 	time.Sleep(time.Second * time.Duration(sp.svr.Extra.WaitDelay))
 	return nil
+}
+
+func memo(ins *store.Instance) error {
+	return store.DB().UpdateInstance(ins)
 }

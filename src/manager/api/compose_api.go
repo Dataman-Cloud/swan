@@ -2,7 +2,6 @@ package api
 
 import (
 	"fmt"
-	"strconv"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -76,10 +75,7 @@ func (api *ComposeService) getInstance(r *restful.Request, w *restful.Response) 
 
 // launch compose instance
 func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) {
-	var (
-		sync, _ = strconv.ParseBool(r.QueryParameter("sync"))
-		err     error
-	)
+	var err error
 
 	// obtain & verify
 	var ins *store.Instance
@@ -107,7 +103,7 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 
 	// ensure all settings could be converted to types.Version to fit with state.NewApp()
 	for name, svr := range ins.ServiceGroup {
-		if _, err := compose.SvrToVersion(svr, ""); err != nil {
+		if _, err := compose.SvrToVersion(svr, "", ""); err != nil {
 			w.WriteError(400, fmt.Errorf("convert svr %s error: %v", name, err))
 			return
 		}
@@ -121,28 +117,17 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 
 	// db save
 	ins.ID = uuid.NewV4().String()
+	ins.Status = "creating"
 	ins.CreatedAt = time.Now()
+	ins.UpdatedAt = time.Now()
 	if err := store.DB().CreateInstance(ins); err != nil {
 		w.WriteError(500, err)
 		return
 	}
 
-	// sync launch
-	if sync {
-		if err := compose.LaunchInstance(ins, api.sched, ""); err != nil {
-			w.WriteError(500, err)
-		} else {
-			w.WriteHeaderAndEntity(201, api.newInstanceWrapper(ins))
-		}
-		return
-	}
-
 	// async launch
-	jid := uuid.NewV4().String()
-	w.WriteHeaderAndEntity(201, map[string]string{
-		"jid": jid,
-	})
-	go compose.LaunchInstance(ins, api.sched, jid)
+	go compose.LaunchInstance(ins, api.sched)
+	w.WriteHeaderAndEntity(201, ins)
 }
 
 // remove compose instance

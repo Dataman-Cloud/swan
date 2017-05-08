@@ -247,6 +247,8 @@ func (zk *ZkStore) applyInstance(op *AtomicOp) bool {
 		zk.Storage.Instances[op.Param1] = op.Payload.(*Instance)
 	case OP_REMOVE:
 		delete(zk.Storage.Instances, op.Param1)
+	case OP_UPDATE:
+		zk.Storage.Instances[op.Param1] = op.Payload.(*Instance)
 	default:
 		panic("applyInstance not supportted operation")
 	}
