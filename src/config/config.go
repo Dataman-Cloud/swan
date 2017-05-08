@@ -155,7 +155,7 @@ func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
 	if err != nil {
 		return managerConfig, err
 	}
-	if err := validZkURL("MesosZkPath", managerConfig.MesosZkPath); err != nil {
+	if err := validZkURL("--mesos-zk-path", managerConfig.MesosZkPath); err != nil {
 		return managerConfig, err
 	}
 
@@ -163,7 +163,7 @@ func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
 	if err != nil {
 		return managerConfig, err
 	}
-	if err := validZkURL("ZkPath", managerConfig.ZkPath); err != nil {
+	if err := validZkURL("--zk-path", managerConfig.ZkPath); err != nil {
 		return managerConfig, err
 	}
 
