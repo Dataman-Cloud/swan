@@ -26,10 +26,6 @@ const ZK_FLAG_NONE = 0
 const SWAN_LEADER_ELECTION_NODE_PATH = "%s/leader-election"
 const SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
 
-var (
-	ErrNormalExit = errors.New("normal exit 0")
-)
-
 type Leadership uint8
 
 const (
@@ -126,12 +122,11 @@ func (manager *Manager) start(ctx context.Context) error {
 	go func() {
 		for {
 			err := manager.watchLeaderChange(ctx, leadershipChangeChan)
-			if err == ErrNormalExit {
-				logrus.Info("watchLeaderChange exit normally")
-				return
-			} else {
+			if err != nil {
 				logrus.Errorf("watchLeaderChange go error: %+v", err)
+				return
 			}
+			logrus.Info("watchLeaderChange exit normally")
 		}
 	}()
 
@@ -213,12 +208,11 @@ reevaluateLeader:
 		return err
 	}
 
-	select {
-	case <-existsWChan:
+	if _, ok := <-existsWChan; ok {
 		goto reevaluateLeader
-	case <-ctx.Done():
-		return ErrNormalExit
 	}
+
+	return nil
 }
 
 func (manager *Manager) minimalValueChild(path string) (string, error) {
