@@ -17,7 +17,7 @@ func ManagerCmd() cli.Command {
 		Name:        "manager",
 		Usage:       "start a manager instance",
 		Description: "start a swan manager",
-		Action:      JoinAndStartManager,
+		Action:      StartManager,
 	}
 
 	managerCmd.Flags = append(managerCmd.Flags, FlagListenAddr())
@@ -28,19 +28,7 @@ func ManagerCmd() cli.Command {
 	return managerCmd
 }
 
-func ManagerInitCmd() cli.Command {
-	managerInitCmd := cli.Command{
-		Name:        "init",
-		Usage:       "init [ARG...]",
-		Description: "start a manager",
-		Flags:       []cli.Flag{},
-		Action:      JoinAndStartManager,
-	}
-
-	return managerInitCmd
-}
-
-func JoinAndStartManager(c *cli.Context) error {
+func StartManager(c *cli.Context) error {
 	conf, err := config.NewManagerConfig(c)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "[ERR] parse config got error: %s\n", err.Error())
