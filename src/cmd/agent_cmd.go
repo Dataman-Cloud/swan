@@ -9,14 +9,14 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 )
 
-func AgentCmd() cli.Command {
+func AgentCmd(ctx context.Context) cli.Command {
 	agentCmd := cli.Command{
 		Name:        "agent",
 		Usage:       "start agent listen for events from leader manager",
 		Description: "run swan agent command",
 		Flags:       []cli.Flag{},
 		Subcommands: []cli.Command{},
-		Action:      JoinAndStartAgent,
+		Action:      StartAgent(ctx),
 	}
 
 	agentCmd.Flags = append(agentCmd.Flags, FlagListenAddr())
@@ -34,21 +34,23 @@ func AgentCmd() cli.Command {
 	return agentCmd
 }
 
-func JoinAndStartAgent(c *cli.Context) error {
-	conf := config.NewAgentConfig(c)
+func StartAgent(ctx context.Context) func(*cli.Context) error {
+	return func(c *cli.Context) error {
+		conf := config.NewAgentConfig(c)
 
-	setupLogger(conf.LogLevel)
+		setupLogger(conf.LogLevel)
 
-	agent, err := agent.New(conf)
-	if err != nil {
-		logrus.Error("agent initialization failed")
-		return err
+		agent, err := agent.New(conf)
+		if err != nil {
+			logrus.Error("agent initialization failed")
+			return err
+		}
+
+		if err := agent.Start(ctx); err != nil {
+			logrus.Errorf("start node failed. Error: %s", err.Error())
+			return err
+		}
+
+		return nil
 	}
-
-	if err := agent.StartAndJoin(context.TODO()); err != nil {
-		logrus.Errorf("start node failed. Error: %s", err.Error())
-		return err
-	}
-
-	return nil
 }

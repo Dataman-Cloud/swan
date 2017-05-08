@@ -72,7 +72,7 @@ func New(agentConf config.AgentConfig) (*Agent, error) {
 	return agent, nil
 }
 
-func (agent *Agent) StartAndJoin(ctx context.Context) error {
+func (agent *Agent) Start(ctx context.Context) error {
 	errChan := make(chan error)
 
 	agentStartedCh := make(chan bool)
