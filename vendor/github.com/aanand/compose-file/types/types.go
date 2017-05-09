@@ -1,6 +1,7 @@
 package types
 
 import (
+	"os"
 	"time"
 )
 
@@ -56,6 +57,14 @@ type ConfigDetails struct {
 	WorkingDir  string
 	ConfigFiles []ConfigFile
 	Environment map[string]string
+}
+
+func (cd ConfigDetails) LookupEnv(key string) (string, bool) {
+	if val, ok := cd.Environment[key]; ok {
+		return val, true
+	}
+
+	return os.LookupEnv(key) // fall back
 }
 
 type Config struct {
