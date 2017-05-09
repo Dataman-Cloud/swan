@@ -1,5 +1,6 @@
 
 - [compose api](#compose-API)
+  + [parse](#parse)
   + [create](#create)
   + [list](#list)
   + [get](#get)
@@ -9,6 +10,33 @@
   + [example](#example)
 
 ## compose-API
+### parse
+`POST` `/v_beta/compose/parse`
+
+Request
+```json
+{
+	"yaml": "docker composer v3 yaml text here ..."
+}
+```
+
+Response
+```json
+{
+  "services": [
+    "dbmaster",
+    "web",
+    "cache",
+    "dbslave"
+  ],
+  "variables": [
+    "RESTART",
+    "WORKDIR",
+    "HOSTNAME"
+  ]
+}
+```
+
 ### create
 `POST` `/v_beta/compose`
 

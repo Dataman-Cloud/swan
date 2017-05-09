@@ -34,6 +34,9 @@ func (api *ComposeService) Register(container *restful.Container) {
 	ws.Route(ws.POST("/").Doc("Run Compose Instance").
 		To(metrics.InstrumentRouteFunc("POST", "Compose", api.runInstance)))
 
+	ws.Route(ws.POST("/parse").Doc("Parse Compose YAML Text").
+		To(metrics.InstrumentRouteFunc("POST", "Parse", api.parseYAML)))
+
 	ws.Route(ws.GET("/").Doc("List Compose Instances").
 		To(metrics.InstrumentRouteFunc("GET", "Compose", api.listInstances)))
 
@@ -66,6 +69,36 @@ func (api *ComposeService) getInstance(r *restful.Request, w *restful.Response) 
 	}
 
 	w.WriteEntity(api.newInstanceWrapper(i))
+}
+
+// parse yaml content and output service & variable definations
+func (api *ComposeService) parseYAML(r *restful.Request, w *restful.Response) {
+	var req struct {
+		YAML string `json:"yaml"`
+	}
+	if err := r.ReadEntity(&req); err != nil {
+		w.WriteError(400, err)
+		return
+	}
+
+	cfg, err := compose.YamlServices([]byte(req.YAML), nil)
+	if err != nil {
+		w.WriteError(400, err)
+		return
+	}
+
+	var (
+		vars = compose.YamlVariables([]byte(req.YAML))
+		svrs = make([]string, 0, 0)
+	)
+	for _, svr := range cfg.Services {
+		svrs = append(svrs, svr.Name)
+	}
+
+	w.WriteHeaderAndEntity(201, map[string]interface{}{
+		"services":  svrs,
+		"variables": vars,
+	})
 }
 
 // launch compose instance
