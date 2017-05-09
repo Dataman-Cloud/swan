@@ -1,0 +1,1074 @@
+
+- [compose api](#compose-API)
+  + [create](#create)
+  + [list](#list)
+  + [get](#get)
+  + [remove](#remove)
+- [docker compose v3](#docker-compose-v3)
+  + [support](#support)
+  + [example](#example)
+
+## compose-API
+### create
+`POST` `/v_beta/compose`
+
+Request:
+```json
+{
+  "name": "b",
+  "desc": "demo instance",
+  "version_id": "xxx",
+  "service_group": { // translated from yaml_raw & yaml_extra
+    "cache": {
+      "name": "cache",
+      "service": {
+        "Name": "cache",
+        "CapAdd": null,
+        "CapDrop": null,
+        "CgroupParent": "",
+        "Command": null,
+        "ContainerName": "",
+        "DependsOn": [
+          "dbmaster",
+          "dbslave"
+        ],
+        "Deploy": {
+          "Mode": "replicated",
+          "Replicas": 1,
+          "Labels": null,
+          "UpdateConfig": null,
+          "Resources": {
+            "Limits": null,
+            "Reservations": null
+          },
+          "RestartPolicy": null,
+          "Placement": {
+            "Constraints": null
+          }
+        },
+        "Devices": null,
+        "Dns": null,
+        "DnsSearch": null,
+        "DomainName": "",
+        "Entrypoint": null,
+        "Environment": {
+          
+        },
+        "Expose": null,
+        "ExternalLinks": null,
+        "ExtraHosts": null,
+        "Hostname": "",
+        "HealthCheck": null,
+        "Image": "redis:alpine",
+        "Ipc": "",
+        "Labels": null,
+        "Links": null,
+        "Logging": null,
+        "MacAddress": "",
+        "NetworkMode": "bridge",
+        "Networks": null,
+        "Pid": "",
+        "Ports": null,
+        "Privileged": false,
+        "ReadOnly": false,
+        "Restart": "",
+        "SecurityOpt": null,
+        "StdinOpen": false,
+        "StopGracePeriod": null,
+        "StopSignal": "",
+        "Tmpfs": null,
+        "Tty": false,
+        "Ulimits": null,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "network": null,
+      "volume": null,
+      "extra": {
+        "priority": 3,
+        "wait_delay": 1,
+        "pull_always": false,
+        "resource": {
+          "cpu": 0.02,
+          "mem": 100,
+          "disk": 33,
+          "ports": null
+        },
+        "constraints": "",
+        "runas": "bbk",
+        "uris": null,
+        "ips": null
+      }
+    },
+    "dbmaster": {
+      "name": "dbmaster",
+      "service": {
+        "Name": "dbmaster",
+        "CapAdd": null,
+        "CapDrop": null,
+        "CgroupParent": "",
+        "Command": [
+          "sleep",
+          "100d"
+        ],
+        "ContainerName": "",
+        "DependsOn": null,
+        "Deploy": {
+          "Mode": "",
+          "Replicas": null,
+          "Labels": null,
+          "UpdateConfig": null,
+          "Resources": {
+            "Limits": null,
+            "Reservations": null
+          },
+          "RestartPolicy": null,
+          "Placement": {
+            "Constraints": null
+          }
+        },
+        "Devices": null,
+        "Dns": null,
+        "DnsSearch": null,
+        "DomainName": "",
+        "Entrypoint": null,
+        "Environment": {
+          
+        },
+        "Expose": null,
+        "ExternalLinks": null,
+        "ExtraHosts": null,
+        "Hostname": "",
+        "HealthCheck": null,
+        "Image": "busybox:latest",
+        "Ipc": "",
+        "Labels": null,
+        "Links": null,
+        "Logging": null,
+        "MacAddress": "",
+        "NetworkMode": "host",
+        "Networks": null,
+        "Pid": "",
+        "Ports": null,
+        "Privileged": false,
+        "ReadOnly": false,
+        "Restart": "",
+        "SecurityOpt": null,
+        "StdinOpen": false,
+        "StopGracePeriod": null,
+        "StopSignal": "",
+        "Tmpfs": null,
+        "Tty": false,
+        "Ulimits": null,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "network": null,
+      "volume": null,
+      "extra": {
+        "priority": 2,
+        "wait_delay": 1,
+        "pull_always": false,
+        "resource": {
+          "cpu": 0.03,
+          "mem": 100,
+          "disk": 0,
+          "ports": null
+        },
+        "constraints": "",
+        "runas": "bbk",
+        "uris": null,
+        "ips": null
+      }
+    },
+    "dbslave": {
+      "name": "dbslave",
+      "service": {
+        "Name": "dbslave",
+        "CapAdd": null,
+        "CapDrop": null,
+        "CgroupParent": "",
+        "Command": [
+          "sleep",
+          "100d"
+        ],
+        "ContainerName": "",
+        "DependsOn": [
+          "dbmaster"
+        ],
+        "Deploy": {
+          "Mode": "",
+          "Replicas": null,
+          "Labels": null,
+          "UpdateConfig": null,
+          "Resources": {
+            "Limits": null,
+            "Reservations": null
+          },
+          "RestartPolicy": null,
+          "Placement": {
+            "Constraints": null
+          }
+        },
+        "Devices": null,
+        "Dns": null,
+        "DnsSearch": null,
+        "DomainName": "",
+        "Entrypoint": null,
+        "Environment": {
+          
+        },
+        "Expose": null,
+        "ExternalLinks": null,
+        "ExtraHosts": null,
+        "Hostname": "",
+        "HealthCheck": null,
+        "Image": "busybox:latest",
+        "Ipc": "",
+        "Labels": null,
+        "Links": null,
+        "Logging": null,
+        "MacAddress": "",
+        "NetworkMode": "host",
+        "Networks": null,
+        "Pid": "",
+        "Ports": null,
+        "Privileged": false,
+        "ReadOnly": false,
+        "Restart": "",
+        "SecurityOpt": null,
+        "StdinOpen": false,
+        "StopGracePeriod": null,
+        "StopSignal": "",
+        "Tmpfs": null,
+        "Tty": false,
+        "Ulimits": null,
+        "User": "",
+        "Volumes": null,
+        "WorkingDir": ""
+      },
+      "network": null,
+      "volume": null,
+      "extra": {
+        "priority": 1,
+        "wait_delay": 1,
+        "pull_always": false,
+        "resource": {
+          "cpu": 0.03,
+          "mem": 100,
+          "disk": 0,
+          "ports": null
+        },
+        "constraints": "",
+        "runas": "bbk",
+        "uris": null,
+        "ips": null
+      }
+    },
+    "web": {
+      "name": "web",
+      "service": {
+        "Name": "web",
+        "CapAdd": [
+          "ALL"
+        ],
+        "CapDrop": [
+          "NET_ADMIN",
+          "SYS_ADMIN"
+        ],
+        "CgroupParent": "",
+        "Command": [
+          "sleep",
+          "100d"
+        ],
+        "ContainerName": "my-web-container",
+        "DependsOn": [
+          "cache",
+          "dbmaster",
+          "dbslave"
+        ],
+        "Deploy": {
+          "Mode": "replicated",
+          "Replicas": 3,
+          "Labels": null,
+          "UpdateConfig": null,
+          "Resources": {
+            "Limits": null,
+            "Reservations": null
+          },
+          "RestartPolicy": null,
+          "Placement": {
+            "Constraints": null
+          }
+        },
+        "Devices": [
+          "/dev/tty10:/dev/tty10"
+        ],
+        "Dns": [
+          "114.114.114.114",
+          "8.8.8.8"
+        ],
+        "DnsSearch": [
+          "swan.local"
+        ],
+        "DomainName": "foo.com",
+        "Entrypoint": null,
+        "Environment": {
+          "DEMO": "true",
+          "PROD": "false"
+        },
+        "Expose": [
+          "80",
+          "443"
+        ],
+        "ExternalLinks": null,
+        "ExtraHosts": {
+          "bbk": "127.0.0.1",
+          "google-dns": "8.8.8.8"
+        },
+        "Hostname": "foo",
+        "HealthCheck": {
+          "Test": [
+            "CMD",
+            "echo",
+            "ok"
+          ],
+          "Timeout": "10s",
+          "Interval": "30s",
+          "Retries": 3,
+          "Disable": false
+        },
+        "Image": "nginx:latest",
+        "Ipc": "host",
+        "Labels": {
+          "description": "bbklab desc",
+          "name": "bbklab"
+        },
+        "Links": null,
+        "Logging": {
+          "Driver": "syslog",
+          "Options": null
+        },
+        "MacAddress": "02:42:ac:11:65:43",
+        "NetworkMode": "bridge",
+        "Networks": null,
+        "Pid": "host",
+        "Ports": [
+          "3000-3003/udp",
+          "8080:800/tcp",
+          "8090:443"
+        ],
+        "Privileged": true,
+        "ReadOnly": true,
+        "Restart": "no",
+        "SecurityOpt": [
+          "label:user:USER",
+          "label:role:ROLE"
+        ],
+        "StdinOpen": true,
+        "StopGracePeriod": 10000000000,
+        "StopSignal": "SIGTERM",
+        "Tmpfs": [
+          "/run",
+          "/tmp"
+        ],
+        "Tty": true,
+        "Ulimits": {
+          "nofile": {
+            "Single": 0,
+            "Soft": 20000,
+            "Hard": 40000
+          },
+          "nproc": {
+            "Single": 65535,
+            "Soft": 0,
+            "Hard": 0
+          }
+        },
+        "User": "root",
+        "Volumes": [
+          "/tmp:/data:rw",
+          "/var/log:/log:ro"
+        ],
+        "WorkingDir": "/"
+      },
+      "network": null,
+      "volume": null,
+      "extra": {
+        "priority": 4,
+        "wait_delay": 1,
+        "pull_always": false,
+        "resource": {
+          "cpu": 0.01,
+          "mem": 50,
+          "disk": 100,
+          "ports": null
+        },
+        "constraints": "",
+        "runas": "bbk",
+        "uris": null,
+        "ips": null
+      }
+    }
+  },
+  "yaml_raw": "version: \"3\"\n\nservices:\n  web:\n    cap_add:\n      - ALL\n    cap_drop:\n      - NET_ADMIN\n      - SYS_ADMIN\n    command: \"sleep 100d\"\n    # cgroup_parent: \"/system.slice\"\n    container_name: \"my-web-container\"\n    deploy:\n      mode: replicated\n      replicas: 3\n    devices:\n        - \"/dev/tty10:/dev/tty10\"  \n    depends_on:\n      - cache\n      - dbmaster\n      - dbslave\n    dns:\n      - 114.114.114.114\n      - 8.8.8.8\n    dns_search:\n      - swan.local \n    tmpfs:\n      - /run\n      - /tmp\n    environment:\n      - DEMO=true\n      - PROD=false\n    expose:\n      - 80\n      - 443\n    extra_hosts:\n      - \"bbk:127.0.0.1\"\n      - \"google-dns:8.8.8.8\"\n    healthcheck:\n      test: [\"CMD\", \"echo\", \"ok\"]\n      interval: 30s\n      timeout: 10s\n      retries: 3\n    image: \"nginx:latest\"\n    labels:\n      - \"name=bbklab\"\n      - \"description=bbklab desc\"\n    logging:\n      driver: syslog\n      # options:\n      # syslog-address: \"tcp://127.0.0.1:123\"\n    network_mode: \"bridge\"\n    pid: \"host\"\n    ipc: \"host\"\n    ports:\n      - \"3000-3003/udp\"\n      - \"8080:800/tcp\"\n      - \"8090:443\"\n    security_opt:\n      - label:user:USER\n      - label:role:ROLE\n    stop_grace_period: 10s\n    stop_signal: SIGTERM\n    ulimits:\n      nproc: 65535\n      nofile:\n        soft: 20000\n        hard: 40000\n    volumes:\n      - /tmp:/data:rw\n      - /var/log:/log:ro\n    restart: \"no\"\n    user: \"root\"\n    working_dir: \"/\"\n    domainname: \"foo.com\"\n    hostname: \"foo\"\n    mac_address: 02:42:ac:11:65:43\n    privileged: true\n    read_only: true\n    stdin_open: true\n    tty: true\n\n  cache:\n    image: \"redis:alpine\"\n    network_mode: \"bridge\"\n    deploy:\n      mode: replicated\n      replicas: 1\n    depends_on:\n      - dbmaster\n      - dbslave\n\n  dbslave:\n    image: \"busybox:latest\"\n    command: \"sleep 100d\"\n    network_mode: \"host\"\n    depends_on:\n      - dbmaster\n\n  dbmaster:\n    image: \"busybox:latest\"\n    command: \"sleep 100d\"\n    network_mode: \"host\"\n",
+  "yaml_extra": {
+    "web": {
+      "priority": 4,
+      "runas": "bbk",
+      "wait_delay": 1,
+      "pull_always": false,
+      "constraints": "",
+      "uris": null,
+      "ips": null,
+      "resource": {
+        "cpu": 0.01,
+        "mem": 50,
+        "disk": 100
+      }
+    },
+    "cache": {
+      "priority": 3,
+      "runas": "bbk",
+      "wait_delay": 1,
+      "pull_always": false,
+      "constraints": "",
+      "uris": null,
+      "ips": null,
+      "resource": {
+        "cpu": 0.02,
+        "mem": 100,
+        "disk": 33
+      }
+    },
+    "dbmaster": {
+      "priority": 2,
+      "runas": "bbk",
+      "wait_delay": 1,
+      "pull_always": false,
+      "constraints": "",
+      "uris": null,
+      "ips": null,
+      "resource": {
+        "cpu": 0.03,
+        "mem": 100
+      }
+    },
+    "dbslave": {
+      "priority": 1,
+      "runas": "bbk",
+      "wait_delay": 1,
+      "pull_always": false,
+      "constraints": "",
+      "uris": null,
+      "ips": null,
+      "resource": {
+        "cpu": 0.03,
+        "mem": 100
+      }
+    }
+  }
+}
+```
+
+Response:
+```json
+201:
+
+400:
+yaml convert: yaml: line 104: did not find expected key
+missing dependency: cache -> dbmaster
+dependency circled: [cache dbmaster cache]
+...
+
+409: conflict
+
+500:
+```
+
+### list
+`GET` `/v_beta/compose`
+
+### get
+`GET` `/v_beta/compose/b`  
+`GET` `/v_beta/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+
+Response
+```json
+{
+  "id": "643a4c42-9f7b-4a65-82f5-7d89d1d7c766",
+  "name": "b",
+  "desc": "demo instance",
+  "version_id": "xxx",
+  "status": "ready",      // creating, ready
+  "errmsg": "",
+  "created_at": "2017-05-09T10:39:06.406874508+08:00",
+  "updated_at": "2017-05-09T10:39:27.066117222+08:00",
+  "service_group": {   // same as above
+  },
+  "yaml_raw": "",      // same as above
+  "yaml_extra": {      // same as above
+  },
+  "apps": [            // related apps
+    {
+      "id": "web-b-bbk-datamanmesos",
+      "name": "web",
+      "instances": 3,
+      "updatedInstances": 0,
+      "runningInstances": 3,
+      "runAs": "bbk",
+      "priority": 0,
+      "clusterID": "datamanmesos",
+      "created": "2017-05-09T10:39:17.543846121+08:00",
+      "updated": "2017-05-09T10:39:17.543846336+08:00",
+      "mode": "replicates",
+      "state": "normal",
+      "currentVersion": {
+        "id": "1494297557",
+        "appName": "web",
+        "appVersion": "xxx",
+        "cmd": "sleep 100d",
+        "cpus": 0.01,
+        "mem": 50,
+        "disk": 100,
+        "instances": 3,
+        "runAs": "bbk",
+        "priority": 0,
+        "container": {
+          "type": "docker",
+          "docker": {
+            "image": "nginx:latest",
+            "network": "bridge",
+            "parameters": [
+              {
+                "key": "ipc",
+                "value": "host"
+              },
+              {
+                "key": "mac-address",
+                "value": "02:42:ac:11:65:43"
+              },
+              {
+                "key": "user",
+                "value": "root"
+              },
+              {
+                "key": "tty",
+                "value": "true"
+              },
+              {
+                "key": "name",
+                "value": "my-web-container"
+              },
+              {
+                "key": "pid",
+                "value": "host"
+              },
+              {
+                "key": "stop-signal",
+                "value": "SIGTERM"
+              },
+              {
+                "key": "restart",
+                "value": "no"
+              },
+              {
+                "key": "workdir",
+                "value": "/"
+              },
+              {
+                "key": "read-only",
+                "value": "true"
+              },
+              {
+                "key": "log-driver",
+                "value": "syslog"
+              },
+              {
+                "key": "hostname",
+                "value": "foo"
+              },
+              {
+                "key": "tmpfs",
+                "value": "/run"
+              },
+              {
+                "key": "tmpfs",
+                "value": "/tmp"
+              },
+              {
+                "key": "label",
+                "value": "name=bbklab"
+              },
+              {
+                "key": "label",
+                "value": "description=bbklab desc"
+              },
+              {
+                "key": "cap-drop",
+                "value": "NET_ADMIN"
+              },
+              {
+                "key": "cap-drop",
+                "value": "SYS_ADMIN"
+              },
+              {
+                "key": "dns",
+                "value": "114.114.114.114"
+              },
+              {
+                "key": "dns",
+                "value": "8.8.8.8"
+              },
+              {
+                "key": "env",
+                "value": "DEMO=true"
+              },
+              {
+                "key": "env",
+                "value": "PROD=false"
+              },
+              {
+                "key": "expose",
+                "value": "80"
+              },
+              {
+                "key": "expose",
+                "value": "443"
+              },
+              {
+                "key": "security-opt",
+                "value": "label:user:USER"
+              },
+              {
+                "key": "security-opt",
+                "value": "label:role:ROLE"
+              },
+              {
+                "key": "ulimit",
+                "value": "nproc=65535:65535"
+              },
+              {
+                "key": "ulimit",
+                "value": "nofile=20000:40000"
+              },
+              {
+                "key": "cap-add",
+                "value": "ALL"
+              },
+              {
+                "key": "device",
+                "value": "/dev/tty10:/dev/tty10"
+              },
+              {
+                "key": "dns-search",
+                "value": "swan.local"
+              },
+              {
+                "key": "add-host",
+                "value": "bbk:127.0.0.1"
+              },
+              {
+                "key": "add-host",
+                "value": "google-dns:8.8.8.8"
+              },
+              {
+                "key": "volume",
+                "value": "/tmp:/data:rw"
+              },
+              {
+                "key": "volume",
+                "value": "/var/log:/log:ro"
+              }
+            ],
+            "portMappings": [
+              {
+                "containerPort": 3000,
+                "hostPort": 3000,
+                "name": "3000",
+                "protocol": "udp"
+              },
+              {
+                "containerPort": 3001,
+                "hostPort": 3001,
+                "name": "3001",
+                "protocol": "udp"
+              },
+              {
+                "containerPort": 3002,
+                "hostPort": 3002,
+                "name": "3002",
+                "protocol": "udp"
+              },
+              {
+                "containerPort": 3003,
+                "hostPort": 3003,
+                "name": "3003",
+                "protocol": "udp"
+              },
+              {
+                "containerPort": 800,
+                "hostPort": 8080,
+                "name": "8080",
+                "protocol": "tcp"
+              },
+              {
+                "containerPort": 443,
+                "hostPort": 8090,
+                "name": "8090",
+                "protocol": "tcp"
+              }
+            ],
+            "privileged": true
+          }
+        },
+        "labels": {
+          "DM_INSTANCE_NAME": "b",
+          "description": "bbklab desc",
+          "name": "bbklab"
+        },
+        "healthCheck": {
+          "protocol": "cmd",
+          "value": "echo ok",
+          "consecutiveFailures": 3,
+          "intervalSeconds": 30,
+          "timeoutSeconds": 10
+        },
+        "env": {
+          "DEMO": "true",
+          "PROD": "false"
+        },
+        "killPolicy": {
+          "duration": 10
+        }
+      },
+      "labels": {
+        "DM_INSTANCE_NAME": "b",
+        "description": "bbklab desc",
+        "name": "bbklab"
+      },
+      "env": {
+        "DEMO": "true",
+        "PROD": "false"
+      }
+    },
+    {
+      "id": "cache-b-bbk-datamanmesos",
+      "name": "cache",
+      "instances": 1,
+      "updatedInstances": 0,
+      "runningInstances": 1,
+      "runAs": "bbk",
+      "priority": 0,
+      "clusterID": "datamanmesos",
+      "created": "2017-05-09T10:39:13.469840343+08:00",
+      "updated": "2017-05-09T10:39:13.469840415+08:00",
+      "mode": "replicates",
+      "state": "normal",
+      "currentVersion": {
+        "id": "1494297553",
+        "appName": "cache",
+        "appVersion": "xxx",
+        "cpus": 0.02,
+        "mem": 100,
+        "disk": 33,
+        "instances": 1,
+        "runAs": "bbk",
+        "priority": 0,
+        "container": {
+          "type": "docker",
+          "docker": {
+            "image": "redis:alpine",
+            "network": "bridge",
+            "parameters": [
+              {
+                "key": "read-only",
+                "value": "false"
+              },
+              {
+                "key": "tty",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        "labels": {
+          "DM_INSTANCE_NAME": "b"
+        }
+      },
+      "labels": {
+        "DM_INSTANCE_NAME": "b"
+      }
+    },
+    {
+      "id": "dbslave-b-bbk-datamanmesos",
+      "name": "dbslave",
+      "instances": 1,
+      "updatedInstances": 0,
+      "runningInstances": 1,
+      "runAs": "bbk",
+      "priority": 0,
+      "clusterID": "datamanmesos",
+      "created": "2017-05-09T10:39:09.38498159+08:00",
+      "updated": "2017-05-09T10:39:09.384981688+08:00",
+      "mode": "replicates",
+      "state": "normal",
+      "currentVersion": {
+        "id": "1494297549",
+        "appName": "dbslave",
+        "appVersion": "xxx",
+        "cmd": "sleep 100d",
+        "cpus": 0.03,
+        "mem": 100,
+        "disk": 0,
+        "instances": 1,
+        "runAs": "bbk",
+        "priority": 0,
+        "container": {
+          "type": "docker",
+          "docker": {
+            "image": "busybox:latest",
+            "network": "host",
+            "parameters": [
+              {
+                "key": "tty",
+                "value": "false"
+              },
+              {
+                "key": "read-only",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        "labels": {
+          "DM_INSTANCE_NAME": "b"
+        }
+      },
+      "labels": {
+        "DM_INSTANCE_NAME": "b"
+      }
+    },
+    {
+      "id": "dbmaster-b-bbk-datamanmesos",
+      "name": "dbmaster",
+      "instances": 1,
+      "updatedInstances": 0,
+      "runningInstances": 1,
+      "runAs": "bbk",
+      "priority": 0,
+      "clusterID": "datamanmesos",
+      "created": "2017-05-09T10:39:06.511004581+08:00",
+      "updated": "2017-05-09T10:39:06.511004689+08:00",
+      "mode": "replicates",
+      "state": "normal",
+      "currentVersion": {
+        "id": "1494297546",
+        "appName": "dbmaster",
+        "appVersion": "xxx",
+        "cmd": "sleep 100d",
+        "cpus": 0.03,
+        "mem": 100,
+        "disk": 0,
+        "instances": 1,
+        "runAs": "bbk",
+        "priority": 0,
+        "container": {
+          "type": "docker",
+          "docker": {
+            "image": "busybox:latest",
+            "network": "host",
+            "parameters": [
+              {
+                "key": "read-only",
+                "value": "false"
+              },
+              {
+                "key": "tty",
+                "value": "false"
+              }
+            ]
+          }
+        },
+        "labels": {
+          "DM_INSTANCE_NAME": "b"
+        }
+      },
+      "labels": {
+        "DM_INSTANCE_NAME": "b"
+      }
+    }
+  ]
+}
+```
+
+### remove
+`DELETE` `/v_beta/compose/b`  
+`DELETE` `/v_beta/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+
+Response:
+204
+
+## docker-compose-v3
+[docker compose v3 reference](https://docs.docker.com/compose/compose-file/)
+
+### support
+| Entry  | - | Example | 
+|------|---------|------|
+| `cap_add` | OK | - |
+| `cap_drop` | OK | - |
+| `command` | OK | - | 
+| `cgroup_parent` | OK | - | 
+| `deploy` | PART | - |
+| `devices` | OK | - | 
+| `depends_on` | OK  | - |
+| `dns` | OK | - |
+| `dns_search` | OK | - |
+| `tmpfs` | OK | - |
+| `environment` | OK | - |
+| `expose` | OK | - | 
+| `extra_hosts` | OK | - |
+| `healthcheck` | OK | - |
+| `image` | OK | - |
+| `labels` | OK  | - |
+| `logging` | OK | - |
+| `network_mode` | OK | - |
+| `pid` | OK | - |
+| `ipc` | OK | - |
+| `ports` | OK | - |
+| `security_opt` | OK | - |
+| `stop_grace_period` | OK | - |
+| `stop_signal` | OK | - |
+| `ulimits` | OK | - |
+| `volumes` | PART | - |
+| `restart` | OK | - |
+| `user` | OK | - |
+| `working_dir` | OK | - |
+| `hostname` | OK | - |
+| `mac_address` | OK | - |
+| `privileged` | OK | - |
+| `read_only` | OK | - |
+| `tty` | OK  | - |
+| `stdin_open` | NO, rewrite by mesos agent  | - |
+| `container_name` | NO, rewrite by mesos agent | - |
+| `entrypoint` | NO, rewrite by mesos agent | - |
+| `isolation` | NO, fixed `default` under linux  | - |
+| `domainname` | NO | - |
+| `shm_size` | NO | - |
+| `sysctls` | NO  | - |
+| `external_links` | NO  | - |
+| `links` | NO  | - |
+| `build` | NO  | - |
+| `userns_mode` | NO  | - |
+| `secrets` | NO  | - |
+| `networks` | NO  | - |
+
+
+### example 
+```yaml
+version: "3"
+
+services:
+  web:
+    cap_add:
+      - ALL
+    cap_drop:
+      - NET_ADMIN
+      - SYS_ADMIN
+    command: "sleep 100d"
+    # cgroup_parent: "/system.slice"
+    container_name: "my-web-container"
+    deploy:
+      mode: replicated
+      replicas: 3
+    devices:
+        - "/dev/tty10:/dev/tty10"  
+    depends_on:
+      - cache
+      - dbmaster
+      - dbslave
+    dns:
+      - 114.114.114.114
+      - 8.8.8.8
+    dns_search:
+      - swan.local 
+    tmpfs:
+      - /run
+      - /tmp
+    environment:
+      - DEMO=true
+      - PROD=false
+    expose:
+      - 80
+      - 443
+    extra_hosts:
+      - "bbk:127.0.0.1"
+      - "google-dns:8.8.8.8"
+    healthcheck:
+      test: ["CMD", "echo", "ok"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    image: "nginx:latest"
+    labels:
+      - "name=bbklab"
+      - "description=bbklab desc"
+    logging:
+      driver: syslog
+      # options:
+      # syslog-address: "tcp://127.0.0.1:123"
+    network_mode: "bridge"
+    pid: "host"
+    ipc: "host"
+    ports:
+      - "3000-3003/udp"
+      - "8080:800/tcp"
+      - "8090:443"
+    security_opt:
+      - label:user:USER
+      - label:role:ROLE
+    stop_grace_period: 10s
+    stop_signal: SIGTERM
+    ulimits:
+      nproc: 65535
+      nofile:
+        soft: 20000
+        hard: 40000
+    volumes:
+      - /tmp:/data:rw
+      - /var/log:/log:ro
+    restart: "no"
+    user: "root"
+    working_dir: "/"
+    domainname: "foo.com"
+    hostname: "foo"
+    mac_address: 02:42:ac:11:65:43
+    privileged: true
+    read_only: true
+    stdin_open: true
+    tty: true
+
+  cache:
+    image: "redis:alpine"
+    network_mode: "bridge"
+    deploy:
+      mode: replicated
+      replicas: 1
+    depends_on:
+      - dbmaster
+      - dbslave
+
+  dbslave:
+    image: "busybox:latest"
+    command: "sleep 100d"
+    network_mode: "host"
+    depends_on:
+      - dbmaster
+
+  dbmaster:
+    image: "busybox:latest"
+    command: "sleep 100d"
+    network_mode: "host"
+```
