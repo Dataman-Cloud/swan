@@ -18,7 +18,7 @@ import (
 )
 
 // YamlToServiceGroup provide ability to convert docker-compose-yaml to docker-container-config
-func YamlToServiceGroup(yaml []byte, exts map[string]*store.YamlExtra) (store.ServiceGroup, error) {
+func YamlToServiceGroup(yaml []byte, env map[string]string, exts map[string]*store.YamlExtra) (store.ServiceGroup, error) {
 	dict, err := loader.ParseYAML(yaml)
 	if err != nil {
 		return nil, err
@@ -28,7 +28,7 @@ func YamlToServiceGroup(yaml []byte, exts map[string]*store.YamlExtra) (store.Se
 		ConfigFiles: []ctypes.ConfigFile{
 			{Config: dict},
 		},
-		Environment: map[string]string{}, // TODO
+		Environment: env,
 	}
 
 	cfg, err := loader.Load(cds)

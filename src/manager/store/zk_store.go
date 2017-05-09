@@ -92,6 +92,7 @@ var (
 	ErrSlotNotFound         = errors.New("slot not found")
 	ErrSlotAlreadyExists    = errors.New("slot already exists")
 	ErrVersionAlreadyExists = errors.New("version already exists")
+	ErrInstanceNotFound     = errors.New("instance not found")
 )
 
 type AtomicOp struct {

@@ -222,6 +222,7 @@ type Instance struct {
 	// request settings
 	ServiceGroup ServiceGroup          `json:"service_group"`
 	YAMLRaw      string                `json:"yaml_raw"`
+	YAMLEnv      map[string]string     `json:"yaml_env"`
 	YAMLExtra    map[string]*YamlExtra `json:"yaml_extra"`
 }
 

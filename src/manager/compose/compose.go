@@ -1,15 +1,15 @@
 package compose
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/state"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
+	"github.com/Dataman-Cloud/swan/src/types"
+	"github.com/Dataman-Cloud/swan/src/utils/labels"
 	"github.com/Sirupsen/logrus"
 )
 
@@ -42,9 +42,14 @@ func LaunchInstance(ins *store.Instance, sched *scheduler.Scheduler) (err error)
 	return nil
 }
 
-//
+func InstanceApps(sched *scheduler.Scheduler, insName string) []*state.App {
+	selector, _ := labels.Parse("DM_INSTANCE_NAME=" + insName)
+	return sched.ListApps(types.AppFilterOptions{
+		LabelsSelector: selector,
+	})
+}
+
 // svrPack is just a convinient hand for instance service(app) operation
-//
 type svrPack struct {
 	ins   *store.Instance
 	svr   *store.DockerService
@@ -69,12 +74,6 @@ func (sp *svrPack) svrName() string {
 
 func (sp *svrPack) create() error {
 	ver, _ := SvrToVersion(sp.svr, sp.insName(), sp.ins.VersionID)
-
-	// just for debug
-	logrus.Println("----------------> create app:", sp.insName(), sp.svrName())
-	json.NewEncoder(os.Stdout).Encode(ver)
-	logrus.Println("<----------------")
-	//return nil
 
 	app, err := sp.sched.CreateApp(ver, sp.insName())
 	if err != nil {

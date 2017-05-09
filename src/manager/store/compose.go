@@ -29,6 +29,11 @@ func (zk *ZkStore) DeleteInstance(idOrName string) error {
 }
 
 func (zk *ZkStore) UpdateInstance(ins *Instance) error {
+	i, _ := zk.GetInstance(ins.ID)
+	if i == nil {
+		return ErrInstanceNotFound
+	}
+
 	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_INSTANCE,

@@ -11,7 +11,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Dataman-Cloud/swan/src/utils/labels"
 
 	"github.com/emicklei/go-restful"
 	uuid "github.com/satori/go.uuid"
@@ -45,10 +44,6 @@ func (api *ComposeService) Register(container *restful.Container) {
 	ws.Route(ws.DELETE("/{iid}").Doc("Delete Compose Instance").
 		To(metrics.InstrumentRouteFunc("DELETE", "Compose", api.removeInstance)).
 		Param(ws.PathParameter("iid", "id or name of comopse instance").DataType("string")))
-
-	ws.Route(ws.PUT("/{iid}").Doc("Upgrade Compose Instance").
-		To(metrics.InstrumentRouteFunc("PUT", "Compose", api.upgradeInstance)).
-		Param(ws.PathParameter("iid", "id or name of compose instance").DataType("string")))
 
 	container.Add(ws)
 }
@@ -87,6 +82,7 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 	if ins.RequireConvert() {
 		ins.ServiceGroup, err = compose.YamlToServiceGroup(
 			[]byte(ins.YAMLRaw), // docker-compose yaml raw
+			ins.YAMLEnv,         // docker-compose yaml env
 			ins.YAMLExtra,       // extra compose settings
 		)
 		if err != nil {
@@ -140,7 +136,7 @@ func (api *ComposeService) removeInstance(r *restful.Request, w *restful.Respons
 	}
 
 	// remove apps
-	apps := api.insApps(i.Name)
+	apps := compose.InstanceApps(api.sched, i.Name)
 	for _, app := range apps {
 		if err := api.sched.DeleteApp(app.ID); err != nil {
 			w.WriteError(500, fmt.Errorf("remove instance:%s app:%s error: %v",
@@ -158,31 +154,23 @@ func (api *ComposeService) removeInstance(r *restful.Request, w *restful.Respons
 	w.WriteHeader(204)
 }
 
-// upgrade compose instance
-func (api *ComposeService) upgradeInstance(r *restful.Request, w *restful.Response) {
-}
-
 type instanceWrapper struct {
 	*store.Instance
 	Apps []*types.App `json:"apps"`
 }
 
 func (api *ComposeService) newInstanceWrapper(i *store.Instance) *instanceWrapper {
+	var (
+		// sigh... state.App can't be Marshal, as loop references cause OOM
+		as   = compose.InstanceApps(api.sched, i.Name)
+		apps = make([]*types.App, 0, len(as))
+	)
+	for _, a := range as {
+		apps = append(apps, FormApp(a))
+	}
+
 	return &instanceWrapper{
 		Instance: i,
-		Apps:     api.insApps(i.Name),
+		Apps:     apps,
 	}
-}
-
-func (api *ComposeService) insApps(insName string) []*types.App {
-	selector, _ := labels.Parse("DM_INSTANCE_NAME=" + insName)
-	apps := api.sched.ListApps(types.AppFilterOptions{
-		LabelsSelector: selector,
-	}) // sigh... can't be Marshal, as state.App has dead loop references which lead to OOM
-
-	ret := make([]*types.App, 0, len(apps))
-	for _, app := range apps {
-		ret = append(ret, FormApp(app))
-	}
-	return ret
 }
