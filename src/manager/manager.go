@@ -92,23 +92,27 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 }
 
 func (manager *Manager) InitAndStart(ctx context.Context) error {
-	zkNodesPath := []string{
+	paths := []string{
 		manager.conf.ZkPath.Path,
 		fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path),
 		fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, manager.conf.ZkPath.Path),
 	}
 
-	nodeExists, _, err := manager.zkConn.Exists(manager.conf.ZkPath.Path)
-	if err != nil && !isNodeDoesNotExists(err) {
-		return err
-	}
-
-	if !nodeExists {
-		for _, path := range zkNodesPath {
-			_, err := manager.zkConn.Create(path, []byte(""), ZK_FLAG_NONE, ZK_DEFAULT_ACL)
-			if err != nil {
-				return err
-			}
+	var (
+		err    error
+		exists bool
+	)
+	for _, p := range paths {
+		exists, _, err = manager.zkConn.Exists(p)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		_, err = manager.zkConn.Create(p, []byte{}, ZK_FLAG_NONE, ZK_DEFAULT_ACL)
+		if err != nil {
+			return err
 		}
 	}
 
@@ -229,8 +233,4 @@ func (manager *Manager) minimalValueChild(path string) (string, error) {
 	sort.Sort(sortablePathes)
 
 	return sortablePathes[0], nil
-}
-
-func isNodeDoesNotExists(err error) bool {
-	return strings.Contains(err.Error(), "node does not exist")
 }
