@@ -1,8 +1,6 @@
 package manager
 
 import (
-	"errors"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -15,16 +13,16 @@ import (
 	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
-	"github.com/Dataman-Cloud/swan/src/utils"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/samuel/go-zookeeper/zk"
 	"golang.org/x/net/context"
 )
 
-const ZK_FLAG_NONE = 0
-const SWAN_LEADER_ELECTION_NODE_PATH = "%s/leader-election"
-const SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
+const (
+	ZK_FLAG_NONE         = 0
+	LEADER_ELECTION_PATH = "/leader-election"
+)
 
 type Leadership uint8
 
@@ -34,18 +32,6 @@ const (
 	LeadershipFollower Leadership = 3
 )
 
-func (l Leadership) String() string {
-	switch l {
-	case LeadershipUnknown:
-		return "LeadershipUnknown"
-	case LeadershipFollower:
-		return "LeadershipFollower"
-	case LeadershipLeader:
-		return "LeadershipLeader"
-	}
-	return ""
-}
-
 var (
 	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
 )
@@ -53,12 +39,14 @@ var (
 type Manager struct {
 	scheduler *scheduler.Scheduler
 	apiServer *apiserver.ApiServer
-	zkConn    *zk.Conn
+	ZKClient  *zk.Conn
 
 	criticalErrorChan chan error
 
-	previousLeadership Leadership
-	conf               config.ManagerConfig
+	conf                 config.ManagerConfig
+	leadershipChangeChan chan Leadership
+	electPath            string
+	myid                 string
 }
 
 func New(managerConf config.ManagerConfig) (*Manager, error) {
@@ -82,20 +70,20 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 	api.NewAndInstallVersionService(route)
 
 	return &Manager{
-		apiServer:          route,
-		criticalErrorChan:  make(chan error, 1),
-		previousLeadership: LeadershipUnknown,
-		scheduler:          sched,
-		zkConn:             conn,
-		conf:               managerConf,
+		apiServer:            route,
+		criticalErrorChan:    make(chan error, 1),
+		scheduler:            sched,
+		ZKClient:             conn,
+		conf:                 managerConf,
+		leadershipChangeChan: make(chan Leadership),
+		electPath:            filepath.Join(managerConf.ZkPath.Path, LEADER_ELECTION_PATH),
 	}, nil
 }
 
-func (manager *Manager) InitAndStart(ctx context.Context) error {
+func (m *Manager) InitAndStart(ctx context.Context) error {
 	paths := []string{
-		manager.conf.ZkPath.Path,
-		fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path),
-		fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, manager.conf.ZkPath.Path),
+		m.conf.ZkPath.Path,
+		m.electPath,
 	}
 
 	var (
@@ -103,65 +91,57 @@ func (manager *Manager) InitAndStart(ctx context.Context) error {
 		exists bool
 	)
 	for _, p := range paths {
-		exists, _, err = manager.zkConn.Exists(p)
+		exists, _, err = m.ZKClient.Exists(p)
 		if err != nil {
 			return err
 		}
 		if exists {
 			continue
 		}
-		_, err = manager.zkConn.Create(p, []byte{}, ZK_FLAG_NONE, ZK_DEFAULT_ACL)
+		_, err = m.ZKClient.Create(p, []byte{}, ZK_FLAG_NONE, ZK_DEFAULT_ACL)
 		if err != nil {
 			return err
 		}
 	}
 
-	return manager.start(ctx)
+	return m.start(ctx)
 }
 
-func (manager *Manager) start(ctx context.Context) error {
-	leadershipChangeChan := make(chan Leadership)
+func (m *Manager) start(ctx context.Context) error {
 	eventbus.Init()
 
 	go func() {
-		for {
-			err := manager.watchLeaderChange(ctx, leadershipChangeChan)
-			if err != nil {
-				logrus.Errorf("watchLeaderChange go error: %+v", err)
-				return
-			}
-			logrus.Info("watchLeaderChange exit normally")
+		p, err := m.electLeader()
+		if err != nil {
+			logrus.Info("Electing lead manager failure, ", err)
+			return
 		}
+		m.watchLeader(p)
 	}()
 
 	var stopFunc context.CancelFunc
 	for {
 		select {
-		case change := <-leadershipChangeChan:
+		case change := <-m.leadershipChangeChan:
 			// do nothing when leadership not change
-			if change == manager.previousLeadership {
-				continue
-			}
-			manager.previousLeadership = change
-
 			switch change {
 			case LeadershipLeader:
 				var stopCtx context.Context
 				stopCtx, stopFunc = context.WithCancel(ctx)
 				go func() {
-					manager.criticalErrorChan <- eventbus.Start(stopCtx)
+					m.criticalErrorChan <- eventbus.Start(stopCtx)
 				}()
 
 				go func() {
-					manager.criticalErrorChan <- manager.scheduler.Start(stopCtx)
+					m.criticalErrorChan <- m.scheduler.Start(stopCtx)
 				}()
 
 				go func() {
-					manager.criticalErrorChan <- manager.apiServer.Start(stopCtx)
+					m.criticalErrorChan <- m.apiServer.Start(stopCtx)
 				}()
 
 				go func() {
-					manager.criticalErrorChan <- store.DB().Start(stopCtx)
+					m.criticalErrorChan <- store.DB().Start(stopCtx)
 				}()
 
 			case LeadershipFollower:
@@ -173,7 +153,7 @@ func (manager *Manager) start(ctx context.Context) error {
 				// do nothing
 			}
 
-		case err := <-manager.criticalErrorChan:
+		case err := <-m.criticalErrorChan:
 			// for any error contains `context canceled` should be
 			// those caused by leadership changed to LeadershipFollower
 			logrus.Error(err)
@@ -191,46 +171,92 @@ func (manager *Manager) start(ctx context.Context) error {
 
 }
 
-func (manager *Manager) watchLeaderChange(ctx context.Context, leadershipChangeChan chan Leadership) error {
-	leaderPath := filepath.Join(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path), "node")
-	myNode, err := manager.zkConn.CreateProtectedEphemeralSequential(leaderPath, []byte(""), ZK_DEFAULT_ACL)
+func (m *Manager) setLeader(path string) {
+	p := filepath.Join(m.electPath, path)
+	_, err := m.ZKClient.Set(p, []byte(m.conf.ListenAddr), -1)
 	if err != nil {
-		return err
+		logrus.Infof("Update leader address error %s", err.Error())
 	}
-	_, myNodePath := filepath.Split(myNode)
-
-reevaluateLeader:
-	leaderNode, err := manager.minimalValueChild(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH, manager.conf.ZkPath.Path))
-	if myNodePath == leaderNode {
-		leadershipChangeChan <- LeadershipLeader
-	} else {
-		leadershipChangeChan <- LeadershipFollower
-	}
-	_, _, existsWChan, err := manager.zkConn.ExistsW(filepath.Join(fmt.Sprintf(SWAN_LEADER_ELECTION_NODE_PATH,
-		manager.conf.ZkPath.Path), leaderNode))
-	if err != nil {
-		return err
-	}
-
-	if _, ok := <-existsWChan; ok {
-		goto reevaluateLeader
-	}
-
-	return nil
 }
 
-func (manager *Manager) minimalValueChild(path string) (string, error) {
-	children, _, err := manager.zkConn.Children(path)
+func (m *Manager) getLeader(path string) string {
+	p := filepath.Join(m.electPath, path)
+	b, _, err := m.ZKClient.Get(p)
+	if err != nil {
+		logrus.Infof("Get leader address error %s", err.Error())
+		return ""
+	}
+
+	return string(b)
+}
+
+func (m *Manager) isLeader(path string) (bool, error, string) {
+	children, _, err := m.ZKClient.Children(m.electPath)
+	if err != nil {
+		return false, err, ""
+	}
+
+	sort.Strings(children)
+
+	p := children[0]
+
+	return path == p, nil, p
+}
+
+func (m *Manager) elect(path string) (string, error) {
+	leader, err, p := m.isLeader(path)
+	if err != nil {
+		return "", err
+	}
+	if leader {
+		logrus.Info("Electing leader success.")
+		m.setLeader(p)
+		m.leadershipChangeChan <- LeadershipLeader
+
+		return p, nil
+	}
+
+	logrus.Infof("Leader manager has been elected.")
+	logrus.Infof("Detect new leader at %s", m.getLeader(p))
+	m.leadershipChangeChan <- LeadershipFollower
+
+	return p, nil
+
+}
+
+func (m *Manager) electLeader() (string, error) {
+	path, err := m.ZKClient.Create(filepath.Join(m.electPath, "0"), nil, zk.FlagEphemeral|zk.FlagSequence, ZK_DEFAULT_ACL)
 	if err != nil {
 		return "", err
 	}
 
-	if len(children) == 0 {
-		return "", errors.New("empty children in minimalValueChild")
+	p := filepath.Base(path)
+	m.myid = p
+
+	return m.elect(p)
+}
+
+func (m *Manager) watchLeader(path string) {
+	pathW := filepath.Join(m.electPath, path)
+	_, _, childCh, err := m.ZKClient.ChildrenW(pathW)
+	if err != nil {
+		logrus.Infof("Watch children error %s", err)
+		return
 	}
 
-	sortablePathes := utils.SortableNodePath(children)
-	sort.Sort(sortablePathes)
-
-	return sortablePathes[0], nil
+	for {
+		childEvent := <-childCh
+		if childEvent.Type == zk.EventNodeDeleted {
+			// re-election
+			logrus.Info("Lost leading manager. Start electing new leader...")
+			// If it is better to run following steps in a seprated goroutine?
+			// (memory leak maybe)
+			p, err := m.elect(m.myid)
+			if err != nil {
+				logrus.Infof("Electing new leader error %s", err.Error())
+				return
+			}
+			m.watchLeader(p)
+		}
+	}
 }
