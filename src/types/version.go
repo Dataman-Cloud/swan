@@ -85,7 +85,7 @@ type HealthCheck struct {
 }
 
 type Gateway struct {
-	Enabled bool    `json:"enabled,omitempty"`
+	Enabled bool    `json:"enabled"`
 	Weight  float64 `json:"weight,omitempty"`
 }
 
