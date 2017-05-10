@@ -13,21 +13,10 @@ import (
 	"github.com/urfave/cli"
 )
 
-func TestString(t *testing.T) {
-	unknown := LeadershipUnknown
-	equals(t, unknown.String(), "LeadershipUnknown")
-
-	follower := LeadershipFollower
-	equals(t, follower.String(), "LeadershipFollower")
-
-	leader := LeadershipLeader
-	equals(t, leader.String(), "LeadershipLeader")
-}
-
 func TestNew(t *testing.T) {
 	set := flag.NewFlagSet("test", 0)
-	set.String("mesos-zk-path", "zk://localhost:port1/mesos", "doc")
-	set.String("zk-path", "zk://localhost:port1/swan", "doc")
+	set.String("mesos", "zk://localhost:port1/mesos", "doc")
+	set.String("zk", "zk://localhost:port1/swan", "doc")
 	testCliCtx := cli.NewContext(nil, set, nil)
 	testManagerConf, _ := config.NewManagerConfig(testCliCtx)
 

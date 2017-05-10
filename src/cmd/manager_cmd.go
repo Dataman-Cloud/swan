@@ -21,8 +21,8 @@ func ManagerCmd() cli.Command {
 	}
 
 	managerCmd.Flags = append(managerCmd.Flags, FlagListenAddr())
-	managerCmd.Flags = append(managerCmd.Flags, FlagZkPath())
-	managerCmd.Flags = append(managerCmd.Flags, FlagMesosZkPath())
+	managerCmd.Flags = append(managerCmd.Flags, FlagZKURL())
+	managerCmd.Flags = append(managerCmd.Flags, FlagMesosURL())
 	managerCmd.Flags = append(managerCmd.Flags, FlagLogLevel())
 
 	return managerCmd

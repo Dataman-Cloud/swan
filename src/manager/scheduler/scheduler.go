@@ -31,8 +31,8 @@ type Scheduler struct {
 	MesosConnector *connector.Connector
 }
 
-func NewScheduler(mConfig config.ManagerConfig) *Scheduler {
-	connector.Init(mConfig.MesosFrameworkUser, mConfig.MesosZkPath)
+func NewScheduler(cfg config.ManagerConfig) *Scheduler {
+	connector.Init(cfg.MesosFrameworkUser, cfg.MesosURL)
 
 	scheduler := &Scheduler{
 		MesosConnector: connector.Instance(),
