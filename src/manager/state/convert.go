@@ -36,7 +36,6 @@ func VersionToRaft(version *types.Version, appID string) *store.Version {
 	raftVersion := &store.Version{
 		ID:          version.ID,
 		Command:     version.Command,
-		Args:        version.Args,
 		Cpus:        version.CPUs,
 		Mem:         version.Mem,
 		Disk:        version.Disk,
@@ -81,7 +80,6 @@ func VersionFromRaft(raftVersion *store.Version) *types.Version {
 		ID:          raftVersion.ID,
 		AppName:     raftVersion.AppName,
 		Command:     raftVersion.Command,
-		Args:        raftVersion.Args,
 		CPUs:        raftVersion.Cpus,
 		Mem:         raftVersion.Mem,
 		Disk:        raftVersion.Disk,

@@ -389,6 +389,15 @@
 			"notests": true
 		},
 		{
+			"importpath": "github.com/docker/go-connections/nat",
+			"repository": "https://github.com/docker/go-connections",
+			"vcs": "git",
+			"revision": "e15c02316c12de00874640cd76311849de2aeed5",
+			"branch": "master",
+			"path": "/nat",
+			"notests": true
+		},
+		{
 			"importpath": "github.com/docker/go-events",
 			"repository": "https://github.com/docker/go-events",
 			"vcs": "git",
