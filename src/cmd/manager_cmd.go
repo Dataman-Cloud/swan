@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
-	"golang.org/x/net/context"
 )
 
 func ManagerCmd() cli.Command {
@@ -43,8 +42,8 @@ func StartManager(c *cli.Context) error {
 		return err
 	}
 
-	if err := managerNode.InitAndStart(context.TODO()); err != nil {
-		logrus.Errorf("start node failed. Error: %s", err.Error())
+	if err := managerNode.Start(); err != nil {
+		logrus.Errorf("start manager failed. Error: %s", err.Error())
 		return err
 	}
 

@@ -18,22 +18,16 @@ type EventBus struct {
 	sync.RWMutex
 }
 
-var initOnce sync.Once
+var once sync.Once
 var eventBusInstance *EventBus
 
-func Instance() *EventBus {
-	return eventBusInstance
-}
-
-func Init() *EventBus {
-	initOnce.Do(func() {
+func init() {
+	once.Do(func() {
 		eventBusInstance = &EventBus{
 			listeners: make(map[string]EventListener),
 			eventChan: make(chan *Event, 1024),
 		}
 	})
-
-	return eventBusInstance
 }
 
 func Start(ctx context.Context) error {
