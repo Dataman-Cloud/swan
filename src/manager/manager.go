@@ -19,22 +19,19 @@ import (
 	"golang.org/x/net/context"
 )
 
-const (
-	ZK_FLAG_NONE         = 0
-	LEADER_ELECTION_PATH = "/leader-election"
-)
-
 type Leadership uint8
 
 const (
+	ZK_FLAG_NONE = 0
+
+	LEADER_ELECTION_PATH = "/leader-election"
+
 	LeadershipUnknown  Leadership = 1
 	LeadershipLeader   Leadership = 2
 	LeadershipFollower Leadership = 3
 )
 
-var (
-	ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
-)
+var ZK_DEFAULT_ACL = zk.WorldACL(zk.PermAll)
 
 type Manager struct {
 	scheduler *scheduler.Scheduler
@@ -43,25 +40,25 @@ type Manager struct {
 
 	criticalErrorChan chan error
 
-	conf                 config.ManagerConfig
+	cfg                  config.ManagerConfig
 	leadershipChangeChan chan Leadership
 	electPath            string
 	myid                 string
 }
 
-func New(managerConf config.ManagerConfig) (*Manager, error) {
-	conn, _, err := zk.Connect(strings.Split(managerConf.ZkPath.Host, ","), 5*time.Second)
+func New(cfg config.ManagerConfig) (*Manager, error) {
+	conn, _, err := zk.Connect(strings.Split(cfg.ZKURL.Host, ","), 5*time.Second)
 	if err != nil {
 		return nil, err
 	}
 
-	err = store.InitZkStore(managerConf.ZkPath)
+	err = store.InitZkStore(cfg.ZKURL)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
 
-	sched := scheduler.NewScheduler(managerConf)
-	route := apiserver.NewApiServer(managerConf.ListenAddr)
+	sched := scheduler.NewScheduler(cfg)
+	route := apiserver.NewApiServer(cfg.ListenAddr)
 	api.NewAndInstallAppService(route, sched)
 	api.NewAndInstallStatsService(route, sched)
 	api.NewAndInstallEventsService(route, sched)
@@ -75,15 +72,15 @@ func New(managerConf config.ManagerConfig) (*Manager, error) {
 		criticalErrorChan:    make(chan error, 1),
 		scheduler:            sched,
 		ZKClient:             conn,
-		conf:                 managerConf,
+		cfg:                  cfg,
 		leadershipChangeChan: make(chan Leadership),
-		electPath:            filepath.Join(managerConf.ZkPath.Path, LEADER_ELECTION_PATH),
+		electPath:            filepath.Join(cfg.ZKURL.Path, LEADER_ELECTION_PATH),
 	}, nil
 }
 
 func (m *Manager) InitAndStart(ctx context.Context) error {
 	paths := []string{
-		m.conf.ZkPath.Path,
+		m.cfg.ZKURL.Path,
 		m.electPath,
 	}
 
@@ -174,7 +171,7 @@ func (m *Manager) start(ctx context.Context) error {
 
 func (m *Manager) setLeader(path string) {
 	p := filepath.Join(m.electPath, path)
-	_, err := m.ZKClient.Set(p, []byte(m.conf.ListenAddr), -1)
+	_, err := m.ZKClient.Set(p, []byte(m.cfg.ListenAddr), -1)
 	if err != nil {
 		logrus.Infof("Update leader address error %s", err.Error())
 	}

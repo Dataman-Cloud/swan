@@ -1,7 +1,6 @@
 package config
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"net/url"
@@ -18,8 +17,8 @@ type ManagerConfig struct {
 	MesosFrameworkUser string `json:"mesosFrameworkUser"`
 	Hostname           string `json:"hostname"`
 
-	MesosZkPath *url.URL `json:"mesosZkPath"`
-	ZkPath      *url.URL `json:"zkPath"`
+	MesosURL *url.URL `json:"mesosURL"`
+	ZKURL    *url.URL `json:"zkURL"`
 }
 
 type AgentConfig struct {
@@ -59,9 +58,8 @@ type Janitor struct {
 }
 
 func NewAgentConfig(c *cli.Context) AgentConfig {
-	agentConfig := AgentConfig{
+	cfg := AgentConfig{
 		LogLevel:         "info",
-		DataDir:          "./data/",
 		ListenAddr:       "0.0.0.0:9999",
 		JoinAddrs:        []string{"0.0.0.0:9999"},
 		GossipListenAddr: "0.0.0.0:5000",
@@ -83,104 +81,92 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 	}
 
 	if c.String("log-level") != "" {
-		agentConfig.LogLevel = c.String("log-level")
-	}
-
-	if c.String("data-dir") != "" {
-		agentConfig.DataDir = c.String("data-dir")
-		if !strings.HasSuffix(agentConfig.DataDir, "/") {
-			agentConfig.DataDir = agentConfig.DataDir + "/"
-		}
+		cfg.LogLevel = c.String("log-level")
 	}
 
 	if c.String("domain") != "" {
-		agentConfig.DNS.Domain = c.String("domain")
-		agentConfig.Janitor.Domain = c.String("domain")
+		cfg.DNS.Domain = c.String("domain")
+		cfg.Janitor.Domain = c.String("domain")
 	}
 
 	if c.String("listen-addr") != "" {
-		agentConfig.ListenAddr = c.String("listen-addr")
+		cfg.ListenAddr = c.String("listen-addr")
 	}
 
-	agentConfig.AdvertiseAddr = c.String("advertise-addr")
-	if agentConfig.AdvertiseAddr == "" {
-		agentConfig.AdvertiseAddr = agentConfig.ListenAddr
+	cfg.AdvertiseAddr = c.String("advertise-addr")
+	if cfg.AdvertiseAddr == "" {
+		cfg.AdvertiseAddr = cfg.ListenAddr
 	}
 
 	if c.String("gateway-advertise-ip") != "" {
-		agentConfig.Janitor.AdvertiseIP = c.String("gateway-advertise-ip")
+		cfg.Janitor.AdvertiseIP = c.String("gateway-advertise-ip")
 	}
 
 	if c.String("gateway-listen-addr") != "" {
-		agentConfig.Janitor.ListenAddr = c.String("gateway-listen-addr")
+		cfg.Janitor.ListenAddr = c.String("gateway-listen-addr")
 
-		if agentConfig.Janitor.AdvertiseIP == "" {
-			agentConfig.Janitor.AdvertiseIP, _, _ = net.SplitHostPort(agentConfig.Janitor.ListenAddr)
+		if cfg.Janitor.AdvertiseIP == "" {
+			cfg.Janitor.AdvertiseIP, _, _ = net.SplitHostPort(cfg.Janitor.ListenAddr)
 		}
 	}
 
 	if c.String("dns-listen-addr") != "" {
-		agentConfig.DNS.ListenAddr = c.String("dns-listen-addr")
+		cfg.DNS.ListenAddr = c.String("dns-listen-addr")
 	}
 
 	if c.String("dns-resolvers") != "" {
-		agentConfig.DNS.Resolvers = strings.Split(c.String("dns-resolvers"), ",")
+		cfg.DNS.Resolvers = strings.Split(c.String("dns-resolvers"), ",")
 	}
 
 	if c.String("join-addrs") != "" {
-		agentConfig.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
+		cfg.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
 	}
 
 	if c.String("gossip-listen-addr") != "" {
-		agentConfig.GossipListenAddr = c.String("gossip-listen-addr")
+		cfg.GossipListenAddr = c.String("gossip-listen-addr")
 	}
 
 	if c.String("gossip-join-addr") != "" {
-		agentConfig.GossipJoinAddr = c.String("gossip-join-addr")
+		cfg.GossipJoinAddr = c.String("gossip-join-addr")
 	}
 
-	return agentConfig
+	return cfg
 }
 
 func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
 	var err error
-	managerConfig := ManagerConfig{
+	cfg := ManagerConfig{
 		LogLevel:           "info",
 		ListenAddr:         "0.0.0.0:9999",
 		MesosFrameworkUser: "root",
 		Hostname:           Hostname(),
 	}
 
-	managerConfig.MesosZkPath, err = url.Parse(c.String("mesos-zk-path"))
+	cfg.MesosURL, err = url.Parse(c.String("mesos"))
 	if err != nil {
-		return managerConfig, err
+		return cfg, err
 	}
-	if err := validZkURL("--mesos-zk-path", managerConfig.MesosZkPath); err != nil {
-		return managerConfig, err
+	if err := validZKURL("--mesos", cfg.MesosURL); err != nil {
+		return cfg, err
 	}
 
-	managerConfig.ZkPath, err = url.Parse(c.String("zk-path"))
+	cfg.ZKURL, err = url.Parse(c.String("zk"))
 	if err != nil {
-		return managerConfig, err
+		return cfg, err
 	}
-	if err := validZkURL("--zk-path", managerConfig.ZkPath); err != nil {
-		return managerConfig, err
-	}
-
-	if (managerConfig.MesosZkPath.Path == managerConfig.ZkPath.Path) &&
-		(managerConfig.MesosZkPath.Host == managerConfig.ZkPath.Host) {
-		return managerConfig, errors.New("ZkPath shouldn't be same as MesosZkPath")
+	if err := validZKURL("--zk", cfg.ZKURL); err != nil {
+		return cfg, err
 	}
 
 	if c.String("listen-addr") != "" {
-		managerConfig.ListenAddr = c.String("listen-addr")
+		cfg.ListenAddr = c.String("listen-addr")
 	}
 
 	if c.String("log-level") != "" {
-		managerConfig.LogLevel = c.String("log-level")
+		cfg.LogLevel = c.String("log-level")
 	}
 
-	return managerConfig, nil
+	return cfg, nil
 }
 
 func Hostname() string {
@@ -192,17 +178,17 @@ func Hostname() string {
 	return hostname
 }
 
-func validZkURL(which string, zkUrl *url.URL) error {
+func validZKURL(p string, zkUrl *url.URL) error {
 	if zkUrl.Host == "" {
-		return errors.New(fmt.Sprintf("%s not present", which))
+		return fmt.Errorf("%s not present", p)
 	}
 
 	if zkUrl.Scheme != "zk" {
-		return errors.New(fmt.Sprintf("%s should have valid scheme, default should be zk://", which))
+		return fmt.Errorf("%s scheme invalid. should be zk://", p)
 	}
 
 	if len(zkUrl.Path) == 0 {
-		return errors.New(fmt.Sprintf("%s should provide meaningful path.   eg. swan", which))
+		return fmt.Errorf("no path found %s", p)
 	}
 
 	return nil
