@@ -31,7 +31,7 @@ const SSE_BLANK_LINE = ""
 type Agent struct {
 	Resolver   *nameserver.Resolver
 	Janitor    *janitor.JanitorServer
-	HttpServer *HttpServer
+	HTTPServer *HttpServer
 	SerfServer *SerfServer
 
 	Config config.AgentConfig
@@ -66,7 +66,7 @@ func New(agentConf config.AgentConfig) (*Agent, error) {
 	jConfig.LogLevel = agentConf.LogLevel
 	agent.Janitor = janitor.NewJanitorServer(jConfig)
 
-	agent.HttpServer = NewHttpServer(agentConf.ListenAddr, agent)
+	agent.HTTPServer = NewHttpServer(agentConf.ListenAddr, agent)
 	agent.SerfServer = NewSerfServer(agentConf.GossipListenAddr, agentConf.GossipJoinAddr)
 
 	return agent, nil
@@ -143,7 +143,7 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 
 	go func() {
 		httpServerCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.HttpServer.Start(httpServerCtx, httpStarted)
+		errChan <- agent.HTTPServer.Start(httpServerCtx, httpStarted)
 	}()
 
 	go func() {
