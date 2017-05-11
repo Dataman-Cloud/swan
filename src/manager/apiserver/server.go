@@ -15,7 +15,6 @@ import (
 	"github.com/emicklei/go-restful"
 	"github.com/emicklei/go-restful/swagger"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"golang.org/x/net/context"
 )
 
 // RootPaths lists the paths available at root.
@@ -54,7 +53,7 @@ func (apiServer *ApiServer) UpdateLeaderAddr(addr string) {
 	apiServer.leaderAddr = addr
 }
 
-func (apiServer *ApiServer) Start(ctx context.Context) error {
+func (apiServer *ApiServer) Start(errCh chan error) error {
 	wsContainer := restful.NewContainer()
 
 	// Register webservices here
@@ -135,13 +134,8 @@ func (apiServer *ApiServer) Start(ctx context.Context) error {
 		// normal close, initiated by cancel context
 		// any error not close should popup
 		if !strings.Contains(e.Error(), "http: Server closed") {
-			return e
+			errCh <- e
 		}
-
-	case <-ctx.Done():
-		server.Close()
-		logrus.Info("apiServer shutdown by ctx cancel")
-		return ctx.Err()
 	}
 	return nil
 }
