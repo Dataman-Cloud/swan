@@ -1,6 +1,6 @@
 package store
 
-func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
+func (zk *ZKStore) UpdateFrameworkId(frameworkId string) error {
 	op := &AtomicOp{
 		Op:      OP_UPDATE,
 		Entity:  ENTITY_FRAMEWORKID,
@@ -10,7 +10,7 @@ func (zk *ZkStore) UpdateFrameworkId(frameworkId string) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) GetFrameworkId() string {
+func (zk *ZKStore) GetFrameworkId() string {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 

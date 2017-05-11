@@ -1,6 +1,6 @@
 package store
 
-func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
+func (zk *ZKStore) CreateVersion(appId string, version *Version) error {
 	if zk.GetVersion(appId, version.ID) != nil {
 		return ErrVersionAlreadyExists
 	}
@@ -16,7 +16,7 @@ func (zk *ZkStore) CreateVersion(appId string, version *Version) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) GetVersion(appId, versionId string) *Version {
+func (zk *ZKStore) GetVersion(appId, versionId string) *Version {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -33,7 +33,7 @@ func (zk *ZkStore) GetVersion(appId, versionId string) *Version {
 	return version
 }
 
-func (zk *ZkStore) ListVersions(appId string) []*Version {
+func (zk *ZKStore) ListVersions(appId string) []*Version {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 

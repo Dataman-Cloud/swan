@@ -2,7 +2,7 @@ package store
 
 import "errors"
 
-func (zk *ZkStore) CreateInstance(ins *Instance) error {
+func (zk *ZKStore) CreateInstance(ins *Instance) error {
 	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_INSTANCE,
@@ -13,7 +13,7 @@ func (zk *ZkStore) CreateInstance(ins *Instance) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) DeleteInstance(idOrName string) error {
+func (zk *ZKStore) DeleteInstance(idOrName string) error {
 	i, _ := zk.GetInstance(idOrName)
 	if i == nil {
 		return nil
@@ -28,7 +28,7 @@ func (zk *ZkStore) DeleteInstance(idOrName string) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) UpdateInstance(ins *Instance) error {
+func (zk *ZKStore) UpdateInstance(ins *Instance) error {
 	i, _ := zk.GetInstance(ins.ID)
 	if i == nil {
 		return ErrInstanceNotFound
@@ -44,7 +44,7 @@ func (zk *ZkStore) UpdateInstance(ins *Instance) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) GetInstance(idOrName string) (*Instance, error) {
+func (zk *ZKStore) GetInstance(idOrName string) (*Instance, error) {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -69,7 +69,7 @@ func (zk *ZkStore) GetInstance(idOrName string) (*Instance, error) {
 	return nil, errors.New("no such compose instance")
 }
 
-func (zk *ZkStore) ListInstances() ([]*Instance, error) {
+func (zk *ZKStore) ListInstances() ([]*Instance, error) {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 

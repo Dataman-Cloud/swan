@@ -34,7 +34,7 @@ type Scheduler struct {
 func NewScheduler(cfg config.ManagerConfig) *Scheduler {
 	connector.Init(cfg.MesosFrameworkUser, cfg.MesosURL)
 
-	scheduler := &Scheduler{
+	sched := &Scheduler{
 		MesosConnector: connector.Instance(),
 		heartbeater:    time.NewTicker(10 * time.Second),
 
@@ -43,54 +43,54 @@ func NewScheduler(cfg config.ManagerConfig) *Scheduler {
 		userEventChan: make(chan *event.UserEvent, 1024),
 	}
 
-	scheduler.handlerManager = NewHandlerManager(scheduler)
+	sched.handlerManager = NewHandlerManager(sched)
 
-	return scheduler
+	return sched
 }
 
 // shutdown main scheduler and related
 // revive from crash or rotate from leader change
-func (scheduler *Scheduler) Start(ctx context.Context) error {
-	if err := scheduler.recoverFromPreviousScene(); err != nil {
+func (sched *Scheduler) Start(ctx context.Context) error {
+	if err := sched.recoverFromPreviousScene(); err != nil {
 		return err
 	}
 
 	go func() {
-		scheduler.MesosConnector.SetFrameworkInfoId(store.DB().GetFrameworkId())
+		sched.MesosConnector.SetFrameworkInfoId(store.DB().GetFrameworkId())
 
 		var c context.Context
-		c, scheduler.mesosConnectorCancelFun = context.WithCancel(ctx)
-		scheduler.MesosConnector.Start(c)
+		c, sched.mesosConnectorCancelFun = context.WithCancel(ctx)
+		sched.MesosConnector.Start(c)
 	}()
 
 	for {
 		select {
-		case e := <-scheduler.userEventChan:
+		case e := <-sched.userEventChan:
 			logrus.WithFields(logrus.Fields{"event": "user"}).Debugf("%s", e)
-			scheduler.handleEvent(e)
+			sched.handleEvent(e)
 
-		case e := <-scheduler.MesosConnector.MesosEvent(): // subcribe connector's mesos-events
+		case e := <-sched.MesosConnector.MesosEvent(): // subcribe connector's mesos-events
 			logrus.WithFields(logrus.Fields{"event": "mesos"}).Debugf("%s", e)
-			scheduler.handleEvent(e)
+			sched.handleEvent(e)
 
 		// TODO: make the connector self-contains rejoin logic
-		case e := <-scheduler.MesosConnector.ErrEvent(): // subcribe connector's failures events
+		case e := <-sched.MesosConnector.ErrEvent(): // subcribe connector's failures events
 			logrus.WithFields(logrus.Fields{"event": "mesosFailure"}).Errorf("%s", e)
 			swanErr, ok := e.(*utils.SwanError)
 			if ok && swanErr.Severity == utils.SeverityLow {
 				for {
 					time.Sleep(CONNECTOR_DEFAULT_BACKOFF)
-					err := scheduler.MesosConnector.Reregister() // CAUTION
+					err := sched.MesosConnector.Reregister() // CAUTION
 					if err == nil {
 						break
 					}
 				}
 			} else {
-				scheduler.mesosConnectorCancelFun() // CAUTION
+				sched.mesosConnectorCancelFun() // CAUTION
 				return e
 			}
 
-		case <-scheduler.heartbeater.C: // heartbeat timeout for now
+		case <-sched.heartbeater.C: // heartbeat timeout for now
 			logrus.WithFields(logrus.Fields{"event": "heartBeat"}).Debugln("heart beat package")
 
 		case <-ctx.Done():
@@ -100,15 +100,15 @@ func (scheduler *Scheduler) Start(ctx context.Context) error {
 	}
 }
 
-func (scheduler *Scheduler) recoverFromPreviousScene() error {
+func (sched *Scheduler) recoverFromPreviousScene() error {
 	err := store.DB().Recover()
 	if err != nil {
 		return err
 	}
 
-	apps := state.LoadAppData(scheduler.userEventChan)
+	apps := state.LoadAppData(sched.userEventChan)
 	for _, app := range apps {
-		scheduler.AppStorage.Add(app.ID, app)
+		sched.AppStorage.Add(app.ID, app)
 
 		for _, slot := range app.GetSlots() {
 			if slot.StateIs(state.SLOT_STATE_PENDING_OFFER) {
@@ -125,14 +125,14 @@ func (scheduler *Scheduler) recoverFromPreviousScene() error {
 	return nil
 }
 
-func (scheduler *Scheduler) handleEvent(e event.Event) {
-	scheduler.handlerManager.Handle(e)
+func (sched *Scheduler) handleEvent(e event.Event) {
+	sched.handlerManager.Handle(e)
 }
 
-func (scheduler *Scheduler) HealthyTaskEvents() []*eventbus.Event {
+func (sched *Scheduler) HealthyTaskEvents() []*eventbus.Event {
 	var healthyEvents []*eventbus.Event
 
-	for _, app := range scheduler.AppStorage.Data() {
+	for _, app := range sched.AppStorage.Data() {
 		for _, slot := range app.GetSlots() {
 			if slot.Healthy() {
 				healthyEvents = append(healthyEvents, slot.BuildTaskEvent(eventbus.EventTypeTaskHealthy))
