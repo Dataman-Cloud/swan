@@ -110,23 +110,12 @@ func setupRoutes(r *apiserver.ApiServer, s *scheduler.Scheduler) {
 }
 
 func (m *Manager) Start() error {
-	paths := []string{
-		m.cfg.ZKURL.Path,
-		m.electRootPath,
+	p := m.electRootPath
+	exists, _, err := m.ZKClient.Exists(p)
+	if err != nil {
+		return err
 	}
-
-	var (
-		err    error
-		exists bool
-	)
-	for _, p := range paths {
-		exists, _, err = m.ZKClient.Exists(p)
-		if err != nil {
-			return err
-		}
-		if exists {
-			continue
-		}
+	if !exists {
 		_, err = m.ZKClient.Create(p, []byte{}, ZK_FLAG_NONE, ZK_DEFAULT_ACL)
 		if err != nil {
 			return err

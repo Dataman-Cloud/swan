@@ -20,8 +20,8 @@ import (
 )
 
 const (
-	SWAN_ATOMIC_STORE_NODE_PATH = "%s/atomic-store"
-	SWAN_SNAPSHOT_PATH          = "%s/snapshot"
+	ATOMIC_STORE_PATH = "%s/atomic-store"
+	SNAPSHOT_PATH     = "%s/snapshot"
 )
 
 var (
@@ -167,10 +167,22 @@ func InitZKStore(zkPath *url.URL) error {
 		}
 	})
 
-	p := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zkPath.Path)
-	exists, _, err := conn.Exists(p)
-	if !exists {
-		_, err = conn.Create(p, []byte{}, 0, zookeeper.WorldACL(zookeeper.PermAll))
+	paths := []string{
+		zkPath.Path,
+		fmt.Sprintf(ATOMIC_STORE_PATH, zkPath.Path),
+	}
+
+	var exists bool
+
+	for _, p := range paths {
+		exists, _, err = conn.Exists(p)
+		if err != nil {
+			return err
+		}
+		if exists {
+			continue
+		}
+		_, err = conn.Create(p, []byte{}, 0, ZK_DEFAULT_ACL)
 		if err != nil {
 			return err
 		}
@@ -236,7 +248,7 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 			return err
 		}
 
-		nodePath := filepath.Join(fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path), "prefix")
+		nodePath := filepath.Join(fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path), "prefix")
 		zk.lastSequentialZkNodePath, err = zk.conn.Create(
 			nodePath,
 			buf.Bytes(),
@@ -378,7 +390,7 @@ func (zk *ZkStore) applyApp(op *AtomicOp) bool {
 
 // remove any atomic op that are already snapshotted
 func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
-	atomicStorePath := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path)
+	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path)
 	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
 		return err
@@ -399,7 +411,7 @@ func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
 }
 
 func (zk *ZkStore) snapshot() (string, error) {
-	snapshotPath := fmt.Sprintf(SWAN_SNAPSHOT_PATH, zk.zkPath.Path)
+	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.zkPath.Path)
 	revision := zk.lastSequentialZkNodePath
 
 	zk.mu.Lock()
@@ -449,7 +461,7 @@ func (zk *ZkStore) Recover() error {
 func (zk *ZkStore) recoverFromSnapshot() error {
 	logrus.Debugf("syncFromSnapshot now")
 
-	snapshotPath := fmt.Sprintf(SWAN_SNAPSHOT_PATH, zk.zkPath.Path)
+	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.zkPath.Path)
 	exists, _, err := zk.conn.Exists(snapshotPath)
 	if err != nil {
 		return err
@@ -473,7 +485,7 @@ func (zk *ZkStore) recoverFromSnapshot() error {
 }
 
 func (zk *ZkStore) recoverFromAtomicSequentialSlice() error {
-	atomicStorePath := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zk.zkPath.Path)
+	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path)
 
 	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
