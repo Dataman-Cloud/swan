@@ -151,6 +151,13 @@ func (m *Manager) start() error {
 		stopFunc context.CancelFunc
 		stopCtx  context.Context
 	)
+
+	// follower or leader both
+	go func() {
+		// TODO(nmg) apiserver not closed.
+		m.apiServer.Start(m.errCh)
+	}()
+
 	for {
 		select {
 		case c := <-m.leadershipChangeCh:
@@ -188,10 +195,6 @@ func (m *Manager) startServices(ctx context.Context, err chan error) {
 
 	go func() {
 		err <- m.scheduler.Start(ctx)
-	}()
-
-	go func() {
-		err <- m.apiServer.Start(ctx)
 	}()
 
 	go func() {
