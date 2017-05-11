@@ -32,7 +32,6 @@ func TestStart(t *testing.T) {
 	c, cfun := context.WithCancel(context.Background())
 	done := make(chan bool)
 	go func() {
-		Init()
 		err := Start(c)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "context canceled")
@@ -45,14 +44,14 @@ func TestStart(t *testing.T) {
 }
 
 func TestAddListener(t *testing.T) {
-	x := Instance()
+	x := eventBusInstance
 	assert.NotNil(t, x)
 	listener := &DemoEventListener{}
 	AddListener(listener)
 }
 
 func TestRemoveListener(t *testing.T) {
-	x := Instance()
+	x := eventBusInstance
 	assert.NotNil(t, x)
 	listener := &DemoEventListener{}
 	RemoveListener(listener)
