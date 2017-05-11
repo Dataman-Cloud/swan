@@ -2,7 +2,7 @@ package store
 
 import ()
 
-func (zk *ZkStore) CreateApp(app *Application) error {
+func (zk *ZKStore) CreateApp(app *Application) error {
 	if zk.GetApp(app.ID) != nil {
 		return ErrAppAlreadyExists
 	}
@@ -17,7 +17,7 @@ func (zk *ZkStore) CreateApp(app *Application) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) UpdateApp(app *Application) error {
+func (zk *ZKStore) UpdateApp(app *Application) error {
 	if zk.GetApp(app.ID) == nil {
 		return ErrAppNotFound
 	}
@@ -32,7 +32,7 @@ func (zk *ZkStore) UpdateApp(app *Application) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) GetApp(appId string) *Application {
+func (zk *ZKStore) GetApp(appId string) *Application {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -44,7 +44,7 @@ func (zk *ZkStore) GetApp(appId string) *Application {
 	return appStore.App
 }
 
-func (zk *ZkStore) ListApps() []*Application {
+func (zk *ZKStore) ListApps() []*Application {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -56,7 +56,7 @@ func (zk *ZkStore) ListApps() []*Application {
 	return apps
 }
 
-func (zk *ZkStore) DeleteApp(appId string) error {
+func (zk *ZKStore) DeleteApp(appId string) error {
 	if zk.GetApp(appId) == nil {
 		return ErrAppNotFound
 	}

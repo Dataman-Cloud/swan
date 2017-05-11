@@ -1,6 +1,6 @@
 package store
 
-func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
+func (zk *ZKStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
 	op := &AtomicOp{
 		Op:      OP_ADD,
 		Entity:  ENTITY_OFFER_ALLOCATOR_ITEM,
@@ -11,7 +11,7 @@ func (zk *ZkStore) CreateOfferAllocatorItem(item *OfferAllocatorItem) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
+func (zk *ZKStore) DeleteOfferAllocatorItem(offerId string) error {
 	op := &AtomicOp{
 		Op:     OP_REMOVE,
 		Entity: ENTITY_OFFER_ALLOCATOR_ITEM,
@@ -21,7 +21,7 @@ func (zk *ZkStore) DeleteOfferAllocatorItem(offerId string) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) ListOfferallocatorItems() []*OfferAllocatorItem {
+func (zk *ZKStore) ListOfferallocatorItems() []*OfferAllocatorItem {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 

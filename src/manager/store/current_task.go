@@ -1,6 +1,6 @@
 package store
 
-func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
+func (zk *ZKStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
@@ -22,7 +22,7 @@ func (zk *ZkStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) ListTaskHistory(appId, slotId string) []*Task {
+func (zk *ZKStore) ListTaskHistory(appId, slotId string) []*Task {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 

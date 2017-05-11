@@ -132,11 +132,11 @@ func NewStorage() *Storage {
 }
 
 var (
-	zs   *ZkStore
+	zs   *ZKStore
 	once sync.Once
 )
 
-type ZkStore struct {
+type ZKStore struct {
 	Storage                  *Storage
 	lastSequentialZkNodePath string
 	lastSnapshotRevision     string
@@ -144,32 +144,32 @@ type ZkStore struct {
 	readyToSnapshot bool
 	mu              sync.RWMutex // protect Storage
 	conn            *zookeeper.Conn
-	zkPath          *url.URL
+	url             *url.URL
 }
 
-func DB() *ZkStore {
+func DB() *ZKStore {
 	return zs
 }
 
-func InitZKStore(zkPath *url.URL) error {
-	conn, _, err := zookeeper.Connect(strings.Split(zkPath.Host, ","), 5*time.Second)
+func InitZKStore(url *url.URL) error {
+	conn, _, err := zookeeper.Connect(strings.Split(url.Host, ","), 5*time.Second)
 	if err != nil {
 		return err
 	}
 	// TODO seems lack of re-connecting logic
 
 	once.Do(func() {
-		zs = &ZkStore{
+		zs = &ZKStore{
 			conn:            conn,
 			Storage:         NewStorage(),
-			zkPath:          zkPath,
+			url:             url,
 			readyToSnapshot: false,
 		}
 	})
 
 	paths := []string{
-		zkPath.Path,
-		fmt.Sprintf(ATOMIC_STORE_PATH, zkPath.Path),
+		url.Path,
+		fmt.Sprintf(ATOMIC_STORE_PATH, url.Path),
 	}
 
 	var exists bool
@@ -191,7 +191,7 @@ func InitZKStore(zkPath *url.URL) error {
 	return nil
 }
 
-func (zk *ZkStore) Start(ctx context.Context) error {
+func (zk *ZKStore) Start(ctx context.Context) error {
 	ticker := time.NewTicker(2 * time.Second)
 	for {
 		select {
@@ -215,7 +215,7 @@ func (zk *ZkStore) Start(ctx context.Context) error {
 	}
 }
 
-func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
+func (zk *ZKStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 	zk.mu.Lock()
 	defer zk.mu.Unlock()
 	logrus.Debugf("Appling %s %s", op.Op.String(), op.Entity.String())
@@ -248,7 +248,7 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 			return err
 		}
 
-		nodePath := filepath.Join(fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path), "prefix")
+		nodePath := filepath.Join(fmt.Sprintf(ATOMIC_STORE_PATH, zk.url.Path), "prefix")
 		zk.lastSequentialZkNodePath, err = zk.conn.Create(
 			nodePath,
 			buf.Bytes(),
@@ -264,7 +264,7 @@ func (zk *ZkStore) Apply(op *AtomicOp, zkPersistNeeded bool) error {
 
 	return nil
 }
-func (zk *ZkStore) applyInstance(op *AtomicOp) bool {
+func (zk *ZKStore) applyInstance(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.Instances[op.Param1] = op.Payload.(*Instance)
@@ -278,7 +278,7 @@ func (zk *ZkStore) applyInstance(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) bool {
+func (zk *ZKStore) applyOfferAllocatorItem(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.OfferAllocator[op.Param1] = op.Payload.(*OfferAllocatorItem)
@@ -294,7 +294,7 @@ func (zk *ZkStore) applyOfferAllocatorItem(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applyCurrentTask(op *AtomicOp) bool {
+func (zk *ZKStore) applyCurrentTask(op *AtomicOp) bool {
 	_, ok := zk.Storage.Apps[op.Param1]
 	if !ok {
 		return false
@@ -315,7 +315,7 @@ func (zk *ZkStore) applyCurrentTask(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applySlot(op *AtomicOp) bool {
+func (zk *ZKStore) applySlot(op *AtomicOp) bool {
 	_, ok := zk.Storage.Apps[op.Param1]
 	if !ok {
 		return false
@@ -335,7 +335,7 @@ func (zk *ZkStore) applySlot(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applyVersion(op *AtomicOp) bool {
+func (zk *ZKStore) applyVersion(op *AtomicOp) bool {
 	_, ok := zk.Storage.Apps[op.Param1]
 	if !ok {
 		return false
@@ -351,7 +351,7 @@ func (zk *ZkStore) applyVersion(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applyFrameworkId(op *AtomicOp) bool {
+func (zk *ZKStore) applyFrameworkId(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.FrameworkId = op.Payload.(string)
@@ -366,7 +366,7 @@ func (zk *ZkStore) applyFrameworkId(op *AtomicOp) bool {
 	return true
 }
 
-func (zk *ZkStore) applyApp(op *AtomicOp) bool {
+func (zk *ZKStore) applyApp(op *AtomicOp) bool {
 	switch op.Op {
 	case OP_ADD:
 		zk.Storage.Apps[op.Param1] = &appHolder{
@@ -389,8 +389,8 @@ func (zk *ZkStore) applyApp(op *AtomicOp) bool {
 }
 
 // remove any atomic op that are already snapshotted
-func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
-	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path)
+func (zk *ZKStore) removeStaleAtomicOp(snapshotTo string) error {
+	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.url.Path)
 	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
 		return err
@@ -410,8 +410,8 @@ func (zk *ZkStore) removeStaleAtomicOp(snapshotTo string) error {
 	return nil
 }
 
-func (zk *ZkStore) snapshot() (string, error) {
-	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.zkPath.Path)
+func (zk *ZKStore) snapshot() (string, error) {
+	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.url.Path)
 	revision := zk.lastSequentialZkNodePath
 
 	zk.mu.Lock()
@@ -444,7 +444,7 @@ func (zk *ZkStore) snapshot() (string, error) {
 	return revision, nil
 }
 
-func (zk *ZkStore) Recover() error {
+func (zk *ZKStore) Recover() error {
 	if err := zk.recoverFromSnapshot(); err != nil {
 		return err
 	}
@@ -458,10 +458,10 @@ func (zk *ZkStore) Recover() error {
 	return nil
 }
 
-func (zk *ZkStore) recoverFromSnapshot() error {
+func (zk *ZKStore) recoverFromSnapshot() error {
 	logrus.Debugf("syncFromSnapshot now")
 
-	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.zkPath.Path)
+	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.url.Path)
 	exists, _, err := zk.conn.Exists(snapshotPath)
 	if err != nil {
 		return err
@@ -484,8 +484,8 @@ func (zk *ZkStore) recoverFromSnapshot() error {
 	return nil
 }
 
-func (zk *ZkStore) recoverFromAtomicSequentialSlice() error {
-	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.zkPath.Path)
+func (zk *ZKStore) recoverFromAtomicSequentialSlice() error {
+	atomicStorePath := fmt.Sprintf(ATOMIC_STORE_PATH, zk.url.Path)
 
 	children, _, err := zk.conn.Children(atomicStorePath)
 	if err != nil {
@@ -513,7 +513,7 @@ func (zk *ZkStore) recoverFromAtomicSequentialSlice() error {
 	return nil
 }
 
-func (zk *ZkStore) unmarshalAtomicOp(data []byte) (*AtomicOp, error) {
+func (zk *ZKStore) unmarshalAtomicOp(data []byte) (*AtomicOp, error) {
 	var tmpAo struct {
 		Op     StoreOp
 		Entity StoreEntity

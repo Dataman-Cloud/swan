@@ -1,6 +1,6 @@
 package store
 
-func (zk *ZkStore) CreateSlot(slot *Slot) error {
+func (zk *ZKStore) CreateSlot(slot *Slot) error {
 	if zk.GetSlot(slot.AppID, slot.ID) != nil {
 		return ErrSlotAlreadyExists
 	}
@@ -16,7 +16,7 @@ func (zk *ZkStore) CreateSlot(slot *Slot) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
+func (zk *ZKStore) GetSlot(appId, slotId string) *Slot {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -33,7 +33,7 @@ func (zk *ZkStore) GetSlot(appId, slotId string) *Slot {
 	return slot
 }
 
-func (zk *ZkStore) ListSlots(appId string) []*Slot {
+func (zk *ZKStore) ListSlots(appId string) []*Slot {
 	zk.mu.RLock()
 	defer zk.mu.RUnlock()
 
@@ -50,7 +50,7 @@ func (zk *ZkStore) ListSlots(appId string) []*Slot {
 	return slots
 }
 
-func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
+func (zk *ZKStore) UpdateSlot(appId, slotId string, slot *Slot) error {
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
@@ -72,7 +72,7 @@ func (zk *ZkStore) UpdateSlot(appId, slotId string, slot *Slot) error {
 	return zk.Apply(op, true)
 }
 
-func (zk *ZkStore) DeleteSlot(appId, slotId string) error {
+func (zk *ZKStore) DeleteSlot(appId, slotId string) error {
 	appStore, found := zk.Storage.Apps[appId]
 	if !found {
 		return ErrAppNotFound
