@@ -52,7 +52,7 @@ func New(cfg config.ManagerConfig) (*Manager, error) {
 		return nil, err
 	}
 
-	err = store.InitZkStore(cfg.ZKURL)
+	err = store.InitZKStore(cfg.ZKURL)
 	if err != nil {
 		logrus.Fatalln(err)
 	}
@@ -86,6 +86,15 @@ func connect(srvs []string) (*zk.Conn, error) {
 				logrus.Info("connect to zookeeper server success!")
 				return conn, nil
 			}
+			// TODO(nmg) should be re-connect.
+			if connEvent.State == zk.StateDisconnected {
+				logrus.Info("lost connection from zookeeper")
+				return nil, nil
+			}
+			// TOOD(nmg) currently not work.
+		case _ = <-time.After(time.Second * 5):
+			conn.Close()
+			return nil, nil
 		}
 	}
 }

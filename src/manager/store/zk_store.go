@@ -151,7 +151,7 @@ func DB() *ZkStore {
 	return zs
 }
 
-func InitZkStore(zkPath *url.URL) error {
+func InitZKStore(zkPath *url.URL) error {
 	conn, _, err := zookeeper.Connect(strings.Split(zkPath.Host, ","), 5*time.Second)
 	if err != nil {
 		return err
@@ -166,6 +166,16 @@ func InitZkStore(zkPath *url.URL) error {
 			readyToSnapshot: false,
 		}
 	})
+
+	p := fmt.Sprintf(SWAN_ATOMIC_STORE_NODE_PATH, zkPath.Path)
+	exists, _, err := conn.Exists(p)
+	if !exists {
+		_, err = conn.Create(p, []byte{}, 0, zookeeper.WorldACL(zookeeper.PermAll))
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
