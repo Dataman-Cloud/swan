@@ -55,11 +55,11 @@ func (resolver *Resolver) WatchEvent(ctx context.Context) {
 			return
 		case e := <-resolver.RecordChangeChan:
 			if e.Change == "del" {
-				resolver.recordHolder.Del(RecordFromRecordChangeEvent(e))
+				resolver.recordHolder.Del(e.record())
 			}
 
 			if e.Change == "add" {
-				resolver.recordHolder.Add(RecordFromRecordChangeEvent(e))
+				resolver.recordHolder.Add(e.record())
 			}
 
 		}

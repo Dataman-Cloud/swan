@@ -372,6 +372,7 @@ func (slot *Slot) BuildTaskEvent(eventType string) *eventbus.Event {
 		RunAs:          slot.Version.RunAs,
 		Weight:         slot.weight,
 		AppName:        slot.App.Name,
+		InsName:        slot.App.InsName(),
 		SlotIndex:      slot.Index,
 		GatewayEnabled: gatewayEnabled,
 	}

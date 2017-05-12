@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/state"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -148,8 +149,10 @@ func SvrToVersion(s *store.DockerService, insName, vid string) (*types.Version, 
 		UpdatePolicy: nil, // no use
 	}
 
+	dnsSearch := fmt.Sprintf("%s.%s.%s.swan.com", insName, ver.RunAs, connector.Instance().ClusterID)
+
 	// container
-	container, err := svrToContainer(s)
+	container, err := svrToContainer(s, dnsSearch)
 	if err != nil {
 		return nil, err
 	}
@@ -225,13 +228,13 @@ func svrToHealthCheck(s *store.DockerService) *types.HealthCheck {
 	return ret
 }
 
-func svrToContainer(s *store.DockerService) (*types.Container, error) {
+func svrToContainer(s *store.DockerService, dnsSearch string) (*types.Container, error) {
 	var (
 		network    = strings.ToLower(s.Service.NetworkMode)
 		image      = s.Service.Image
 		forcePull  = s.Extra.PullAlways
 		privileged = s.Service.Privileged
-		parameters = svrToParams(s)
+		parameters = svrToParams(s, dnsSearch)
 	)
 	portMap, err := svrToPortMaps(s)
 	if err != nil {
@@ -280,7 +283,7 @@ func svrToPortMaps(s *store.DockerService) ([]*types.PortMapping, error) {
 // sigh ...
 // mesos's default supportting for container options is so lazy tricky, so
 // we have to convert docker container configs to CLI params key-value pairs.
-func svrToParams(s *store.DockerService) []*types.Parameter {
+func svrToParams(s *store.DockerService, dnsSearch string) []*types.Parameter {
 	var (
 		m1 = make(map[string]string)   // key-value  params
 		m2 = make(map[string][]string) // key-list params
@@ -360,9 +363,7 @@ func svrToParams(s *store.DockerService) []*types.Parameter {
 	if v := s.Service.Dns; len(v) > 0 {
 		fset("dns", v)
 	}
-	if v := s.Service.DnsSearch; len(v) > 0 {
-		fset("dns-search", v)
-	}
+	fset("dns-search", []string{dnsSearch})
 
 	// env
 	if v := s.Service.Environment; len(v) > 0 {
