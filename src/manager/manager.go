@@ -143,8 +143,10 @@ func (m *Manager) start() error {
 
 	// follower or leader both
 	go func() {
-		// TODO(nmg) apiserver not closed.
-		m.apiServer.Start(m.errCh)
+		if err := m.apiServer.Start(); err != nil {
+			logrus.Errorf("api server run error %s", err.Error())
+			m.errCh <- err
+		}
 	}()
 
 	for {

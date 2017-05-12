@@ -29,36 +29,38 @@ type ApiRegister interface {
 }
 
 type ApiServer struct {
-	listenAddr    string
-	advertiseAddr string
-	leaderAddr    string
-	apiRegisters  []ApiRegister
+	listenAddr string
+	// TODO(nmg): use `leaderAddr` to update leader addr for request proxy.
+	// request should be proxy from follower to leader.
+	leaderAddr string
+	registers  []ApiRegister
+	server     *http.Server
 }
 
 func init() {
 	metrics.Register()
 }
 
-func NewApiServer(listenAddr string) *ApiServer {
+func NewApiServer(l string) *ApiServer {
 	return &ApiServer{
-		listenAddr: listenAddr,
+		listenAddr: l,
 	}
 }
 
-func Install(apiServer *ApiServer, apiRegister ApiRegister) {
-	apiServer.apiRegisters = append(apiServer.apiRegisters, apiRegister)
+func Install(s *ApiServer, r ApiRegister) {
+	s.registers = append(s.registers, r)
 }
 
-func (apiServer *ApiServer) UpdateLeaderAddr(addr string) {
-	apiServer.leaderAddr = addr
+func (s *ApiServer) UpdateLeaderAddr(addr string) {
+	s.leaderAddr = addr
 }
 
-func (apiServer *ApiServer) Start(errCh chan error) error {
+func (s *ApiServer) Start() error {
 	wsContainer := restful.NewContainer()
 
 	// Register webservices here
-	for _, ws := range apiServer.apiRegisters {
-		ws.Register(wsContainer)
+	for _, r := range s.registers {
+		r.Register(wsContainer)
 	}
 
 	// Add container filter to enable CORS
@@ -121,23 +123,18 @@ func (apiServer *ApiServer) Start(errCh chan error) error {
 		w.Write(output)
 	})
 
-	logrus.Printf("start listening on %s", apiServer.listenAddr)
+	logrus.Printf("start listening on %s", s.listenAddr)
 
-	server := &http.Server{Addr: apiServer.listenAddr, Handler: wsContainer}
-	var errChan chan error
-	go func() {
-		errChan <- server.ListenAndServe()
-	}()
+	srv := &http.Server{Addr: s.listenAddr, Handler: wsContainer}
+	s.server = srv
 
-	select {
-	case e := <-errChan:
-		// normal close, initiated by cancel context
-		// any error not close should popup
-		if !strings.Contains(e.Error(), "http: Server closed") {
-			errCh <- e
-		}
-	}
-	return nil
+	return srv.ListenAndServe()
+}
+
+// gracefully shutdown.
+func (s *ApiServer) Stop() error {
+	// NOTE(nmg): need golang 1.8+ to run this method.
+	return s.server.Shutdown(nil)
 }
 
 func NCSACommonLogFormatLogger() restful.FilterFunction {
