@@ -8,8 +8,8 @@ import (
 	"github.com/Dataman-Cloud/swan/src/types"
 )
 
-func AppToRaft(app *App) *store.Application {
-	raftApp := &store.Application{
+func AppToDB(app *App) *store.Application {
+	a := &store.Application{
 		ID:        app.ID,
 		Name:      app.Name,
 		ClusterID: app.ClusterID,
@@ -18,22 +18,22 @@ func AppToRaft(app *App) *store.Application {
 	}
 
 	if app.CurrentVersion != nil {
-		raftApp.Version = VersionToRaft(app.CurrentVersion, app.ID)
+		a.Version = VersionToDB(app.CurrentVersion, app.ID)
 	}
 
 	if app.ProposedVersion != nil {
-		raftApp.ProposedVersion = VersionToRaft(app.ProposedVersion, app.ID)
+		a.ProposedVersion = VersionToDB(app.ProposedVersion, app.ID)
 	}
 
 	if app.StateMachine != nil {
-		raftApp.StateMachine = StateMachineToRaft(app.StateMachine)
+		a.StateMachine = StateMachineToDB(app.StateMachine)
 	}
 
-	return raftApp
+	return a
 }
 
-func VersionToRaft(version *types.Version, appID string) *store.Version {
-	raftVersion := &store.Version{
+func VersionToDB(version *types.Version, appID string) *store.Version {
+	ver := &store.Version{
 		ID:          version.ID,
 		Command:     version.Command,
 		Cpus:        version.CPUs,
@@ -53,105 +53,105 @@ func VersionToRaft(version *types.Version, appID string) *store.Version {
 	}
 
 	if version.Container != nil {
-		raftVersion.Container = ContainerToRaft(version.Container)
+		ver.Container = ContainerToDB(version.Container)
 	}
 
 	if version.KillPolicy != nil {
-		raftVersion.KillPolicy = KillPolicyToRaft(version.KillPolicy)
+		ver.KillPolicy = KillPolicyToDB(version.KillPolicy)
 	}
 
 	if version.UpdatePolicy != nil {
-		raftVersion.UpdatePolicy = UpdatePolicyToRaft(version.UpdatePolicy)
+		ver.UpdatePolicy = UpdatePolicyToDB(version.UpdatePolicy)
 	}
 
 	if version.HealthCheck != nil {
-		raftVersion.HealthCheck = HealthCheckToRaft(version.HealthCheck)
+		ver.HealthCheck = HealthCheckToDB(version.HealthCheck)
 	}
 
 	if version.Gateway != nil {
-		raftVersion.Gateway = GatewayToRaft(version.Gateway)
+		ver.Gateway = GatewayToDB(version.Gateway)
 	}
 
-	return raftVersion
+	return ver
 }
 
-func VersionFromRaft(raftVersion *store.Version) *types.Version {
+func VersionFromDB(ver *store.Version) *types.Version {
 	version := &types.Version{
-		ID:          raftVersion.ID,
-		AppName:     raftVersion.AppName,
-		Command:     raftVersion.Command,
-		CPUs:        raftVersion.Cpus,
-		Mem:         raftVersion.Mem,
-		Disk:        raftVersion.Disk,
-		Instances:   raftVersion.Instances,
-		RunAs:       raftVersion.RunAs,
-		Priority:    raftVersion.Priority,
-		Labels:      raftVersion.Labels,
-		Env:         raftVersion.Env,
-		Constraints: raftVersion.Constraints,
-		URIs:        raftVersion.Uris,
-		IP:          raftVersion.Ip,
-		AppVersion:  raftVersion.AppVersion,
+		ID:          ver.ID,
+		AppName:     ver.AppName,
+		Command:     ver.Command,
+		CPUs:        ver.Cpus,
+		Mem:         ver.Mem,
+		Disk:        ver.Disk,
+		Instances:   ver.Instances,
+		RunAs:       ver.RunAs,
+		Priority:    ver.Priority,
+		Labels:      ver.Labels,
+		Env:         ver.Env,
+		Constraints: ver.Constraints,
+		URIs:        ver.Uris,
+		IP:          ver.Ip,
+		AppVersion:  ver.AppVersion,
 	}
 
-	if raftVersion.Container != nil {
-		version.Container = ContainerFromRaft(raftVersion.Container)
+	if ver.Container != nil {
+		version.Container = ContainerFromDB(ver.Container)
 	}
 
-	if raftVersion.KillPolicy != nil {
-		version.KillPolicy = KillPolicyFromRaft(raftVersion.KillPolicy)
+	if ver.KillPolicy != nil {
+		version.KillPolicy = KillPolicyFromDB(ver.KillPolicy)
 	}
 
-	if raftVersion.UpdatePolicy != nil {
-		version.UpdatePolicy = UpdatePolicyFromRaft(raftVersion.UpdatePolicy)
+	if ver.UpdatePolicy != nil {
+		version.UpdatePolicy = UpdatePolicyFromDB(ver.UpdatePolicy)
 	}
 
-	if raftVersion.HealthCheck != nil {
-		version.HealthCheck = HealthCheckFromRaft(raftVersion.HealthCheck)
+	if ver.HealthCheck != nil {
+		version.HealthCheck = HealthCheckFromDB(ver.HealthCheck)
 	}
 
-	if raftVersion.Gateway != nil {
-		version.Gateway = GatewayFromRaft(raftVersion.Gateway)
+	if ver.Gateway != nil {
+		version.Gateway = GatewayFromDB(ver.Gateway)
 	}
 
 	return version
 }
 
-func ContainerToRaft(container *types.Container) *store.Container {
-	raftContainer := &store.Container{
+func ContainerToDB(container *types.Container) *store.Container {
+	c := &store.Container{
 		Type: container.Type,
 	}
 
 	if container.Docker != nil {
-		raftContainer.Docker = DockerToRaft(container.Docker)
+		c.Docker = DockerToDB(container.Docker)
 	}
 
 	if container.Volumes != nil {
 		var volumes []*store.Volume
 
 		for _, volume := range container.Volumes {
-			volumes = append(volumes, VolumeToRaft(volume))
+			volumes = append(volumes, VolumeToDB(volume))
 		}
 
-		raftContainer.Volumes = volumes
+		c.Volumes = volumes
 	}
 
-	return raftContainer
+	return c
 }
 
-func ContainerFromRaft(raftContainer *store.Container) *types.Container {
+func ContainerFromDB(c *store.Container) *types.Container {
 	container := &types.Container{
-		Type: raftContainer.Type,
+		Type: c.Type,
 	}
 
-	if raftContainer.Docker != nil {
-		container.Docker = DockerFromRaft(raftContainer.Docker)
+	if c.Docker != nil {
+		container.Docker = DockerFromDB(c.Docker)
 	}
 
-	if raftContainer.Volumes != nil {
+	if c.Volumes != nil {
 		var volumes []*types.Volume
 
-		for _, volume := range raftContainer.Volumes {
+		for _, volume := range c.Volumes {
 			volumes = append(volumes, VolumeFromFaft(volume))
 		}
 
@@ -161,8 +161,8 @@ func ContainerFromRaft(raftContainer *store.Container) *types.Container {
 	return container
 }
 
-func DockerToRaft(docker *types.Docker) *store.Docker {
-	raftDocker := &store.Docker{
+func DockerToDB(docker *types.Docker) *store.Docker {
+	d := &store.Docker{
 		ForcePullImage: docker.ForcePullImage,
 		Image:          docker.Image,
 		Network:        docker.Network,
@@ -172,46 +172,46 @@ func DockerToRaft(docker *types.Docker) *store.Docker {
 	if docker.Parameters != nil {
 		var parameters []*store.Parameter
 		for _, parameter := range docker.Parameters {
-			parameters = append(parameters, ParameterToRaft(parameter))
+			parameters = append(parameters, ParameterToDB(parameter))
 		}
 
-		raftDocker.Parameters = parameters
+		d.Parameters = parameters
 	}
 
 	if docker.PortMappings != nil {
 		var portMappings []*store.PortMapping
 
 		for _, portMapping := range docker.PortMappings {
-			portMappings = append(portMappings, PortMappingToRaft(portMapping))
+			portMappings = append(portMappings, PortMappingToDB(portMapping))
 		}
 
-		raftDocker.PortMappings = portMappings
+		d.PortMappings = portMappings
 	}
 
-	return raftDocker
+	return d
 }
 
-func DockerFromRaft(raftDocker *store.Docker) *types.Docker {
+func DockerFromDB(d *store.Docker) *types.Docker {
 	docker := &types.Docker{
-		ForcePullImage: raftDocker.ForcePullImage,
-		Image:          raftDocker.Image,
-		Network:        raftDocker.Network,
-		Privileged:     raftDocker.Privileged,
+		ForcePullImage: d.ForcePullImage,
+		Image:          d.Image,
+		Network:        d.Network,
+		Privileged:     d.Privileged,
 	}
 
-	if raftDocker.Parameters != nil {
+	if d.Parameters != nil {
 		var parameters []*types.Parameter
-		for _, parameter := range raftDocker.Parameters {
-			parameters = append(parameters, ParameterFromRaft(parameter))
+		for _, parameter := range d.Parameters {
+			parameters = append(parameters, ParameterFromDB(parameter))
 		}
 
 		docker.Parameters = parameters
 	}
 
-	if raftDocker.PortMappings != nil {
+	if d.PortMappings != nil {
 		var portMappings []*types.PortMapping
-		for _, portMapping := range raftDocker.PortMappings {
-			portMappings = append(portMappings, PortMappingFromRaft(portMapping))
+		for _, portMapping := range d.PortMappings {
+			portMappings = append(portMappings, PortMappingFromDB(portMapping))
 		}
 
 		docker.PortMappings = portMappings
@@ -220,21 +220,21 @@ func DockerFromRaft(raftDocker *store.Docker) *types.Docker {
 	return docker
 }
 
-func ParameterToRaft(parameter *types.Parameter) *store.Parameter {
+func ParameterToDB(parameter *types.Parameter) *store.Parameter {
 	return &store.Parameter{
 		Key:   parameter.Key,
 		Value: parameter.Value,
 	}
 }
 
-func ParameterFromRaft(raftParameter *store.Parameter) *types.Parameter {
+func ParameterFromDB(p *store.Parameter) *types.Parameter {
 	return &types.Parameter{
-		Key:   raftParameter.Key,
-		Value: raftParameter.Value,
+		Key:   p.Key,
+		Value: p.Value,
 	}
 }
 
-func PortMappingToRaft(portMapping *types.PortMapping) *store.PortMapping {
+func PortMappingToDB(portMapping *types.PortMapping) *store.PortMapping {
 	return &store.PortMapping{
 		ContainerPort: portMapping.ContainerPort,
 		HostPort:      portMapping.HostPort,
@@ -243,16 +243,16 @@ func PortMappingToRaft(portMapping *types.PortMapping) *store.PortMapping {
 	}
 }
 
-func PortMappingFromRaft(raftPortMapping *store.PortMapping) *types.PortMapping {
+func PortMappingFromDB(pm *store.PortMapping) *types.PortMapping {
 	return &types.PortMapping{
-		ContainerPort: raftPortMapping.ContainerPort,
-		HostPort:      raftPortMapping.HostPort,
-		Name:          raftPortMapping.Name,
-		Protocol:      raftPortMapping.Protocol,
+		ContainerPort: pm.ContainerPort,
+		HostPort:      pm.HostPort,
+		Name:          pm.Name,
+		Protocol:      pm.Protocol,
 	}
 }
 
-func VolumeToRaft(volume *types.Volume) *store.Volume {
+func VolumeToDB(volume *types.Volume) *store.Volume {
 	return &store.Volume{
 		ContainerPath: volume.ContainerPath,
 		HostPath:      volume.HostPath,
@@ -260,27 +260,27 @@ func VolumeToRaft(volume *types.Volume) *store.Volume {
 	}
 }
 
-func VolumeFromFaft(raftVolume *store.Volume) *types.Volume {
+func VolumeFromFaft(v *store.Volume) *types.Volume {
 	return &types.Volume{
-		ContainerPath: raftVolume.ContainerPath,
-		HostPath:      raftVolume.HostPath,
-		Mode:          raftVolume.Mode,
+		ContainerPath: v.ContainerPath,
+		HostPath:      v.HostPath,
+		Mode:          v.Mode,
 	}
 }
 
-func KillPolicyToRaft(killPolicy *types.KillPolicy) *store.KillPolicy {
+func KillPolicyToDB(killPolicy *types.KillPolicy) *store.KillPolicy {
 	return &store.KillPolicy{
 		Duration: killPolicy.Duration,
 	}
 }
 
-func KillPolicyFromRaft(raftKillPolicy *store.KillPolicy) *types.KillPolicy {
+func KillPolicyFromDB(k *store.KillPolicy) *types.KillPolicy {
 	return &types.KillPolicy{
-		Duration: raftKillPolicy.Duration,
+		Duration: k.Duration,
 	}
 }
 
-func UpdatePolicyToRaft(updatePolicy *types.UpdatePolicy) *store.UpdatePolicy {
+func UpdatePolicyToDB(updatePolicy *types.UpdatePolicy) *store.UpdatePolicy {
 	return &store.UpdatePolicy{
 		UpdateDelay:  updatePolicy.UpdateDelay,
 		MaxRetries:   updatePolicy.MaxRetries,
@@ -289,17 +289,17 @@ func UpdatePolicyToRaft(updatePolicy *types.UpdatePolicy) *store.UpdatePolicy {
 	}
 }
 
-func UpdatePolicyFromRaft(raftUpdatePolicy *store.UpdatePolicy) *types.UpdatePolicy {
+func UpdatePolicyFromDB(p *store.UpdatePolicy) *types.UpdatePolicy {
 	return &types.UpdatePolicy{
-		UpdateDelay:  raftUpdatePolicy.UpdateDelay,
-		MaxRetries:   raftUpdatePolicy.MaxRetries,
-		MaxFailovers: raftUpdatePolicy.MaxFailovers,
-		Action:       raftUpdatePolicy.Action,
+		UpdateDelay:  p.UpdateDelay,
+		MaxRetries:   p.MaxRetries,
+		MaxFailovers: p.MaxFailovers,
+		Action:       p.Action,
 	}
 }
 
-func HealthCheckToRaft(healthCheck *types.HealthCheck) *store.HealthCheck {
-	raftHealthCheck := &store.HealthCheck{
+func HealthCheckToDB(healthCheck *types.HealthCheck) *store.HealthCheck {
+	c := &store.HealthCheck{
 		ID:                  healthCheck.ID,
 		Address:             healthCheck.Address,
 		Protocol:            healthCheck.Protocol,
@@ -313,47 +313,47 @@ func HealthCheckToRaft(healthCheck *types.HealthCheck) *store.HealthCheck {
 		DelaySeconds:        healthCheck.DelaySeconds,
 	}
 
-	return raftHealthCheck
+	return c
 }
 
-func HealthCheckFromRaft(raftHealthCheck *store.HealthCheck) *types.HealthCheck {
+func HealthCheckFromDB(c *store.HealthCheck) *types.HealthCheck {
 	healthCheck := &types.HealthCheck{
-		ID:                  raftHealthCheck.ID,
-		Address:             raftHealthCheck.Address,
-		Protocol:            raftHealthCheck.Protocol,
-		PortName:            raftHealthCheck.PortName,
-		Path:                raftHealthCheck.Path,
-		Value:               raftHealthCheck.Value,
-		ConsecutiveFailures: raftHealthCheck.ConsecutiveFailures,
-		GracePeriodSeconds:  raftHealthCheck.GracePeriodSeconds,
-		IntervalSeconds:     raftHealthCheck.IntervalSeconds,
-		TimeoutSeconds:      raftHealthCheck.TimeoutSeconds,
-		DelaySeconds:        raftHealthCheck.DelaySeconds,
+		ID:                  c.ID,
+		Address:             c.Address,
+		Protocol:            c.Protocol,
+		PortName:            c.PortName,
+		Path:                c.Path,
+		Value:               c.Value,
+		ConsecutiveFailures: c.ConsecutiveFailures,
+		GracePeriodSeconds:  c.GracePeriodSeconds,
+		IntervalSeconds:     c.IntervalSeconds,
+		TimeoutSeconds:      c.TimeoutSeconds,
+		DelaySeconds:        c.DelaySeconds,
 	}
 
 	return healthCheck
 }
 
-func GatewayToRaft(gateway *types.Gateway) *store.Gateway {
-	raftGateway := &store.Gateway{
+func GatewayToDB(gateway *types.Gateway) *store.Gateway {
+	g := &store.Gateway{
 		Weight:  gateway.Weight,
 		Enabled: gateway.Enabled,
 	}
 
-	return raftGateway
+	return g
 }
 
-func GatewayFromRaft(raftGateway *store.Gateway) *types.Gateway {
+func GatewayFromDB(g *store.Gateway) *types.Gateway {
 	gateway := &types.Gateway{
-		Weight:  raftGateway.Weight,
-		Enabled: raftGateway.Enabled,
+		Weight:  g.Weight,
+		Enabled: g.Enabled,
 	}
 
 	return gateway
 }
 
-func SlotToRaft(slot *Slot) *store.Slot {
-	raftSlot := &store.Slot{
+func SlotToDB(slot *Slot) *store.Slot {
+	s := &store.Slot{
 		Index:     int32(slot.Index),
 		ID:        slot.ID,
 		AppID:     slot.App.ID,
@@ -364,46 +364,46 @@ func SlotToRaft(slot *Slot) *store.Slot {
 	}
 
 	if slot.CurrentTask != nil {
-		raftSlot.CurrentTask = TaskToRaft(slot.CurrentTask)
+		s.CurrentTask = TaskToDB(slot.CurrentTask)
 	}
 
 	if len(slot.TaskHistory) > 0 {
-		raftSlot.TaskHistory = make([]*store.Task, 0)
+		s.TaskHistory = make([]*store.Task, 0)
 		for _, t := range slot.TaskHistory {
-			raftSlot.TaskHistory = append(raftSlot.TaskHistory, TaskToRaft(t))
+			s.TaskHistory = append(s.TaskHistory, TaskToDB(t))
 		}
 	}
 
-	return raftSlot
+	return s
 }
 
-func SlotFromRaft(raftSlot *store.Slot, app *App) *Slot {
+func SlotFromDB(s *store.Slot, app *App) *Slot {
 	slot := &Slot{
-		Index:         int(raftSlot.Index),
-		ID:            raftSlot.ID,
-		State:         raftSlot.State,
-		OfferID:       raftSlot.CurrentTask.OfferID,
-		AgentID:       raftSlot.CurrentTask.AgentID,
-		Ip:            raftSlot.CurrentTask.Ip,
-		AgentHostName: raftSlot.CurrentTask.AgentHostName,
-		healthy:       raftSlot.Healthy,
-		weight:        raftSlot.Weight,
+		Index:         int(s.Index),
+		ID:            s.ID,
+		State:         s.State,
+		OfferID:       s.CurrentTask.OfferID,
+		AgentID:       s.CurrentTask.AgentID,
+		Ip:            s.CurrentTask.Ip,
+		AgentHostName: s.CurrentTask.AgentHostName,
+		healthy:       s.Healthy,
+		weight:        s.Weight,
 		TaskHistory:   make([]*Task, 0),
 	}
 
-	if raftSlot.CurrentTask != nil {
-		slot.CurrentTask = TaskFromRaft(raftSlot.CurrentTask, app)
+	if s.CurrentTask != nil {
+		slot.CurrentTask = TaskFromDB(s.CurrentTask, app)
 		slot.CurrentTask.Slot = slot
 	}
 
-	if len(raftSlot.TaskHistory) > 0 {
-		for _, t := range raftSlot.TaskHistory {
-			slot.TaskHistory = append(slot.TaskHistory, TaskFromRaft(t, app))
+	if len(s.TaskHistory) > 0 {
+		for _, t := range s.TaskHistory {
+			slot.TaskHistory = append(slot.TaskHistory, TaskFromDB(t, app))
 		}
 	}
 
 	for _, version := range app.Versions {
-		if raftSlot.VersionID == version.ID {
+		if s.VersionID == version.ID {
 			slot.Version = version
 		}
 	}
@@ -411,7 +411,7 @@ func SlotFromRaft(raftSlot *store.Slot, app *App) *Slot {
 	return slot
 }
 
-func TaskToRaft(task *Task) *store.Task {
+func TaskToDB(task *Task) *store.Task {
 	return &store.Task{
 		ID:            task.ID,
 		AppID:         task.Slot.App.ID,
@@ -434,26 +434,26 @@ func TaskToRaft(task *Task) *store.Task {
 	}
 }
 
-func TaskFromRaft(raftTask *store.Task, app *App) *Task {
+func TaskFromDB(t *store.Task, app *App) *Task {
 	task := &Task{
-		ID:            raftTask.ID,
-		State:         raftTask.State,
-		Stdout:        raftTask.Stdout,
-		Stderr:        raftTask.Stderr,
-		HostPorts:     raftTask.HostPorts,
-		OfferID:       raftTask.OfferID,
-		AgentID:       raftTask.AgentID,
-		Ip:            raftTask.Ip,
-		AgentHostName: raftTask.AgentHostName,
-		Reason:        raftTask.Reason,
-		Message:       raftTask.Message,
-		Created:       time.Unix(0, raftTask.CreatedAt),
-		ContainerId:   raftTask.ContainerId,
-		ContainerName: raftTask.ContainerName,
+		ID:            t.ID,
+		State:         t.State,
+		Stdout:        t.Stdout,
+		Stderr:        t.Stderr,
+		HostPorts:     t.HostPorts,
+		OfferID:       t.OfferID,
+		AgentID:       t.AgentID,
+		Ip:            t.Ip,
+		AgentHostName: t.AgentHostName,
+		Reason:        t.Reason,
+		Message:       t.Message,
+		Created:       time.Unix(0, t.CreatedAt),
+		ContainerId:   t.ContainerId,
+		ContainerName: t.ContainerName,
 	}
 
 	for _, version := range app.Versions {
-		if raftTask.VersionID == version.ID {
+		if t.VersionID == version.ID {
 			task.Version = version
 		}
 	}
@@ -461,7 +461,7 @@ func TaskFromRaft(raftTask *store.Task, app *App) *Task {
 	return task
 }
 
-func OfferAllocatorItemToRaft(slotID string, offerInfo *OfferInfo) *store.OfferAllocatorItem {
+func OfferAllocatorItemToDB(slotID string, offerInfo *OfferInfo) *store.OfferAllocatorItem {
 	item := &store.OfferAllocatorItem{
 		OfferID:  offerInfo.OfferID,
 		SlotID:   slotID,
@@ -472,7 +472,7 @@ func OfferAllocatorItemToRaft(slotID string, offerInfo *OfferInfo) *store.OfferA
 	return item
 }
 
-func OfferAllocatorItemFromRaft(item *store.OfferAllocatorItem) (slotID string, offerInfo *OfferInfo) {
+func OfferAllocatorItemFromDB(item *store.OfferAllocatorItem) (slotID string, offerInfo *OfferInfo) {
 	return item.SlotID, &OfferInfo{
 		OfferID:  item.OfferID,
 		Hostname: item.Hostname,
@@ -480,13 +480,13 @@ func OfferAllocatorItemFromRaft(item *store.OfferAllocatorItem) (slotID string, 
 	}
 }
 
-func StateMachineFromRaft(app *App, machine *store.StateMachine) *StateMachine {
+func StateMachineFromDB(app *App, machine *store.StateMachine) *StateMachine {
 	return &StateMachine{
-		state: StateFromRaft(app, machine.State),
+		state: StateFromDB(app, machine.State),
 	}
 }
 
-func StateFromRaft(app *App, state *store.State) State {
+func StateFromDB(app *App, state *store.State) State {
 	slot, _ := app.GetSlot(int(state.CurrentSlotIndex))
 	switch state.Name {
 	case APP_STATE_NORMAL:
@@ -549,31 +549,31 @@ func StateFromRaft(app *App, state *store.State) State {
 	}
 }
 
-func StateMachineToRaft(machine *StateMachine) *store.StateMachine {
+func StateMachineToDB(machine *StateMachine) *store.StateMachine {
 	return &store.StateMachine{
-		State: StateToRaft(machine.CurrentState()),
+		State: StateToDB(machine.CurrentState()),
 	}
 }
 
-func StateToRaft(state State) *store.State {
+func StateToDB(state State) *store.State {
 	stateObj := reflect.ValueOf(state).Elem()
 	typeOfT := stateObj.Type()
-	raftState := &store.State{}
+	s := &store.State{}
 
 	for i := 0; i < stateObj.NumField(); i++ {
 		f := stateObj.Field(i)
 		switch typeOfT.Field(i).Name {
 		case "Name":
-			raftState.Name = f.Interface().(string)
+			s.Name = f.Interface().(string)
 		case "CurrentSlotIndex":
-			raftState.CurrentSlotIndex = int64(f.Interface().(int))
+			s.CurrentSlotIndex = int64(f.Interface().(int))
 		case "TargetSlotIndex":
-			raftState.TargetSlotIndex = int64(f.Interface().(int))
+			s.TargetSlotIndex = int64(f.Interface().(int))
 		case "SlotCountNeedUpdate":
-			raftState.SlotCountNeedUpdate = int64(f.Interface().(int))
+			s.SlotCountNeedUpdate = int64(f.Interface().(int))
 		default:
 		}
 	}
 
-	return raftState
+	return s
 }

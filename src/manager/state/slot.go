@@ -434,14 +434,14 @@ func (slot *Slot) Touch() {
 }
 
 func (slot *Slot) update() {
-	err := store.DB().UpdateSlot(slot.App.ID, slot.ID, SlotToRaft(slot))
+	err := store.DB().UpdateSlot(slot.App.ID, slot.ID, SlotToDB(slot))
 	if err != nil {
 		logrus.Error(err)
 	}
 }
 
 func (slot *Slot) create() {
-	err := store.DB().CreateSlot(SlotToRaft(slot))
+	err := store.DB().CreateSlot(SlotToDB(slot))
 	if err != nil {
 		logrus.Error(err)
 	}
