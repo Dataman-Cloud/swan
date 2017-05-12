@@ -2,8 +2,8 @@ package api
 
 import (
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
+	apiserver "github.com/Dataman-Cloud/swan/src/manager/api/server"
+	"github.com/Dataman-Cloud/swan/src/manager/api/server/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/types"

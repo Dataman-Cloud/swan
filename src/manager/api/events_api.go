@@ -6,8 +6,8 @@ import (
 
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
+	apiserver "github.com/Dataman-Cloud/swan/src/manager/api/server"
+	"github.com/Dataman-Cloud/swan/src/manager/api/server/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 
 	restful "github.com/emicklei/go-restful"

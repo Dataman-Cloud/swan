@@ -9,7 +9,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/manager/api"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver"
+	apiserver "github.com/Dataman-Cloud/swan/src/manager/api/server"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 

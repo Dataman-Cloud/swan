@@ -1,4 +1,4 @@
-package apiserver
+package server
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
-	"github.com/Dataman-Cloud/swan/src/manager/apiserver/metrics"
+	"github.com/Dataman-Cloud/swan/src/manager/api/server/metrics"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/emicklei/go-restful"
