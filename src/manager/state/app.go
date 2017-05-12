@@ -58,6 +58,14 @@ func (a AppsByUpdated) Len() int           { return len(a) }
 func (a AppsByUpdated) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a AppsByUpdated) Less(i, j int) bool { return a[i].Updated.After(a[j].Updated) }
 
+func (app *App) InsName() string {
+	ss := strings.SplitN(app.ID, "-", 4)
+	if len(ss) != 4 {
+		return ""
+	}
+	return ss[1]
+}
+
 func NewApp(version *types.Version, appID string,
 	userEventChan chan *event.UserEvent) (*App, error) {
 

@@ -273,6 +273,7 @@ func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.T
 	resolverEvent.Cluster = taskInfoEvent.ClusterID
 	resolverEvent.RunAs = taskInfoEvent.RunAs
 	resolverEvent.AppName = taskInfoEvent.AppName
+	resolverEvent.InsName = taskInfoEvent.InsName
 	resolverEvent.SlotID = fmt.Sprintf("%d", taskInfoEvent.SlotIndex)
 
 	return resolverEvent

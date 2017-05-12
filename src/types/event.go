@@ -15,6 +15,7 @@ type TaskInfoEvent struct {
 	Mode           string  `json:"mode"`
 	Weight         float64 `json:"weight"`
 	AppName        string  `json:"appName"`
+	InsName        string  `json:"insName"`
 	SlotIndex      int     `json:"slotIndex"`
 	GatewayEnabled bool    `json:"gatewayEnabled"`
 }

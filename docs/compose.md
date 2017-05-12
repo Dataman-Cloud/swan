@@ -565,7 +565,6 @@ Response:
 | `devices` | OK | - | 
 | `depends_on` | OK  | - |
 | `dns` | OK | - |
-| `dns_search` | OK | - |
 | `tmpfs` | OK | - |
 | `environment` | OK | - |
 | `expose` | OK | - | 
@@ -591,6 +590,7 @@ Response:
 | `privileged` | OK | - |
 | `read_only` | OK | - |
 | `tty` | OK  | - |
+| `dns_search` | NO | rewrite by swan |
 | `stdin_open` | NO, rewrite by mesos agent  | - |
 | `container_name` | NO, rewrite by mesos agent | - |
 | `entrypoint` | NO, rewrite by mesos agent | - |
