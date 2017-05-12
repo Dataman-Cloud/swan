@@ -571,7 +571,7 @@ func ValidateAndFormatVersion(version *types.Version) error {
 
 func (app *App) SaveVersion(version *types.Version) {
 	app.Versions = append(app.Versions, version)
-	store.DB().CreateVersion(app.ID, VersionToRaft(version, app.ID))
+	store.DB().CreateVersion(app.ID, VersionToDB(version, app.ID))
 }
 
 func (app *App) Remove() {
@@ -584,7 +584,7 @@ func (app *App) Touch() {
 
 func (app *App) update() {
 	logrus.Debugf("update app %s", app.ID)
-	err := store.DB().UpdateApp(AppToRaft(app))
+	err := store.DB().UpdateApp(AppToDB(app))
 	if err != nil {
 		logrus.Error(err)
 	}
@@ -592,7 +592,7 @@ func (app *App) update() {
 
 func (app *App) create() {
 	logrus.Debugf("create app %s", app.ID)
-	err := store.DB().CreateApp(AppToRaft(app))
+	err := store.DB().CreateApp(AppToDB(app))
 	if err != nil {
 		logrus.Error(err)
 	}

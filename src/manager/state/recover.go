@@ -28,7 +28,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 		app.UserEventChan = userEventChan
 
 		if raftApp.Version != nil {
-			app.CurrentVersion = VersionFromRaft(raftApp.Version)
+			app.CurrentVersion = VersionFromDB(raftApp.Version)
 		} else {
 			// TODO raftApp.Version should not be nil but we need more infomation to
 			// find the reason cause the raftApp.Version nil
@@ -38,14 +38,14 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 		app.Mode = AppMode(raftApp.Version.Mode)
 
 		if raftApp.ProposedVersion != nil {
-			app.ProposedVersion = VersionFromRaft(raftApp.ProposedVersion)
+			app.ProposedVersion = VersionFromDB(raftApp.ProposedVersion)
 		}
 
 		raftVersions := store.DB().ListVersions(raftApp.ID)
 
 		var versions []*types.Version
 		for _, raftVersion := range raftVersions {
-			versions = append(versions, VersionFromRaft(raftVersion))
+			versions = append(versions, VersionFromDB(raftVersion))
 		}
 
 		app.Versions = versions
@@ -56,7 +56,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 		}
 
 		if raftApp.StateMachine != nil {
-			app.StateMachine = StateMachineFromRaft(app, raftApp.StateMachine)
+			app.StateMachine = StateMachineFromDB(app, raftApp.StateMachine)
 		}
 
 		apps[app.ID] = app
@@ -69,12 +69,12 @@ func LoadAppSlots(app *App) []*Slot {
 	raftSlots := store.DB().ListSlots(app.ID)
 	var slots []*Slot
 	for _, raftSlot := range raftSlots {
-		slot := SlotFromRaft(raftSlot, app)
+		slot := SlotFromDB(raftSlot, app)
 
 		raftTasks := store.DB().ListTaskHistory(app.ID, slot.ID)
 		var tasks []*Task
 		for _, raftTask := range raftTasks {
-			tasks = append(tasks, TaskFromRaft(raftTask, app))
+			tasks = append(tasks, TaskFromDB(raftTask, app))
 		}
 		slot.TaskHistory = tasks
 
@@ -90,7 +90,7 @@ func LoadOfferAllocatorMap() (map[string]*OfferInfo, error) {
 	m := make(map[string]*OfferInfo)
 	list := store.DB().ListOfferallocatorItems()
 	for _, item := range list {
-		slotId, offerInfo := OfferAllocatorItemFromRaft(item)
+		slotId, offerInfo := OfferAllocatorItemFromDB(item)
 		m[slotId] = offerInfo
 	}
 

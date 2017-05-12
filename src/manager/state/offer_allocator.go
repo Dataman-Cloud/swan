@@ -175,7 +175,7 @@ func (allocator *OfferAllocator) RemoveSlotFromAllocator(slot *Slot) {
 
 func (allocator *OfferAllocator) create(slotID string, offerInfo *OfferInfo) {
 	logrus.Debugf("create offer allocator item %s => %s", slotID, offerInfo.OfferID)
-	store.DB().CreateOfferAllocatorItem(OfferAllocatorItemToRaft(slotID, offerInfo))
+	store.DB().CreateOfferAllocatorItem(OfferAllocatorItemToDB(slotID, offerInfo))
 }
 
 func (allocator *OfferAllocator) remove(slotID string) {
