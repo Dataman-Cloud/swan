@@ -28,15 +28,17 @@ const SSE_DATA_PREFIX = "data:"
 const SSE_EVENT_PREFIX = "event:"
 const SSE_BLANK_LINE = ""
 
+// Agent struct
 type Agent struct {
 	Resolver   *nameserver.Resolver
 	Janitor    *janitor.JanitorServer
-	HTTPServer *HttpServer
+	HTTPServer *HTTPServer
 	SerfServer *SerfServer
 
 	Config config.AgentConfig
 }
 
+// New agent func
 func New(agentConf config.AgentConfig) (*Agent, error) {
 	agent := &Agent{
 		Config: agentConf,
@@ -66,12 +68,13 @@ func New(agentConf config.AgentConfig) (*Agent, error) {
 	jConfig.LogLevel = agentConf.LogLevel
 	agent.Janitor = janitor.NewJanitorServer(jConfig)
 
-	agent.HTTPServer = NewHttpServer(agentConf.ListenAddr, agent)
+	agent.HTTPServer = NewHTTPServer(agentConf.ListenAddr, agent)
 	agent.SerfServer = NewSerfServer(agentConf.GossipListenAddr, agentConf.GossipJoinAddr)
 
 	return agent, nil
 }
 
+// StartAndJoin func
 func (agent *Agent) StartAndJoin(ctx context.Context) error {
 	errChan := make(chan error)
 
