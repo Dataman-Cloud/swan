@@ -43,6 +43,7 @@ type Manager struct {
 	leadershipChangeCh chan Leadership
 	errCh              chan error
 	electRootPath      string
+	leaderAddr         string
 	myid               string
 }
 
@@ -141,24 +142,32 @@ func (m *Manager) start() error {
 		stopCtx  context.Context
 	)
 
-	// follower or leader both
-	go func() {
-		if err := m.apiServer.Start(); err != nil {
-			logrus.Errorf("api server run error %s", err.Error())
-			m.errCh <- err
-		}
-	}()
-
 	for {
 		select {
 		case c := <-m.leadershipChangeCh:
 			// do nothing when leadership not change
 			switch c {
 			case LeadershipLeader:
+				m.apiServer.UpdateLeaderAddr(m.leaderAddr)
+				go func() {
+					if err := m.apiServer.Start(); err != nil {
+						logrus.Errorf("api server run error %s", err.Error())
+						m.errCh <- err
+					}
+				}()
+
 				stopCtx, stopFunc = context.WithCancel(context.TODO())
 				m.startServices(stopCtx, m.errCh)
 
 			case LeadershipFollower:
+				m.apiServer.UpdateLeaderAddr(m.leaderAddr)
+				go func() {
+					if err := m.apiServer.Start(); err != nil {
+						logrus.Errorf("api server run error %s", err.Error())
+						m.errCh <- err
+					}
+				}()
+
 				m.stopServices(stopFunc)
 
 				// NOTE(nmg): this case should be removed. testing.
@@ -238,6 +247,7 @@ func (m *Manager) elect() (string, error) {
 	}
 	if leader {
 		logrus.Info("Electing leader success.")
+		m.leaderAddr = m.cfg.ListenAddr
 		m.setLeader(p)
 		m.leadershipChangeCh <- LeadershipLeader
 
@@ -245,7 +255,12 @@ func (m *Manager) elect() (string, error) {
 	}
 
 	logrus.Infof("Leader manager has been elected.")
-	logrus.Infof("Detect new leader at %s", m.getLeader(p))
+
+	l := m.getLeader(p)
+	logrus.Infof("Detect new leader at %s", l)
+
+	m.leaderAddr = l
+
 	m.leadershipChangeCh <- LeadershipFollower
 
 	return p, nil

@@ -2,7 +2,9 @@ package server
 
 import (
 	"encoding/json"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -33,8 +35,9 @@ type ApiServer struct {
 	// TODO(nmg): use `leaderAddr` to update leader addr for request proxy.
 	// request should be proxy from follower to leader.
 	leaderAddr string
-	registers  []ApiRegister
-	server     *http.Server
+
+	registers []ApiRegister
+	server    *http.Server
 }
 
 func init() {
@@ -71,7 +74,10 @@ func (s *ApiServer) Start() error {
 	wsContainer.Filter(cors.Filter)
 
 	// Add log filter
-	wsContainer.Filter(NCSACommonLogFormatLogger())
+	wsContainer.Filter(s.NCSACommonLogFormatLogger())
+
+	//
+	wsContainer.Filter(s.ProxyRequest())
 
 	// Add prometheus metrics
 	wsContainer.Handle("/metrics", promhttp.Handler())
@@ -137,7 +143,7 @@ func (s *ApiServer) Stop() error {
 	return s.server.Shutdown(nil)
 }
 
-func NCSACommonLogFormatLogger() restful.FilterFunction {
+func (s *ApiServer) NCSACommonLogFormatLogger() restful.FilterFunction {
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		var username = "-"
 		if req.Request.URL.User != nil {
@@ -156,5 +162,68 @@ func NCSACommonLogFormatLogger() restful.FilterFunction {
 			resp.StatusCode(),
 			resp.ContentLength(),
 		)
+	}
+}
+
+func (s *ApiServer) ProxyRequest() restful.FilterFunction {
+	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		if s.leaderAddr == s.listenAddr {
+			chain.ProcessFilter(req, resp)
+			return
+		}
+
+		r := req.Request
+
+		// NOTE(nmg): If you just use ip address here, the `url.Parse` with get error with
+		// `first path segment in URL cannot contain colon`.
+		// It's golang 1.8's bug. more details see https://github.com/golang/go/issues/18824.
+		leaderUrl := s.leaderAddr
+		if !strings.HasPrefix(s.leaderAddr, "http://") {
+			leaderUrl = "http://" + s.leaderAddr
+		}
+
+		leaderURL, err := url.Parse(leaderUrl + r.URL.Path)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		copyHeader(r.Header, &rr.Header)
+
+		// Create a client and query the target
+		var transport http.Transport
+		leaderResp, err := transport.RoundTrip(rr)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		defer leaderResp.Body.Close()
+		body, err := ioutil.ReadAll(leaderResp.Body)
+		if err != nil {
+			http.Error(resp, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		dH := resp.Header()
+		copyHeader(leaderResp.Header, &dH)
+		dH.Add("Requested-Host", rr.Host)
+
+		resp.Write(body)
+		return
+	}
+}
+
+func copyHeader(source http.Header, dest *http.Header) {
+	for n, v := range source {
+		for _, vv := range v {
+			dest.Add(n, vv)
+		}
 	}
 }
