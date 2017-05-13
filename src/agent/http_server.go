@@ -9,7 +9,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-type HttpServer struct {
+// HTTPServer instance
+type HTTPServer struct {
 	listener string
 	agentRef *Agent
 	engine   *gin.Engine
@@ -22,14 +23,19 @@ func prometheusHandler() gin.HandlerFunc {
 	}
 }
 
-func NewHttpServer(listener string, a *Agent) *HttpServer {
-	aas := &HttpServer{
+// NewHTTPServer is single instance func
+func NewHTTPServer(listener string, a *Agent) *HTTPServer {
+	aas := &HTTPServer{
 		listener: listener,
 		agentRef: a,
 	}
 	aas.engine = gin.Default()
 
 	aas.engine.GET(aas.agentRef.Janitor.P.MetricsPath, prometheusHandler())
+
+	aas.engine.GET("/", func(c *gin.Context) {
+		c.String(http.StatusOK, "OK")
+	})
 
 	aas.engine.GET("/ping", func(c *gin.Context) {
 		c.String(http.StatusOK, "pong")
@@ -46,7 +52,8 @@ func NewHttpServer(listener string, a *Agent) *HttpServer {
 	return aas
 }
 
-func (aas *HttpServer) Start(ctx context.Context, started chan bool) error {
+// Start func
+func (aas *HTTPServer) Start(ctx context.Context, started chan bool) error {
 	errCh := make(chan error)
 	go func() {
 		errCh <- aas.engine.Run(aas.listener)
