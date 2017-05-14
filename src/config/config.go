@@ -54,7 +54,7 @@ type DNS struct {
 type Janitor struct {
 	ListenAddr  string `json:"listenAddr"`
 	Domain      string `json:"domain"`
-	AdvertiseIP string `json:"ddvertiseIP"`
+	AdvertiseIP string `json:"advertiseIP"`
 }
 
 func NewAgentConfig(c *cli.Context) AgentConfig {
@@ -178,16 +178,16 @@ func Hostname() string {
 	return hostname
 }
 
-func validZKURL(p string, zkUrl *url.URL) error {
-	if zkUrl.Host == "" {
+func validZKURL(p string, zkURL *url.URL) error {
+	if zkURL.Host == "" {
 		return fmt.Errorf("%s not present", p)
 	}
 
-	if zkUrl.Scheme != "zk" {
+	if zkURL.Scheme != "zk" {
 		return fmt.Errorf("%s scheme invalid. should be zk://", p)
 	}
 
-	if len(zkUrl.Path) == 0 {
+	if len(zkURL.Path) == 0 {
 		return fmt.Errorf("no path found %s", p)
 	}
 
