@@ -132,6 +132,7 @@ func (m *Manager) start() error {
 		p, err := m.electLeader()
 		if err != nil {
 			logrus.Info("Electing lead manager failure, ", err)
+			m.errCh <- err
 			return
 		}
 
@@ -175,16 +176,15 @@ func (m *Manager) start() error {
 }
 
 func (m *Manager) reloadAPIServer() {
-	logrus.Info("relad api server for leader change.")
+	logrus.Info("Reload apiserver for leader change.")
 	go func() {
 		if err := m.apiServer.Stop(); err != nil {
-			logrus.Errorf("shutdown api server error: %s", err.Error())
+			logrus.Errorf("Shutdown api server error: %s", err.Error())
 			m.errCh <- err
 			return
 		}
 		m.apiServer.UpdateLeaderAddr(m.leaderAddr)
 		err := m.apiServer.Start()
-		logrus.Errorf("api server run error %s", err.Error())
 		if err != http.ErrServerClosed {
 			m.errCh <- err
 		}
@@ -220,15 +220,42 @@ func (m *Manager) setLeader(path string) {
 	}
 }
 
-func (m *Manager) getLeader(path string) string {
+func (m *Manager) getLeader(path string) (string, error) {
 	p := filepath.Join(m.electRootPath, path)
-	b, _, err := m.ZKClient.Get(p)
-	if err != nil {
-		logrus.Infof("Get leader address error %s", err.Error())
-		return ""
-	}
+	// NOTE(nmg):Example to use node-data-changed event to get leader.
+	// b, _, evCh, err := m.ZKClient.GetW(p)
+	// if err != nil {
+	// 	logrus.Infof("Get leader address error %s", err.Error())
+	// 	return "", err
+	// }
+	// if len(b) > 0 {
+	// 	return string(b), nil
+	// }
 
-	return string(b)
+	// for {
+	// 	ev := <-evCh
+	// 	if ev.Type == zk.EventNodeDataChanged {
+	// 		b, _, err := m.ZKClient.Get(p)
+	// 		if err != nil {
+	// 			logrus.Infof("Get leader address error %s", err.Error())
+	// 			return "", err
+	// 		}
+	// 		return string(b), nil
+	// 	}
+	// }
+	for {
+		b, _, err := m.ZKClient.Get(p)
+		if err != nil {
+			logrus.Infof("Get leader address error %s", err.Error())
+			return "", err
+		}
+
+		if len(b) > 0 {
+			return string(b), nil
+		}
+
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (m *Manager) isLeader(path string) (bool, error, string) {
@@ -260,7 +287,11 @@ func (m *Manager) elect() (string, error) {
 
 	logrus.Infof("Leader manager has been elected.")
 
-	l := m.getLeader(p)
+	l, err := m.getLeader(p)
+	if err != nil {
+		logrus.Errorf("Detect new leader error %s", err.Error())
+		return "", err
+	}
 	logrus.Infof("Detect new leader at %s", l)
 
 	m.leaderAddr = l
