@@ -138,9 +138,24 @@ func (s *ApiServer) Start() error {
 }
 
 // gracefully shutdown.
+func (s *ApiServer) Shutdown() error {
+	// If s.server is nil, api server is not running.
+	logrus.Info("stop api server")
+	if s.server != nil {
+		// NOTE(nmg): need golang 1.8+ to run this method.
+		return s.server.Shutdown(nil)
+	}
+
+	return nil
+}
+
 func (s *ApiServer) Stop() error {
-	// NOTE(nmg): need golang 1.8+ to run this method.
-	return s.server.Shutdown(nil)
+	logrus.Info("stopping api server")
+	if s.server != nil {
+		return s.server.Close()
+	}
+
+	return nil
 }
 
 func (s *ApiServer) NCSACommonLogFormatLogger() restful.FilterFunction {

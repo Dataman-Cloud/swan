@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -148,26 +149,12 @@ func (m *Manager) start() error {
 			// do nothing when leadership not change
 			switch c {
 			case LeadershipLeader:
-				m.apiServer.UpdateLeaderAddr(m.leaderAddr)
-				go func() {
-					if err := m.apiServer.Start(); err != nil {
-						logrus.Errorf("api server run error %s", err.Error())
-						m.errCh <- err
-					}
-				}()
-
+				m.reloadAPIServer()
 				stopCtx, stopFunc = context.WithCancel(context.TODO())
 				m.startServices(stopCtx, m.errCh)
 
 			case LeadershipFollower:
-				m.apiServer.UpdateLeaderAddr(m.leaderAddr)
-				go func() {
-					if err := m.apiServer.Start(); err != nil {
-						logrus.Errorf("api server run error %s", err.Error())
-						m.errCh <- err
-					}
-				}()
-
+				m.reloadAPIServer()
 				m.stopServices(stopFunc)
 
 				// NOTE(nmg): this case should be removed. testing.
@@ -180,11 +167,28 @@ func (m *Manager) start() error {
 			// those caused by leadership changed to LeadershipFollower
 			if !strings.Contains(err.Error(), "context canceled") {
 				m.stopServices(stopFunc)
-				return err
 			}
+			return err
 		}
 	}
 
+}
+
+func (m *Manager) reloadAPIServer() {
+	logrus.Info("relad api server for leader change.")
+	go func() {
+		if err := m.apiServer.Stop(); err != nil {
+			logrus.Errorf("shutdown api server error: %s", err.Error())
+			m.errCh <- err
+			return
+		}
+		m.apiServer.UpdateLeaderAddr(m.leaderAddr)
+		err := m.apiServer.Start()
+		logrus.Errorf("api server run error %s", err.Error())
+		if err != http.ErrServerClosed {
+			m.errCh <- err
+		}
+	}()
 }
 
 func (m *Manager) startServices(ctx context.Context, err chan error) {
