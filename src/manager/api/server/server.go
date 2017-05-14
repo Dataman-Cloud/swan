@@ -140,7 +140,6 @@ func (s *ApiServer) Start() error {
 // gracefully shutdown.
 func (s *ApiServer) Shutdown() error {
 	// If s.server is nil, api server is not running.
-	logrus.Info("stop api server")
 	if s.server != nil {
 		// NOTE(nmg): need golang 1.8+ to run this method.
 		return s.server.Shutdown(nil)
@@ -150,7 +149,6 @@ func (s *ApiServer) Shutdown() error {
 }
 
 func (s *ApiServer) Stop() error {
-	logrus.Info("stopping api server")
 	if s.server != nil {
 		return s.server.Close()
 	}
