@@ -16,6 +16,7 @@ type HTTPServer struct {
 	engine   *gin.Engine
 }
 
+// Deprecated: Use promhttp.Handler instead.
 func prometheusHandler() gin.HandlerFunc {
 	h := prometheus.UninstrumentedHandler()
 	return func(c *gin.Context) {
@@ -23,7 +24,7 @@ func prometheusHandler() gin.HandlerFunc {
 	}
 }
 
-// NewHTTPServer is single instance func
+// NewHTTPServer is singleton instance func
 func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 	aas := &HTTPServer{
 		listener: listener,
