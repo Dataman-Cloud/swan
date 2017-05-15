@@ -23,10 +23,11 @@ import (
 	"golang.org/x/net/context"
 )
 
-var SPECIAL_CHARACTER = regexp.MustCompile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
-
-var instance *Connector
-var once sync.Once
+var (
+	specialChar = regexp.MustCompile("([\\-\\.\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	instance    *Connector
+	once        sync.Once
+)
 
 // Connector create a persistent connection against mesos master to subscribe mesos event.
 // caller could use:
@@ -37,7 +38,7 @@ type Connector struct {
 	MesosZkPath           *url.URL
 	ClusterID             string
 	MesosLeader           string
-	MesosLeaderHttpClient *HttpClient
+	MesosLeaderHTTPClient *HttpClient
 
 	EventChan chan *event.MesosEvent
 	ErrorChan chan error
@@ -48,10 +49,12 @@ type Connector struct {
 	StreamCancelFun context.CancelFunc
 }
 
+// Instance func
 func Instance() *Connector {
 	return instance
 }
 
+// Init package func
 func Init(user string, mesosZkPath *url.URL) {
 	once.Do(
 		func() {
@@ -61,7 +64,9 @@ func Init(user string, mesosZkPath *url.URL) {
 				Name:      proto.String("swan"),
 				Principal: proto.String("swan"),
 
-				FailoverTimeout: proto.Float64(60 * 60 * 3),
+				// FailoverTimeout should be avoid accidental destruction of tasks.
+				// production frameworks typically set this to a large value (e.g., 1 week).
+				FailoverTimeout: proto.Float64(60 * 60 * 24 * 7),
 				Checkpoint:      proto.Bool(false),
 				Hostname:        proto.String(hostname),
 				Capabilities: []*mesos.FrameworkInfo_Capability{
@@ -137,8 +142,95 @@ func (s *Connector) handleEvents(ctx context.Context, resp *http.Response) {
 	}
 }
 
-func (s *Connector) SetFrameworkInfoId(id string) {
+// SetFrameworkInfoID ...
+func (s *Connector) SetFrameworkInfoID(id string) {
 	s.FrameworkInfo.Id = &mesos.FrameworkID{Value: proto.String(id)}
+}
+
+func (s *Connector) send(call *sched.Call) (*http.Response, error) {
+	payload, err := proto.Marshal(call)
+	if err != nil {
+		return nil, err
+	}
+	return s.MesosLeaderHTTPClient.send(payload)
+}
+
+func (s *Connector) emitEvent(eventType sched.Event_Type, e *sched.Event) {
+	s.EventChan <- &event.MesosEvent{EventType: eventType, Event: e}
+}
+
+func (s *Connector) emitError(level utils.SwanErrorSeverity, err interface{}) {
+	s.ErrorChan <- utils.NewError(level, err)
+}
+
+// ErrEvent func
+func (s *Connector) ErrEvent() chan error {
+	return s.ErrorChan
+}
+
+// MesosEvent func
+func (s *Connector) MesosEvent() chan *event.MesosEvent {
+	return s.EventChan
+}
+
+// Reregister func
+func (s *Connector) Reregister() error {
+	logrus.Infof("re-register to mesos now")
+
+	// cancel previous stale goroutine
+	if s.StreamCancelFun != nil {
+		s.StreamCancelFun()
+	}
+
+	err := s.leaderDetect()
+	if err != nil { // if leader detect encounter any error
+		logrus.Errorf("exiting re-register due to err: %v", err)
+		return err
+	}
+
+	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
+	go s.subscribe(s.StreamCtx)
+	return nil
+}
+
+// Start func
+func (s *Connector) Start(ctx context.Context) {
+	err := s.leaderDetect()
+	if err != nil {
+		logrus.Errorf("start mesos connector got error: %v", err)
+		s.emitError(utils.SeverityHigh, err) // set SeverityHigh when first start
+		return
+	}
+
+	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
+	go s.subscribe(s.StreamCtx)
+}
+
+func (s *Connector) leaderDetect() error {
+	masters, err := getMastersFromZK(instance.MesosZkPath)
+	if err != nil {
+		return err
+	}
+
+	state, err := stateFromMasters(masters)
+	if err != nil {
+		return err
+	}
+
+	s.MesosLeaderHTTPClient = NewHTTPClient(state.Leader, "/api/v1/scheduler")
+	s.MesosLeader = state.Leader
+
+	s.ClusterID = "cluster"
+	if v := strings.TrimSpace(state.Cluster); v != "" {
+		s.ClusterID = v
+	}
+
+	if specialChar.MatchString(s.ClusterID) {
+		logrus.Warnf(`Swan do not work with mesos cluster name(%s) with special characters "-.$*+?{}()[]|".`, s.ClusterID)
+		s.ClusterID = specialChar.ReplaceAllString(s.ClusterID, "")
+	}
+
+	return nil
 }
 
 func getMastersFromZK(zkPath *url.URL) ([]string, error) {
@@ -175,14 +267,15 @@ func getMastersFromZK(zkPath *url.URL) ([]string, error) {
 func stateFromMasters(masters []string) (*megos.State, error) {
 	masterUrls := make([]*url.URL, 0, len(masters))
 	for _, master := range masters {
-		masterUrl, _ := url.Parse(fmt.Sprintf("http://%s", master))
-		masterUrls = append(masterUrls, masterUrl)
+		masterURL, _ := url.Parse(fmt.Sprintf("http://%s", master))
+		masterUrls = append(masterUrls, masterURL)
 	}
 
 	mesos := megos.NewClient(masterUrls, nil)
 	return mesos.GetStateFromCluster()
 }
 
+// SendCall func
 func (s *Connector) SendCall(call *sched.Call) {
 	resp, err := s.send(call)
 	if err != nil {
@@ -194,86 +287,4 @@ func (s *Connector) SendCall(call *sched.Call) {
 		logrus.Errorf("send call %+v to master, expect 202, got %d", call, code)
 		s.emitError(utils.SeverityLow, "sending call response status code not 202")
 	}
-}
-
-func (s *Connector) send(call *sched.Call) (*http.Response, error) {
-	payload, err := proto.Marshal(call)
-	if err != nil {
-		return nil, err
-	}
-	return s.MesosLeaderHttpClient.send(payload)
-}
-
-func (s *Connector) emitEvent(eventType sched.Event_Type, e *sched.Event) {
-	s.EventChan <- &event.MesosEvent{EventType: eventType, Event: e}
-}
-
-func (s *Connector) emitError(level utils.SwanErrorSeverity, err interface{}) {
-	s.ErrorChan <- utils.NewError(level, err)
-}
-
-func (s *Connector) ErrEvent() chan error {
-	return s.ErrorChan
-}
-
-func (s *Connector) MesosEvent() chan *event.MesosEvent {
-	return s.EventChan
-}
-
-func (s *Connector) Reregister() error {
-	logrus.Infof("re-register to mesos now")
-
-	// cancel previous stale goroutine
-	if s.StreamCancelFun != nil {
-		s.StreamCancelFun()
-	}
-
-	err := s.leaderDetect()
-	if err != nil { // if leader detect encounter any error
-		logrus.Errorf("exiting re-register due to err: %v", err)
-		return err
-	}
-
-	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
-	go s.subscribe(s.StreamCtx)
-	return nil
-}
-
-func (s *Connector) Start(ctx context.Context) {
-	err := s.leaderDetect()
-	if err != nil {
-		logrus.Errorf("start mesos connector got error: %v", err)
-		s.emitError(utils.SeverityHigh, err) // set SeverityHigh when first start
-		return
-	}
-
-	s.StreamCtx, s.StreamCancelFun = context.WithCancel(context.Background())
-	go s.subscribe(s.StreamCtx)
-}
-
-func (s *Connector) leaderDetect() error {
-	masters, err := getMastersFromZK(instance.MesosZkPath)
-	if err != nil {
-		return err
-	}
-
-	state, err := stateFromMasters(masters)
-	if err != nil {
-		return err
-	}
-
-	s.MesosLeaderHttpClient = NewHTTPClient(state.Leader, "/api/v1/scheduler")
-	s.MesosLeader = state.Leader
-
-	s.ClusterID = "cluster"
-	if v := strings.TrimSpace(state.Cluster); v != "" {
-		s.ClusterID = v
-	}
-
-	if SPECIAL_CHARACTER.MatchString(s.ClusterID) {
-		logrus.Warnf(`Swan do not work with mesos cluster name(%s) with special characters "-.$*+?{}()[]|".`, s.ClusterID)
-		s.ClusterID = SPECIAL_CHARACTER.ReplaceAllString(s.ClusterID, "")
-	}
-
-	return nil
 }
