@@ -219,7 +219,6 @@ type Instance struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`
 	Desc      string    `json:"desc"`
-	VersionID string    `json:"version_id"`
 	Status    string    `json:"status"` // op status
 	ErrMsg    string    `json:"errmsg"`
 	CreatedAt time.Time `json:"created_at"`
@@ -248,10 +247,6 @@ func (ins *Instance) Valid() error {
 	}
 	if ins.Name == "default" {
 		return errors.New(`name 'default' is reserved`)
-	}
-
-	if ins.VersionID == "" {
-		return errors.New("instance version required")
 	}
 	if sg := ins.ServiceGroup; len(sg) > 0 {
 		return sg.Valid()

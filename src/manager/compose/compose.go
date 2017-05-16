@@ -73,7 +73,7 @@ func (sp *svrPack) svrName() string {
 }
 
 func (sp *svrPack) create() error {
-	ver, _ := SvrToVersion(sp.svr, sp.insName(), sp.ins.VersionID)
+	ver, _ := SvrToVersion(sp.svr, sp.insName())
 
 	app, err := sp.sched.CreateApp(ver, sp.insName())
 	if err != nil {

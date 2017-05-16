@@ -132,7 +132,7 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 
 	// ensure all settings could be converted to types.Version to fit with state.NewApp()
 	for name, svr := range ins.ServiceGroup {
-		if _, err := compose.SvrToVersion(svr, "", ""); err != nil {
+		if _, err := compose.SvrToVersion(svr, ""); err != nil {
 			w.WriteError(400, fmt.Errorf("convert svr %s error: %v", name, err))
 			return
 		}
