@@ -240,6 +240,9 @@ func (ins *Instance) Valid() error {
 	if ins.Name == "" {
 		return errors.New("instance name required")
 	}
+	if ins.Name == "default" {
+		return errors.New("instance name reserved")
+	}
 	if strings.ContainsRune(ins.Name, '-') {
 		return errors.New(`char '-' not allowed for compose instance name`)
 	}
