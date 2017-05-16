@@ -56,7 +56,7 @@ func (sched *Scheduler) Start(ctx context.Context) error {
 	}
 
 	go func() {
-		sched.MesosConnector.SetFrameworkInfoId(store.DB().GetFrameworkId())
+		sched.MesosConnector.SetFrameworkInfoID(store.DB().GetFrameworkId())
 
 		var c context.Context
 		c, sched.mesosConnectorCancelFun = context.WithCancel(ctx)

@@ -18,7 +18,7 @@ func SubscribedHandler(s *Scheduler, ev event.Event) error {
 	logrus.Infof("subscribed successful with ID %s", e.GetSubscribed().FrameworkId.GetValue())
 
 	sub := e.GetSubscribed()
-	connector.Instance().SetFrameworkInfoId(*sub.FrameworkId.Value)
+	connector.Instance().SetFrameworkInfoID(*sub.FrameworkId.Value)
 
 	return store.DB().UpdateFrameworkId(*sub.FrameworkId.Value)
 }
