@@ -184,9 +184,8 @@ func SvrToVersion(s *store.DockerService, insName, vid string) (*types.Version, 
 		} else {
 			ver.Instances = int32(*n)
 		}
-	case "global": // exactly one container per swarm node
-		ver.Constraints = "unique hostname" // overwrite constraints
-		ver.Instances = 1                   // no use, just to make pass validator
+	default:
+		ver.Instances = 1
 	}
 
 	// killpolicy
