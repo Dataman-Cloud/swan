@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"net/http"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -188,8 +189,9 @@ func (m *Manager) reloadAPIServer() {
 		}
 		m.apiServer.UpdateLeaderAddr(m.leaderAddr)
 		err := m.apiServer.Start()
-		m.errCh <- err
-		return
+		if err != http.ErrServerClosed {
+			m.errCh <- err
+		}
 	}()
 }
 
