@@ -92,7 +92,7 @@ func NewApp(version *types.Version, appID string,
 		app.Mode = APP_MODE_REPLICATES
 	}
 
-	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+	version.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	if version.AppVersion == "" {
 		version.AppVersion = version.ID
 	}
@@ -173,7 +173,7 @@ func (app *App) Update(version *types.Version) error {
 		return err
 	}
 
-	version.ID = fmt.Sprintf("%d", time.Now().Unix())
+	version.ID = fmt.Sprintf("%d", time.Now().UnixNano())
 	if version.AppVersion == "" {
 		version.AppVersion = version.ID
 	}
