@@ -16,7 +16,6 @@ import (
 
 	"github.com/aanand/compose-file/loader"
 	ctypes "github.com/aanand/compose-file/types"
-	uuid "github.com/satori/go.uuid"
 )
 
 // YamlToServiceGroup provide ability to convert docker-compose-yaml to docker-container-config
@@ -134,11 +133,9 @@ func YamlVariables(yaml []byte) []string {
 	return ret
 }
 
-func SvrToVersion(s *store.DockerService, insName, vid string) (*types.Version, error) {
+func SvrToVersion(s *store.DockerService, insName string) (*types.Version, error) {
 	ver := &types.Version{
-		ID:           uuid.NewV4().String(),
 		AppName:      s.Name, // svr name
-		AppVersion:   vid,    // version
 		Priority:     0,      // no use
 		Env:          s.Service.Environment,
 		Constraints:  s.Extra.Constraints,

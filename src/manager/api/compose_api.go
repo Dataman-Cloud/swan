@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -57,6 +58,7 @@ func (api *ComposeService) listInstances(r *restful.Request, w *restful.Response
 		w.WriteError(500, err)
 		return
 	}
+	sort.Sort(instanceSorter(is))
 	w.WriteEntity(is)
 }
 
@@ -132,7 +134,7 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 
 	// ensure all settings could be converted to types.Version to fit with state.NewApp()
 	for name, svr := range ins.ServiceGroup {
-		if _, err := compose.SvrToVersion(svr, "", ""); err != nil {
+		if _, err := compose.SvrToVersion(svr, ""); err != nil {
 			w.WriteError(400, fmt.Errorf("convert svr %s error: %v", name, err))
 			return
 		}
@@ -207,3 +209,9 @@ func (api *ComposeService) newInstanceWrapper(i *store.Instance) *instanceWrappe
 		Apps:     apps,
 	}
 }
+
+type instanceSorter []*store.Instance
+
+func (s instanceSorter) Len() int           { return len(s) }
+func (s instanceSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s instanceSorter) Less(i, j int) bool { return s[i].UpdatedAt.After(s[j].UpdatedAt) }
