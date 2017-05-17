@@ -129,9 +129,10 @@ func (s *ApiServer) Start() error {
 		w.Write(output)
 	})
 
-	logrus.Printf("start listening on %s", s.listenAddr)
+	logrus.Printf("apiserver listening on %s", s.listenAddr)
 
 	srv := &http.Server{Addr: s.listenAddr, Handler: wsContainer}
+	srv.SetKeepAlivesEnabled(false)
 	s.server = srv
 
 	return srv.ListenAndServe()
