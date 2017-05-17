@@ -136,7 +136,11 @@ func (m *Manager) start() error {
 			return
 		}
 
-		m.watchLeader(p)
+		if err := m.watchLeader(p); err != nil {
+			logrus.Info("Electing leader error", err)
+			m.errCh <- err
+			return
+		}
 	}()
 
 	var (
@@ -314,12 +318,12 @@ func (m *Manager) electLeader() (string, error) {
 	return m.elect()
 }
 
-func (m *Manager) watchLeader(path string) {
+func (m *Manager) watchLeader(path string) error {
 	p := filepath.Join(m.electRootPath, path)
 	_, _, childCh, err := m.ZKClient.ChildrenW(p)
 	if err != nil {
 		logrus.Infof("Watch children error %s", err)
-		return
+		return err
 	}
 
 	for {
@@ -332,7 +336,7 @@ func (m *Manager) watchLeader(path string) {
 			p, err := m.elect()
 			if err != nil {
 				logrus.Infof("Electing new leader error %s", err.Error())
-				return
+				return err
 			}
 			m.watchLeader(p)
 		}
