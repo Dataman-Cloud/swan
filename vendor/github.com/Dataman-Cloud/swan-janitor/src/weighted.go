@@ -13,6 +13,11 @@ func NewWeightLoadBalancer() *WeightLoadBalancer {
 }
 
 func (rr *WeightLoadBalancer) Seed(targets []*Target) *Target {
+	// protect targets from being empty
+	if len(targets) == 0 {
+		return nil
+	}
+
 	rand.Seed(int64(time.Now().Nanosecond()))
 	ranges := []float64{0}
 	previousSum := float64(0)
@@ -23,7 +28,7 @@ func (rr *WeightLoadBalancer) Seed(targets []*Target) *Target {
 
 	rValue := rand.Float64() * previousSum
 	for i, step := range ranges {
-		if step >= rValue {
+		if step > rValue {
 			return targets[i-1]
 		}
 	}
