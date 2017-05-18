@@ -203,6 +203,8 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 		}
 
 		rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
+		rr.RequestURI = r.RequestURI
+		rr.URL.RawQuery = r.URL.RawQuery
 		if err != nil {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
