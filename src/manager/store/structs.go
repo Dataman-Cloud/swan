@@ -254,14 +254,15 @@ func (ins *Instance) Valid() error {
 }
 
 type YamlExtra struct {
-	Priority    uint      `json:"priority"`
-	WaitDelay   uint      `json:"wait_delay"` // by second
-	PullAlways  bool      `json:"pull_always"`
-	Resource    *Resource `json:"resource"`
-	Constraints string    `json:"constraints"`
-	RunAs       string    `json:"runas"`
-	URIs        []string  `json:"uris"`
-	IPs         []string  `json:"ips"`
+	Priority    uint              `json:"priority"`
+	WaitDelay   uint              `json:"wait_delay"` // by second
+	PullAlways  bool              `json:"pull_always"`
+	Resource    *Resource         `json:"resource"`
+	Constraints string            `json:"constraints"`
+	RunAs       string            `json:"runas"`
+	URIs        []string          `json:"uris"`
+	IPs         []string          `json:"ips"`
+	Labels      map[string]string `json:"labels"` // extra labels: uid, username, vcluster ...
 }
 
 type Resource struct {

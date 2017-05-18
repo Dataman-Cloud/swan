@@ -32,29 +32,39 @@ func YamlToServiceGroup(yaml []byte, env map[string]string, exts map[string]*sto
 		volumes  = cfg.Volumes // named volume definations
 	)
 	for _, svr := range services {
-		// service
 		name := svr.Name
-		nsvr := svr
-		ds := &store.DockerService{
-			Name:    name,
-			Service: &nsvr,
-		}
-		// network
-		if v, ok := networks[name]; ok {
-			nv := v
-			ds.Network = &nv
-		}
-		// volume
-		if v, ok := volumes[name]; ok {
-			nv := v
-			ds.Volume = &nv
-		}
+
 		// extra
 		ext, _ := exts[name]
 		if ext == nil {
 			return nil, errors.New("extra settings requried for service: " + name)
 		}
-		ds.Extra = ext
+
+		// service, with extra labels
+		nsvr := svr
+		if nsvr.Labels == nil {
+			nsvr.Labels = make(map[string]string)
+		}
+		for k, v := range ext.Labels {
+			nsvr.Labels[k] = v
+		}
+		ds := &store.DockerService{
+			Name:    name,
+			Service: &nsvr,
+			Extra:   ext,
+		}
+
+		// network
+		if v, ok := networks[name]; ok {
+			nv := v
+			ds.Network = &nv
+		}
+
+		// volume
+		if v, ok := volumes[name]; ok {
+			nv := v
+			ds.Volume = &nv
+		}
 
 		ret[name] = ds
 	}
@@ -149,7 +159,7 @@ func SvrToVersion(s *store.DockerService, insName string) (*types.Version, error
 	dnsSearch := fmt.Sprintf("%s.%s.%s.swan.com", insName, ver.RunAs, connector.Instance().ClusterID)
 
 	// container
-	container, err := svrToContainer(s, dnsSearch)
+	container, err := svrToContainer(s, dnsSearch, insName)
 	if err != nil {
 		return nil, err
 	}
@@ -224,13 +234,13 @@ func svrToHealthCheck(s *store.DockerService) *types.HealthCheck {
 	return ret
 }
 
-func svrToContainer(s *store.DockerService, dnsSearch string) (*types.Container, error) {
+func svrToContainer(s *store.DockerService, dnsSearch, insName string) (*types.Container, error) {
 	var (
 		network    = strings.ToLower(s.Service.NetworkMode)
 		image      = s.Service.Image
 		forcePull  = s.Extra.PullAlways
 		privileged = s.Service.Privileged
-		parameters = svrToParams(s, dnsSearch)
+		parameters = svrToParams(s, dnsSearch, insName)
 	)
 	portMap, err := svrToPortMaps(s)
 	if err != nil {
@@ -279,7 +289,7 @@ func svrToPortMaps(s *store.DockerService) ([]*types.PortMapping, error) {
 // sigh ...
 // mesos's default supportting for container options is so lazy tricky, so
 // we have to convert docker container configs to CLI params key-value pairs.
-func svrToParams(s *store.DockerService, dnsSearch string) []*types.Parameter {
+func svrToParams(s *store.DockerService, dnsSearch, insName string) []*types.Parameter {
 	var (
 		m1 = make(map[string]string)   // key-value  params
 		m2 = make(map[string][]string) // key-list params
@@ -389,13 +399,11 @@ func svrToParams(s *store.DockerService, dnsSearch string) []*types.Parameter {
 		fset("tmpfs", v)
 	}
 	// labels
-	if v := s.Service.Labels; len(v) > 0 {
-		lbs := make([]string, 0, len(v))
-		for key, val := range v {
-			lbs = append(lbs, fmt.Sprintf("%s=%s", key, val))
-		}
-		fset("label", lbs)
+	lbs := []string{"DM_INSTANCE_NAME=" + insName}
+	for key, val := range s.Service.Labels {
+		lbs = append(lbs, fmt.Sprintf("%s=%s", key, val))
 	}
+	fset("label", lbs)
 	// volumes
 	if v := s.Service.Volumes; len(v) > 0 {
 		fset("volume", v)
