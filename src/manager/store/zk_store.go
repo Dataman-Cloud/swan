@@ -414,12 +414,13 @@ func (zk *ZKStore) snapshot() (string, error) {
 	snapshotPath := fmt.Sprintf(SNAPSHOT_PATH, zk.url.Path)
 	revision := zk.lastSequentialZkNodePath
 
-	zk.mu.Lock()
+	zk.mu.RLock()
 	data, err := json.Marshal(zk.Storage)
 	if err != nil {
+		zk.mu.RUnlock()
 		return "", err
 	}
-	zk.mu.Unlock()
+	zk.mu.RUnlock()
 
 	logrus.Debugf("snapshot storage to zk with data len: %d", len(data))
 	logrus.Debugf(string(data))
