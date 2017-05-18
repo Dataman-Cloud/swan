@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -236,17 +237,12 @@ func (ins *Instance) RequireConvert() bool {
 }
 
 func (ins *Instance) Valid() error {
-	if ins.Name == "" {
-		return errors.New("instance name required")
+	reg := regexp.MustCompile(`^[a-zA-Z0-9]{1,32}$`)
+	if !reg.MatchString(ins.Name) {
+		return errors.New("instance name should be regexp matched by: " + reg.String())
 	}
 	if ins.Name == "default" {
 		return errors.New("instance name reserved")
-	}
-	if strings.ContainsRune(ins.Name, '-') {
-		return errors.New(`char '-' not allowed for compose instance name`)
-	}
-	if ins.Name == "default" {
-		return errors.New(`name 'default' is reserved`)
 	}
 	if sg := ins.ServiceGroup; len(sg) > 0 {
 		return sg.Valid()
