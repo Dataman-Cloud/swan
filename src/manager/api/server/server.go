@@ -203,6 +203,8 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 		}
 
 		rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
+		rr.RequestURI = r.RequestURI
+		rr.URL.RawQuery = r.URL.RawQuery
 		if err != nil {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
@@ -237,7 +239,7 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 func copyHeader(source http.Header, dest *http.Header) {
 	for n, v := range source {
 		for _, vv := range v {
-			dest.Add(n, vv)
+			dest.Set(n, vv)
 		}
 	}
 }
