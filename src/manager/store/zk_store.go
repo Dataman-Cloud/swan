@@ -583,6 +583,13 @@ func (zk *ZKStore) unmarshalAtomicOp(data []byte) (*AtomicOp, error) {
 				return nil, err
 			}
 			ao.Payload = &item
+		case ENTITY_INSTANCE:
+			var item Instance
+			err = json.Unmarshal(tmpAo.Payload, &item)
+			if err != nil {
+				return nil, err
+			}
+			ao.Payload = &item
 		}
 	}
 	return &ao, nil
