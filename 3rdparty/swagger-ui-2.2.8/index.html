@@ -37,7 +37,13 @@
       if (url && url.length > 1) {
         url = decodeURIComponent(url[1]);
       } else {
-        url = "http://localhost:9999/apidocs.json";
+        if (window.location.port == 80 || window.location.port == "") {
+          url = window.location.protocol + "//" + window.location.hostname;
+        } else {
+          url = window.location.protocol + "//"
+                + window.location.hostname + ":" + window.location.port;
+        }
+        url = url + "/apidocs.json";
       }
 
       hljs.configure({
