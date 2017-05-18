@@ -237,7 +237,7 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 func copyHeader(source http.Header, dest *http.Header) {
 	for n, v := range source {
 		for _, vv := range v {
-			dest.Add(n, vv)
+			dest.Set(n, vv)
 		}
 	}
 }
