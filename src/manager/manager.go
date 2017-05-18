@@ -188,9 +188,23 @@ func (m *Manager) reloadAPIServer() {
 			return
 		}
 		m.apiServer.UpdateLeaderAddr(m.leaderAddr)
-		err := m.apiServer.Start()
-		if err != http.ErrServerClosed {
-			m.errCh <- err
+		// NOTE(nmg): Sometimes the api server can't be closed immediately.
+		// If this the `bind: address already in use` error will be occured.
+		// So we use a `for loop` to aviod this.
+		// TODO(nmg): Fix this more elegant.
+		for {
+			err := m.apiServer.Start()
+			if strings.Contains(err.Error(), "bind: address already in use") {
+				logrus.Errorf("Start apiserver error %s. Retry after 1 second.", err.Error())
+				time.Sleep(1 * time.Second)
+				continue
+			}
+
+			if err != http.ErrServerClosed {
+				m.errCh <- err
+			}
+
+			return
 		}
 	}()
 }
@@ -293,6 +307,10 @@ func (m *Manager) elect() (string, error) {
 
 	l, err := m.getLeader(p)
 	if err != nil {
+		if err == zk.ErrNoNode {
+			logrus.Errorf("Leader lost again. start new electing...")
+			return m.elect()
+		}
 		logrus.Errorf("Detect new leader error %s", err.Error())
 		return "", err
 	}
