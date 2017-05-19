@@ -55,12 +55,7 @@ func (zk *ZKStore) GetInstance(idOrName string) (*Instance, error) {
 	}
 
 	// by name
-	var inss []*Instance
-	inss, err := zk.ListInstances()
-	if err != nil {
-		return nil, err
-	}
-	for _, ins := range inss {
+	for _, ins := range zk.Storage.Instances {
 		if ins.Name == idOrName {
 			return ins, nil
 		}
