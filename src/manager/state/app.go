@@ -441,7 +441,7 @@ func ValidateAndFormatVersion(version *types.Version) error {
 
 	version.AppName = strings.TrimSpace(version.AppName)
 
-	r := regexp.MustCompile("([0-9]+)|([A-Z]+)|([\\-\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
+	r := regexp.MustCompile("([A-Z]+)|([\\-\\$\\*\\+\\?\\{\\}\\(\\)\\[\\]\\|]+)")
 	errMsg := errors.New(`must be lower case characters`)
 
 	//validation of AppId
