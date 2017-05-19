@@ -1,40 +1,40 @@
 package store
 
-func (zk *ZKStore) UpdateCurrentTask(appId, slotId string, task *Task) error {
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
-		return ErrAppNotFound
+// TODO
+// As Nested Field of AppHolder, UpdateCurrentTask Require Transaction Lock
+func (zk *ZKStore) UpdateCurrentTask(aid, sid string, task *Task) error {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
+		return errAppNotFound
 	}
 
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
+	slot := holder.Slots[sid]
+	if slot == nil {
+		return errSlotNotFound
 	}
 
-	op := &AtomicOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_CURRENT_TASK,
-		Param1:  appId,
-		Param2:  slotId,
-		Payload: task,
+	slot.CurrentTask = task
+	holder.Slots[sid] = slot
+
+	bs, err := encode(holder)
+	if err != nil {
+		return err
 	}
 
-	return zk.Apply(op, true)
+	path := keyApp + "/" + aid
+	return zk.createAll(path, bs)
 }
 
-func (zk *ZKStore) ListTaskHistory(appId, slotId string) []*Task {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
+func (zk *ZKStore) ListTaskHistory(aid, sid string) []*Task {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
 		return nil
 	}
 
-	slotStore, found := appStore.Slots[slotId]
-	if !found {
+	slot := holder.Slots[sid]
+	if slot == nil {
 		return nil
 	}
 
-	return slotStore.TaskHistory
+	return slot.TaskHistory
 }

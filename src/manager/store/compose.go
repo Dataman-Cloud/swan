@@ -1,77 +1,90 @@
 package store
 
-import "errors"
+import (
+	"errors"
+
+	"github.com/Sirupsen/logrus"
+)
 
 func (zk *ZKStore) CreateInstance(ins *Instance) error {
-	op := &AtomicOp{
-		Op:      OP_ADD,
-		Entity:  ENTITY_INSTANCE,
-		Param1:  ins.ID,
-		Payload: ins,
+	bs, err := encode(ins)
+	if err != nil {
+		return err
 	}
 
-	return zk.Apply(op, true)
-}
-
-func (zk *ZKStore) DeleteInstance(idOrName string) error {
-	i, _ := zk.GetInstance(idOrName)
-	if i == nil {
-		return nil
-	}
-
-	op := &AtomicOp{
-		Op:     OP_REMOVE,
-		Entity: ENTITY_INSTANCE,
-		Param1: i.ID,
-	}
-
-	return zk.Apply(op, true)
+	path := keyInstance + "/" + ins.ID
+	return zk.createAll(path, bs)
 }
 
 func (zk *ZKStore) UpdateInstance(ins *Instance) error {
-	i, _ := zk.GetInstance(ins.ID)
-	if i == nil {
-		return ErrInstanceNotFound
+	bs, err := encode(ins)
+	if err != nil {
+		return err
 	}
 
-	op := &AtomicOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_INSTANCE,
-		Param1:  ins.ID,
-		Payload: ins,
-	}
-
-	return zk.Apply(op, true)
+	path := keyInstance + "/" + ins.ID
+	return zk.create(path, bs)
 }
 
 func (zk *ZKStore) GetInstance(idOrName string) (*Instance, error) {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
 	// by id
-	ins, ok := zk.Storage.Instances[idOrName]
-	if ok {
+	bs, err := zk.get(keyInstance + "/" + idOrName)
+	if err == nil {
+		ins := new(Instance)
+		if err := decode(bs, &ins); err != nil {
+			logrus.Errorln("zk GetInstance.decode error:", err)
+			return nil, err
+		}
 		return ins, nil
 	}
 
 	// by name
-	for _, ins := range zk.Storage.Instances {
+	inss, err := zk.ListInstances()
+	if err != nil {
+		return nil, err
+	}
+	for _, ins := range inss {
 		if ins.Name == idOrName {
 			return ins, nil
 		}
 	}
 
-	return nil, errors.New("no such compose instance")
+	return nil, errors.New("no such instance")
 }
 
 func (zk *ZKStore) ListInstances() ([]*Instance, error) {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
+	ret := make([]*Instance, 0, 0)
 
-	is := make([]*Instance, 0, 0)
-	for _, i := range zk.Storage.Instances {
-		is = append(is, i)
+	nodes, err := zk.list(keyInstance)
+	if err != nil {
+		logrus.Errorln("zk ListInstances error:", err)
+		return ret, err
 	}
 
-	return is, nil
+	for _, node := range nodes {
+		bs, err := zk.get(keyInstance + "/" + node)
+		if err != nil {
+			logrus.Errorln("zk ListInstance.getnode error:", err)
+			continue
+		}
+
+		ins := new(Instance)
+		if err := decode(bs, &ins); err != nil {
+			logrus.Errorln("zk ListInstance.decode error:", err)
+			continue
+		}
+
+		ret = append(ret, ins)
+	}
+
+	return ret, nil
+}
+
+func (zk *ZKStore) DeleteInstance(idOrName string) error {
+	ins, err := zk.GetInstance(idOrName)
+	if err != nil {
+		return err
+	}
+
+	return zk.del(keyInstance + "/" + ins.ID)
 }

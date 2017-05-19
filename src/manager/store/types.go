@@ -1,8 +1,6 @@
 package store
 
 import (
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"regexp"
@@ -12,6 +10,30 @@ import (
 	"github.com/Dataman-Cloud/swan/src/utils/dfs"
 	"github.com/aanand/compose-file/types"
 )
+
+var (
+	errAppNotFound          = errors.New("app not found")
+	errAppAlreadyExists     = errors.New("app already exists")
+	errSlotNotFound         = errors.New("slot not found")
+	errSlotAlreadyExists    = errors.New("slot already exists")
+	errVersionAlreadyExists = errors.New("version already exists")
+	errInstanceNotFound     = errors.New("instance not found")
+)
+
+const (
+	keyApp         = "/app"       // single app
+	keyAllocator   = "/allocator" // offer allocator
+	keyInstance    = "/instance"  // compose instance (group apps)
+	keyFrameworkID = "/framework" // framework id
+)
+
+// AppHodler is Application wrapped with related versions & slots
+// save to -> keyApp
+type AppHolder struct {
+	App      *Application        `json:"app"`
+	Versions map[string]*Version `json:"versions"`
+	Slots    map[string]*Slot    `json:"slots"`
+}
 
 type Application struct {
 	ID              string        `json:"id,omitempty"`
@@ -23,20 +45,6 @@ type Application struct {
 	CreatedAt       int64         `json:"createdAt,omitempty"`
 	UpdatedAt       int64         `json:"updatedAt,omitempty"`
 	State           string        `json:"State,omitempty"`
-}
-
-func (app *Application) Bytes() []byte {
-	var buf bytes.Buffer
-	dec := gob.NewEncoder(&buf)
-	dec.Encode(app)
-	return buf.Bytes()
-}
-
-func (app *Application) FromBytes(buf []byte) *Application {
-	dec := gob.NewDecoder(bytes.NewBuffer(buf))
-	dec.Decode(app)
-
-	return app
 }
 
 type Version struct {
@@ -62,20 +70,6 @@ type Version struct {
 	AppID        string            `json:"appID,omitempty"`
 	Priority     int32             `json:"priority,omitempty"`
 	AppVersion   string            `json:"appVersion,omitempty"`
-}
-
-func (version *Version) Bytes() []byte {
-	var buf bytes.Buffer
-	dec := gob.NewEncoder(&buf)
-	dec.Encode(version)
-	return buf.Bytes()
-}
-
-func (version *Version) FromBytes(buf []byte) *Version {
-	dec := gob.NewDecoder(bytes.NewBuffer(buf))
-	dec.Decode(version)
-
-	return version
 }
 
 type Container struct {
@@ -158,20 +152,6 @@ type Slot struct {
 	Weight               float64        `json:"weight,omitempty"`
 }
 
-func (slot *Slot) Bytes() []byte {
-	var buf bytes.Buffer
-	dec := gob.NewEncoder(&buf)
-	dec.Encode(slot)
-	return buf.Bytes()
-}
-
-func (slot *Slot) FromBytes(buf []byte) *Slot {
-	dec := gob.NewDecoder(bytes.NewBuffer(buf))
-	dec.Decode(slot)
-
-	return slot
-}
-
 type RestartPolicy struct {
 }
 
@@ -197,6 +177,7 @@ type Task struct {
 	Weight        float64  `json:"weight,omitempty"`
 }
 
+// save to -> keyAllocator
 type OfferAllocatorItem struct {
 	SlotID   string `json:"slotId,omitempty"`
 	OfferID  string `json:"offerId,omitempty"`
@@ -215,7 +196,7 @@ type State struct {
 	SlotCountNeedUpdate int64  `json:"slotCountNeedUpdate,omitempty"`
 }
 
-// compose instance
+// save to -> keyInstance
 type Instance struct {
 	ID        string    `json:"id"`
 	Name      string    `json:"name"`

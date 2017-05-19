@@ -1,18 +1,15 @@
 package store
 
-func (zk *ZKStore) UpdateFrameworkId(frameworkId string) error {
-	op := &AtomicOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_FRAMEWORKID,
-		Payload: frameworkId,
-	}
+import "github.com/Sirupsen/logrus"
 
-	return zk.Apply(op, true)
+func (zk *ZKStore) UpdateFrameworkId(id string) error {
+	return zk.createAll(keyFrameworkID, []byte(id))
 }
 
 func (zk *ZKStore) GetFrameworkId() string {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
-	return zk.Storage.FrameworkId
+	bs, err := zk.get(keyFrameworkID)
+	if err != nil {
+		logrus.Errorln("zk GetFrameworkId error:", err)
+	}
+	return string(bs)
 }

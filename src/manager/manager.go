@@ -218,10 +218,6 @@ func (m *Manager) startServices(ctx context.Context, err chan error) {
 	go func() {
 		err <- m.scheduler.Start(ctx)
 	}()
-
-	go func() {
-		err <- store.DB().Start(ctx)
-	}()
 }
 
 func (m *Manager) stopServices(cancel context.CancelFunc) {

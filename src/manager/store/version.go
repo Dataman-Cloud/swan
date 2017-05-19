@@ -1,51 +1,46 @@
 package store
 
-func (zk *ZKStore) CreateVersion(appId string, version *Version) error {
-	if zk.GetVersion(appId, version.ID) != nil {
-		return ErrVersionAlreadyExists
+// TODO
+// As Nested Field of AppHolder, CreateVersion Require Transaction Lock
+func (zk *ZKStore) CreateVersion(aid string, version *Version) error {
+	if zk.GetVersion(aid, version.ID) != nil {
+		return errVersionAlreadyExists
 	}
 
-	op := &AtomicOp{
-		Op:      OP_ADD,
-		Entity:  ENTITY_VERSION,
-		Param1:  appId,
-		Param2:  version.ID,
-		Payload: version,
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
+		return errAppNotFound
 	}
 
-	return zk.Apply(op, true)
+	holder.Versions[version.ID] = version
+
+	bs, err := encode(holder)
+	if err != nil {
+		return err
+	}
+
+	path := keyApp + "/" + aid
+	return zk.createAll(path, bs)
 }
 
-func (zk *ZKStore) GetVersion(appId, versionId string) *Version {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
+func (zk *ZKStore) GetVersion(aid, vid string) *Version {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
 		return nil
 	}
 
-	version, found := appStore.Versions[versionId]
-	if !found {
-		return nil
-	}
-
-	return version
+	return holder.Versions[vid]
 }
 
-func (zk *ZKStore) ListVersions(appId string) []*Version {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
+func (zk *ZKStore) ListVersions(aid string) []*Version {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
 		return nil
 	}
 
-	versions := make([]*Version, 0)
-	for _, version := range appStore.Versions {
-		versions = append(versions, version)
+	ret := make([]*Version, 0, len(holder.Versions))
+	for _, ver := range holder.Versions {
+		ret = append(ret, ver)
 	}
-
-	return versions
+	return ret
 }
