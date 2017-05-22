@@ -2,6 +2,7 @@ package api
 
 import (
 	"fmt"
+	"net/url"
 	"sort"
 	"time"
 
@@ -58,6 +59,10 @@ func (api *ComposeService) listInstances(r *restful.Request, w *restful.Response
 		w.WriteError(500, err)
 		return
 	}
+
+	r.Request.ParseForm()
+	is = filterInstances(is, r.Request.Form)
+
 	sort.Sort(instanceSorter(is))
 	w.WriteEntity(is)
 }
@@ -215,3 +220,42 @@ type instanceSorter []*store.Instance
 func (s instanceSorter) Len() int           { return len(s) }
 func (s instanceSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
 func (s instanceSorter) Less(i, j int) bool { return s[i].UpdatedAt.After(s[j].UpdatedAt) }
+
+// filter instances according by yaml extra labels
+func filterInstances(is []*store.Instance, filter url.Values) []*store.Instance {
+	var idx int
+
+	for _, i := range is {
+		ext := i.YAMLExtra
+		if len(ext) == 0 {
+			continue
+		}
+
+		var extOne *store.YamlExtra
+		for _, v := range ext {
+			extOne = v
+			break
+		}
+		if extOne == nil {
+			continue
+		}
+
+		var n int
+		for k, v := range filter {
+			for key, val := range extOne.Labels {
+				if key == k && val == v[0] {
+					n++
+					break
+				}
+			}
+		}
+
+		// matched all filters
+		if n == len(filter) {
+			is[idx] = i
+			idx++
+		}
+	}
+
+	return is[0:idx]
+}
