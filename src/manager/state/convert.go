@@ -370,7 +370,9 @@ func SlotToDB(slot *Slot) *store.Slot {
 	if len(slot.TaskHistory) > 0 {
 		s.TaskHistory = make([]*store.Task, 0)
 		for _, t := range slot.TaskHistory {
-			s.TaskHistory = append(s.TaskHistory, TaskToDB(t))
+			if t.Slot != nil {
+				s.TaskHistory = append(s.TaskHistory, TaskToDB(t))
+			}
 		}
 	}
 
