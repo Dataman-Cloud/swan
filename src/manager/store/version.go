@@ -1,8 +1,10 @@
 package store
 
-// TODO
 // As Nested Field of AppHolder, CreateVersion Require Transaction Lock
 func (zk *ZKStore) CreateVersion(aid string, version *Version) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetVersion(aid, version.ID) != nil {
 		return errVersionAlreadyExists
 	}

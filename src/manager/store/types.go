@@ -29,6 +29,8 @@ const (
 
 // AppHodler is Application wrapped with related versions & slots
 // save to -> keyApp
+// NOTE must be under protection by Transaction Lock while updating nested fields
+// such as version, slots, currentversion ...
 type AppHolder struct {
 	App      *Application        `json:"app"`
 	Versions map[string]*Version `json:"versions"`

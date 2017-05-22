@@ -1,8 +1,10 @@
 package store
 
-// TODO
 // As Nested Field of AppHolder, CreateSlot Require Transaction Lock
 func (zk *ZKStore) CreateSlot(slot *Slot) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetSlot(slot.AppID, slot.ID) != nil {
 		return errSlotAlreadyExists
 	}
@@ -45,9 +47,11 @@ func (zk *ZKStore) ListSlots(aid string) []*Slot {
 	return ret
 }
 
-// TODO
 // As Nested Field of AppHolder, UpdateSlot Require Transaction Lock
 func (zk *ZKStore) UpdateSlot(aid, sid string, slot *Slot) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetSlot(aid, sid) == nil {
 		return errSlotNotFound
 	}
@@ -68,9 +72,11 @@ func (zk *ZKStore) UpdateSlot(aid, sid string, slot *Slot) error {
 	return zk.createAll(path, bs)
 }
 
-// TODO
 // As Nested Field of AppHolder, DeleteSlot Require Transaction Lock
 func (zk *ZKStore) DeleteSlot(aid, sid string) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetSlot(aid, sid) == nil {
 		return errSlotNotFound
 	}

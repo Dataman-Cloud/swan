@@ -22,9 +22,11 @@ func (zk *ZKStore) CreateApp(app *Application) error {
 	return zk.createAll(path, bs)
 }
 
-// TODO
-// All of AppHolder Update Ops Requires Transaction Lock
+// All of AppHolder Write Ops Requires Transaction Lock
 func (zk *ZKStore) UpdateApp(app *Application) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	holder := zk.GetAppHolder(app.ID)
 	if holder == nil {
 		return errAppNotFound
@@ -83,7 +85,11 @@ func (zk *ZKStore) ListApps() []*Application {
 	return ret
 }
 
+// All of AppHolder Write Ops Requires Transaction Lock
 func (zk *ZKStore) DeleteApp(id string) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetApp(id) == nil {
 		return errAppNotFound
 	}

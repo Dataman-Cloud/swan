@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"path"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -19,6 +20,8 @@ type ZKStore struct {
 	url  *url.URL
 	conn *zk.Conn
 	acl  []zk.ACL
+
+	sync.Mutex // only protect AppHolder Nested Objects (Tasks,Slots ...) Write Ops
 }
 
 func DB() *ZKStore {

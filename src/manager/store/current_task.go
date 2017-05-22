@@ -1,8 +1,10 @@
 package store
 
-// TODO
 // As Nested Field of AppHolder, UpdateCurrentTask Require Transaction Lock
 func (zk *ZKStore) UpdateCurrentTask(aid, sid string, task *Task) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	holder := zk.GetAppHolder(aid)
 	if holder == nil {
 		return errAppNotFound
