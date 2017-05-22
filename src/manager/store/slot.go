@@ -1,94 +1,98 @@
 package store
 
+// As Nested Field of AppHolder, CreateSlot Require Transaction Lock
 func (zk *ZKStore) CreateSlot(slot *Slot) error {
+	zk.Lock()
+	defer zk.Unlock()
+
 	if zk.GetSlot(slot.AppID, slot.ID) != nil {
-		return ErrSlotAlreadyExists
+		return errSlotAlreadyExists
 	}
 
-	op := &AtomicOp{
-		Op:      OP_ADD,
-		Entity:  ENTITY_SLOT,
-		Param1:  slot.AppID,
-		Param2:  slot.ID,
-		Payload: slot,
+	holder := zk.GetAppHolder(slot.AppID)
+	if holder == nil {
+		return errAppNotFound
 	}
 
-	return zk.Apply(op, true)
+	holder.Slots[slot.ID] = slot
+
+	bs, err := encode(holder)
+	if err != nil {
+		return err
+	}
+
+	path := keyApp + "/" + slot.AppID
+	return zk.createAll(path, bs)
 }
 
-func (zk *ZKStore) GetSlot(appId, slotId string) *Slot {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
-
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
+func (zk *ZKStore) GetSlot(aid, sid string) *Slot {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
 		return nil
 	}
 
-	slot, found := appStore.Slots[slotId]
-	if !found {
+	return holder.Slots[sid]
+}
+
+func (zk *ZKStore) ListSlots(aid string) []*Slot {
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
 		return nil
 	}
 
-	return slot
+	ret := make([]*Slot, 0, len(holder.Slots))
+	for _, slot := range holder.Slots {
+		ret = append(ret, slot)
+	}
+	return ret
 }
 
-func (zk *ZKStore) ListSlots(appId string) []*Slot {
-	zk.mu.RLock()
-	defer zk.mu.RUnlock()
+// As Nested Field of AppHolder, UpdateSlot Require Transaction Lock
+func (zk *ZKStore) UpdateSlot(aid, sid string, slot *Slot) error {
+	zk.Lock()
+	defer zk.Unlock()
 
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
-		return nil
+	if zk.GetSlot(aid, sid) == nil {
+		return errSlotNotFound
 	}
 
-	slots := make([]*Slot, 0)
-	for _, slot := range appStore.Slots {
-		slots = append(slots, slot)
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
+		return errAppNotFound
 	}
 
-	return slots
+	holder.Slots[sid] = slot
+
+	bs, err := encode(holder)
+	if err != nil {
+		return err
+	}
+
+	path := keyApp + "/" + aid
+	return zk.createAll(path, bs)
 }
 
-func (zk *ZKStore) UpdateSlot(appId, slotId string, slot *Slot) error {
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
-		return ErrAppNotFound
+// As Nested Field of AppHolder, DeleteSlot Require Transaction Lock
+func (zk *ZKStore) DeleteSlot(aid, sid string) error {
+	zk.Lock()
+	defer zk.Unlock()
+
+	if zk.GetSlot(aid, sid) == nil {
+		return errSlotNotFound
 	}
 
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
+	holder := zk.GetAppHolder(aid)
+	if holder == nil {
+		return errAppNotFound
 	}
 
-	op := &AtomicOp{
-		Op:      OP_UPDATE,
-		Entity:  ENTITY_SLOT,
-		Param1:  slot.AppID,
-		Param2:  slot.ID,
-		Payload: slot,
+	delete(holder.Slots, sid)
+
+	bs, err := encode(holder)
+	if err != nil {
+		return err
 	}
 
-	return zk.Apply(op, true)
-}
-
-func (zk *ZKStore) DeleteSlot(appId, slotId string) error {
-	appStore, found := zk.Storage.Apps[appId]
-	if !found {
-		return ErrAppNotFound
-	}
-
-	_, found = appStore.Slots[slotId]
-	if !found {
-		return ErrSlotNotFound
-	}
-
-	op := &AtomicOp{
-		Op:     OP_REMOVE,
-		Entity: ENTITY_SLOT,
-		Param1: appId,
-		Param2: slotId,
-	}
-
-	return zk.Apply(op, true)
+	path := keyApp + "/" + aid
+	return zk.createAll(path, bs)
 }

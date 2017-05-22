@@ -101,10 +101,7 @@ func (sched *Scheduler) Start(ctx context.Context) error {
 }
 
 func (sched *Scheduler) recoverFromPreviousScene() error {
-	err := store.DB().Recover()
-	if err != nil {
-		return err
-	}
+	var err error
 
 	apps := state.LoadAppData(sched.userEventChan)
 	for _, app := range apps {
