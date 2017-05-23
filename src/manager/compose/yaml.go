@@ -121,7 +121,10 @@ func YamlVariables(yaml []byte) []string {
 			text = groups["escaped"]
 		}
 
-		var sep string
+		var (
+			sep    string
+			fields []string
+		)
 		switch {
 		case text == "":
 			goto END
@@ -130,11 +133,12 @@ func YamlVariables(yaml []byte) []string {
 		case strings.Contains(text, "-"):
 			sep = "-"
 		default:
-			ret = append(ret, text)
+			ret = append(ret, text+":")
 			goto END
 		}
 
-		ret = append(ret, strings.SplitN(text, sep, 2)[0])
+		fields = strings.SplitN(text, sep, 2)
+		ret = append(ret, fields[0]+":"+fields[1])
 
 	END:
 		return ""
