@@ -227,13 +227,7 @@ func (ins *Instance) Valid() error {
 	if ins.Name == "default" {
 		return errors.New("instance name reserved")
 	}
-	if sg := ins.ServiceGroup; len(sg) > 0 {
-		return sg.Valid()
-	}
-	if ins.YAMLRaw == "" {
-		return errors.New("at least one of ServiceGroup or YamlRaw required")
-	}
-	return nil
+	return ins.ServiceGroup.Valid()
 }
 
 type YamlExtra struct {

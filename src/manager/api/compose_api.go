@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
 	"sort"
@@ -102,7 +103,12 @@ func (api *ComposeService) parseYAML(r *restful.Request, w *restful.Response) {
 		svrs = append(svrs, svr.Name)
 	}
 
-	w.WriteHeaderAndEntity(201, map[string]interface{}{
+	if len(svrs) == 0 {
+		w.WriteError(400, errors.New("at least one of docker service defination required"))
+		return
+	}
+
+	w.WriteHeaderAndEntity(200, map[string]interface{}{
 		"services":  svrs,
 		"variables": vars,
 	})
