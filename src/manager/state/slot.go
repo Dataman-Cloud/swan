@@ -136,7 +136,7 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 func (slot *Slot) KillTask() {
 	slot.StopRestartPolicy()
 
-	if slot.Dispatched() {
+	if slot.Dispatched() || slot.Abnormal() {
 		slot.SetState(SLOT_STATE_PENDING_KILL)
 		slot.CurrentTask.Kill()
 	} else {
