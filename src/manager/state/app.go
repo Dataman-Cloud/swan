@@ -271,6 +271,8 @@ func (app *App) EmitAppEvent(stateString string) {
 		eventType = eventbus.EventTypeAppStateDeletion
 	case APP_STATE_NORMAL:
 		eventType = eventbus.EventTypeAppStateNormal
+	case APP_STATE_FAILED:
+		eventType = eventbus.EventTypeAppStateFailed
 	case APP_STATE_UPDATING:
 		eventType = eventbus.EventTypeAppStateUpdating
 	case APP_STATE_CANCEL_UPDATE:
@@ -343,6 +345,8 @@ func (app *App) stateFactory(stateName string, args ...interface{}) State {
 
 	case APP_STATE_CANCEL_UPDATE:
 		return NewStateCancelUpdate(app)
+	case APP_STATE_FAILED:
+		return NewStateFailed(app)
 	default:
 		panic(errors.New("unrecognized state"))
 	}
