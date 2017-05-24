@@ -1,8 +1,9 @@
 package server
 
 import (
+	"bufio"
 	"encoding/json"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path/filepath"
@@ -203,7 +204,6 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 		}
 
 		rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
-		rr.RequestURI = r.RequestURI
 		rr.URL.RawQuery = r.URL.RawQuery
 		if err != nil {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
@@ -213,25 +213,43 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 		copyHeader(r.Header, &rr.Header)
 
 		// Create a client and query the target
-		var transport http.Transport
-		leaderResp, err := transport.RoundTrip(rr)
+		client := &http.Client{}
+		lresp, err := client.Do(rr)
 		if err != nil {
 			http.Error(resp, err.Error(), http.StatusInternalServerError)
 			return
 		}
-
-		defer leaderResp.Body.Close()
-		body, err := ioutil.ReadAll(leaderResp.Body)
-		if err != nil {
-			http.Error(resp, err.Error(), http.StatusInternalServerError)
-			return
-		}
+		logrus.Infof("Request forwarding %s %s %s", rr.Method, rr.URL, lresp.Status)
 
 		dH := resp.Header()
-		copyHeader(leaderResp.Header, &dH)
+		copyHeader(lresp.Header, &dH)
 		dH.Add("Requested-Host", rr.Host)
 
-		resp.Write(body)
+		reader := bufio.NewReader(lresp.Body)
+		for {
+			line, err := reader.ReadSlice('\n')
+
+			if err == io.EOF {
+				break
+			}
+
+			if err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			if len(line) == 0 {
+				continue
+			}
+
+			if _, err := resp.Write(line); err != nil {
+				http.Error(resp, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			resp.Flush()
+		}
+
 		return
 	}
 }
