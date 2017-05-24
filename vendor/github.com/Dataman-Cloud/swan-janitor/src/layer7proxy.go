@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"net/url"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -136,15 +135,22 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	wildcardDomain := host[0 : domainIndex-1]
-	slices := strings.SplitN(wildcardDomain, ".", 2)
-	if len(slices) != 2 {
-		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host))
-		return
-	}
+	slices := strings.Split(wildcardDomain, ".")
 
-	digitRegexp := regexp.MustCompile("[0-9]+")
-	if digitRegexp.MatchString(slices[0]) {
-		upstream := p.UpstreamLoader.Get(slices[1])
+	switch len(slices) {
+	// app
+	case 4:
+		upstream := p.UpstreamLoader.Get(wildcardDomain)
+		if upstream == nil {
+			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
+			return
+		}
+
+		selectedTarget = upstream.NextTargetEntry()
+
+	// task
+	case 5:
+		upstream := p.UpstreamLoader.Get(fmt.Sprintf("%s.%s.%s.%s", slices[1], slices[2], slices[3], slices[4]))
 		if upstream == nil {
 			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
 			return
@@ -157,14 +163,11 @@ func (p *layer7Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		selectedTarget = target
-	} else {
-		upstream := p.UpstreamLoader.Get(wildcardDomain)
-		if upstream == nil {
-			p.FailByGateway(w, r, http.StatusNotFound, fmt.Sprintf("fail to found any upstream for %s", host))
-			return
-		}
 
-		selectedTarget = upstream.NextTargetEntry()
+	// format malformed
+	default:
+		p.FailByGateway(w, r, http.StatusBadRequest, fmt.Sprintf("header host is %s doesn't match [0\\.]app.user.cluster.domain.com abort", host))
+		return
 	}
 
 	if selectedTarget == nil {
