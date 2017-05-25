@@ -483,13 +483,21 @@ func OfferAllocatorItemFromDB(item *store.OfferAllocatorItem) (slotID string, of
 }
 
 func StateMachineFromDB(app *App, machine *store.StateMachine) *StateMachine {
-	return &StateMachine{
-		state: StateFromDB(app, machine.State),
+	state := StateFromDB(app, machine.State)
+
+	if state == nil {
+		return &StateMachine{state: NewStateNormal(app)}
 	}
+
+	return &StateMachine{state: state}
 }
 
 func StateFromDB(app *App, state *store.State) State {
-	slot, _ := app.GetSlot(int(state.CurrentSlotIndex))
+	slot, ok := app.GetSlot(int(state.CurrentSlotIndex))
+	if !ok {
+		return nil
+	}
+
 	switch state.Name {
 	case APP_STATE_NORMAL:
 		return &StateNormal{
