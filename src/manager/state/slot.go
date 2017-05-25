@@ -116,16 +116,16 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 	// initialize restart policy
 	testAndRestartFunc := func(s *Slot) bool {
 		if slot.Abnormal() {
+			logrus.Printf("slot %s abnormal, retry by dispatching a new task ...", slot.ID)
 			s.Archive()
 			s.DispatchNewTask(slot.Version)
+			return true
 		}
 
 		return false
 	}
 
-	//slot.restartPolicy = NewRestartPolicy(slot, slot.Version.BackoffSeconds,
-	//slot.Version.BackoffFactor, slot.Version.MaxLaunchDelaySeconds, testAndRestartFunc)
-	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 1, time.Second*300, 5, testAndRestartFunc)
+	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 5, testAndRestartFunc)
 
 	slot.create()
 
