@@ -92,6 +92,17 @@ type SlotResource struct {
 	Disk float64
 }
 
+var testAndRestartFunc = func(s *Slot) bool {
+	if s.Abnormal() {
+		logrus.Printf("slot %s abnormal, retry by dispatching a new task ...", s.ID)
+		s.Archive()
+		s.DispatchNewTask(s.Version)
+		return true
+	}
+
+	return false
+}
+
 func NewSlot(app *App, version *types.Version, index int) *Slot {
 	slot := &Slot{
 		Index:       index,
@@ -113,19 +124,8 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 		slot.Ip = app.CurrentVersion.IP[index]
 	}
 
-	// initialize restart policy
-	testAndRestartFunc := func(s *Slot) bool {
-		if slot.Abnormal() {
-			s.Archive()
-			s.DispatchNewTask(slot.Version)
-		}
-
-		return false
-	}
-
-	//slot.restartPolicy = NewRestartPolicy(slot, slot.Version.BackoffSeconds,
-	//slot.Version.BackoffFactor, slot.Version.MaxLaunchDelaySeconds, testAndRestartFunc)
-	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 1, time.Second*300, 5, testAndRestartFunc)
+	// initialize restart policy watcher
+	slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 5, testAndRestartFunc)
 
 	slot.create()
 
