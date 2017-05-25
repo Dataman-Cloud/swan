@@ -17,6 +17,10 @@ func (zk *ZKStore) CreateInstance(ins *Instance) error {
 }
 
 func (zk *ZKStore) UpdateInstance(ins *Instance) error {
+	if i, _ := zk.GetInstance(ins.ID); i == nil {
+		return errInstanceNotFound
+	}
+
 	bs, err := encode(ins)
 	if err != nil {
 		return err
