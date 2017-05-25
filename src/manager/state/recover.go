@@ -52,6 +52,8 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 
 		slots := LoadAppSlots(app)
 		for _, slot := range slots {
+			// recover slot's runtime restart policy watcher
+			slot.restartPolicy = NewRestartPolicy(slot, time.Second*10, 5, testAndRestartFunc)
 			app.Slots[int(slot.Index)] = slot
 		}
 
