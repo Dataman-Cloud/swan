@@ -141,7 +141,7 @@ Response
   "name": "b",
   "desc": "demo instance",
   "version_id": "xxx",
-  "status": "ready",      // creating, ready
+  "status": "ready",      // creating, ready, failed
   "errmsg": "",
   "created_at": "2017-05-09T10:39:06.406874508+08:00",
   "updated_at": "2017-05-09T10:39:27.066117222+08:00",

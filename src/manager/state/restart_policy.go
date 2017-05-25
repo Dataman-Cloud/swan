@@ -48,6 +48,9 @@ func NewRestartPolicy(slot *Slot, interval time.Duration, maxRetry int, restartF
 				}
 				if p.retried >= p.maxRetry {
 					logrus.Println("reached max restart retries, quit")
+					if p.slot.App.StateIs(APP_STATE_CREATING) {
+						p.slot.App.TransitTo(APP_STATE_FAILED)
+					}
 					return
 				}
 

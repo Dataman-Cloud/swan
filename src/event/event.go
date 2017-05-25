@@ -36,6 +36,7 @@ const (
 	EventTypeAppStateCreating     = "app_state_creating"
 	EventTypeAppStateDeletion     = "app_state_deletion"
 	EventTypeAppStateNormal       = "app_state_normal"
+	EventTypeAppStateFailed       = "app_state_failed"
 	EventTypeAppStateUpdating     = "app_state_updating"
 	EventTypeAppStateCancelUpdate = "app_state_cancel_update"
 	EventTypeAppStateScaleUp      = "app_state_scale_up"

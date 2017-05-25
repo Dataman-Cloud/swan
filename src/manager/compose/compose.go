@@ -1,7 +1,6 @@
 package compose
 
 import (
-	"errors"
 	"fmt"
 	"time"
 
@@ -15,12 +14,14 @@ import (
 
 func LaunchInstance(ins *store.Instance, sched *scheduler.Scheduler) (err error) {
 	defer func() {
-		ins.Status = "ready"
 		ins.UpdatedAt = time.Now()
-		ins.ErrMsg = ""
 
 		if err != nil {
+			ins.Status = "failed"
 			ins.ErrMsg = err.Error()
+		} else {
+			ins.Status = "ready"
+			ins.ErrMsg = ""
 		}
 
 		memo(ins)
@@ -94,11 +95,14 @@ func (sp *svrPack) create() error {
 		if app.StateMachine.ReadableState() == state.APP_STATE_NORMAL {
 			break
 		}
+		if app.StateMachine.ReadableState() == state.APP_STATE_FAILED {
+			return fmt.Errorf("app %s failed", sp.svrName())
+		}
 
 		time.Sleep(interval)
 		goesBy += interval.Seconds()
 		if goesBy > timeOut.Seconds() {
-			return errors.New("time out")
+			return fmt.Errorf("waitting for app %s timeout", sp.svrName())
 		}
 	}
 

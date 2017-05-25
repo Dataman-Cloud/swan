@@ -7,6 +7,7 @@ import (
 
 const (
 	APP_STATE_NORMAL        = "normal"
+	APP_STATE_FAILED        = "failed"
 	APP_STATE_CREATING      = "creating"
 	APP_STATE_DELETING      = "deleting"
 	APP_STATE_UPDATING      = "updating"
@@ -76,7 +77,6 @@ func (machine *StateMachine) Step() {
 type State interface {
 	OnEnter()
 	OnExit()
-
 	StateName() string
 	Step()
 	CanTransitTo(targetState string) bool
