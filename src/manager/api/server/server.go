@@ -227,10 +227,17 @@ func (s *ApiServer) ProxyRequest() restful.FilterFunction {
 
 		reader := bufio.NewReader(lresp.Body)
 		for {
-			line, err := reader.ReadSlice('\n')
+			line, err := reader.ReadBytes('\n')
 
 			if err == io.EOF {
-				break
+				if _, err := resp.Write(line); err != nil {
+					http.Error(resp, err.Error(), http.StatusInternalServerError)
+					return
+				}
+
+				resp.Flush()
+
+				return
 			}
 
 			if err != nil {
