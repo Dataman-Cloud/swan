@@ -94,6 +94,10 @@ type SlotResource struct {
 
 var testAndRestartFunc = func(s *Slot) bool {
 	if s.Abnormal() {
+		if s.StateIs(SLOT_STATE_TASK_FINISHED) {
+			return false // skip if task normally finished
+		}
+
 		logrus.Printf("slot %s abnormal, retry by dispatching a new task ...", s.ID)
 		s.Archive()
 		s.DispatchNewTask(s.Version)
