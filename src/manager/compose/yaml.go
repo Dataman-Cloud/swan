@@ -3,6 +3,7 @@ package compose
 import (
 	"errors"
 	"fmt"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,6 +18,15 @@ import (
 	"github.com/aanand/compose-file/loader"
 	ctypes "github.com/aanand/compose-file/types"
 )
+
+var swanDomain string
+
+func init() {
+	swanDomain = "swan.com"
+	if d := strings.TrimSpace(os.Getenv("SWAN_DOMAIN")); d != "" {
+		swanDomain = d
+	}
+}
 
 // YamlToServiceGroup provide ability to convert docker-compose-yaml to docker-container-config
 func YamlToServiceGroup(yaml []byte, env map[string]string, exts map[string]*store.YamlExtra) (store.ServiceGroup, error) {
@@ -160,7 +170,7 @@ func SvrToVersion(s *store.DockerService, insName string) (*types.Version, error
 		UpdatePolicy: nil, // no use
 	}
 
-	dnsSearch := fmt.Sprintf("%s.%s.%s.swan.com", insName, ver.RunAs, connector.Instance().ClusterID)
+	dnsSearch := fmt.Sprintf("%s.%s.%s.%s", insName, ver.RunAs, connector.Instance().ClusterID, swanDomain)
 
 	// container
 	container, err := svrToContainer(s, dnsSearch, insName)
