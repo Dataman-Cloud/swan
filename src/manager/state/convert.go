@@ -15,6 +15,7 @@ func AppToDB(app *App) *store.Application {
 		ClusterID: app.ClusterID,
 		CreatedAt: app.Created.UnixNano(),
 		UpdatedAt: app.Updated.UnixNano(),
+		Mode:      string(app.Mode),
 	}
 
 	if app.CurrentVersion != nil {
