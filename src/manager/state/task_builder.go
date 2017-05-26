@@ -14,6 +14,9 @@ type TaskBuilder struct {
 	task      *Task
 	taskInfo  *mesos.TaskInfo
 	HostPorts []uint64
+
+	// hold all random port map
+	portMaps map[string]int32
 }
 
 func NewTaskBuilder(task *Task) *TaskBuilder {
@@ -21,6 +24,7 @@ func NewTaskBuilder(task *Task) *TaskBuilder {
 		task:      task,
 		taskInfo:  &mesos.TaskInfo{},
 		HostPorts: make([]uint64, 0),
+		portMaps:  make(map[string]int32, 0),
 	}
 
 	builder.taskInfo.Labels = &mesos.Labels{Labels: make([]*mesos.Label, 0)}
@@ -205,6 +209,7 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 				})
 			}
 			builder.HostPorts = append(builder.HostPorts, hostPort)
+			builder.portMaps[m.Name] = int32(hostPort)
 			portsRelatedEnvs[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(m.Name))] = fmt.Sprintf("%d", hostPort)
 		}
 		builder.taskInfo.Container.Docker.Network = mesos.ContainerInfo_DockerInfo_HOST.Enum()
@@ -251,47 +256,49 @@ func (builder *TaskBuilder) SetNetwork(network string, portsAvailable []uint64) 
 }
 
 func (builder *TaskBuilder) SetHealthCheck(healthCheck *types.HealthCheck) *TaskBuilder {
-	protocol := strings.ToLower(healthCheck.Protocol)
-	if protocol == "cmd" {
+	var (
+		protocol      = strings.ToLower(healthCheck.Protocol)
+		mappings      = builder.task.Slot.Version.Container.Docker.PortMappings
+		network       = strings.ToLower(builder.task.Slot.Version.Container.Docker.Network)
+		namespacePort int32
+	)
+
+	for _, pm := range mappings {
+		if pm.Name == healthCheck.PortName {
+			if network == "host" {
+				namespacePort = builder.portMaps[pm.Name]
+			} else if network == "bridge" {
+				namespacePort = pm.ContainerPort
+			} else { // not support, shortcut
+				return builder
+			}
+		}
+	}
+
+	switch protocol {
+	case "cmd":
 		builder.taskInfo.HealthCheck = &mesos.HealthCheck{
 			Type: mesos.HealthCheck_COMMAND.Enum(),
 			Command: &mesos.CommandInfo{
 				Value: &healthCheck.Value,
 			},
 		}
-	} else {
-		var namespacePort int32
-		for _, portMapping := range builder.task.Slot.Version.Container.Docker.PortMappings {
-			if portMapping.Name == healthCheck.PortName {
-				if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "host" {
-					namespacePort = portMapping.HostPort
-				} else if strings.ToLower(builder.task.Slot.Version.Container.Docker.Network) == "bridge" {
-					namespacePort = portMapping.ContainerPort
-				} else { // not support, shortcut
-					return builder
-				}
-			}
+	case "http":
+		builder.taskInfo.HealthCheck = &mesos.HealthCheck{
+			Type: mesos.HealthCheck_HTTP.Enum(),
+			Http: &mesos.HealthCheck_HTTPCheckInfo{
+				Scheme:   proto.String(protocol),
+				Port:     proto.Uint32(uint32(namespacePort)),
+				Path:     &healthCheck.Path,
+				Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
+			},
 		}
-
-		if protocol == "http" {
-			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
-				Type: mesos.HealthCheck_HTTP.Enum(),
-				Http: &mesos.HealthCheck_HTTPCheckInfo{
-					Scheme:   proto.String(protocol),
-					Port:     proto.Uint32(uint32(namespacePort)),
-					Path:     &healthCheck.Path,
-					Statuses: []uint32{uint32(200), uint32(201), uint32(301), uint32(302)},
-				},
-			}
-		}
-
-		if protocol == "tcp" {
-			builder.taskInfo.HealthCheck = &mesos.HealthCheck{
-				Type: mesos.HealthCheck_TCP.Enum(),
-				Tcp: &mesos.HealthCheck_TCPCheckInfo{
-					Port: proto.Uint32(uint32(namespacePort)),
-				},
-			}
+	case "tcp":
+		builder.taskInfo.HealthCheck = &mesos.HealthCheck{
+			Type: mesos.HealthCheck_TCP.Enum(),
+			Tcp: &mesos.HealthCheck_TCPCheckInfo{
+				Port: proto.Uint32(uint32(namespacePort)),
+			},
 		}
 	}
 
