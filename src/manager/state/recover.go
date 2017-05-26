@@ -23,6 +23,7 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 			Created:   time.Unix(0, raftApp.CreatedAt),
 			Updated:   time.Unix(0, raftApp.UpdatedAt),
 			Slots:     make(map[int]*Slot),
+			Mode:      AppMode(raftApp.Mode),
 		}
 
 		app.UserEventChan = userEventChan
@@ -34,8 +35,6 @@ func LoadAppData(userEventChan chan *event.UserEvent) map[string]*App {
 			// find the reason cause the raftApp.Version nil
 			logrus.Errorf("app: %s version was nil", app.ID)
 		}
-
-		app.Mode = AppMode(raftApp.Version.Mode)
 
 		if raftApp.ProposedVersion != nil {
 			app.ProposedVersion = VersionFromDB(raftApp.ProposedVersion)

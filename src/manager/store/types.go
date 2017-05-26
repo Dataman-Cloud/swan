@@ -47,6 +47,7 @@ type Application struct {
 	CreatedAt       int64         `json:"createdAt,omitempty"`
 	UpdatedAt       int64         `json:"updatedAt,omitempty"`
 	State           string        `json:"State,omitempty"`
+	Mode            string        `json:"mode,omitempty"`
 }
 
 type Version struct {
