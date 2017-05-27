@@ -139,6 +139,10 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 // kill task doesn't need cleanup slot from app.Slots
 func (slot *Slot) KillTask() {
 	slot.StopRestartPolicy()
+	// just mark the slot state for removal
+	// NOTE do NOT use slot.SetState() to skip Step() which lead to dead lock
+	slot.State = SLOT_STATE_REAP
+	slot.Touch()
 	slot.CurrentTask.Kill()
 }
 
