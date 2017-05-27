@@ -28,6 +28,7 @@ func (normal *StateNormal) OnExit() {
 
 func (normal *StateNormal) Step() {
 	logrus.Debug("state normal step")
+	//logrus.Info("=========normal step")
 }
 
 func (normal *StateNormal) StateName() string {

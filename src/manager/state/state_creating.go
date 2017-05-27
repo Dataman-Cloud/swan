@@ -41,8 +41,13 @@ func (creating *StateCreating) OnExit() {
 }
 
 func (creating *StateCreating) Step() {
+	//logrus.Info("======create step")
 	logrus.Debug("state creating step")
 
+	//logrus.Info("====================xxxxx", creating.CurrentSlot.Healthy())
+	//if creating.CurrentSlot.Healthy() {
+	//	logrus.Info("==========", creating.CurrentSlot.ID)
+	//}
 	if creating.CurrentSlotIndex == creating.TargetSlotIndex && creating.CurrentSlot.Healthy() {
 		creating.App.TransitTo(APP_STATE_NORMAL)
 	} else if creating.CurrentSlot.Healthy() && creating.CurrentSlotIndex < creating.TargetSlotIndex {
@@ -57,6 +62,8 @@ func (creating *StateCreating) Step() {
 	} else {
 		logrus.Debug("state creating step, do nothing")
 	}
+
+	//logrus.Info("=======task=", creating.CurrentSlot.Healthy())
 }
 
 func (creating *StateCreating) StateName() string {
