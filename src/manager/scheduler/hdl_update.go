@@ -86,6 +86,7 @@ func UpdateHandler(s *Scheduler, ev event.Event) error {
 			slot.CurrentTask.ContainerId = parseValue(`"Id": "(?P<value>\w+)`, string(data))
 			slot.CurrentTask.ContainerName = parseValue(`"Name": "(?P<value>/mesos-[\w\.-]+)`, string(data))
 
+			logrus.Info("========", taskState.String())
 			slot.SetState(state.SLOT_STATE_TASK_RUNNING)
 		}
 

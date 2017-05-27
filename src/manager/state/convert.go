@@ -1,6 +1,7 @@
 package state
 
 import (
+	"fmt"
 	"reflect"
 	"time"
 
@@ -354,6 +355,7 @@ func GatewayFromDB(g *store.Gateway) *types.Gateway {
 }
 
 func SlotToDB(slot *Slot) *store.Slot {
+	fmt.Println("=====slot touch====", slot.Healthy())
 	s := &store.Slot{
 		Index:     int32(slot.Index),
 		ID:        slot.ID,
