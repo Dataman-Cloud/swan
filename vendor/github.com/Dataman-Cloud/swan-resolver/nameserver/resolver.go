@@ -66,8 +66,8 @@ func (resolver *Resolver) WatchEvent(ctx context.Context) {
 	}
 }
 
-func (res *Resolver) Start(ctx context.Context, started chan bool) error {
-	dns.HandleFunc("swan.com.", res.HandleSwan)
+func (res *Resolver) Start(ctx context.Context, started chan bool, domain string) error {
+	dns.HandleFunc(domain, res.HandleSwan)
 	//dns.HandleFunc(res.config.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 

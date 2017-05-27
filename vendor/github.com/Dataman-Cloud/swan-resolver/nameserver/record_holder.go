@@ -28,7 +28,7 @@ func NewRecordHolder(domain string) *RecordHolder {
 }
 
 func (rh *RecordHolder) Add(record *Record) {
-	logrus.Debugf("add %s record %s@%s:%s", record.Type, record.Key(), record.Ip, record.Port)
+	logrus.Printf("add %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
 
 	rh.mu.Lock()
 	defer rh.mu.Unlock()
@@ -37,7 +37,7 @@ func (rh *RecordHolder) Add(record *Record) {
 }
 
 func (rh *RecordHolder) Del(record *Record) {
-	logrus.Debugf("del %s record %s@%s:%s", record.Type, record.Key(), record.Ip, record.Port)
+	logrus.Printf("del %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
 	rh.mu.Lock()
 	defer rh.mu.Unlock()
 
