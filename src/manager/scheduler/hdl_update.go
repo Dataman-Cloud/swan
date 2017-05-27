@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/event"
@@ -14,6 +15,8 @@ import (
 
 	"github.com/Sirupsen/logrus"
 )
+
+var lock sync.Mutex
 
 func UpdateHandler(s *Scheduler, ev event.Event) error {
 	logrus.WithFields(logrus.Fields{"handler": "update"}).
@@ -69,6 +72,9 @@ func UpdateHandler(s *Scheduler, ev event.Event) error {
 	logrus.Debugf("found slot %s", slot.ID)
 
 	slot.SetHealthy(healthy)
+
+	lock.Lock()
+	defer lock.Unlock()
 
 	switch taskState {
 	case mesos.TaskState_TASK_STAGING:

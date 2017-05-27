@@ -77,7 +77,11 @@ type Slot struct {
 
 	restartPolicy *RestartPolicy
 
+	hlock   sync.Mutex // for SetHealthy
 	healthy bool
+
+	//tlock sync.Mutex // for Touch
+	//slock sync.Mutex // for SetState
 }
 
 type SlotsById []*Slot
@@ -268,6 +272,9 @@ func (slot *Slot) StateIs(state string) bool {
 func (slot *Slot) SetState(state string) error {
 	logrus.Debugf("setting state for slot %s from %s to %s", slot.ID, slot.State, state)
 
+	//slot.slock.Lock()
+	//defer slot.slock.Unlock()
+
 	slot.State = state
 	switch slot.State {
 	case SLOT_STATE_PENDING_OFFER:
@@ -288,24 +295,34 @@ func (slot *Slot) SetState(state string) error {
 	case SLOT_STATE_TASK_KILLING:
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilling)
 	case SLOT_STATE_TASK_FINISHED:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFinished)
 	case SLOT_STATE_TASK_FAILED:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateFailed)
 	case SLOT_STATE_TASK_KILLED:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateKilled)
 	case SLOT_STATE_TASK_ERROR:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateError)
 	case SLOT_STATE_TASK_LOST:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateLost)
 	case SLOT_STATE_TASK_DROPPED:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateDropped)
 	case SLOT_STATE_TASK_UNREACHABLE:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnreachable)
 	case SLOT_STATE_TASK_GONE:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGone)
 	case SLOT_STATE_TASK_GONE_BY_OPERATOR:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateGoneByOperator)
 	case SLOT_STATE_TASK_UNKNOWN:
+		slot.SetHealthy(false)
 		slot.EmitTaskEvent(eventbus.EventTypeTaskStateUnknown)
 	default:
 	}
@@ -398,6 +415,9 @@ func (slot *Slot) Healthy() bool {
 }
 
 func (slot *Slot) SetHealthy(healthy bool) {
+	slot.hlock.Lock()
+	defer slot.hlock.Unlock()
+
 	needEmitEvent := slot.healthy != healthy
 
 	slot.healthy = healthy
@@ -429,6 +449,9 @@ func (slot *Slot) Remove() {
 }
 
 func (slot *Slot) Touch() {
+	//slot.tlock.Lock()
+	//defer slot.tlock.Unlock()
+
 	slot.update()
 }
 
