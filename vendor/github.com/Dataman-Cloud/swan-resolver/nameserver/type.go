@@ -60,3 +60,15 @@ func (record *Record) IsA() bool {
 func (record *Record) IsAAndSRV() bool {
 	return record.IsSRV() && record.IsA()
 }
+
+func (record *Record) Typ() string {
+	switch {
+	case record.IsSRV():
+		return "SRV"
+	case record.IsA():
+		return "A"
+	case record.IsAAndSRV():
+		return "A-SRV"
+	}
+	return "UNKN"
+}

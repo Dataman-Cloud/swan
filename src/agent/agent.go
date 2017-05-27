@@ -94,6 +94,7 @@ func (agent *Agent) StartAndJoin(ctx context.Context) error {
 				time.Sleep(REJOIN_BACKOFF)
 				goto JOIN_AGAIN
 			}
+			logrus.Printf("detected manager addr %s, listening on events ...", leaderAddr)
 
 			err = agent.watchManagerEvents(leaderAddr)
 			if err != nil {
@@ -131,7 +132,7 @@ func (agent *Agent) start(ctx context.Context, started chan bool) error {
 
 	go func() {
 		resolverCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.Resolver.Start(resolverCtx, resolverStarted)
+		errChan <- agent.Resolver.Start(resolverCtx, resolverStarted, agent.Config.DNS.Domain)
 	}()
 
 	go func() {
