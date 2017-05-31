@@ -1,0 +1,250 @@
+package zk
+
+import (
+	"fmt"
+	"path"
+	"strings"
+
+	"github.com/Dataman-Cloud/swan/proto/mesos"
+	"github.com/Dataman-Cloud/swan/types"
+
+	log "github.com/Sirupsen/logrus"
+)
+
+func (zk *ZKStore) CreateApp(app *types.Application) error {
+	p := path.Join(keyApp, app.ID)
+
+	data, _, err := zk.get(p)
+	if err != nil {
+		if !strings.Contains(err.Error(), "node does not exist") {
+			log.Errorf("find app %s got error: %v", app.ID)
+			return err
+		}
+	}
+
+	if len(data) != 0 {
+		return errAppAlreadyExists
+	}
+
+	bs, err := encode(app)
+	if err != nil {
+		return err
+	}
+
+	return zk.createAll(p, bs)
+}
+
+// All of AppHolder Write Ops Requires Transaction Lock
+func (zk *ZKStore) UpdateApp(app *types.Application) error {
+	bs, err := encode(app)
+	if err != nil {
+		return err
+	}
+
+	path := path.Join(keyApp, app.ID)
+
+	return zk.set(path, bs)
+}
+
+func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
+	p := path.Join(keyApp, id)
+
+	data, _, err := zk.get(p)
+	if err != nil {
+		log.Errorf("find app %s got error: %v", id, err)
+		return nil, fmt.Errorf("app %s not exists", id)
+	}
+
+	var app types.Application
+	if err := decode(data, &app); err != nil {
+		return nil, err
+	}
+
+	tasks, err := zk.tasks(p, id)
+	if err != nil {
+		log.Errorf("get app %s tasks got error: %v", id, err)
+		return nil, err
+	}
+
+	app.Tasks = tasks
+	app.Status = zk.status(tasks)
+	app.Version = zk.version(tasks)
+
+	versions, err := zk.versions(p, id)
+	if err != nil {
+		log.Errorf("get app %s versions got error: %v", id, err)
+		return nil, err
+	}
+
+	app.Versions = versions
+
+	return &app, nil
+}
+
+func (zk *ZKStore) ListApps() ([]*types.Application, error) {
+	nodes, err := zk.list(keyApp)
+	if err != nil {
+		log.Errorln("zk ListApps error:", err)
+		return nil, err
+	}
+
+	apps := make([]*types.Application, 0)
+	for _, node := range nodes {
+		if app, _ := zk.GetApp(node); app != nil {
+			apps = append(apps, app)
+		}
+	}
+
+	return apps, nil
+}
+
+func (zk *ZKStore) DeleteApp(id string) error {
+	p := path.Join(keyApp, id)
+
+	if err := zk.delTasks(p, id); err != nil {
+		log.Errorf("delete app %s tasks got error: %v", id, err)
+		return err
+	}
+
+	if err := zk.delVersions(p, id); err != nil {
+		log.Errorf("delete app %s versions got error: %v", id, err)
+		return err
+	}
+
+	return zk.del(p)
+}
+
+func (zk *ZKStore) tasks(p, id string) (types.TaskList, error) {
+	children, err := zk.list(path.Join(p, "tasks"))
+	if err != nil {
+		log.Errorf("get app %s children(tasks) error: %v", id, err)
+		return nil, err
+	}
+
+	tasks := make([]*types.Task, 0)
+	for _, child := range children {
+		p := path.Join(keyApp, id, "tasks", child)
+		data, _, err := zk.get(p)
+		if err != nil {
+			log.Errorf("get %s got error: %v", p, err)
+			return nil, err
+		}
+
+		var task *types.Task
+		if err := decode(data, &task); err != nil {
+			log.Errorf("decode task %s got error: %v", id, err)
+			return nil, err
+		}
+
+		tasks = append(tasks, task)
+	}
+
+	return tasks, nil
+}
+
+func (zk *ZKStore) versions(p, id string) (types.VersionList, error) {
+	children, err := zk.list(path.Join(p, "versions"))
+	if err != nil {
+		log.Errorf("get app %s children(versions) error: %v", id, err)
+		return nil, err
+	}
+
+	versions := make([]*types.Version, 0)
+	for _, child := range children {
+		p := path.Join(keyApp, id, "versions", child)
+		data, _, err := zk.get(p)
+		if err != nil {
+			log.Errorf("get %s got error: %v", p, err)
+			return nil, err
+		}
+
+		var ver *types.Version
+		if err := decode(data, &ver); err != nil {
+			log.Errorf("decode version %s got error: %v", id, err)
+			return nil, err
+		}
+
+		versions = append(versions, ver)
+	}
+
+	return versions, err
+}
+
+func (zk *ZKStore) status(tasks types.TaskList) string {
+	for _, task := range tasks {
+		if task.Status == mesos.TaskState_TASK_RUNNING.String() {
+			return "available"
+		}
+	}
+
+	return "unavailable"
+}
+
+func (zk *ZKStore) version(tasks types.TaskList) []string {
+	vers := make([]string, 0)
+
+	for _, task := range tasks {
+		if verExist(vers, task.Version) {
+			continue
+		}
+
+		vers = append(vers, task.Version)
+	}
+
+	// TODO(nmg): should be sort.
+	return vers
+}
+
+func verExist(vers []string, ver string) bool {
+	for _, v := range vers {
+		if v == ver {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (zk *ZKStore) delTasks(p, id string) error {
+	children, err := zk.list(path.Join(p, "tasks"))
+	if err != nil {
+		log.Errorf("get app %s children(tasks) error: %v", id, err)
+		return err
+	}
+
+	for _, child := range children {
+		if err := zk.del(path.Join(p, "tasks", child)); err != nil {
+			log.Errorf("delete task %s got error: %v", child, err)
+			return err
+		}
+	}
+
+	if err := zk.del(path.Join(p, "tasks")); err != nil {
+		log.Errorf("deleta znode %s/tasks got error: %v", p, err)
+		return err
+	}
+
+	return nil
+}
+
+func (zk *ZKStore) delVersions(p, id string) error {
+	children, err := zk.list(path.Join(p, "versions"))
+	if err != nil {
+		log.Errorf("get app %s children(versions) error: %v", id, err)
+		return err
+	}
+
+	for _, child := range children {
+		if err := zk.del(path.Join(p, "versions", child)); err != nil {
+			log.Errorf("delete version %s got error: %v", child, err)
+			return err
+		}
+	}
+
+	if err := zk.del(path.Join(p, "versions")); err != nil {
+		log.Errorf("deleta znode %s/versions got error: %v", p, err)
+		return err
+	}
+
+	return nil
+}

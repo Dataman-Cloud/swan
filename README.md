@@ -23,17 +23,18 @@ With `Swan` you can deploy long running `application` on mesos cluster, control 
 #### for more documentation about `Swan` please refer to [swan-docs](https://github.com/Dataman-Cloud/swan/docs/)
 
 
-## Noteworthy Features
+## Features
 
-+ Application deployment
-+ Application scaling
-+ Build in HTTP Proxy, Load Balance
-+ Rolling upgrade
-+ Version rollback
-+ Health check
-+ Auto failover
-+ High Availability with Raft backend
-+ Build in DNS
++ Application Management 
++ ScaleUp/ScaleDown
++ Rolling update 
++ Rollback
++ Mesos-based health checks 
++ HA 
++ Event Subscription
++ Compose
++ Calico-based IP-Per-Task
++ Schedule stategy
 
 ## Installation
 
@@ -57,84 +58,41 @@ Then you can compile `Swan` with:
 ```
 
 
-## Run manager 
-
+## Run 
 ```
-  make docker-run-manager-init 
+./bin/swan manager --mesos=zk://192.168.1.47:2181/mesos --zk=zk://192.168.1.47:2181/swan061904 --log-level=info --listen=0.0.0.0:9999
 ```
 ```
-  make docker-run-manager-join
-```
-
-## Run agent 
-
-```
-  make docker-run-agent
+./bin/swan --help
 ```
 
-## How to deploy my applications with swan
-### Use `curl`
+### API
+| Method        | API                        | 
+| ------------- |:---------------------------|
+| GET           | /v1/apps                   |
+| POST          | /v1/apps                   |
+| GET           | /v1/apps/{app_id}          |
+| DELETE        | /v1/apps/{app_id}          |
+| PATCH         | /v1/apps/{app_id}/scale    |
+| PUT           | /v1/apps/{app_id}/update   |
+| POST          | /v1/apps/{app_id}/rollback |
+| GET           | /v1/apps/{app_id}/tasks    |
+| GET           | /v1/apps/{app_id}/versions |
+| GET           | /v1/apps/{app_id}/tasks/{task_id} |
+| GET           | /v1/apps/{app_id}/versions/{version_id} |
 
-+ application deployment
-```
-  curl -X POST -H "Content-Type: application/json" -d@example/template-replicates.json http://localhost:9999/v_beta/apps
-```
+| Method        | API
+|---------------|:-------------------------|
+| POST          | /v1/compose | 
+| GET           | /v1/compose | 
+| GET           | /v1/compose/{compose_id} |
+| DELETE        | /v1/compose/{compose_id} | 
 
-+ applications list
-```
-  curl http://localhost:9999/v_beta/apps
-```
-
-+ application show
-```
-  curl http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
-```
-
-+ application delete
-```
-  curl -X DELETE http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
-```
-
-+ application scale up
-```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/scale-up -d '{"instances": 2}'
-```
-
-+ application scale down
-```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unamed/scale-down -d '{"instances": 2}'
-```
-
-+ application rolling upgrade
-```
-  curl -X PUT -H "Content-Type: application/json" -d@new_verison.json http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed
-```
-
-+ proceed upgrade process
-```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/proceed-update -d'{"instances": $NUM}'
-```
-
-`instances` -1 means upgrading all instances at once. Any other value specifies the number of instances to be updated at the same time.
-
-+ cancel upgrade process
-```
-  curl -X PATCH -H "Content-Type: application/json" http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/cancel-update
-```
-
-+ list application versions
-```
-  curl http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/versions
-```
-
-+ get application version
-```
-  curl http://localhost:9999/v_beta/apps/nginx0003-xcm-unnamed/versions/14012934223
-```
-
-
-## Roadmap
-See [ROADMAP](https://github.com/Dataman-Cloud/swan/blob/master/ROADMAP.md) for the full roadmap.
+| Method        | API   |
+|---------------|:-------------------------|
+| GET           | /ping |
+| GET           | /v1/events |
+| GET           | /version |
 
 ## Contributing
 If you want to contribute to swan, make a PR or report a issue.

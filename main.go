@@ -6,9 +6,9 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
 
-	"github.com/Dataman-Cloud/swan/src/cmd"
-	_ "github.com/Dataman-Cloud/swan/src/debug"
-	"github.com/Dataman-Cloud/swan/src/version"
+	"github.com/Dataman-Cloud/swan/cmd"
+	_ "github.com/Dataman-Cloud/swan/debug"
+	"github.com/Dataman-Cloud/swan/version"
 )
 
 func main() {
