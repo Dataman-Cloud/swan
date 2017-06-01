@@ -1,9 +1,6 @@
 package janitor
 
-import (
-	"strings"
-	"sync"
-)
+import "sync"
 
 type Upstream struct {
 	AppID string `json:"appID"`
@@ -11,7 +8,7 @@ type Upstream struct {
 	Targets      []*Target `json:"targets"`
 	loadBalancer LoadBalancer
 
-	mu sync.RWMutex
+	sync.RWMutex // protect Targets
 }
 
 func NewUpstream() *Upstream {
@@ -20,41 +17,37 @@ func NewUpstream() *Upstream {
 	}
 }
 
-func (u *Upstream) Equal(o *Upstream) bool {
-	return u.AppID == o.AppID
-}
-
-func (u *Upstream) ContainsTarget(taskID string) bool {
-	return u.GetTarget(taskID) != nil
-}
-
 func (u *Upstream) AddTarget(target *Target) {
-	u.mu.Lock()
-	defer u.mu.Unlock()
-
+	u.Lock()
 	u.Targets = append(u.Targets, target)
+	u.Unlock()
 }
 
 func (u *Upstream) UpdateTargetWeight(taskID string, newWeight float64) {
-	target := u.GetTarget(taskID)
+	u.Lock()
+	defer u.Unlock()
+
+	var target *Target
+	for _, t := range u.Targets {
+		if formatID(t.TaskID) == formatID(taskID) {
+			target = t
+		}
+	}
+
 	if target != nil {
 		target.Weight = newWeight
 	}
 }
 
 func (u *Upstream) RemoveTarget(target *Target) {
-	index := -1
-	for k, v := range u.Targets {
-		if v.Equal(target) {
-			index = k
-			break
-		}
-	}
-	if index >= 0 {
-		u.mu.Lock()
-		defer u.mu.Unlock()
+	u.Lock()
+	defer u.Unlock()
 
-		u.Targets = append(u.Targets[:index], u.Targets[index+1:]...)
+	for i, v := range u.Targets {
+		if v.Equal(target) {
+			u.Targets = append(u.Targets[:i], u.Targets[i+1:]...)
+			return
+		}
 	}
 }
 
@@ -63,15 +56,14 @@ func (u *Upstream) NextTargetEntry() *Target {
 }
 
 func (u *Upstream) GetTarget(taskID string) *Target {
+	u.RLock()
+	defer u.RUnlock()
+
 	for _, t := range u.Targets {
-		if formattedTaksId(t.TaskID) == formattedTaksId(taskID) {
+		if formatID(t.TaskID) == formatID(taskID) {
 			return t
 		}
 	}
 
 	return nil
-}
-
-func formattedTaksId(taskId string) string {
-	return strings.ToLower(strings.Replace(taskId, "-", ".", -1))
 }
