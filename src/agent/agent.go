@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -51,128 +50,108 @@ func New(agentConf config.AgentConfig) *Agent {
 }
 
 // StartAndJoin func
-func (agent *Agent) StartAndJoin(ctx context.Context) error {
-	errChan := make(chan error)
-
-	agentStartedCh := make(chan bool)
-	go func() {
-		err := agent.start(ctx, agentStartedCh)
-		errChan <- err
-	}()
+func (agent *Agent) StartAndJoin() error {
+	errCh := make(chan error)
 
 	go func() {
-		<-agentStartedCh
-		for {
-		JOIN_AGAIN:
-			leaderAddr, err := agent.detectManagerLeader(ctx)
-			if err != nil {
-				logrus.Errorf("detect manager leader got error: %s", err.Error())
-				time.Sleep(REJOIN_BACKOFF)
-				goto JOIN_AGAIN
-			}
-			logrus.Printf("detected manager addr %s, listening on events ...", leaderAddr)
-
-			err = agent.watchManagerEvents(leaderAddr)
-			if err != nil {
-				logrus.Errorf("watchManagerEvents got error: %s", err.Error())
-				time.Sleep(REJOIN_BACKOFF)
-				goto JOIN_AGAIN
-			}
+		err := agent.Resolver.Start(agent.Config.DNS.Domain)
+		if err != nil {
+			errCh <- err
 		}
+		logrus.Warnln("resolver quit, error:", err)
 	}()
 
-	return <-errChan
+	go func() {
+		err := agent.Janitor.Start()
+		if err != nil {
+			errCh <- err
+		}
+		logrus.Warnln("janitor quit, error:", err)
+	}()
+
+	go func() {
+		err := agent.SerfServer.Start()
+		if err != nil {
+			errCh <- err
+		}
+		logrus.Warnln("serf server quit, error:", err)
+	}()
+
+	go func() {
+		err := agent.HTTPServer.Start()
+		if err != nil {
+			errCh <- err
+		}
+		logrus.Warnln("http server quit, error:", err)
+	}()
+
+	go agent.watchEvents()
+	go agent.dispatchEvents()
+
+	return <-errCh
 }
 
-func (agent *Agent) start(ctx context.Context, started chan bool) error {
-	errChan := make(chan error)
-	var wg sync.WaitGroup
-	wg.Add(4)
-	resolverStarted, janitorStarted, httpStarted, serfStarted := make(chan bool),
-		make(chan bool), make(chan bool), make(chan bool)
-
-	go func() {
-		for {
-			select {
-			case <-resolverStarted:
-				wg.Done()
-			case <-janitorStarted:
-				wg.Done()
-			case <-httpStarted:
-				wg.Done()
-			case <-serfStarted:
-				wg.Done()
-			}
-		}
-	}()
-
-	go func() {
-		resolverCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.Resolver.Start(resolverCtx, resolverStarted, agent.Config.DNS.Domain)
-	}()
-
-	go func() {
-		janitorCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.Janitor.Start(janitorCtx, janitorStarted)
-	}()
-
-	go func() {
-		serfCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.SerfServer.Start(serfCtx, serfStarted)
-	}()
-
-	go func() {
-		httpServerCtx, _ := context.WithCancel(ctx)
-		errChan <- agent.HTTPServer.Start(httpServerCtx, httpStarted)
-	}()
-
-	go func() {
-		wg.Wait()
-		started <- true
-		// send proxy info to dns proxy listener
-		rgEvent := &nameserver.RecordChangeEvent{}
-		rgEvent.Change = "add"
-		rgEvent.Type = nameserver.A
-		rgEvent.Ip = agent.Config.Janitor.AdvertiseIP
-
-		rgEvent.IsProxy = true
-		agent.Resolver.RecordChangeChan <- rgEvent
-
-		for event := range agent.SerfServer.EventCh {
-			userEvent, ok := event.(serf.UserEvent)
-			if ok {
-				var taskInfoEvent types.TaskInfoEvent
-				err := json.Unmarshal(userEvent.Payload, &taskInfoEvent)
-				if err != nil {
-					logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
-				} else {
-					if taskInfoEvent.GatewayEnabled {
-						agent.Janitor.EventChan <- janitorTargetChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
-					}
-
-					if userEvent.Name == eventbus.EventTypeTaskHealthy || userEvent.Name == eventbus.EventTypeTaskUnhealthy { // Resolver only recongnize these two events
-						agent.Resolver.RecordChangeChan <- recordChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
-					}
-				}
-			}
-		}
-
-	}()
-
+// watchEvents establish a connection to swan master's stream events endpoint
+// and broadcast received events
+func (agent *Agent) watchEvents() {
 	for {
-		select {
-		case err := <-errChan:
-			if err != nil {
-				return err
-			}
-		case <-ctx.Done():
-			return ctx.Err()
+		leaderAddr, err := agent.detectManagerLeader()
+		if err != nil {
+			logrus.Errorf("detect manager leader got error: %v, retry ...", err)
+			time.Sleep(REJOIN_BACKOFF)
+			continue
+		}
+		logrus.Printf("detected manager addr %s, listening on events ...", leaderAddr)
+
+		err = agent.watchManagerEvents(leaderAddr)
+		if err != nil {
+			logrus.Errorf("watch manager events got error: %v, retry ...", err)
+			time.Sleep(REJOIN_BACKOFF)
+		}
+	}
+}
+
+// dispatchEvents dispatch received events to dns & proxy goroutines
+func (agent *Agent) dispatchEvents() {
+	// send proxy info to dns proxy listener
+	agent.Resolver.RecordChangeChan <- &nameserver.RecordChangeEvent{
+		Change: "add",
+		Record: nameserver.Record{
+			Type:    nameserver.A,
+			Ip:      agent.Config.Janitor.AdvertiseIP,
+			IsProxy: true,
+		},
+	}
+
+	for event := range agent.SerfServer.EventCh {
+		userEvent, ok := event.(serf.UserEvent)
+		if !ok {
+			continue
+		}
+
+		var taskInfoEvent types.TaskInfoEvent
+		err := json.Unmarshal(userEvent.Payload, &taskInfoEvent)
+		if err != nil {
+			logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
+			continue
+		}
+
+		if taskInfoEvent.GatewayEnabled {
+			agent.Janitor.EventChan <- janitorTargetChangeEventFromTaskInfoEvent(
+				userEvent.Name, &taskInfoEvent)
+		}
+
+		// Resolver only recongnize these two events
+		if userEvent.Name == eventbus.EventTypeTaskHealthy ||
+			userEvent.Name == eventbus.EventTypeTaskUnhealthy {
+			agent.Resolver.RecordChangeChan <- recordChangeEventFromTaskInfoEvent(
+				userEvent.Name, &taskInfoEvent)
 		}
 	}
 }
 
 // todo
-func (agent *Agent) detectManagerLeader(ctx context.Context) (leaderAddr string, err error) {
+func (agent *Agent) detectManagerLeader() (leaderAddr string, err error) {
 	for _, managerAddr := range agent.Config.JoinAddrs {
 		nodeRegistrationPath := managerAddr + "/ping"
 		_, err := httpclient.NewDefaultClient().GET(context.TODO(), nodeRegistrationPath, nil, nil)

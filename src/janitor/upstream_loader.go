@@ -1,11 +1,11 @@
 package janitor
 
 import (
+	"errors"
 	"strings"
 	"sync"
 
 	log "github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const (
@@ -43,63 +43,63 @@ func NewUpstreamLoader(eventChan chan *TargetChangeEvent) *UpstreamLoader {
 	return UpstreamLoader
 }
 
-func (loader *UpstreamLoader) Start(ctx context.Context) error {
-	log.Debug("UpstreamLoader starts listening app event...")
+func (loader *UpstreamLoader) Start() error {
+	log.Println("UpstreamLoader starts listening app event...")
 
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case targetChangeEvent := <-loader.eventChan:
-			log.Debugf("upstreamLoader receive app event: %+v", targetChangeEvent)
+	for targetChangeEvent := range loader.eventChan {
+		log.Debugf("upstreamLoader receive app event: %+v", targetChangeEvent)
 
-			upstream := upstreamFromChangeEvent(targetChangeEvent)
-			target := targetFromChangeEvent(targetChangeEvent)
+		upstream := upstreamFromChangeEvent(targetChangeEvent)
+		target := targetFromChangeEvent(targetChangeEvent)
 
-			if strings.ToLower(targetChangeEvent.Change) == "add" {
-				if loader.Contains(upstream) {
-					u := loader.Get(upstream.AppID)
-					// add target if not exists
-					if !u.ContainsTarget(target.TaskID) {
-						u.AddTarget(target)
-					}
-				} else {
-					upstream.AddTarget(target)
-					loader.Upstreams = append(loader.Upstreams, upstream)
+		if strings.ToLower(targetChangeEvent.Change) == "add" {
+			if loader.Contains(upstream) {
+				u := loader.Get(upstream.AppID)
+				// add target if not exists
+				if !u.ContainsTarget(target.TaskID) {
+					u.AddTarget(target)
+				}
+			} else {
+				upstream.AddTarget(target)
+				loader.Upstreams = append(loader.Upstreams, upstream)
+			}
+			continue
+		}
+
+		if strings.ToLower(targetChangeEvent.Change) == "del" {
+			if loader.Contains(upstream) {
+				u := loader.Get(upstream.AppID)
+
+				u.RemoveTarget(target)
+				if len(u.Targets) == 0 { // remove upstream after last target was removed
+					loader.RemoveUpstream(upstream)
 				}
 			}
+			continue
+		}
 
-			if strings.ToLower(targetChangeEvent.Change) == "del" {
-				if loader.Contains(upstream) {
-					u := loader.Get(upstream.AppID)
-
-					u.RemoveTarget(target)
-					if len(u.Targets) == 0 { // remove upstream after last target was removed
-						loader.RemoveUpstream(upstream)
-					}
+		// targetChangeEvent update, weight only for the time present
+		if strings.ToLower(targetChangeEvent.Change) == "change" {
+			if loader.Contains(upstream) {
+				u := loader.Get(upstream.AppID)
+				if u == nil {
+					log.Errorf("failed to find upstream %s from loader", upstream.AppID)
+					break
 				}
-			}
 
-			// targetChangeEvent update, weight only for the time present
-			if strings.ToLower(targetChangeEvent.Change) == "change" {
-				if loader.Contains(upstream) {
-					u := loader.Get(upstream.AppID)
-					if u == nil {
-						log.Errorf("failed to find upstream %s from loader", upstream.AppID)
-						break
-					}
-
-					t := u.GetTarget(target.TaskID)
-					if t == nil {
-						log.Errorf("failed to find target %s from upstream", target.TaskID)
-						break
-					}
-
-					u.UpdateTargetWeight(target.TaskID, target.Weight)
+				t := u.GetTarget(target.TaskID)
+				if t == nil {
+					log.Errorf("failed to find target %s from upstream", target.TaskID)
+					break
 				}
+
+				u.UpdateTargetWeight(target.TaskID, target.Weight)
 			}
+			continue
 		}
 	}
+
+	return errors.New("UpstreamLoader.eventChan closed")
 }
 
 func (loader *UpstreamLoader) Contains(newUpstream *Upstream) bool {

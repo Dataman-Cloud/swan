@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/net/context"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -54,20 +53,6 @@ func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 }
 
 // Start func
-func (aas *HTTPServer) Start(ctx context.Context, started chan bool) error {
-	errCh := make(chan error)
-	go func() {
-		errCh <- aas.engine.Run(aas.listener)
-	}()
-
-	go func() {
-		started <- true
-	}()
-
-	select {
-	case err := <-errCh:
-		return err
-	case <-ctx.Done():
-		return ctx.Err()
-	}
+func (aas *HTTPServer) Start() error {
+	return aas.engine.Run(aas.listener)
 }

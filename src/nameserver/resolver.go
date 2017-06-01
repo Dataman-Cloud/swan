@@ -61,12 +61,12 @@ func (resolver *Resolver) WatchEvent(ctx context.Context) {
 	}
 }
 
-func (res *Resolver) Start(ctx context.Context, started chan bool, domain string) error {
+func (res *Resolver) Start(domain string) error {
 	dns.HandleFunc(domain, res.HandleSwan)
 	//dns.HandleFunc(res.config.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
-	return res.Serve(ctx, started)
+	return res.Serve()
 }
 
 func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
@@ -167,12 +167,11 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 	return exs
 }
 
-func (res *Resolver) Serve(ctx context.Context, started chan bool) (err error) {
+func (res *Resolver) Serve() (err error) {
 	server := &dns.Server{
-		Addr:              res.config.ListenAddr,
-		Net:               "udp",
-		TsigSecret:        nil,
-		NotifyStartedFunc: func() { started <- true },
+		Addr:       res.config.ListenAddr,
+		Net:        "udp",
+		TsigSecret: nil,
 	}
 
 	errCh := make(chan error, 1)
@@ -180,12 +179,7 @@ func (res *Resolver) Serve(ctx context.Context, started chan bool) (err error) {
 		errCh <- server.ListenAndServe()
 	}()
 
-	select {
-	case <-ctx.Done():
-		return ctx.Err()
-	case err := <-errCh:
-		return err
-	}
+	return <-errCh
 }
 
 type multiError []error
