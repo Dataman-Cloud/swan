@@ -6,13 +6,14 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
-	"github.com/armon/go-proxyproto"
+	proxyproto "github.com/armon/go-proxyproto"
 	"golang.org/x/net/context"
+
+	"github.com/Dataman-Cloud/swan/src/config"
 )
 
 type JanitorServer struct {
-	config Config
+	config *config.Janitor
 
 	UpstreamLoader *UpstreamLoader
 	EventChan      chan *TargetChangeEvent
@@ -21,7 +22,7 @@ type JanitorServer struct {
 	P          *Prometheus
 }
 
-func NewJanitorServer(Config Config) *JanitorServer {
+func NewJanitorServer(Config *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
 		config: Config,
 	}
@@ -39,9 +40,6 @@ func NewJanitorServer(Config Config) *JanitorServer {
 		s.UpstreamLoader,
 		s.P,
 	)}
-
-	level, _ := logrus.ParseLevel(Config.LogLevel)
-	logrus.SetLevel(level)
 
 	return s
 }

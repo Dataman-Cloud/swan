@@ -9,17 +9,13 @@ import (
 	. "github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/nameserver"
-	// "golang.org/x/net/context"
 )
 
 func TestStartAndJoin(t *testing.T) {
 	testConf := config.AgentConfig{ListenAddr: "localhost:8881", GossipListenAddr: "localhost:8881", GossipJoinAddr: "localhost:8881"}
-	testAgent, err := New(testConf)
+	testAgent := New(testConf)
 
-	ok(t, err)
-	assert(t, testAgent != nil, "agent should be Agent instance")
-
-	resolvCfg := &nameserver.Config{
+	resolvCfg := &config.DNS{
 		ListenAddr: "localhost:8882",
 	}
 	testAgent.Resolver = nameserver.NewResolver(resolvCfg)

@@ -15,6 +15,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 	"github.com/prometheus/client_golang/prometheus"
+
+	"github.com/Dataman-Cloud/swan/src/config"
 )
 
 const (
@@ -81,13 +83,13 @@ func (m *meteredRoundTripper) RoundTrip(r *http.Request) (*http.Response, error)
 // httpProxy is a dynamic reverse proxy for HTTP and HTTPS protocols.
 type layer7Proxy struct {
 	tr             http.RoundTripper
-	config         Config
+	config         *config.Janitor
 	UpstreamLoader *UpstreamLoader
 	P              *Prometheus
 }
 
 func NewLayer7Proxy(tr http.RoundTripper,
-	Config Config,
+	Config *config.Janitor,
 	UpstreamLoader *UpstreamLoader,
 	P *Prometheus) http.Handler {
 
