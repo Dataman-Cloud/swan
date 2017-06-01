@@ -10,10 +10,10 @@ import (
 	"sync"
 	"time"
 
-	janitor "github.com/Dataman-Cloud/swan-janitor/src"
-	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
+	"github.com/Dataman-Cloud/swan/src/janitor"
+	"github.com/Dataman-Cloud/swan/src/nameserver"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils"
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
