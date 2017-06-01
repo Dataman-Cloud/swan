@@ -88,13 +88,9 @@ type layer7Proxy struct {
 	P              *Prometheus
 }
 
-func NewLayer7Proxy(tr http.RoundTripper,
-	Config *config.Janitor,
-	UpstreamLoader *UpstreamLoader,
-	P *Prometheus) http.Handler {
-
+func NewLayer7Proxy(Config *config.Janitor, UpstreamLoader *UpstreamLoader, P *Prometheus) http.Handler {
 	return &layer7Proxy{
-		tr:             tr,
+		tr:             &http.Transport{},
 		config:         Config,
 		UpstreamLoader: UpstreamLoader,
 		P:              P,

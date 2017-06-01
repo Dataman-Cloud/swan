@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/hashicorp/serf/serf"
-	"golang.org/x/net/context"
 )
 
 type SerfServer struct {
@@ -30,7 +29,8 @@ func NewSerfServer(listenerAddr, joinAddr string) *SerfServer {
 	ss.EventCh = make(chan serf.Event, 64)
 	ss.serfConfig.EventCh = ss.EventCh
 
-	_bindAddr, _bindPort := strings.Split(ss.SerfListenAddr, ":")[0], strings.Split(ss.SerfListenAddr, ":")[1]
+	fields := strings.Split(ss.SerfListenAddr, ":")
+	_bindAddr, _bindPort := fields[0], fields[1]
 	ss.serfConfig.MemberlistConfig.BindAddr = _bindAddr
 
 	bindPort, _ := strconv.Atoi(_bindPort)
@@ -42,16 +42,13 @@ func NewSerfServer(listenerAddr, joinAddr string) *SerfServer {
 	return ss
 }
 
-func (ss *SerfServer) Start(ctx context.Context, started chan bool) error {
+func (ss *SerfServer) Start() error {
 	var err error
+
 	ss.SerfNode, err = serf.Create(ss.serfConfig)
 	if err != nil {
 		return err
 	}
-
-	go func() {
-		started <- true
-	}()
 
 	if ss.SerfJoinAddr != "" {
 		_, err := ss.SerfNode.Join([]string{ss.SerfJoinAddr}, false)
@@ -66,18 +63,3 @@ func (ss *SerfServer) Start(ctx context.Context, started chan bool) error {
 func (ss *SerfServer) Publish(eventType string, payload []byte) {
 	ss.SerfNode.UserEvent(eventType, payload, true)
 }
-
-//for {
-//event := <-eventCh
-//userEvent, ok := event.(serf.UserEvent)
-//if ok {
-//var taskInfoEvent types.TaskInfoEvent
-//err = json.Unmarshal(userEvent.Payload, &taskInfoEvent)
-//if err != nil {
-//logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
-//}
-
-//agent.Resolver.RecordGeneratorChangeChan() <- recordGeneratorChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
-//agent.Janitor.SwanEventChan() <- janitorTargetgChangeEventFromTaskInfoEvent(userEvent.Name, &taskInfoEvent)
-//}
-//}

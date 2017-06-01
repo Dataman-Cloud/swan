@@ -3,7 +3,6 @@ package cmd
 import (
 	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
-	"golang.org/x/net/context"
 
 	"github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
@@ -41,7 +40,7 @@ func JoinAndStartAgent(c *cli.Context) error {
 
 	agent := agent.New(conf)
 
-	if err := agent.StartAndJoin(context.TODO()); err != nil {
+	if err := agent.StartAndJoin(); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())
 		return err
 	}

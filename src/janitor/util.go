@@ -28,3 +28,7 @@ func localPort(r *http.Request) string {
 	}
 	return "80"
 }
+
+func formatID(id string) string {
+	return strings.ToLower(strings.Replace(id, "-", ".", -1))
+}
