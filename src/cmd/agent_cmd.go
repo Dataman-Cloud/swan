@@ -39,11 +39,7 @@ func JoinAndStartAgent(c *cli.Context) error {
 
 	setupLogger(conf.LogLevel)
 
-	agent, err := agent.New(conf)
-	if err != nil {
-		logrus.Error("agent initialization failed")
-		return err
-	}
+	agent := agent.New(conf)
 
 	if err := agent.StartAndJoin(context.TODO()); err != nil {
 		logrus.Errorf("start node failed. Error: %s", err.Error())

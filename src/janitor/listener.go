@@ -6,13 +6,15 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/armon/go-proxyproto"
+	proxyproto "github.com/armon/go-proxyproto"
+
+	"github.com/Dataman-Cloud/swan/src/config"
 )
 
 // http://www.hydrogen18.com/blog/stop-listening-http-server-go.html
 // listener was not shutting down gracefully
 
-func ListenAndServeHTTP(h http.Handler, config Config) {
+func ListenAndServeHTTP(h http.Handler, config *config.Janitor) {
 	srv := &http.Server{
 		Handler: h,
 		Addr:    "",

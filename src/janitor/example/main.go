@@ -8,6 +8,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
 
+	"github.com/Dataman-Cloud/swan/src/config"
 	"github.com/Dataman-Cloud/swan/src/janitor"
 )
 
@@ -27,7 +28,7 @@ var domain = flag.String("domain", "lvh.me", "")
 
 func main() {
 	flag.Parse()
-	janitorConfig := janitor.DefaultConfig()
+	janitorConfig := new(config.Janitor)
 	janitorConfig.ListenAddr = *listenaddr
 	janitorConfig.Domain = *domain
 	SetupLogger()

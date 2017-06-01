@@ -34,9 +34,12 @@ type AgentConfig struct {
 }
 
 type DNS struct {
-	Domain     string `json:"domain"`
-	RecurseOn  bool   `json:"recurseOn"`
-	ListenAddr string `json:"listenAddr"`
+	Domain          string        `json:"domain"`
+	RecurseOn       bool          `json:"recurseOn"`
+	ListenAddr      string        `json:"listenAddr"`
+	TTL             int           `json:"ttl"`
+	Resolvers       []string      `json:"resolvers"`
+	ExchangeTimeout time.Duration `json:"exchangeTimeout"`
 
 	SOARname   string `json:"soarname"`
 	SOAMname   string `json:"soamname"`
@@ -44,17 +47,13 @@ type DNS struct {
 	SOARefresh uint32 `json:"soarefresh"`
 	SOARetry   uint32 `json:"soaretry"`
 	SOAExpire  uint32 `json:"soaexpire"`
-
-	TTL int `json:"ttl"`
-
-	Resolvers       []string      `json:"resolvers"`
-	ExchangeTimeout time.Duration `json:"exchangeTimeout"`
 }
 
 type Janitor struct {
-	ListenAddr  string `json:"listenAddr"`
-	Domain      string `json:"domain"`
-	AdvertiseIP string `json:"advertiseIP"`
+	ListenAddr    string        `json:"listenAddr"`
+	FlushInterval time.Duration `json:"flushInterval"`
+	Domain        string        `json:"domain"`
+	AdvertiseIP   string        `json:"advertiseIP"` // no use ?
 }
 
 func NewAgentConfig(c *cli.Context) AgentConfig {
@@ -75,8 +74,9 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		},
 
 		Janitor: Janitor{
-			ListenAddr: "0.0.0.0:80",
-			Domain:     "swan.com",
+			ListenAddr:    "0.0.0.0:80",
+			FlushInterval: time.Second * 1,
+			Domain:        "swan.com",
 		},
 	}
 
@@ -104,7 +104,6 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 
 	if c.String("gateway-listen-addr") != "" {
 		cfg.Janitor.ListenAddr = c.String("gateway-listen-addr")
-
 		if cfg.Janitor.AdvertiseIP == "" {
 			cfg.Janitor.AdvertiseIP, _, _ = net.SplitHostPort(cfg.Janitor.ListenAddr)
 		}

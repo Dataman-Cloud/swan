@@ -10,6 +10,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 	"golang.org/x/net/context"
+
+	"github.com/Dataman-Cloud/swan/src/config"
 )
 
 const (
@@ -20,19 +22,12 @@ type Resolver struct {
 	RecordChangeChan chan *RecordChangeEvent
 
 	recordHolder *RecordHolder
-	config       *Config
+	config       *config.DNS
 	defaultFwd   Forwarder
 	domain       string
 }
 
-func NewResolver(config *Config) *Resolver {
-	level, err := logrus.ParseLevel(config.LogLevel)
-	if err != nil {
-		logrus.SetLevel(logrus.DebugLevel)
-	} else {
-		logrus.SetLevel(level)
-	}
-
+func NewResolver(config *config.DNS) *Resolver {
 	resolver := &Resolver{
 		RecordChangeChan: make(chan *RecordChangeEvent, 1),
 
@@ -103,7 +98,7 @@ func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
 	}
 
 	if !errs.Nil() {
-		logrus.Debugf(errs.Error())
+		logrus.Errorln(errs.Error())
 	}
 
 	reply(w, msg)
@@ -152,10 +147,8 @@ func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.
 // reply writes the given dns.Msg out to the given dns.ResponseWriter,
 // compressing the message first and truncating it accordingly.
 func reply(w dns.ResponseWriter, m *dns.Msg) {
-	//m.Compress = true // https://github.com/mesosphere/mesos-dns/issues/{170,173,174}
-
 	if err := w.WriteMsg(m); err != nil {
-		logrus.Errorf("%s", err)
+		logrus.Errorln(err)
 	}
 }
 

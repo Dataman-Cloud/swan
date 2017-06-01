@@ -39,39 +39,15 @@ type Agent struct {
 }
 
 // New agent func
-func New(agentConf config.AgentConfig) (*Agent, error) {
+func New(agentConf config.AgentConfig) *Agent {
 	agent := &Agent{
-		Config: agentConf,
+		Config:     agentConf,
+		Resolver:   nameserver.NewResolver(&agentConf.DNS),
+		Janitor:    janitor.NewJanitorServer(&agentConf.Janitor),
+		SerfServer: NewSerfServer(agentConf.GossipListenAddr, agentConf.GossipJoinAddr),
 	}
-
-	resolverConfig := &nameserver.Config{
-		Domain:     agentConf.DNS.Domain,
-		ListenAddr: agentConf.DNS.ListenAddr,
-		LogLevel:   agentConf.LogLevel,
-
-		Resolvers:       agentConf.DNS.Resolvers,
-		ExchangeTimeout: agentConf.DNS.ExchangeTimeout,
-		SOARname:        agentConf.DNS.SOARname,
-		SOAMname:        agentConf.DNS.SOAMname,
-		SOASerial:       agentConf.DNS.SOASerial,
-		SOARefresh:      agentConf.DNS.SOARefresh,
-		SOARetry:        agentConf.DNS.SOARetry,
-		SOAExpire:       agentConf.DNS.SOAExpire,
-		RecurseOn:       agentConf.DNS.RecurseOn,
-		TTL:             agentConf.DNS.TTL,
-	}
-	agent.Resolver = nameserver.NewResolver(resolverConfig)
-
-	jConfig := janitor.DefaultConfig()
-	jConfig.ListenAddr = agentConf.Janitor.ListenAddr
-	jConfig.Domain = agentConf.Janitor.Domain
-	jConfig.LogLevel = agentConf.LogLevel
-	agent.Janitor = janitor.NewJanitorServer(jConfig)
-
 	agent.HTTPServer = NewHTTPServer(agentConf.ListenAddr, agent)
-	agent.SerfServer = NewSerfServer(agentConf.GossipListenAddr, agentConf.GossipJoinAddr)
-
-	return agent, nil
+	return agent
 }
 
 // StartAndJoin func
