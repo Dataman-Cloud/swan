@@ -6,9 +6,9 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Dataman-Cloud/swan-resolver/nameserver"
 	. "github.com/Dataman-Cloud/swan/src/agent"
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/nameserver"
 	// "golang.org/x/net/context"
 )
 
