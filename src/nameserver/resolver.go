@@ -9,7 +9,6 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
-	"golang.org/x/net/context"
 
 	"github.com/Dataman-Cloud/swan/src/config"
 )
@@ -19,54 +18,53 @@ const (
 )
 
 type Resolver struct {
-	RecordChangeChan chan *RecordChangeEvent
+	recordChangeChan chan *RecordChangeEvent
 
 	recordHolder *RecordHolder
 	config       *config.DNS
 	defaultFwd   Forwarder
-	domain       string
 }
 
 func NewResolver(config *config.DNS) *Resolver {
 	resolver := &Resolver{
-		RecordChangeChan: make(chan *RecordChangeEvent, 1),
+		recordChangeChan: make(chan *RecordChangeEvent, 1),
 
 		config:       config,
 		defaultFwd:   NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp")),
 		recordHolder: NewRecordHolder(config.Domain),
 	}
 
-	go func() {
-		resolver.WatchEvent(context.Background())
+	go resolver.watchEvent()
 
-	}()
 	return resolver
 }
 
-func (resolver *Resolver) WatchEvent(ctx context.Context) {
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case e := <-resolver.RecordChangeChan:
-			if e.Change == "del" {
-				resolver.recordHolder.Del(e.record())
-			}
+func (resolver *Resolver) EmitChange(ev *RecordChangeEvent) {
+	resolver.recordChangeChan <- ev
+}
 
-			if e.Change == "add" {
-				resolver.recordHolder.Add(e.record())
-			}
-
+func (resolver *Resolver) watchEvent() {
+	for e := range resolver.recordChangeChan {
+		switch e.Change {
+		case "del":
+			resolver.recordHolder.Del(e.record())
+		case "add":
+			resolver.recordHolder.Add(e.record())
 		}
 	}
 }
 
-func (res *Resolver) Start(domain string) error {
-	dns.HandleFunc(domain, res.HandleSwan)
-	//dns.HandleFunc(res.config.Domain, res.HandleSwan)
+func (res *Resolver) Start() error {
+	dns.HandleFunc(res.config.Domain, res.HandleSwan)
 	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
 
-	return res.Serve()
+	server := &dns.Server{
+		Addr:       res.config.ListenAddr,
+		Net:        "udp",
+		TsigSecret: nil,
+	}
+
+	return server.ListenAndServe()
 }
 
 func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
@@ -167,21 +165,6 @@ func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
 	return exs
 }
 
-func (res *Resolver) Serve() (err error) {
-	server := &dns.Server{
-		Addr:       res.config.ListenAddr,
-		Net:        "udp",
-		TsigSecret: nil,
-	}
-
-	errCh := make(chan error, 1)
-	go func() {
-		errCh <- server.ListenAndServe()
-	}()
-
-	return <-errCh
-}
-
 type multiError []error
 
 func (e *multiError) Add(err ...error) {
@@ -260,22 +243,4 @@ func rcode(err error) int {
 	default:
 		return dns.RcodeServerFailure
 	}
-}
-
-func isUDP(w dns.ResponseWriter) bool {
-	return strings.HasPrefix(w.RemoteAddr().Network(), "udp")
-}
-
-func sliceEqual(a []string, b []string) bool {
-	if len(a) != len(b) {
-		return false
-	}
-
-	for i, _ := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-
-	return true
 }

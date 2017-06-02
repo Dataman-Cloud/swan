@@ -33,20 +33,24 @@ func (rce *RecordChangeEvent) record() *Record {
 
 func (record *Record) Key() string {
 	if record.Port != "" {
-		return fmt.Sprintf("%s-%s-%s-%s-%s-%s-%s", record.SlotID, record.AppName, record.InsName, record.RunAs, record.Cluster, record.Ip, record.Port)
-	} else {
-		return fmt.Sprintf("%s-%s-%s-%s-%s-%s", record.SlotID, record.AppName, record.InsName, record.RunAs, record.Cluster, record.Ip)
+		return fmt.Sprintf("%s-%s-%s-%s-%s-%s-%s",
+			record.SlotID, record.AppName, record.InsName,
+			record.RunAs, record.Cluster, record.Ip, record.Port)
 	}
 
-	return ""
+	return fmt.Sprintf("%s-%s-%s-%s-%s-%s",
+		record.SlotID, record.AppName, record.InsName,
+		record.RunAs, record.Cluster, record.Ip)
 }
 
 func (record *Record) WithSlotDomain() string {
-	return fmt.Sprintf("%s.%s.%s.%s.%s", record.SlotID, record.AppName, record.InsName, record.RunAs, record.Cluster)
+	return fmt.Sprintf("%s.%s.%s.%s.%s",
+		record.SlotID, record.AppName, record.InsName, record.RunAs, record.Cluster)
 }
 
 func (record *Record) WithoutSlotDomain() string {
-	return fmt.Sprintf("%s.%s.%s.%s", record.AppName, record.InsName, record.RunAs, record.Cluster)
+	return fmt.Sprintf("%s.%s.%s.%s",
+		record.AppName, record.InsName, record.RunAs, record.Cluster)
 }
 
 func (record *Record) IsSRV() bool {

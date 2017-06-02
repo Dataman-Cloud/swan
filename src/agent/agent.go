@@ -54,7 +54,7 @@ func (agent *Agent) StartAndJoin() error {
 	errCh := make(chan error)
 
 	go func() {
-		err := agent.Resolver.Start(agent.Config.DNS.Domain)
+		err := agent.Resolver.Start()
 		if err != nil {
 			errCh <- err
 		}
@@ -114,14 +114,14 @@ func (agent *Agent) watchEvents() {
 // dispatchEvents dispatch received events to dns & proxy goroutines
 func (agent *Agent) dispatchEvents() {
 	// send proxy info to dns proxy listener
-	agent.Resolver.RecordChangeChan <- &nameserver.RecordChangeEvent{
+	agent.Resolver.EmitChange(&nameserver.RecordChangeEvent{
 		Change: "add",
 		Record: nameserver.Record{
 			Type:    nameserver.A,
 			Ip:      agent.Config.Janitor.AdvertiseIP,
 			IsProxy: true,
 		},
-	}
+	})
 
 	for event := range agent.SerfServer.EventCh {
 		userEvent, ok := event.(serf.UserEvent)
@@ -144,8 +144,8 @@ func (agent *Agent) dispatchEvents() {
 		// Resolver only recongnize these two events
 		if userEvent.Name == eventbus.EventTypeTaskHealthy ||
 			userEvent.Name == eventbus.EventTypeTaskUnhealthy {
-			agent.Resolver.RecordChangeChan <- recordChangeEventFromTaskInfoEvent(
-				userEvent.Name, &taskInfoEvent)
+			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
+				userEvent.Name, &taskInfoEvent))
 		}
 	}
 }
