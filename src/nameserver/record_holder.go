@@ -27,21 +27,28 @@ func NewRecordHolder(domain string) *RecordHolder {
 	}
 }
 
+func (rh *RecordHolder) All() map[string]*Record {
+	rh.mu.RLock()
+	defer rh.mu.RUnlock()
+	return rh.recordsMap
+}
+
 func (rh *RecordHolder) Add(record *Record) {
-	logrus.Printf("add %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
-
 	rh.mu.Lock()
-	defer rh.mu.Unlock()
-
-	rh.recordsMap[record.Key()] = record
+	key := record.Key()
+	if record.IsProxy {
+		key = "-PROXY-" + record.Ip
+	}
+	rh.recordsMap[key] = record
+	rh.mu.Unlock()
+	logrus.Printf("add %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
 }
 
 func (rh *RecordHolder) Del(record *Record) {
-	logrus.Printf("del %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
 	rh.mu.Lock()
-	defer rh.mu.Unlock()
-
 	delete(rh.recordsMap, record.Key())
+	rh.mu.Unlock()
+	logrus.Printf("del %s record %s@%s:%s", record.Typ(), record.Key(), record.Ip, record.Port)
 }
 
 func (rh *RecordHolder) GetA(name string) []*Record {

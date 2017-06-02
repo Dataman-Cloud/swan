@@ -221,19 +221,21 @@ func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.T
 		resolverEvent.Change = "del"
 	}
 
-	resolverEvent.Ip = taskInfoEvent.IP
-
+	// port & type
 	if taskInfoEvent.Mode == "replicates" {
 		resolverEvent.Type = nameserver.SRV ^ nameserver.A
 		resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
 	} else {
 		resolverEvent.Type = nameserver.A
 	}
+	// the rest
 	resolverEvent.Cluster = taskInfoEvent.ClusterID
 	resolverEvent.RunAs = taskInfoEvent.RunAs
 	resolverEvent.AppName = taskInfoEvent.AppName
 	resolverEvent.InsName = taskInfoEvent.InsName
 	resolverEvent.SlotID = fmt.Sprintf("%d", taskInfoEvent.SlotIndex)
+	resolverEvent.Ip = taskInfoEvent.IP
+	resolverEvent.Weight = taskInfoEvent.Weight
 
 	return resolverEvent
 }

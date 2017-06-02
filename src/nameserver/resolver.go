@@ -39,6 +39,10 @@ func NewResolver(config *config.DNS) *Resolver {
 	return resolver
 }
 
+func (resolver *Resolver) AllRecords() map[string]*Record {
+	return resolver.recordHolder.All()
+}
+
 func (resolver *Resolver) EmitChange(ev *RecordChangeEvent) {
 	resolver.recordChangeChan <- ev
 }
@@ -105,11 +109,12 @@ func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
 func (res *Resolver) handleSRV(name string, m, r *dns.Msg) error {
 	var errs multiError
 	for _, record := range res.recordHolder.GetSRV(name) {
-		rr, err := res.buildSRV(name, record)
+		srv, ext, err := res.buildSRV(name, record)
 		if err != nil {
 			errs.Add(err)
 		} else {
-			m.Answer = append(m.Answer, rr)
+			m.Answer = append(m.Answer, srv)
+			m.Extra = append(m.Extra, ext)
 		}
 	}
 
@@ -196,15 +201,17 @@ func (e multiError) Nil() bool {
 	return true
 }
 
-func (res *Resolver) buildSRV(name string, record *Record) (*dns.SRV, error) {
+func (res *Resolver) buildSRV(name string, record *Record) (*dns.SRV, *dns.A, error) {
 	ttl := uint32(res.config.TTL)
 
 	p, err := strconv.Atoi(record.Port)
 	if err != nil {
-		return nil, errors.New("invalid target port")
+		return nil, nil, errors.New("invalid target port")
 	}
 
-	return &dns.SRV{
+	target := record.WithSlotDomain() + "." + res.config.Domain + "."
+
+	srv := &dns.SRV{
 		Hdr: dns.RR_Header{
 			Name:   name,
 			Rrtype: dns.TypeSRV,
@@ -212,10 +219,17 @@ func (res *Resolver) buildSRV(name string, record *Record) (*dns.SRV, error) {
 			Ttl:    ttl,
 		},
 		Priority: 0,
-		Weight:   0,
+		Weight:   uint16(record.Weight),
 		Port:     uint16(p),
-		Target:   record.WithSlotDomain() + "." + res.config.Domain + ".",
-	}, nil
+		Target:   target,
+	}
+
+	a, err := res.buildA(target, record)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return srv, a, nil
 }
 
 func (res *Resolver) buildA(name string, record *Record) (*dns.A, error) {
