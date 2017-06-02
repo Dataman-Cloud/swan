@@ -201,13 +201,14 @@ type State struct {
 
 // save to -> keyInstance
 type Instance struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	Desc      string    `json:"desc"`
-	Status    string    `json:"status"` // op status
-	ErrMsg    string    `json:"errmsg"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID          string    `json:"id"`
+	Name        string    `json:"name"`
+	DisplayName string    `json:"display_name"`
+	Desc        string    `json:"desc"`
+	Status      string    `json:"status"` // op status
+	ErrMsg      string    `json:"errmsg"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 
 	// request settings
 	ServiceGroup ServiceGroup          `json:"service_group"`

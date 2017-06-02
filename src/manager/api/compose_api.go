@@ -11,6 +11,7 @@ import (
 	apiserver "github.com/Dataman-Cloud/swan/src/manager/api/server"
 	"github.com/Dataman-Cloud/swan/src/manager/api/server/metrics"
 	"github.com/Dataman-Cloud/swan/src/manager/compose"
+	"github.com/Dataman-Cloud/swan/src/manager/connector"
 	"github.com/Dataman-Cloud/swan/src/manager/scheduler"
 	"github.com/Dataman-Cloud/swan/src/manager/store"
 	"github.com/Dataman-Cloud/swan/src/types"
@@ -157,8 +158,18 @@ func (api *ComposeService) runInstance(r *restful.Request, w *restful.Response) 
 		return
 	}
 
+	// get runas
+	var runAs string
+	for _, ext := range ins.YAMLExtra {
+		if ext != nil {
+			runAs = ext.RunAs
+			break
+		}
+	}
+
 	// db save
 	ins.ID = uuid.NewV4().String()
+	ins.DisplayName = ins.Name + "-" + runAs + "-" + connector.Instance().ClusterID
 	ins.Status = "creating"
 	ins.CreatedAt = time.Now()
 	ins.UpdatedAt = time.Now()
