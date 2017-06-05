@@ -4,8 +4,6 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
-
-	"github.com/prometheus/client_golang/prometheus"
 )
 
 // HTTPServer instance
@@ -15,14 +13,6 @@ type HTTPServer struct {
 	engine   *gin.Engine
 }
 
-// Deprecated: Use promhttp.Handler instead.
-func prometheusHandler() gin.HandlerFunc {
-	h := prometheus.UninstrumentedHandler()
-	return func(c *gin.Context) {
-		h.ServeHTTP(c.Writer, c.Request)
-	}
-}
-
 // NewHTTPServer is singleton instance func
 func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 	aas := &HTTPServer{
@@ -30,8 +20,6 @@ func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 		agentRef: a,
 	}
 	aas.engine = gin.Default()
-
-	aas.engine.GET(aas.agentRef.Janitor.P.MetricsPath, prometheusHandler())
 
 	aas.engine.GET("/", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")
@@ -46,7 +34,7 @@ func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 	})
 
 	aas.engine.GET("/proxy", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"upstreams": aas.agentRef.Janitor.UpstreamLoader.Upstreams})
+		c.JSON(http.StatusOK, gin.H{"upstreams": aas.agentRef.Janitor.AllUpstreams()})
 	})
 
 	aas.engine.GET("/dns", func(c *gin.Context) {

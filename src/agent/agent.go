@@ -137,8 +137,8 @@ func (agent *Agent) dispatchEvents() {
 		}
 
 		if taskInfoEvent.GatewayEnabled {
-			agent.Janitor.EventChan <- janitorTargetChangeEventFromTaskInfoEvent(
-				userEvent.Name, &taskInfoEvent)
+			agent.Janitor.EmitChange(janitorTargetChangeEventFromTaskInfoEvent(
+				userEvent.Name, &taskInfoEvent))
 		}
 
 		// Resolver only recongnize these two events
@@ -259,7 +259,6 @@ func janitorTargetChangeEventFromTaskInfoEvent(eventType string,
 	janitorEvent.TaskPort = taskInfoEvent.Port
 	janitorEvent.AppID = taskInfoEvent.AppID
 	janitorEvent.PortName = taskInfoEvent.PortName
-	janitorEvent.TaskPort = taskInfoEvent.Port
 	janitorEvent.Weight = taskInfoEvent.Weight
 	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
 	janitorEvent.AppVersion = taskInfoEvent.AppVersion
