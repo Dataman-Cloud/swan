@@ -64,18 +64,17 @@ func (s *JanitorServer) watchEvent() {
 	for ev := range s.eventChan {
 		log.Printf("proxy caught event: %s", ev)
 
-		appID := ev.AppID
 		target := &ev.Target
 
 		switch strings.ToLower(ev.Change) {
 		case "add":
-			s.upstreams.addTarget(appID, target)
+			s.upstreams.addTarget(target)
 
 		case "del":
-			s.upstreams.removeTarget(appID, target.TaskID)
+			s.upstreams.removeTarget(target)
 
 		case "change":
-			s.upstreams.updateTarget(appID, target)
+			s.upstreams.updateTarget(target)
 
 		default:
 			log.Warnln("unrecognized event change type", ev.Change)

@@ -15,14 +15,16 @@ type Upstreams struct {
 
 type Upstream struct {
 	AppID    string    `json:"app_id"` // uniq id of upstream
+	AppAlias string    `json:"app_alias"`
 	Targets  []*Target `json:"targets"`
 	sessions *Sessions
 	balancer Balancer
 }
 
-func newUpstream(appID string) *Upstream {
+func newUpstream(appID, appAlias string) *Upstream {
 	return &Upstream{
 		AppID:    appID,
+		AppAlias: appAlias,
 		Targets:  make([]*Target, 0, 0),
 		balancer: &WeightBalancer{}, // default balancer
 		sessions: newSessions(),     // sessions store
@@ -46,7 +48,7 @@ func (us *Upstreams) allSess() map[string]*Sessions {
 	return ret
 }
 
-func (us *Upstreams) addTarget(appID string, target *Target) {
+func (us *Upstreams) addTarget(target *Target) {
 	us.Lock()
 	defer us.Unlock()
 
@@ -54,15 +56,21 @@ func (us *Upstreams) addTarget(appID string, target *Target) {
 		return
 	}
 
-	_, u := us.getUpstream(appID)
+	var (
+		appID    = target.AppID
+		appAlias = target.AppAlias
+		taskID   = target.TaskID
+	)
+
+	_, u := us.getUpstreamByID(appID)
 	if u == nil { // add new upstream
-		u = newUpstream(appID)
+		u = newUpstream(appID, appAlias)
 		u.Targets = append(u.Targets, target)
 		us.Upstreams = append(us.Upstreams, u)
 		return
 	}
 
-	_, t := u.getTarget(target.TaskID)
+	_, t := u.getTarget(taskID)
 	if t != nil {
 		log.Warnf("already exists the target %v, ignore.", *t)
 		return
@@ -75,7 +83,7 @@ func (us *Upstreams) getTarget(appID, taskID string) *Target {
 	us.RLock()
 	defer us.RUnlock()
 
-	_, u := us.getUpstream(appID)
+	_, u := us.getUpstreamByID(appID)
 	if u == nil {
 		return nil
 	}
@@ -84,11 +92,16 @@ func (us *Upstreams) getTarget(appID, taskID string) *Target {
 	return t
 }
 
-func (us *Upstreams) removeTarget(appID, taskID string) {
+func (us *Upstreams) removeTarget(target *Target) {
 	us.Lock()
 	defer us.Unlock()
 
-	idxu, u := us.getUpstream(appID)
+	var (
+		appID  = target.AppID
+		taskID = target.TaskID
+	)
+
+	idxu, u := us.getUpstreamByID(appID)
 	if u == nil {
 		log.Warnln("no such upstream", appID)
 		return
@@ -111,11 +124,16 @@ func (us *Upstreams) removeTarget(appID, taskID string) {
 	}
 }
 
-func (us *Upstreams) updateTarget(appID string, new *Target) {
+func (us *Upstreams) updateTarget(new *Target) {
 	us.Lock()
 	defer us.Unlock()
 
-	_, u := us.getUpstream(appID)
+	var (
+		appID  = new.AppID
+		taskID = new.TaskID
+	)
+
+	_, u := us.getUpstreamByID(appID)
 	if u == nil {
 		log.Warnln("no such upstream", appID)
 		return
@@ -123,11 +141,25 @@ func (us *Upstreams) updateTarget(appID string, new *Target) {
 
 	_, t := u.getTarget(new.TaskID)
 	if t == nil {
-		log.Warnf("no such target", new.TaskID)
+		log.Warnf("no such target", taskID)
 		return
 	}
 
 	t.Weight = new.Weight // NOTE only update weight currently
+}
+
+// lookup similar as lookup, but by app alias
+func (us *Upstreams) lookupAlias(remoteIP, appAlias string) *Target {
+	us.RLock()
+	_, u := us.getUpstreamByAlias(appAlias)
+	us.RUnlock()
+
+	if u == nil {
+		return nil
+	}
+
+	appID := u.AppID
+	return us.lookup(remoteIP, appID, "")
 }
 
 // lookup select a suitable backend according by sessions & balancer
@@ -137,7 +169,7 @@ func (us *Upstreams) lookup(remoteIP, appID, taskID string) *Target {
 		t *Target
 	)
 
-	if _, u = us.getUpstream(appID); u == nil {
+	if _, u = us.getUpstreamByID(appID); u == nil {
 		return nil
 	}
 
@@ -167,7 +199,7 @@ func (us *Upstreams) nextTarget(appID string) *Target {
 	us.RLock()
 	defer us.RUnlock()
 
-	_, u := us.getUpstream(appID)
+	_, u := us.getUpstreamByID(appID)
 	if u == nil {
 		return nil
 	}
@@ -176,9 +208,19 @@ func (us *Upstreams) nextTarget(appID string) *Target {
 }
 
 // note: must be called under protection of mutext lock
-func (us *Upstreams) getUpstream(appID string) (int, *Upstream) {
+func (us *Upstreams) getUpstreamByID(appID string) (int, *Upstream) {
 	for i, v := range us.Upstreams {
 		if v.AppID == appID {
+			return i, v
+		}
+	}
+	return -1, nil
+}
+
+// note: must be called under protection of mutext lock
+func (us *Upstreams) getUpstreamByAlias(alias string) (int, *Upstream) {
+	for i, v := range us.Upstreams {
+		if v.AppAlias == alias {
 			return i, v
 		}
 	}
@@ -198,6 +240,7 @@ func (u *Upstream) getTarget(taskID string) (int, *Target) {
 // Target
 type Target struct {
 	AppID      string  `json:"app_id"`
+	AppAlias   string  `json:"app_alias"`
 	VersionID  string  `json:"version_id"`
 	AppVersion string  `json:"app_version"`
 	TaskID     string  `json:"task_id"`

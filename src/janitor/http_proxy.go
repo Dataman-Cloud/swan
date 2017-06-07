@@ -35,6 +35,57 @@ func NewHTTPProxy(cfg *config.Janitor, ups *Upstreams, sta *Stats) http.Handler 
 	}
 }
 
+func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return nil, fmt.Errorf("request RemoteAddr [%s] unrecognized", r.RemoteAddr)
+	}
+
+	if len(r.Host) == 0 {
+		return nil, errors.New("request Host empty")
+	}
+
+	var (
+		host     = strings.Split(r.Host, ":")[0]
+		byAlias  bool // flag on looking up by target alias or not
+		selected *Target
+	)
+	if !strings.HasSuffix(host, p.suffix) {
+		byAlias = true
+	}
+
+	if byAlias {
+		selected = p.upstreams.lookupAlias(remoteIP, host)
+
+	} else {
+		trimed := strings.TrimSuffix(host, p.suffix)
+		ss := strings.Split(trimed, ".")
+
+		switch len(ss) {
+		case 4: // app
+			appID := fmt.Sprintf("%s-%s-%s-%s", ss[0], ss[1], ss[2], ss[3])
+			selected = p.upstreams.lookup(remoteIP, appID, "")
+		case 5: // task
+			appID := fmt.Sprintf("%s-%s-%s-%s", ss[1], ss[2], ss[3], ss[4])
+			taskID := fmt.Sprintf("%s-%s", ss[0], appID)
+			selected = p.upstreams.lookup(remoteIP, appID, taskID)
+		default:
+			return nil, fmt.Errorf("request Host [%s] invalid", host)
+		}
+	}
+
+	if selected == nil {
+		return nil, fmt.Errorf("not found any matched targets for request Host [%s]", host)
+	}
+
+	log.Debugf("proxy redirect request [%s-%s-%s] -> [%s-%s]",
+		remoteIP, r.Method, r.Host,
+		selected.TaskID, selected.url(),
+	)
+
+	return selected, nil
+}
+
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		err  error
@@ -51,54 +102,11 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.stats.incr(nil, gGlb)
 	}()
 
-	if len(r.Host) == 0 {
-		code, err = 400, errors.New("request Host empty")
-		return
-	}
-
-	host := strings.Split(r.Host, ":")[0]
-	if !strings.HasSuffix(host, p.suffix) {
-		code, err = 400, fmt.Errorf("request Host [%s] should end with %s", host, p.suffix)
-		return
-	}
-
-	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	selected, err := p.lookup(r)
 	if err != nil {
-		code, err = 400, fmt.Errorf("request RemoteAddr [%s] unrecognized", r.RemoteAddr)
+		code, err = 404, err
 		return
 	}
-
-	var (
-		wildcardDomain = strings.TrimSuffix(host, p.suffix)
-		slices         = strings.Split(wildcardDomain, ".")
-		selected       *Target
-	)
-
-	switch len(slices) {
-
-	case 4: // app
-		appID := fmt.Sprintf("%s-%s-%s-%s", slices[0], slices[1], slices[2], slices[3])
-		selected = p.upstreams.lookup(remoteIP, appID, "")
-
-	case 5: // task
-		appID := fmt.Sprintf("%s-%s-%s-%s", slices[1], slices[2], slices[3], slices[4])
-		taskID := fmt.Sprintf("%s-%s", slices[0], appID)
-		selected = p.upstreams.lookup(remoteIP, appID, taskID)
-
-	default:
-		code, err = 400, fmt.Errorf("request Host [%s] invalid", host)
-		return
-	}
-
-	if selected == nil {
-		code, err = 404, fmt.Errorf("not found any matched targets for request Host [%s]", host)
-		return
-	}
-
-	log.Debugf("proxy redirect request [%s-%s-%s] -> [%s-%s]",
-		remoteIP, r.Method, r.Host,
-		selected.TaskID, selected.url(),
-	)
 
 	if err := p.AddHeaders(r, selected); err != nil {
 		code, err = 500, fmt.Errorf("add header error: %v", err)
