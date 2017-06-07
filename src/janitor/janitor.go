@@ -40,7 +40,11 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 }
 
 func (s *JanitorServer) AllUpstreams() []*Upstream {
-	return s.upstreams.all()
+	return s.upstreams.allUps()
+}
+
+func (s *JanitorServer) AllSessions() map[string]*Sessions {
+	return s.upstreams.allSess()
 }
 
 func (s *JanitorServer) EmitChange(ev *TargetChangeEvent) {

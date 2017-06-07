@@ -16,6 +16,7 @@ type Upstreams struct {
 type Upstream struct {
 	AppID    string    `json:"app_id"` // uniq id of upstream
 	Targets  []*Target `json:"targets"`
+	sessions *Sessions
 	balancer Balancer
 }
 
@@ -24,13 +25,25 @@ func newUpstream(appID string) *Upstream {
 		AppID:    appID,
 		Targets:  make([]*Target, 0, 0),
 		balancer: &WeightBalancer{}, // default balancer
+		sessions: newSessions(),     // sessions store
 	}
 }
 
-func (us *Upstreams) all() []*Upstream {
+func (us *Upstreams) allUps() []*Upstream {
 	us.RLock()
 	defer us.RUnlock()
 	return us.Upstreams
+}
+
+func (us *Upstreams) allSess() map[string]*Sessions {
+	us.RLock()
+	defer us.RUnlock()
+
+	ret := make(map[string]*Sessions)
+	for _, u := range us.Upstreams {
+		ret[u.AppID] = u.sessions
+	}
+	return ret
 }
 
 func (us *Upstreams) addTarget(appID string, target *Target) {
@@ -87,9 +100,13 @@ func (us *Upstreams) removeTarget(appID, taskID string) {
 		return
 	}
 
+	// remove target
 	u.Targets = append(u.Targets[:idxt], u.Targets[idxt+1:]...)
+	u.sessions.remove(taskID)
 
+	// remove empty upstream
 	if len(u.Targets) == 0 {
+		u.sessions.stop() // stop sessions gc & clean up
 		us.Upstreams = append(us.Upstreams[:idxu], us.Upstreams[idxu+1:]...)
 	}
 }
@@ -111,6 +128,39 @@ func (us *Upstreams) updateTarget(appID string, new *Target) {
 	}
 
 	t.Weight = new.Weight // NOTE only update weight currently
+}
+
+// lookup select a suitable backend according by sessions & balancer
+func (us *Upstreams) lookup(remoteIP, appID, taskID string) *Target {
+	var (
+		u *Upstream
+		t *Target
+	)
+
+	if _, u = us.getUpstream(appID); u == nil {
+		return nil
+	}
+
+	defer func() {
+		if t != nil {
+			u.sessions.update(remoteIP, t)
+		}
+	}()
+
+	// obtain session
+	if t = u.sessions.get(remoteIP); t != nil {
+		return t
+	}
+
+	// obtain specified task backend
+	if taskID != "" {
+		t = us.getTarget(appID, taskID)
+		return t
+	}
+
+	// use balancer to obtain a new backend
+	t = us.nextTarget(appID)
+	return t
 }
 
 func (us *Upstreams) nextTarget(appID string) *Target {

@@ -38,10 +38,6 @@ func (p *httpProxy) FailByGateway(code int, reason string) {
 }
 
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// requestDurationBegin := time.Now()
-
-	log.Debugf("proxy http request [%s] - [%s]", r.Method, r.Host)
-
 	if len(r.Host) == 0 {
 		p.FailByGateway(502, "header host empty")
 		return
@@ -50,6 +46,12 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	host := strings.Split(r.Host, ":")[0]
 	if !strings.HasSuffix(host, p.suffix) {
 		p.FailByGateway(400, fmt.Sprintf("request Host [%s] should end with %s", host, p.suffix))
+		return
+	}
+
+	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		p.FailByGateway(400, fmt.Sprintf("request RemoteAddr [%s] unrecognized", r.RemoteAddr))
 		return
 	}
 
@@ -63,12 +65,12 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	case 4: // app
 		appID := fmt.Sprintf("%s-%s-%s-%s", slices[0], slices[1], slices[2], slices[3])
-		selected = p.upstreams.nextTarget(appID)
+		selected = p.upstreams.lookup(remoteIP, appID, "")
 
 	case 5: // task
 		appID := fmt.Sprintf("%s-%s-%s-%s", slices[1], slices[2], slices[3], slices[4])
 		taskID := fmt.Sprintf("%s-%s", slices[0], appID)
-		selected = p.upstreams.getTarget(appID, taskID)
+		selected = p.upstreams.lookup(remoteIP, appID, taskID)
 
 	default:
 		p.FailByGateway(400, fmt.Sprintf("request Host [%s] invalid", host))
@@ -79,6 +81,11 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.FailByGateway(404, fmt.Sprintf("not found any matched targets for request Host [%s]", host))
 		return
 	}
+
+	log.Debugf("proxy redirect request [%s-%s-%s] -> [%s-%s]",
+		remoteIP, r.Method, r.Host,
+		selected.TaskID, selected.url(),
+	)
 
 	if err := p.AddHeaders(r, selected); err != nil {
 		p.FailByGateway(500, err.Error())
