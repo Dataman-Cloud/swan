@@ -20,6 +20,7 @@ func init() {
 type JanitorServer struct {
 	upstreams  *Upstreams
 	eventChan  chan *TargetChangeEvent
+	stats      *Stats
 	httpServer *http.Server
 	config     *config.Janitor
 }
@@ -28,23 +29,16 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
 		config:    cfg,
 		eventChan: make(chan *TargetChangeEvent, 1024),
+		stats:     newStats(),
 		upstreams: &Upstreams{
 			Upstreams: make([]*Upstream, 0, 0),
 		},
 	}
 
 	s.httpServer = &http.Server{
-		Handler: NewHTTPProxy(cfg, s.upstreams)}
+		Handler: NewHTTPProxy(cfg, s.upstreams, s.stats)}
 
 	return s
-}
-
-func (s *JanitorServer) AllUpstreams() []*Upstream {
-	return s.upstreams.allUps()
-}
-
-func (s *JanitorServer) AllSessions() map[string]*Sessions {
-	return s.upstreams.allSess()
 }
 
 func (s *JanitorServer) EmitChange(ev *TargetChangeEvent) {

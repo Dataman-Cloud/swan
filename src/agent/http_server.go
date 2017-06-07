@@ -33,12 +33,8 @@ func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 		c.JSON(http.StatusOK, gin.H{"agents": aas.agentRef.SerfServer.SerfNode.Members()})
 	})
 
-	aas.engine.GET("/proxy", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"upstreams": aas.agentRef.Janitor.AllUpstreams(),
-			"sessions":  aas.agentRef.Janitor.AllSessions(),
-		})
-	})
+	proxyRouter := aas.engine.Group("/proxy")
+	a.Janitor.ApiServe(proxyRouter)
 
 	aas.engine.GET("/dns", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"records": aas.agentRef.Resolver.AllRecords()})

@@ -22,36 +22,49 @@ const (
 type httpProxy struct {
 	config    *config.Janitor
 	upstreams *Upstreams
+	stats     *Stats
 	suffix    string
 }
 
-func NewHTTPProxy(cfg *config.Janitor, ups *Upstreams) http.Handler {
+func NewHTTPProxy(cfg *config.Janitor, ups *Upstreams, sta *Stats) http.Handler {
 	return &httpProxy{
 		config:    cfg,
 		upstreams: ups,
+		stats:     sta,
 		suffix:    "." + RESERVED_API_GATEWAY_DOMAIN + "." + cfg.Domain,
 	}
 }
 
-func (p *httpProxy) FailByGateway(code int, reason string) {
-	log.Warnln(code, reason)
-}
-
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	var (
+		err  error
+		code int
+		gGlb = &deltaGlb{0, 0, 1, 0}
+	)
+
+	defer func() {
+		if err != nil {
+			http.Error(w, err.Error(), code)
+			log.Errorln("proxy serve error:", err)
+			gGlb.fail = 1
+		}
+		p.stats.incr(nil, gGlb)
+	}()
+
 	if len(r.Host) == 0 {
-		p.FailByGateway(502, "header host empty")
+		code, err = 400, errors.New("request Host empty")
 		return
 	}
 
 	host := strings.Split(r.Host, ":")[0]
 	if !strings.HasSuffix(host, p.suffix) {
-		p.FailByGateway(400, fmt.Sprintf("request Host [%s] should end with %s", host, p.suffix))
+		code, err = 400, fmt.Errorf("request Host [%s] should end with %s", host, p.suffix)
 		return
 	}
 
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
-		p.FailByGateway(400, fmt.Sprintf("request RemoteAddr [%s] unrecognized", r.RemoteAddr))
+		code, err = 400, fmt.Errorf("request RemoteAddr [%s] unrecognized", r.RemoteAddr)
 		return
 	}
 
@@ -73,12 +86,12 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		selected = p.upstreams.lookup(remoteIP, appID, taskID)
 
 	default:
-		p.FailByGateway(400, fmt.Sprintf("request Host [%s] invalid", host))
+		code, err = 400, fmt.Errorf("request Host [%s] invalid", host)
 		return
 	}
 
 	if selected == nil {
-		p.FailByGateway(404, fmt.Sprintf("not found any matched targets for request Host [%s]", host))
+		code, err = 404, fmt.Errorf("not found any matched targets for request Host [%s]", host)
 		return
 	}
 
@@ -88,7 +101,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if err := p.AddHeaders(r, selected); err != nil {
-		p.FailByGateway(500, err.Error())
+		code, err = 500, fmt.Errorf("add header error: %v", err)
 		return
 	}
 
@@ -104,7 +117,9 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		h = newHTTPProxy(selected.url(), time.Duration(0))
 	}
 
+	p.stats.incr(&deltaApp{selected.AppID, selected.TaskID, 1, 0, 0}, nil)
 	h.ServeHTTP(w, r)
+	p.stats.incr(&deltaApp{selected.AppID, selected.TaskID, -1, 0, 0}, nil)
 }
 
 func (proxy *httpProxy) AddHeaders(r *http.Request, t *Target) error {
