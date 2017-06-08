@@ -41,10 +41,6 @@ func NewHTTPServer(listener string, a *Agent) *HTTPServer {
 		c.String(http.StatusOK, "pong")
 	})
 
-	aas.engine.GET("/agents", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"agents": aas.agentRef.SerfServer.SerfNode.Members()})
-	})
-
 	aas.engine.GET("/proxy", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"upstreams": aas.agentRef.Janitor.UpstreamLoader.Upstreams})
 	})

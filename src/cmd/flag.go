@@ -31,23 +31,6 @@ func FlagJoinAddrs() cli.Flag {
 	}
 }
 
-func FlagGossipListenAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "gossip-listen-addr",
-		Usage:  "swan gossip node listener address",
-		EnvVar: "SWAN_GOSSIP_LISTEN_ADDR",
-		Value:  "0.0.0.0:5000",
-	}
-}
-
-func FlagGossipJoinAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "gossip-join-addr",
-		Usage:  "any agent in the cluster",
-		EnvVar: "SWAN_GOSSIP_JOIN_ADDR",
-	}
-}
-
 func FlagGatewayAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
 		Name:   "gateway-advertise-ip",
