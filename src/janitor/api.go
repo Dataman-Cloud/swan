@@ -1,10 +1,16 @@
 package janitor
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
 	r.GET("", s.listUpstreams)
 	r.GET("/upstreams", s.listUpstreams)
+	r.POST("/upstreams", s.addUpstream)
+	r.DELETE("/upstreams", s.delUpstream)
 	r.GET("/sessions", s.listSessions)
 	r.GET("/configs", s.showConfigs)
 	r.GET("/stats", s.showStats)
@@ -14,6 +20,25 @@ func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
 
 func (s *JanitorServer) listUpstreams(c *gin.Context) {
 	c.JSON(200, s.upstreams.allUps())
+}
+
+func (s *JanitorServer) addUpstream(c *gin.Context) {
+	var target *Target
+	if err := c.BindJSON(&target); err != nil {
+		http.Error(c.Writer, err.Error(), 400)
+		return
+	}
+	s.upstreams.addTarget(target)
+}
+
+func (s *JanitorServer) delUpstream(c *gin.Context) {
+	var target *Target
+	if err := c.BindJSON(&target); err != nil {
+		http.Error(c.Writer, err.Error(), 400)
+		return
+	}
+	s.upstreams.removeTarget(target)
+	s.stats.del(target.AppID, target.TaskID)
 }
 
 func (s *JanitorServer) listSessions(c *gin.Context) {
