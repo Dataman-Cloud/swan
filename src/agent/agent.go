@@ -18,7 +18,6 @@ import (
 	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/hashicorp/serf/serf"
 	"golang.org/x/net/context"
 )
 
@@ -32,18 +31,22 @@ type Agent struct {
 	Resolver   *nameserver.Resolver
 	Janitor    *janitor.JanitorServer
 	HTTPServer *HTTPServer
-	SerfServer *SerfServer
+	Config     config.AgentConfig
+	eventCh    chan *event
+}
 
-	Config config.AgentConfig
+type event struct {
+	name    string
+	payload []byte
 }
 
 // New agent func
 func New(agentConf config.AgentConfig) *Agent {
 	agent := &Agent{
-		Config:     agentConf,
-		Resolver:   nameserver.NewResolver(&agentConf.DNS),
-		Janitor:    janitor.NewJanitorServer(&agentConf.Janitor),
-		SerfServer: NewSerfServer(agentConf.GossipListenAddr, agentConf.GossipJoinAddr),
+		Config:   agentConf,
+		Resolver: nameserver.NewResolver(&agentConf.DNS),
+		Janitor:  janitor.NewJanitorServer(&agentConf.Janitor),
+		eventCh:  make(chan *event, 1024),
 	}
 	agent.HTTPServer = NewHTTPServer(agentConf.ListenAddr, agent)
 	return agent
@@ -67,14 +70,6 @@ func (agent *Agent) StartAndJoin() error {
 			errCh <- err
 		}
 		logrus.Warnln("janitor quit, error:", err)
-	}()
-
-	go func() {
-		err := agent.SerfServer.Start()
-		if err != nil {
-			errCh <- err
-		}
-		logrus.Warnln("serf server quit, error:", err)
 	}()
 
 	go func() {
@@ -123,14 +118,9 @@ func (agent *Agent) dispatchEvents() {
 		},
 	})
 
-	for event := range agent.SerfServer.EventCh {
-		userEvent, ok := event.(serf.UserEvent)
-		if !ok {
-			continue
-		}
-
+	for event := range agent.eventCh {
 		var taskInfoEvent types.TaskInfoEvent
-		err := json.Unmarshal(userEvent.Payload, &taskInfoEvent)
+		err := json.Unmarshal(event.payload, &taskInfoEvent)
 		if err != nil {
 			logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
 			continue
@@ -138,14 +128,14 @@ func (agent *Agent) dispatchEvents() {
 
 		if taskInfoEvent.GatewayEnabled {
 			agent.Janitor.EmitChange(janitorTargetChangeEventFromTaskInfoEvent(
-				userEvent.Name, &taskInfoEvent))
+				event.name, &taskInfoEvent))
 		}
 
 		// Resolver only recongnize these two events
-		if userEvent.Name == eventbus.EventTypeTaskHealthy ||
-			userEvent.Name == eventbus.EventTypeTaskUnhealthy {
+		if event.name == eventbus.EventTypeTaskHealthy ||
+			event.name == eventbus.EventTypeTaskUnhealthy {
 			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
-				userEvent.Name, &taskInfoEvent))
+				event.name, &taskInfoEvent))
 		}
 	}
 }
@@ -208,7 +198,10 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 				continue
 			}
 
-			agent.SerfServer.Publish(eventType, []byte(line[len(SSE_DATA_PREFIX):len(line)]))
+			agent.eventCh <- &event{
+				name:    eventType,
+				payload: []byte(line[len(SSE_DATA_PREFIX):len(line)]),
+			}
 		}
 	}
 }

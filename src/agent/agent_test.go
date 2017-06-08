@@ -12,7 +12,7 @@ import (
 )
 
 func TestStartAndJoin(t *testing.T) {
-	testConf := config.AgentConfig{ListenAddr: "localhost:8881", GossipListenAddr: "localhost:8881", GossipJoinAddr: "localhost:8881"}
+	testConf := config.AgentConfig{ListenAddr: "localhost:8881"}
 	testAgent := New(testConf)
 
 	resolvCfg := &config.DNS{
