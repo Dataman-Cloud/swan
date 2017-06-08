@@ -80,7 +80,7 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 		return nil, err
 	}
 
-	log.Debugf("proxy redirect request [%s-%s-%s] -> [%s-%s]",
+	log.Debugf("proxy redirecting request [%s-%s-%s] -> [%s-%s]",
 		remoteIP, r.Method, r.Host,
 		selected.TaskID, url,
 	)
@@ -92,16 +92,21 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		err  error
 		code int
-		gGlb = &deltaGlb{0, 0, 1, 0}
+		in   int64     // received bytes
+		out  int64     // transmitted bytes
+		dGlb *deltaGlb // delta global
 	)
 
 	defer func() {
 		if err != nil {
 			http.Error(w, err.Error(), code)
-			log.Errorln(err)
-			gGlb.fail = 1
+			log.Errorf("proxy serve error: %d - %v, recived:%d, transmitted:%d", code, err, in, out)
+			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
+		} else {
+			log.Debugf("proxy serve succeed: recived:%d, transmitted:%d", in, out)
+			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 0}
 		}
-		p.stats.incr(nil, gGlb)
+		p.stats.incr(nil, dGlb)
 	}()
 
 	selected, err := p.lookup(r)
@@ -110,50 +115,65 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	url, _ := selected.url()
+	var (
+		url, _ = selected.url()
+		aid    = selected.AppID
+		tid    = selected.TaskID
+	)
 
-	p.stats.incr(&deltaApp{selected.AppID, selected.TaskID, 1, 0, 0}, nil)
-	err = p.rawHTTPProxy(w, r, url)
+	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	in, out, err = p.doRawProxy(w, r, url)
 	if err != nil {
 		code = 500
 	}
-	p.stats.incr(&deltaApp{selected.AppID, selected.TaskID, -1, 0, 0}, nil)
+	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
-func (proxy *httpProxy) rawHTTPProxy(w http.ResponseWriter, r *http.Request, t *url.URL) error {
+func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.URL) (int64, int64, error) {
+	var in, out int64
+
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		return fmt.Errorf("not a hijacker")
+		return in, out, fmt.Errorf("not a hijacker")
 	}
 
-	in, _, err := hj.Hijack()
+	src, _, err := hj.Hijack()
 	if err != nil {
-		return fmt.Errorf("hijack error: %v", err)
+		return in, out, fmt.Errorf("hijack error: %v", err)
 	}
-	defer in.Close()
+	//defer src.Close()
 
-	out, err := net.DialTimeout("tcp", t.Host, time.Second*60)
+	dst, err := net.DialTimeout("tcp", t.Host, time.Second*60)
 	if err != nil {
-		return fmt.Errorf("cannot connect to upstream %s", t.Host)
+		return in, out, fmt.Errorf("cannot connect to upstream %s: %v", t.Host, err)
 	}
-	defer out.Close()
+	//defer dst.Close()
 
-	err = r.Write(out) // send request to backend firstly
+	err = r.WriteProxy(dst) // send request to backend firstly
 	if err != nil {
-		return fmt.Errorf("copying request to %s error: %v", t, err)
+		return in, out, fmt.Errorf("copying request to %s error: %v", t, err)
+	}
+	if n := r.ContentLength; n > 0 { // TODO not exactly
+		in += n
 	}
 
 	errc := make(chan error, 2)
-	cp := func(dst io.Writer, src io.Reader) {
-		_, err := io.Copy(dst, src)
+	cp := func(w io.WriteCloser, r io.Reader, c *int64) {
+		defer w.Close()
+
+		n, err := io.Copy(w, r)
+		if n > 0 {
+			*c += n
+		}
 		errc <- err
 	}
 
-	go cp(out, in)
-	go cp(in, out)
+	go cp(dst, src, &in)
+	cp(src, dst, &out) // note: hanging wait while copying the response
+
 	err = <-errc
 	if err != nil && err != io.EOF {
-		return fmt.Errorf("io copy error: %v", err)
+		return in, out, fmt.Errorf("io copy error: %v", err)
 	}
-	return nil
+	return in, out, nil
 }

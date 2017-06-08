@@ -72,6 +72,7 @@ func (s *JanitorServer) watchEvent() {
 
 		case "del":
 			s.upstreams.removeTarget(target)
+			s.stats.del(target.AppID, target.TaskID)
 
 		case "change":
 			s.upstreams.updateTarget(target)
@@ -97,7 +98,7 @@ func (ln TcpKeepAliveListener) Accept() (c net.Conn, err error) {
 	if err = tc.SetKeepAlive(true); err != nil {
 		return
 	}
-	if err = tc.SetKeepAlivePeriod(3 * time.Minute); err != nil {
+	if err = tc.SetKeepAlivePeriod(1 * time.Minute); err != nil {
 		return
 	}
 	return tc, nil
