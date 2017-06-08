@@ -36,7 +36,7 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	}
 
 	s.httpServer = &http.Server{
-		Handler: NewHTTPProxy(cfg, s.upstreams, s.stats)}
+		Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats)}
 
 	return s
 }

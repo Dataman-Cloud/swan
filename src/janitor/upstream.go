@@ -250,15 +250,14 @@ type Target struct {
 	Weight     float64 `json:"weihgt"`
 }
 
-func (t Target) url() *url.URL {
+func (t Target) url() (*url.URL, error) {
 	s := fmt.Sprintf("http://%s:%d", t.TaskIP, t.TaskPort)
 	u, err := url.Parse(s)
 	if err != nil {
-		log.Errorf("invalid task url entry %s - [%v]", s, err)
-		return nil
+		return nil, fmt.Errorf("invalid task url entry %s - [%v]", s, err)
 	}
 
-	return u
+	return u, nil
 }
 
 // TargetChangeEvent
