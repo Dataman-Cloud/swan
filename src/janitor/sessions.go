@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 	"time"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 // Sessions
@@ -73,6 +75,7 @@ func (s *Sessions) gc() {
 			s.Lock()
 			for key, session := range s.m {
 				if session.UpdatedAt.Before(time.Now().Add(-s.timeout)) {
+					log.Printf("clean up outdated session: %s -> %s", key, session.TaskID)
 					delete(s.m, key)
 				}
 			}

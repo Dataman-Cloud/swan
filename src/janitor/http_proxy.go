@@ -153,9 +153,7 @@ func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.UR
 	if err != nil {
 		return in, out, fmt.Errorf("copying request to %s error: %v", t, err)
 	}
-	if n := r.ContentLength; n > 0 { // TODO not exactly
-		in += n
-	}
+	in += httpRequestLen(r)
 
 	errc := make(chan error, 2)
 	cp := func(w io.WriteCloser, r io.Reader, c *int64) {
@@ -176,4 +174,25 @@ func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.UR
 		return in, out, fmt.Errorf("io copy error: %v", err)
 	}
 	return in, out, nil
+}
+
+// try hard to obtain the size of initial raw HTTP request according by RFC7231.
+// Note: we can't obtain the actually exact size through *http.Request because some details
+// of the initial request are lost while parsing it into *http.Request within golang http.Server
+// Note: do NOT try `httputil.DumpRequest` that will lead to poor performance.
+func httpRequestLen(r *http.Request) int64 {
+	n := int64(len(r.Method) + len(r.URL.Path) + len(r.Proto) + 3)
+	n += int64(len(r.Host) + 3)
+
+	for k, vs := range r.Header {
+		n += int64(len(k) + 3)
+		for _, v := range vs {
+			n += int64(len(v))
+		}
+	}
+
+	if len := r.ContentLength; len > 0 {
+		n += len
+	}
+	return n
 }
