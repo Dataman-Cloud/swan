@@ -22,15 +22,13 @@ type ManagerConfig struct {
 }
 
 type AgentConfig struct {
-	DataDir          string   `json:"dataDir"`
-	LogLevel         string   `json:"logLevel"`
-	ListenAddr       string   `json:"listenAddr"`
-	AdvertiseAddr    string   `json:"advertiseAddr"`
-	GossipListenAddr string   `json:"gossipListenAddr"`
-	GossipJoinAddr   string   `json:"gossipJoinAddr"`
-	JoinAddrs        []string `json:"joinAddrs"`
-	DNS              DNS      `json:"dns"`
-	Janitor          Janitor  `json:"janitor"`
+	DataDir       string   `json:"dataDir"`
+	LogLevel      string   `json:"logLevel"`
+	ListenAddr    string   `json:"listenAddr"`
+	AdvertiseAddr string   `json:"advertiseAddr"`
+	JoinAddrs     []string `json:"joinAddrs"`
+	DNS           DNS      `json:"dns"`
+	Janitor       Janitor  `json:"janitor"`
 }
 
 type DNS struct {
@@ -58,10 +56,9 @@ type Janitor struct {
 
 func NewAgentConfig(c *cli.Context) AgentConfig {
 	cfg := AgentConfig{
-		LogLevel:         "info",
-		ListenAddr:       "0.0.0.0:9999",
-		JoinAddrs:        []string{"0.0.0.0:9999"},
-		GossipListenAddr: "0.0.0.0:5000",
+		LogLevel:   "info",
+		ListenAddr: "0.0.0.0:9999",
+		JoinAddrs:  []string{"0.0.0.0:9999"},
 
 		DNS: DNS{
 			Domain:     "swan.com",
@@ -119,14 +116,6 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 
 	if c.String("join-addrs") != "" {
 		cfg.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
-	}
-
-	if c.String("gossip-listen-addr") != "" {
-		cfg.GossipListenAddr = c.String("gossip-listen-addr")
-	}
-
-	if c.String("gossip-join-addr") != "" {
-		cfg.GossipJoinAddr = c.String("gossip-join-addr")
 	}
 
 	return cfg
