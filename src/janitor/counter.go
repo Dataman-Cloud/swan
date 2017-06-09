@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+var (
+	rateFreshIntv = time.Second * 2 // rate calculation interval
+)
+
 // Stats holds all of statistics data.
 type Stats struct {
 	Global *GlobalCounter `json:"global"` // global counter
@@ -25,6 +29,12 @@ type GlobalCounter struct {
 	TxRate   uint   `json:"tx_rate"`       // transmitted bytes / second
 	ReqRate  uint   `json:"requests_rate"` // requests / second
 	FailRate uint   `json:"fails_rate"`    // failed requests / second
+
+	lastRx   uint64 // used for calculate rate per second
+	lastTx   uint64
+	lastReq  uint64
+	lastFail uint64
+	freshed  bool
 
 	startedAt time.Time
 }
@@ -54,6 +64,11 @@ type TaskCounter struct {
 	RxRate        uint   `json:"rx_rate"`        // received bytes / second
 	TxRate        uint   `json:"tx_rate"`        // transmitted bytes / second
 	ReqRate       uint   `json:"requests_rate"`  // requests / second
+
+	lastRx  uint64 // used for calculate rate per second
+	lastTx  uint64
+	lastReq uint64
+	freshed bool
 
 	startedAt time.Time
 }
@@ -116,8 +131,13 @@ func (c *Stats) del(aid, tid string) {
 }
 
 func (c *Stats) runCounters() {
+	ticker := time.NewTicker(rateFreshIntv)
+	defer ticker.Stop()
+
 	for {
 		select {
+		case <-ticker.C:
+			c.freshRate()
 		case d := <-c.inAppCh:
 			c.updateApp(d)
 		case d := <-c.inGlbCh:
@@ -127,12 +147,80 @@ func (c *Stats) runCounters() {
 		}
 	}
 }
+func (c *Stats) freshRate() {
+	c.Global.freshRate()
+
+	for _, app := range c.App {
+		for _, task := range app {
+			task.freshRate()
+		}
+	}
+}
+
+// fresh global counter
+func (c *GlobalCounter) freshRate() {
+	if !c.freshed {
+		c.RxRate = 0
+		c.TxRate = 0
+		c.ReqRate = 0
+		c.FailRate = 0
+		return
+	}
+
+	var (
+		nRx   = c.RxBytes - c.lastRx
+		nTx   = c.TxBytes - c.lastTx
+		nReq  = c.Requests - c.lastReq
+		nFail = c.Fails - c.lastFail
+		intv  = uint64(rateFreshIntv.Seconds())
+	)
+
+	c.RxRate = uint(nRx / intv)
+	c.TxRate = uint(nTx / intv)
+	c.ReqRate = uint(nReq / intv)
+	c.FailRate = uint(nFail / intv)
+
+	c.lastRx = c.RxBytes
+	c.lastTx = c.TxBytes
+	c.lastReq = c.Requests
+	c.lastFail = c.Fails
+
+	c.freshed = false // mark as consumed
+}
+
+// fresh task counter
+func (c *TaskCounter) freshRate() {
+	if !c.freshed {
+		c.RxRate = 0
+		c.TxRate = 0
+		c.ReqRate = 0
+		return
+	}
+
+	var (
+		nRx  = c.RxBytes - c.lastRx
+		nTx  = c.TxBytes - c.lastTx
+		nReq = c.Requests - c.lastReq
+		intv = uint64(rateFreshIntv.Seconds())
+	)
+
+	c.RxRate = uint(nRx / intv)
+	c.TxRate = uint(nTx / intv)
+	c.ReqRate = uint(nReq / intv)
+
+	c.lastRx = c.RxBytes
+	c.lastTx = c.TxBytes
+	c.lastReq = c.Requests
+
+	c.freshed = false // mark as consumed
+}
 
 func (c *Stats) updateGlb(d *deltaGlb) {
 	c.Global.RxBytes += d.rx
 	c.Global.TxBytes += d.tx
 	c.Global.Requests += d.req
 	c.Global.Fails += d.fail
+	c.Global.freshed = true
 }
 
 func (c *Stats) updateApp(d *deltaApp) {
@@ -166,6 +254,8 @@ func (c *Stats) updateApp(d *deltaApp) {
 	if n := d.req; n > 0 {
 		task.Requests += n
 	}
+
+	task.freshed = true
 }
 
 func (c *Stats) removeApp(d *deltaApp) {
