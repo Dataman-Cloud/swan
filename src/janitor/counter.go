@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	rateFreshIntv = time.Second * 2 // rate calculation interval
+	rateFreshIntv = time.Second * 2  // rate calculation interval
+	gcIntv        = time.Second * 10 // interval to scan & clean up removal-marked task counter
 )
 
 // Stats holds all of statistics data.
@@ -71,6 +72,8 @@ type TaskCounter struct {
 	freshed bool
 
 	startedAt time.Time
+
+	removed bool // removal flag, actually removed by gc() until `ActiveClients` decreased to 0
 }
 
 type TaskCounterAlias TaskCounter
@@ -131,13 +134,18 @@ func (c *Stats) del(aid, tid string) {
 }
 
 func (c *Stats) runCounters() {
-	ticker := time.NewTicker(rateFreshIntv)
-	defer ticker.Stop()
+	freshTicker := time.NewTicker(rateFreshIntv)
+	defer freshTicker.Stop()
+
+	gcTicker := time.NewTicker(gcIntv)
+	defer gcTicker.Stop()
 
 	for {
 		select {
-		case <-ticker.C:
+		case <-freshTicker.C:
 			c.freshRate()
+		case <-gcTicker.C:
+			c.gc()
 		case d := <-c.inAppCh:
 			c.updateApp(d)
 		case d := <-c.inGlbCh:
@@ -147,6 +155,7 @@ func (c *Stats) runCounters() {
 		}
 	}
 }
+
 func (c *Stats) freshRate() {
 	c.Global.freshRate()
 
@@ -215,6 +224,26 @@ func (c *TaskCounter) freshRate() {
 	c.freshed = false // mark as consumed
 }
 
+// gc actually delete removal-marked task counters
+// until the `active-clients` decreased to zero
+func (c *Stats) gc() {
+	for aid, app := range c.App {
+
+		for tid, task := range app {
+			if !task.removed {
+				continue
+			}
+			if task.ActiveClients <= 0 {
+				delete(app, tid)
+			}
+		}
+
+		if len(app) == 0 {
+			delete(c.App, aid)
+		}
+	}
+}
+
 func (c *Stats) updateGlb(d *deltaGlb) {
 	c.Global.RxBytes += d.rx
 	c.Global.TxBytes += d.tx
@@ -258,6 +287,8 @@ func (c *Stats) updateApp(d *deltaApp) {
 	task.freshed = true
 }
 
+// note: removeApp() only mark the removal flag on specified task counter,
+// counter will be actually removed by gc() until its `active-clients` decreased to zero
 func (c *Stats) removeApp(d *deltaApp) {
 	if d.aid == "" || d.tid == "" {
 		return
@@ -267,11 +298,7 @@ func (c *Stats) removeApp(d *deltaApp) {
 	}
 	app := c.App[d.aid]
 
-	if _, ok := app[d.tid]; ok {
-		delete(app, d.tid)
-	}
-
-	if len(app) == 0 {
-		delete(c.App, d.aid)
+	if task, ok := app[d.tid]; ok {
+		task.removed = true
 	}
 }
