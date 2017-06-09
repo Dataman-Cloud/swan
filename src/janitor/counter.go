@@ -7,12 +7,12 @@ import (
 
 // Stats holds all of statistics data.
 type Stats struct {
-	Uptime   string                             `json:"uptime"`
-	Global   *GlobalCounter                     `json:"global"`
-	App      map[string]map[string]*TaskCounter `json:"app"` // app -> task -> counter
-	inGlbCh  chan *deltaGlb                     // new global counter delta received
-	inAppCh  chan *deltaApp                     // new app counter delta received
-	delAppCh chan *deltaApp                     // removal signal app->task counter delta
+	Uptime   string         `json:"uptime"`
+	Global   *GlobalCounter `json:"global"`
+	App      AppCounter     `json:"app"` // app -> task -> counter
+	inGlbCh  chan *deltaGlb // new global counter delta received
+	inAppCh  chan *deltaApp // new app counter delta received
+	delAppCh chan *deltaApp // removal signal app->task counter delta
 	startAt  time.Time
 }
 
@@ -25,6 +25,9 @@ type GlobalCounter struct {
 	Requests uint64 `json:"requests"` // nb of client requests
 	Fails    uint64 `json:"fails"`    // nb of failed requesets
 }
+
+// AppCounter hold current app statistics
+type AppCounter map[string]map[string]*TaskCounter
 
 // TaskCounter hold one app-task's current statistics
 type TaskCounter struct {
@@ -53,7 +56,7 @@ type deltaGlb struct {
 func newStats() *Stats {
 	c := &Stats{
 		Global:   &GlobalCounter{},
-		App:      make(map[string]map[string]*TaskCounter),
+		App:      make(AppCounter),
 		inGlbCh:  make(chan *deltaGlb, 1024),
 		inAppCh:  make(chan *deltaApp, 1024),
 		delAppCh: make(chan *deltaApp, 128),

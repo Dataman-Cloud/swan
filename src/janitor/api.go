@@ -9,7 +9,7 @@ import (
 func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
 	r.GET("", s.listUpstreams)
 	r.GET("/upstreams", s.listUpstreams)
-	r.POST("/upstreams", s.addUpstream)
+	r.PUT("/upstreams", s.upsertUpstream)
 	r.DELETE("/upstreams", s.delUpstream)
 	r.GET("/sessions", s.listSessions)
 	r.GET("/configs", s.showConfigs)
@@ -22,13 +22,24 @@ func (s *JanitorServer) listUpstreams(c *gin.Context) {
 	c.JSON(200, s.upstreams.allUps())
 }
 
-func (s *JanitorServer) addUpstream(c *gin.Context) {
+func (s *JanitorServer) upsertUpstream(c *gin.Context) {
 	var target *Target
 	if err := c.BindJSON(&target); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
-	s.upstreams.addTarget(target)
+
+	if err := target.valid(); err != nil {
+		http.Error(c.Writer, err.Error(), 400)
+		return
+	}
+
+	if err := s.upstreams.upsertTarget(target); err != nil {
+		http.Error(c.Writer, err.Error(), 500)
+		return
+	}
+
+	c.Writer.WriteHeader(201)
 }
 
 func (s *JanitorServer) delUpstream(c *gin.Context) {
@@ -37,8 +48,11 @@ func (s *JanitorServer) delUpstream(c *gin.Context) {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
+
 	s.upstreams.removeTarget(target)
 	s.stats.del(target.AppID, target.TaskID)
+
+	c.Writer.WriteHeader(204)
 }
 
 func (s *JanitorServer) listSessions(c *gin.Context) {

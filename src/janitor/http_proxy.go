@@ -18,7 +18,6 @@ const (
 )
 
 type httpProxy struct {
-	domain    string
 	upstreams *Upstreams
 	stats     *Stats
 	suffix    string

@@ -1,11 +1,11 @@
 package janitor
 
 import (
+	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 	"sync"
-
-	log "github.com/Sirupsen/logrus"
 )
 
 type Upstreams struct {
@@ -48,13 +48,9 @@ func (us *Upstreams) allSess() map[string]*Sessions {
 	return ret
 }
 
-func (us *Upstreams) addTarget(target *Target) {
+func (us *Upstreams) upsertTarget(target *Target) error {
 	us.Lock()
 	defer us.Unlock()
-
-	if target == nil {
-		return
-	}
 
 	var (
 		appID    = target.AppID
@@ -63,20 +59,32 @@ func (us *Upstreams) addTarget(target *Target) {
 	)
 
 	_, u := us.getUpstreamByID(appID)
-	if u == nil { // add new upstream
+	// add new upstream
+	if u == nil {
+		if i, _ := us.getUpstreamByAlias(appAlias); i >= 0 {
+			return fmt.Errorf("alias [%s] conflict", appAlias)
+		}
 		u = newUpstream(appID, appAlias)
 		u.Targets = append(u.Targets, target)
 		us.Upstreams = append(us.Upstreams, u)
-		return
+		return nil
 	}
 
 	_, t := u.getTarget(taskID)
-	if t != nil {
-		log.Warnf("already exists the target %v, ignore.", *t)
-		return
+
+	// add new target
+	if t == nil {
+		u.Targets = append(u.Targets, target)
+		return nil
 	}
 
-	u.Targets = append(u.Targets, target)
+	// update target
+	t.VersionID = target.VersionID
+	t.AppVersion = target.AppVersion
+	t.TaskIP = target.TaskIP
+	t.TaskPort = target.TaskPort
+	t.Weight = target.Weight
+	return nil
 }
 
 func (us *Upstreams) getTarget(appID, taskID string) *Target {
@@ -103,49 +111,23 @@ func (us *Upstreams) removeTarget(target *Target) {
 
 	idxu, u := us.getUpstreamByID(appID)
 	if u == nil {
-		log.Warnln("no such upstream", appID)
 		return
 	}
 
 	idxt, t := u.getTarget(taskID)
 	if t == nil {
-		log.Warnf("no such target", taskID)
 		return
 	}
 
-	// remove target
+	// remove target & session
 	u.Targets = append(u.Targets[:idxt], u.Targets[idxt+1:]...)
 	u.sessions.remove(taskID)
 
-	// remove empty upstream
+	// remove empty upstream & stop sessions gc
 	if len(u.Targets) == 0 {
-		u.sessions.stop() // stop sessions gc & clean up
+		u.sessions.stop()
 		us.Upstreams = append(us.Upstreams[:idxu], us.Upstreams[idxu+1:]...)
 	}
-}
-
-func (us *Upstreams) updateTarget(new *Target) {
-	us.Lock()
-	defer us.Unlock()
-
-	var (
-		appID  = new.AppID
-		taskID = new.TaskID
-	)
-
-	_, u := us.getUpstreamByID(appID)
-	if u == nil {
-		log.Warnln("no such upstream", appID)
-		return
-	}
-
-	_, t := u.getTarget(new.TaskID)
-	if t == nil {
-		log.Warnf("no such target", taskID)
-		return
-	}
-
-	t.Weight = new.Weight // NOTE only update weight currently
 }
 
 // lookup similar as lookup, but by app alias
@@ -246,11 +228,10 @@ type Target struct {
 	TaskID     string  `json:"task_id"`
 	TaskIP     string  `json:"task_ip"`
 	TaskPort   uint32  `json:"task_port"`
-	PortName   string  `json:"port_name"`
 	Weight     float64 `json:"weihgt"`
 }
 
-func (t Target) url() (*url.URL, error) {
+func (t *Target) url() (*url.URL, error) {
 	s := fmt.Sprintf("http://%s:%d", t.TaskIP, t.TaskPort)
 	u, err := url.Parse(s)
 	if err != nil {
@@ -258,6 +239,22 @@ func (t Target) url() (*url.URL, error) {
 	}
 
 	return u, nil
+}
+
+func (t *Target) valid() error {
+	if t == nil {
+		return errors.New("nil targte")
+	}
+	if t.AppID == "" || t.TaskID == "" {
+		return errors.New("app_id or task_id required")
+	}
+	if t.TaskIP == "" || t.TaskPort == 0 {
+		return errors.New("task_ip or task_port required")
+	}
+	if !strings.HasSuffix(t.TaskID, "-"+t.AppID) {
+		return errors.New("invalid task_id, must be suffixed by app_id")
+	}
+	return nil
 }
 
 // TargetChangeEvent

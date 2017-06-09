@@ -67,15 +67,14 @@ func (s *JanitorServer) watchEvent() {
 		target := &ev.Target
 
 		switch strings.ToLower(ev.Change) {
-		case "add":
-			s.upstreams.addTarget(target)
+		case "add", "change":
+			if err := s.upstreams.upsertTarget(target); err != nil {
+				log.Errorln("upstream upsert error: %v", err)
+			}
 
 		case "del":
 			s.upstreams.removeTarget(target)
 			s.stats.del(target.AppID, target.TaskID)
-
-		case "change":
-			s.upstreams.updateTarget(target)
 
 		default:
 			log.Warnln("unrecognized event change type", ev.Change)

@@ -251,7 +251,6 @@ func janitorTargetChangeEventFromTaskInfoEvent(eventType string,
 	janitorEvent.TaskIP = taskInfoEvent.IP
 	janitorEvent.TaskPort = taskInfoEvent.Port
 	janitorEvent.AppID = taskInfoEvent.AppID
-	janitorEvent.PortName = taskInfoEvent.PortName
 	janitorEvent.Weight = taskInfoEvent.Weight
 	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
 	janitorEvent.AppVersion = taskInfoEvent.AppVersion
