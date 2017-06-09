@@ -7,26 +7,42 @@ import (
 
 // Stats holds all of statistics data.
 type Stats struct {
-	Uptime   string         `json:"uptime"`
-	Global   *GlobalCounter `json:"global"`
-	App      AppCounter     `json:"app"` // app -> task -> counter
+	Global *GlobalCounter `json:"global"` // global counter
+	App    AppCounter     `json:"app"`    // app -> task -> counter
+
 	inGlbCh  chan *deltaGlb // new global counter delta received
 	inAppCh  chan *deltaApp // new app counter delta received
 	delAppCh chan *deltaApp // removal signal app->task counter delta
-	startAt  time.Time
 }
-
-type StatsAlias Stats
 
 // GlobalCounter hold current global statistics
 type GlobalCounter struct {
-	RxBytes  uint64 `json:"rx_bytes"` // nb of received bytes
-	TxBytes  uint64 `json:"tx_bytes"` // nb of transmitted bytes
-	Requests uint64 `json:"requests"` // nb of client requests
-	Fails    uint64 `json:"fails"`    // nb of failed requesets
+	RxBytes  uint64 `json:"rx_bytes"`      // nb of received bytes
+	TxBytes  uint64 `json:"tx_bytes"`      // nb of transmitted bytes
+	Requests uint64 `json:"requests"`      // nb of client requests
+	Fails    uint64 `json:"fails"`         // nb of failed requesets
+	RxRate   uint   `json:"rx_rate"`       // received bytes / second
+	TxRate   uint   `json:"tx_rate"`       // transmitted bytes / second
+	ReqRate  uint   `json:"requests_rate"` // requests / second
+	FailRate uint   `json:"fails_rate"`    // failed requests / second
+
+	startedAt time.Time
 }
 
-// AppCounter hold current app statistics
+type GlobalCounterAlias GlobalCounter
+
+func (c *GlobalCounter) MarshalJSON() ([]byte, error) {
+	var wrapper struct {
+		GlobalCounterAlias
+		Uptime string `json:"uptime"`
+	}
+
+	wrapper.GlobalCounterAlias = GlobalCounterAlias(*c)
+	wrapper.Uptime = time.Now().Sub(c.startedAt).String()
+	return json.Marshal(wrapper)
+}
+
+// AppCounter hold app current statistics
 type AppCounter map[string]map[string]*TaskCounter
 
 // TaskCounter hold one app-task's current statistics
@@ -35,6 +51,24 @@ type TaskCounter struct {
 	RxBytes       uint64 `json:"rx_bytes"`       // nb of received bytes
 	TxBytes       uint64 `json:"tx_bytes"`       // nb of transmitted bytes
 	Requests      uint64 `json:"requests"`       // nb of requests
+	RxRate        uint   `json:"rx_rate"`        // received bytes / second
+	TxRate        uint   `json:"tx_rate"`        // transmitted bytes / second
+	ReqRate       uint   `json:"requests_rate"`  // requests / second
+
+	startedAt time.Time
+}
+
+type TaskCounterAlias TaskCounter
+
+func (c *TaskCounter) MarshalJSON() ([]byte, error) {
+	var wrapper struct {
+		TaskCounterAlias
+		Uptime string `json:"uptime"`
+	}
+
+	wrapper.TaskCounterAlias = TaskCounterAlias(*c)
+	wrapper.Uptime = time.Now().Sub(c.startedAt).String()
+	return json.Marshal(wrapper)
 }
 
 type deltaApp struct {
@@ -55,22 +89,17 @@ type deltaGlb struct {
 
 func newStats() *Stats {
 	c := &Stats{
-		Global:   &GlobalCounter{},
+		Global: &GlobalCounter{
+			startedAt: time.Now(),
+		},
 		App:      make(AppCounter),
 		inGlbCh:  make(chan *deltaGlb, 1024),
 		inAppCh:  make(chan *deltaApp, 1024),
 		delAppCh: make(chan *deltaApp, 128),
-		startAt:  time.Now(),
 	}
 
 	go c.runCounters()
 	return c
-}
-
-func (c *Stats) MarshalJSON() ([]byte, error) {
-	a := StatsAlias(*c)
-	a.Uptime = time.Now().Sub(a.startAt).String()
-	return json.Marshal(a)
 }
 
 func (c *Stats) incr(dapp *deltaApp, dglb *deltaGlb) {
@@ -117,7 +146,9 @@ func (c *Stats) updateApp(d *deltaApp) {
 	app := c.App[d.aid]
 
 	if _, ok := app[d.tid]; !ok {
-		app[d.tid] = new(TaskCounter)
+		app[d.tid] = &TaskCounter{
+			startedAt: time.Now(),
+		}
 	}
 	task := app[d.tid]
 
