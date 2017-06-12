@@ -69,7 +69,7 @@ func (s *JanitorServer) watchEvent() {
 		switch strings.ToLower(ev.Change) {
 		case "add", "change":
 			if err := s.upstreams.upsertTarget(target); err != nil {
-				log.Errorln("upstream upsert error: %v", err)
+				log.Errorln("upstream upsert error:", err)
 			}
 
 		case "del":

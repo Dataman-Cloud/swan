@@ -89,16 +89,19 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
-		err  error
-		code int
-		in   int64     // received bytes
-		out  int64     // transmitted bytes
-		dGlb *deltaGlb // delta global
+		err      error
+		code     int
+		in       int64     // received bytes
+		out      int64     // transmitted bytes
+		hijacked bool      // if hijacked or not
+		dGlb     *deltaGlb // delta global
 	)
 
 	defer func() {
 		if err != nil {
-			http.Error(w, err.Error(), code)
+			if !hijacked { // we've proceed the error if hijacked
+				http.Error(w, err.Error(), code)
+			}
 			log.Errorf("proxy serve error: %d - %v, recived:%d, transmitted:%d", code, err, in, out)
 			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
@@ -121,36 +124,45 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	)
 
 	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
-	in, out, err = p.doRawProxy(w, r, url)
+	in, out, err, hijacked = p.doRawProxy(w, r, url)
 	if err != nil {
 		code = 500
 	}
 	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
-func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.URL) (int64, int64, error) {
-	var in, out int64
+func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.URL) (int64, int64, error, bool) {
+	var (
+		in, out  int64
+		hijacked bool
+	)
 
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		return in, out, fmt.Errorf("not a hijacker")
+		return in, out, fmt.Errorf("not a hijacker"), hijacked
 	}
 
 	src, _, err := hj.Hijack()
 	if err != nil {
-		return in, out, fmt.Errorf("hijack error: %v", err)
+		return in, out, fmt.Errorf("hijack error: %v", err), hijacked
 	}
-	//defer src.Close()
+	defer src.Close()
+
+	hijacked = true
 
 	dst, err := net.DialTimeout("tcp", t.Host, time.Second*60)
 	if err != nil {
-		return in, out, fmt.Errorf("cannot connect to upstream %s: %v", t.Host, err)
+		err = fmt.Errorf("cannot connect to upstream %s: %v", t.Host, err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
+		return in, out, err, hijacked
 	}
-	//defer dst.Close()
+	defer dst.Close()
 
 	err = r.WriteProxy(dst) // send request to backend firstly
 	if err != nil {
-		return in, out, fmt.Errorf("copying request to %s error: %v", t, err)
+		err = fmt.Errorf("copying request to %s error: %v", t, err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
+		return in, out, err, hijacked
 	}
 	in += httpRequestLen(r)
 
@@ -170,9 +182,11 @@ func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.UR
 
 	err = <-errc
 	if err != nil && err != io.EOF {
-		return in, out, fmt.Errorf("io copy error: %v", err)
+		err = fmt.Errorf("io copy error: %v", err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
+		return in, out, err, hijacked
 	}
-	return in, out, nil
+	return in, out, nil, hijacked
 }
 
 // try hard to obtain the size of initial raw HTTP request according by RFC7231.

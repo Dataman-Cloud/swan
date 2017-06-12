@@ -201,6 +201,9 @@ func (us *Upstreams) getUpstreamByID(appID string) (int, *Upstream) {
 
 // note: must be called under protection of mutext lock
 func (us *Upstreams) getUpstreamByAlias(alias string) (int, *Upstream) {
+	if alias == "" {
+		return -1, nil
+	}
 	for i, v := range us.Upstreams {
 		if v.AppAlias == alias {
 			return i, v
