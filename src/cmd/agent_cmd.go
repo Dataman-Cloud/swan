@@ -23,6 +23,9 @@ func AgentCmd() cli.Command {
 	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayAdvertiseIp())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayListenAddr())
+	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSListenAddr())
+	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSCertFile())
+	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSKeyFile())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDNSListenAddr())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDNSResolvers())
 	agentCmd.Flags = append(agentCmd.Flags, FlagLogLevel())
@@ -32,7 +35,10 @@ func AgentCmd() cli.Command {
 }
 
 func JoinAndStartAgent(c *cli.Context) error {
-	conf := config.NewAgentConfig(c)
+	conf, err := config.NewAgentConfig(c)
+	if err != nil {
+		return err
+	}
 
 	setupLogger(conf.LogLevel)
 

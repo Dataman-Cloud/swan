@@ -272,7 +272,7 @@ func TestHostname(t *testing.T) {
 func TestNewAgentConfig(t *testing.T) {
 	app := PrepareApp()
 	app.Run([]string{"swan", "agent", "join", "--join-addrs=132"})
-	agentConfig := NewAgentConfig(gc)
+	agentConfig, _ := NewAgentConfig(gc)
 	assert.Equal(t, agentConfig.LogLevel, "info")
 	assert.Equal(t, "132", gc.String("join-addrs"))
 }

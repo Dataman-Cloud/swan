@@ -2,13 +2,11 @@ package janitor
 
 import (
 	"math/rand"
-	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	proxyproto "github.com/armon/go-proxyproto"
 
 	"github.com/Dataman-Cloud/swan/src/config"
 )
@@ -18,11 +16,12 @@ func init() {
 }
 
 type JanitorServer struct {
-	upstreams  *Upstreams
-	eventChan  chan *TargetChangeEvent
-	stats      *Stats
-	httpServer *http.Server
-	config     *config.Janitor
+	upstreams *Upstreams
+	eventChan chan *TargetChangeEvent
+	stats     *Stats
+	httpd     *http.Server
+	httpdTLS  *http.Server
+	config    *config.Janitor
 }
 
 func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
@@ -35,8 +34,17 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 		},
 	}
 
-	s.httpServer = &http.Server{
-		Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats)}
+	s.httpd = &http.Server{
+		Addr:    s.config.ListenAddr,
+		Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats),
+	}
+
+	if s.config.TLSListenAddr != "" {
+		s.httpdTLS = &http.Server{
+			Addr:    s.config.TLSListenAddr,
+			Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats),
+		}
+	}
 
 	return s
 }
@@ -46,16 +54,23 @@ func (s *JanitorServer) EmitChange(ev *TargetChangeEvent) {
 }
 
 func (s *JanitorServer) Start() error {
-	ln, err := net.Listen("tcp", s.config.ListenAddr)
-	if err != nil {
-		return err
-	}
-
 	go s.watchEvent()
 
-	defer s.httpServer.Close()
-	return s.httpServer.Serve(&proxyproto.Listener{
-		Listener: TcpKeepAliveListener{ln.(*net.TCPListener)}})
+	errCh := make(chan error)
+
+	go func() {
+		defer s.httpd.Close()
+		errCh <- s.httpd.ListenAndServe()
+	}()
+
+	go func() {
+		if s.httpdTLS != nil {
+			defer s.httpdTLS.Close()
+			errCh <- s.httpdTLS.ListenAndServeTLS(s.config.TLSCertFile, s.config.TLSKeyFile)
+		}
+	}()
+
+	return <-errCh
 }
 
 func (s *JanitorServer) watchEvent() {
@@ -82,23 +97,4 @@ func (s *JanitorServer) watchEvent() {
 	}
 
 	panic("event channel closed, never be here")
-}
-
-// TcpKeepAliveListener enable TCP-KEEPALIVE for each incomming tcp conn
-type TcpKeepAliveListener struct {
-	*net.TCPListener
-}
-
-func (ln TcpKeepAliveListener) Accept() (c net.Conn, err error) {
-	tc, err := ln.AcceptTCP()
-	if err != nil {
-		return
-	}
-	if err = tc.SetKeepAlive(true); err != nil {
-		return
-	}
-	if err = tc.SetKeepAlivePeriod(1 * time.Minute); err != nil {
-		return
-	}
-	return tc, nil
 }

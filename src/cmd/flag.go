@@ -49,6 +49,33 @@ func FlagGatewayListenAddr() cli.Flag {
 	}
 }
 
+func FlagGatewayTLSListenAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gateway-tls-listen-addr",
+		Usage:  "gateway tls listen addr",
+		Value:  "",
+		EnvVar: "SWAN_GATEWAY_TLS_LISTEN_ADDR",
+	}
+}
+
+func FlagGatewayTLSCertFile() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gateway-tls-cert-file",
+		Usage:  "gateway tls cert file",
+		Value:  "",
+		EnvVar: "SWAN_GATEWAY_TLS_CERT_FILE",
+	}
+}
+
+func FlagGatewayTLSKeyFile() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gateway-tls-key-file",
+		Usage:  "gateway tls key file",
+		Value:  "",
+		EnvVar: "SWAN_GATEWAY_TLS_KEY_FILE",
+	}
+}
+
 func FlagDNSListenAddr() cli.Flag {
 	return cli.StringFlag{
 		Name:   "dns-listen-addr",

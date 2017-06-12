@@ -49,12 +49,15 @@ type DNS struct {
 
 type Janitor struct {
 	ListenAddr    string        `json:"listenAddr"`
+	TLSListenAddr string        `json:"tlsListenAddr"`
+	TLSCertFile   string        `json:"tlsCertFile"`
+	TLSKeyFile    string        `json:"tlsKeyFile"`
 	FlushInterval time.Duration `json:"flushInterval"`
 	Domain        string        `json:"domain"`
-	AdvertiseIP   string        `json:"advertiseIP"` // no use ?
+	AdvertiseIP   string        `json:"advertiseIP"`
 }
 
-func NewAgentConfig(c *cli.Context) AgentConfig {
+func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 	cfg := AgentConfig{
 		LogLevel:   "info",
 		ListenAddr: "0.0.0.0:9999",
@@ -106,6 +109,18 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		}
 	}
 
+	if c.String("gateway-tls-listen-addr") != "" {
+		cfg.Janitor.TLSListenAddr = c.String("gateway-tls-listen-addr")
+	}
+
+	if c.String("gateway-tls-cert-file") != "" {
+		cfg.Janitor.TLSCertFile = c.String("gateway-tls-cert-file")
+	}
+
+	if c.String("gateway-tls-key-file") != "" {
+		cfg.Janitor.TLSKeyFile = c.String("gateway-tls-key-file")
+	}
+
 	if c.String("dns-listen-addr") != "" {
 		cfg.DNS.ListenAddr = c.String("dns-listen-addr")
 	}
@@ -118,7 +133,17 @@ func NewAgentConfig(c *cli.Context) AgentConfig {
 		cfg.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
 	}
 
-	return cfg
+	// verify tls cert/key files if gateway tls enabled
+	if cfg.Janitor.TLSListenAddr != "" {
+		if _, err := os.Stat(cfg.Janitor.TLSCertFile); err != nil {
+			return cfg, fmt.Errorf("tsl cert file: %v", err)
+		}
+		if _, err := os.Stat(cfg.Janitor.TLSKeyFile); err != nil {
+			return cfg, fmt.Errorf("tsl key file: %v", err)
+		}
+	}
+
+	return cfg, nil
 }
 
 func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
