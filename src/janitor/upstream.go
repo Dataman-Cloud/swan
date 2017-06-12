@@ -3,7 +3,6 @@ package janitor
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"strings"
 	"sync"
 )
@@ -83,6 +82,7 @@ func (us *Upstreams) upsertTarget(target *Target) error {
 	t.AppVersion = target.AppVersion
 	t.TaskIP = target.TaskIP
 	t.TaskPort = target.TaskPort
+	t.Scheme = target.Scheme
 	t.Weight = target.Weight
 	return nil
 }
@@ -231,17 +231,12 @@ type Target struct {
 	TaskID     string  `json:"task_id"`
 	TaskIP     string  `json:"task_ip"`
 	TaskPort   uint32  `json:"task_port"`
+	Scheme     string  `json:"scheme"` // http / https
 	Weight     float64 `json:"weihgt"`
 }
 
-func (t *Target) url() (*url.URL, error) {
-	s := fmt.Sprintf("http://%s:%d", t.TaskIP, t.TaskPort)
-	u, err := url.Parse(s)
-	if err != nil {
-		return nil, fmt.Errorf("invalid task url entry %s - [%v]", s, err)
-	}
-
-	return u, nil
+func (t *Target) addr() string {
+	return fmt.Sprintf("%s:%d", t.TaskIP, t.TaskPort)
 }
 
 func (t *Target) valid() error {
@@ -267,6 +262,6 @@ type TargetChangeEvent struct {
 }
 
 func (ev TargetChangeEvent) String() string {
-	return fmt.Sprintf("{%s: app:%s task:%s ip:%s:%d weight:%f}",
+	return fmt.Sprintf("{%s app:%s task:%s ip:%s:%d weight:%f}",
 		ev.Change, ev.AppID, ev.TaskID, ev.TaskIP, ev.TaskPort, ev.Weight)
 }

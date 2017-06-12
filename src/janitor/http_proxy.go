@@ -1,12 +1,12 @@
 package janitor
 
 import (
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
-	"net/url"
 	"strings"
 	"time"
 
@@ -74,14 +74,9 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 		return nil, fmt.Errorf("not found any matched targets for request Host [%s]", host)
 	}
 
-	url, err := selected.url()
-	if err != nil {
-		return nil, err
-	}
-
 	log.Debugf("proxy redirecting request [%s-%s-%s] -> [%s-%s]",
 		remoteIP, r.Method, r.Host,
-		selected.TaskID, url,
+		selected.TaskID, selected.addr(),
 	)
 
 	return selected, nil
@@ -89,20 +84,15 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
-		err      error
-		code     int
-		in       int64     // received bytes
-		out      int64     // transmitted bytes
-		hijacked bool      // if hijacked or not
-		dGlb     *deltaGlb // delta global
+		err  error
+		in   int64     // received bytes
+		out  int64     // transmitted bytes
+		dGlb *deltaGlb // delta global
 	)
 
 	defer func() {
 		if err != nil {
-			if !hijacked { // we've proceed the error if hijacked
-				http.Error(w, err.Error(), code)
-			}
-			log.Errorf("proxy serve error: %d - %v, recived:%d, transmitted:%d", code, err, in, out)
+			log.Errorf("proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
 			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
 			log.Debugf("proxy serve succeed: recived:%d, transmitted:%d", in, out)
@@ -111,66 +101,96 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		p.stats.incr(nil, dGlb)
 	}()
 
+	// lookup a proper backend according by request
 	selected, err := p.lookup(r)
 	if err != nil {
-		code = 404
+		http.Error(w, err.Error(), 404)
 		return
 	}
 
+	// detect & update target scheme
+	if selected.Scheme == "" {
+		https, err := detectHTTPs(selected.addr())
+		if err != nil {
+			err = fmt.Errorf("detect selected scheme error: %v", err)
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		if https {
+			selected.Scheme = "https"
+		} else {
+			selected.Scheme = "http"
+		}
+
+		p.upstreams.upsertTarget(selected)
+	}
+
 	var (
-		url, _ = selected.url()
-		aid    = selected.AppID
-		tid    = selected.TaskID
+		addr = selected.addr()
+		sche = selected.Scheme
+		aid  = selected.AppID
+		tid  = selected.TaskID
 	)
 
-	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
-	in, out, err, hijacked = p.doRawProxy(w, r, url)
-	if err != nil {
-		code = 500
+	// obtian the underlying net.Conn
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		err = fmt.Errorf("not a hijacker")
+		http.Error(w, err.Error(), 500)
+		return
 	}
+
+	conn, _, err := hj.Hijack()
+	if err != nil {
+		err = fmt.Errorf("hijack tcp conn error: %v", err)
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer conn.Close()
+
+	// proxy
+	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	in, out, err = p.doRawProxy(conn, r, sche, addr)
 	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
-func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.URL) (int64, int64, error, bool) {
-	var (
-		in, out  int64
-		hijacked bool
-	)
+func (p *httpProxy) doRawProxy(src net.Conn, req *http.Request, sche, addr string) (int64, int64, error) {
+	var in, out int64
 
-	hj, ok := w.(http.Hijacker)
-	if !ok {
-		return in, out, fmt.Errorf("not a hijacker"), hijacked
-	}
-
-	src, _, err := hj.Hijack()
+	// dial backend
+	dst, err := net.DialTimeout("tcp", addr, time.Second*60)
 	if err != nil {
-		return in, out, fmt.Errorf("hijack error: %v", err), hijacked
-	}
-	defer src.Close()
-
-	hijacked = true
-
-	dst, err := net.DialTimeout("tcp", t.Host, time.Second*60)
-	if err != nil {
-		err = fmt.Errorf("cannot connect to upstream %s: %v", t.Host, err)
-		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
-		return in, out, err, hijacked
+		err = fmt.Errorf("cannot connect to upstream %s: %v", addr, err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\r\n"))
+		return in, out, err
 	}
 	defer dst.Close()
 
-	err = r.WriteProxy(dst) // send request to backend firstly
-	if err != nil {
-		err = fmt.Errorf("copying request to %s error: %v", t, err)
-		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
-		return in, out, err, hijacked
+	// tls wrap and try handshake
+	if sche == "https" {
+		dst, err = wrapWithTLS(dst)
+		if err != nil {
+			err = fmt.Errorf("tls handshake with upstream %s error: %v", addr, err)
+			src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\r\n"))
+			return in, out, err
+		}
 	}
-	in += httpRequestLen(r)
 
+	err = req.WriteProxy(dst) // send original request
+	if err != nil {
+		err = fmt.Errorf("copying request to %s error: %v", addr, err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\r\n"))
+		return in, out, err
+	}
+	in += httpRequestLen(req)
+
+	// io copy between src & dst
 	errc := make(chan error, 2)
 	cp := func(w io.WriteCloser, r io.Reader, c *int64) {
 		defer w.Close()
 
-		n, err := io.Copy(w, r)
+		n, err := io.Copy(w, r) // TODO caculate each piece of io buffer by real time
 		if n > 0 {
 			*c += n
 		}
@@ -183,10 +203,10 @@ func (p *httpProxy) doRawProxy(w http.ResponseWriter, r *http.Request, t *url.UR
 	err = <-errc
 	if err != nil && err != io.EOF {
 		err = fmt.Errorf("io copy error: %v", err)
-		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\n"))
-		return in, out, err, hijacked
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\r\n"))
+		return in, out, err
 	}
-	return in, out, nil, hijacked
+	return in, out, nil
 }
 
 // try hard to obtain the size of initial raw HTTP request according by RFC7231.
@@ -208,4 +228,45 @@ func httpRequestLen(r *http.Request) int64 {
 		n += len
 	}
 	return n
+}
+
+func detectHTTPs(addr string) (https bool, err error) {
+	conn, err := net.DialTimeout("tcp", addr, time.Second*60)
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	_, err = conn.Write([]byte("GET / HTTP/1.1\r\n\r\n"))
+	if err != nil {
+		return
+	}
+
+	b := make([]byte, 5)
+	_, err = conn.Read(b)
+	if err != nil {
+		return
+	}
+
+	https = string(b[:]) != "HTTP/" // or use: b[0] == 21
+	return
+}
+
+func wrapWithTLS(plainConn net.Conn) (net.Conn, error) {
+	tlsConn := tls.Client(plainConn, &tls.Config{InsecureSkipVerify: true})
+
+	errCh := make(chan error, 2)
+	timer := time.AfterFunc(time.Second*10, func() {
+		errCh <- errors.New("timeout on tls handshake")
+	})
+	defer timer.Stop()
+
+	go func() {
+		errCh <- tlsConn.Handshake()
+	}()
+
+	if err := <-errCh; err != nil {
+		return nil, err
+	}
+	return tlsConn, nil
 }

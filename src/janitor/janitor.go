@@ -56,7 +56,7 @@ func (s *JanitorServer) EmitChange(ev *TargetChangeEvent) {
 func (s *JanitorServer) Start() error {
 	go s.watchEvent()
 
-	errCh := make(chan error)
+	errCh := make(chan error, 2)
 
 	go func() {
 		defer s.httpd.Close()
@@ -83,6 +83,10 @@ func (s *JanitorServer) watchEvent() {
 
 		switch strings.ToLower(ev.Change) {
 		case "add", "change":
+			if err := target.valid(); err != nil {
+				log.Errorln("invalid event target:", err)
+				continue
+			}
 			if err := s.upstreams.upsertTarget(target); err != nil {
 				log.Errorln("upstream upsert error:", err)
 			}
