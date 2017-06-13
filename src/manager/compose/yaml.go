@@ -282,20 +282,13 @@ func svrToPortMaps(s *store.DockerService) ([]*types.PortMapping, error) {
 	}
 
 	ret := make([]*types.PortMapping, 0, 0)
-	for k, v := range binding {
-		for _, vv := range v {
-			cp, _ := strconv.Atoi(k.Port())
-			hp, _ := strconv.Atoi(vv.HostPort)
-			if hp == 0 {
-				hp = cp
-			}
-			ret = append(ret, &types.PortMapping{
-				Name:          fmt.Sprintf("%d", hp), // TODO
-				ContainerPort: int32(cp),
-				HostPort:      int32(hp),
-				Protocol:      k.Proto(),
-			})
-		}
+	for k := range binding {
+		cp, _ := strconv.Atoi(k.Port())
+		ret = append(ret, &types.PortMapping{
+			Name:          fmt.Sprintf("%d", cp), // TODO
+			ContainerPort: int32(cp),
+			Protocol:      strings.ToUpper(k.Proto()),
+		})
 	}
 	return ret, nil
 }
