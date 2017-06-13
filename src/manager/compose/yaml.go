@@ -216,6 +216,12 @@ func SvrToVersion(s *store.DockerService, insName string) (*types.Version, error
 		}
 	}
 
+	// gateway
+	ver.Gateway = &types.Gateway{
+		Enabled: s.Extra.GatewayEnabled,
+		Weight:  100,
+	}
+
 	return ver, state.ValidateAndFormatVersion(ver)
 }
 
