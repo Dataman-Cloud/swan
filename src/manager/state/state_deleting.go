@@ -35,7 +35,7 @@ func (deleting *StateDeleting) OnEnter() {
 
 	deleting.CurrentSlot, _ = deleting.App.GetSlot(deleting.CurrentSlotIndex)
 	if deleting.CurrentSlot != nil {
-		deleting.CurrentSlot.KillTask()
+		deleting.CurrentSlot.KillTask(true)
 	} else {
 		deleting.App.Remove() // remove self from boltdb store
 
@@ -68,7 +68,7 @@ func (deleting *StateDeleting) Step() {
 		deleting.CurrentSlotIndex -= 1
 		deleting.CurrentSlot, _ = deleting.App.GetSlot(deleting.CurrentSlotIndex)
 		if deleting.CurrentSlot != nil {
-			deleting.CurrentSlot.KillTask()
+			deleting.CurrentSlot.KillTask(true)
 		}
 
 		deleting.lock.Unlock()

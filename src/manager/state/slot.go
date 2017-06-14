@@ -141,11 +141,13 @@ func NewSlot(app *App, version *types.Version, index int) *Slot {
 }
 
 // kill task doesn't need cleanup slot from app.Slots
-func (slot *Slot) KillTask() {
+func (slot *Slot) KillTask(mark bool) {
 	slot.StopRestartPolicy()
 	// just mark the slot state for removal
 	// NOTE do NOT use slot.SetState() to skip Step() which lead to dead lock
-	slot.State = SLOT_STATE_REAP
+	if mark {
+		slot.State = SLOT_STATE_REAP
+	}
 	slot.Touch()
 	slot.CurrentTask.Kill()
 }
@@ -197,7 +199,7 @@ func (slot *Slot) TestOfferMatch(ow *OfferWrapper) bool {
 	return constraintsMatch && resourcesMatch && portsMatch
 }
 
-func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrapper, *mesos.TaskInfo) {
+func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) *mesos.TaskInfo {
 	slot.resourceReservationLock.Lock()
 	defer slot.resourceReservationLock.Unlock()
 
@@ -215,7 +217,7 @@ func (slot *Slot) ReserveOfferAndPrepareTaskInfo(ow *OfferWrapper) (*OfferWrappe
 		ow.PortUsedSize += len(slot.Version.Container.Docker.PortMappings)
 	}
 
-	return ow, taskInfo
+	return taskInfo
 }
 
 func (slot *Slot) UpdateOfferInfo(offer *mesos.Offer) error {
