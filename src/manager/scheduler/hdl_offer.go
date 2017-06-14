@@ -32,7 +32,7 @@ func OfferHandler(s *Scheduler, ev event.Event) error {
 			if match {
 				// TODO the following code logic complex, need improvement
 				// offerWrapper cpu/mem/disk deduction recorded within the obj itself
-				_, taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
+				taskInfo := slot.ReserveOfferAndPrepareTaskInfo(offerWrapper)
 				state.OfferAllocatorInstance().SetOfferSlotMap(offer, slot)
 				taskInfos = append(taskInfos, taskInfo)
 			} else {

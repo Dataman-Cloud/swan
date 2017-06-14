@@ -24,6 +24,8 @@ type StateUpdating struct {
 	TargetSlotIndex     int
 	SlotCountNeedUpdate int
 	lock                sync.Mutex
+
+	previousFinished bool
 }
 
 func NewStateUpdating(app *App, slotCountNeedUpdate int) *StateUpdating {
@@ -58,7 +60,7 @@ func (updating *StateUpdating) OnEnter() {
 		if updating.CurrentSlotIndex == 0 {
 			updating.CurrentSlot.SetWeight(0)
 		}
-		updating.CurrentSlot.KillTask()
+		updating.CurrentSlot.KillTask(false)
 	}
 }
 
@@ -69,10 +71,9 @@ func (updating *StateUpdating) OnExit() {
 func (updating *StateUpdating) Step() {
 	logrus.Debug("state updating step")
 
-	if (updating.CurrentSlot.StateIs(SLOT_STATE_REAP) ||
-		updating.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED) ||
-		updating.CurrentSlot.StateIs(SLOT_STATE_TASK_FINISHED) ||
-		updating.CurrentSlot.Abnormal()) &&
+	if (updating.CurrentSlot.StateIs(SLOT_STATE_TASK_FINISHED) ||
+		updating.CurrentSlot.StateIs(SLOT_STATE_TASK_KILLED)) &&
+		!updating.previousFinished &&
 		updating.CurrentSlotIndex <= updating.TargetSlotIndex {
 
 		logrus.Infof("archive current task")
@@ -88,7 +89,7 @@ func (updating *StateUpdating) Step() {
 
 		updating.CurrentSlotIndex += 1
 		updating.CurrentSlot, _ = updating.App.GetSlot(updating.CurrentSlotIndex)
-		updating.CurrentSlot.KillTask()
+		updating.CurrentSlot.KillTask(false)
 
 	} else if updating.CurrentSlot.StateIs(SLOT_STATE_TASK_RUNNING) &&
 		updating.CurrentSlot.Healthy() &&
@@ -102,6 +103,7 @@ func (updating *StateUpdating) Step() {
 
 			updating.App.TransitTo(APP_STATE_NORMAL)
 		} else {
+			updating.previousFinished = true
 			logrus.Debug("state updating step, updating done,  not all slots updated")
 		}
 	} else {
