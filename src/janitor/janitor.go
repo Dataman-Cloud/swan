@@ -3,6 +3,7 @@ package janitor
 import (
 	"math/rand"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -13,6 +14,12 @@ import (
 
 func init() {
 	rand.Seed(time.Now().UnixNano())
+
+	// disable HTTP/2 server side support, because when `Chrome/Firefox` visit `https://`,
+	// http.ResponseWriter is actually implemented by *http.http2responseWriter which
+	// does NOT implemented http.Hijacker
+	// See: https://github.com/golang/go/issues/14797
+	os.Setenv("GODEBUG", "http2server=0")
 }
 
 type JanitorServer struct {

@@ -136,7 +136,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// obtian the underlying net.Conn
 	hj, ok := w.(http.Hijacker)
 	if !ok {
-		err = fmt.Errorf("not a hijacker")
+		err = fmt.Errorf("not support http hijack: %T", w)
 		http.Error(w, err.Error(), 500)
 		return
 	}
