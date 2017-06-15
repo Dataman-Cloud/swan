@@ -13,20 +13,22 @@ type Upstreams struct {
 }
 
 type Upstream struct {
-	AppID    string    `json:"app_id"` // uniq id of upstream
-	AppAlias string    `json:"app_alias"`
-	Targets  []*Target `json:"targets"`
-	sessions *Sessions
-	balancer Balancer
+	AppID     string    `json:"app_id"` // uniq id of upstream
+	AppAlias  string    `json:"app_alias"`
+	AppListen string    `json:"app_listen"`
+	Targets   []*Target `json:"targets"`
+	sessions  *Sessions
+	balancer  Balancer
 }
 
-func newUpstream(appID, appAlias string) *Upstream {
+func newUpstream(first *Target) *Upstream {
 	return &Upstream{
-		AppID:    appID,
-		AppAlias: appAlias,
-		Targets:  make([]*Target, 0, 0),
-		balancer: &WeightBalancer{}, // default balancer
-		sessions: newSessions(),     // sessions store
+		AppID:     first.AppID,
+		AppAlias:  first.AppAlias,
+		AppListen: first.AppListen,
+		Targets:   []*Target{first},
+		balancer:  &WeightBalancer{}, // default balancer
+		sessions:  newSessions(),     // sessions store
 	}
 }
 
@@ -47,26 +49,33 @@ func (us *Upstreams) allSess() map[string]*Sessions {
 	return ret
 }
 
-func (us *Upstreams) upsertTarget(target *Target) error {
+func (us *Upstreams) upsertTarget(target *Target) (onFirst bool, err error) {
 	us.Lock()
 	defer us.Unlock()
 
 	var (
-		appID    = target.AppID
-		appAlias = target.AppAlias
-		taskID   = target.TaskID
+		appID     = target.AppID
+		appAlias  = target.AppAlias
+		appListen = target.AppListen
+		taskID    = target.TaskID
 	)
 
 	_, u := us.getUpstreamByID(appID)
 	// add new upstream
 	if u == nil {
+		onFirst = true
+
 		if i, _ := us.getUpstreamByAlias(appAlias); i >= 0 {
-			return fmt.Errorf("alias [%s] conflict", appAlias)
+			err = fmt.Errorf("alias address [%s] conflict", appAlias)
+			return
 		}
-		u = newUpstream(appID, appAlias)
-		u.Targets = append(u.Targets, target)
-		us.Upstreams = append(us.Upstreams, u)
-		return nil
+		if i, _ := us.getUpstreamByListen(appListen); i >= 0 {
+			err = fmt.Errorf("listen address [%d] conflict", appListen)
+			return
+		}
+
+		us.Upstreams = append(us.Upstreams, newUpstream(target))
+		return
 	}
 
 	_, t := u.getTarget(taskID)
@@ -74,7 +83,7 @@ func (us *Upstreams) upsertTarget(target *Target) error {
 	// add new target
 	if t == nil {
 		u.Targets = append(u.Targets, target)
-		return nil
+		return
 	}
 
 	// update target
@@ -82,9 +91,10 @@ func (us *Upstreams) upsertTarget(target *Target) error {
 	t.AppVersion = target.AppVersion
 	t.TaskIP = target.TaskIP
 	t.TaskPort = target.TaskPort
-	t.Scheme = target.Scheme
+	t.Scheme = ""
 	t.Weight = target.Weight
-	return nil
+
+	return
 }
 
 func (us *Upstreams) getTarget(appID, taskID string) *Target {
@@ -100,7 +110,7 @@ func (us *Upstreams) getTarget(appID, taskID string) *Target {
 	return t
 }
 
-func (us *Upstreams) removeTarget(target *Target) {
+func (us *Upstreams) removeTarget(target *Target) (onLast bool) {
 	us.Lock()
 	defer us.Unlock()
 
@@ -125,15 +135,32 @@ func (us *Upstreams) removeTarget(target *Target) {
 
 	// remove empty upstream & stop sessions gc
 	if len(u.Targets) == 0 {
+		onLast = true
 		u.sessions.stop()
 		us.Upstreams = append(us.Upstreams[:idxu], us.Upstreams[idxu+1:]...)
 	}
+
+	return
 }
 
 // lookup similar as lookup, but by app alias
 func (us *Upstreams) lookupAlias(remoteIP, appAlias string) *Target {
 	us.RLock()
 	_, u := us.getUpstreamByAlias(appAlias)
+	us.RUnlock()
+
+	if u == nil {
+		return nil
+	}
+
+	appID := u.AppID
+	return us.lookup(remoteIP, appID, "")
+}
+
+// lookup similar as lookup, but by app listen
+func (us *Upstreams) lookupListen(remoteIP, appListen string) *Target {
+	us.RLock()
+	_, u := us.getUpstreamByListen(appListen)
 	us.RUnlock()
 
 	if u == nil {
@@ -213,6 +240,19 @@ func (us *Upstreams) getUpstreamByAlias(alias string) (int, *Upstream) {
 }
 
 // note: must be called under protection of mutext lock
+func (us *Upstreams) getUpstreamByListen(listen string) (int, *Upstream) {
+	if listen == "" {
+		return -1, nil
+	}
+	for i, v := range us.Upstreams {
+		if v.AppListen == listen {
+			return i, v
+		}
+	}
+	return -1, nil
+}
+
+// note: must be called under protection of mutext lock
 func (u *Upstream) getTarget(taskID string) (int, *Target) {
 	for i, v := range u.Targets {
 		if v.TaskID == taskID {
@@ -224,14 +264,15 @@ func (u *Upstream) getTarget(taskID string) (int, *Target) {
 
 // Target
 type Target struct {
-	AppID      string  `json:"app_id"`
-	AppAlias   string  `json:"app_alias"`
+	AppID      string  `json:"app_id"`     // uniq id (app,uniq)
+	AppAlias   string  `json:"app_alias"`  // http visit hostname (app,uniq)
+	AppListen  string  `json:"app_listen"` // listening port on proxy (app,uniq)
 	VersionID  string  `json:"version_id"`
 	AppVersion string  `json:"app_version"`
 	TaskID     string  `json:"task_id"`
 	TaskIP     string  `json:"task_ip"`
 	TaskPort   uint32  `json:"task_port"`
-	Scheme     string  `json:"scheme"` // http / https
+	Scheme     string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
 	Weight     float64 `json:"weihgt"`
 }
 
@@ -253,6 +294,24 @@ func (t *Target) valid() error {
 		return errors.New("invalid task_id, must be suffixed by app_id")
 	}
 	return nil
+}
+
+func (t *Target) format() *Target {
+	t.AppListen = t.tcpListen() // rewrite AppListen
+	return t
+}
+
+func (t *Target) tcpListen() string {
+	if t.AppListen == "" {
+		return ""
+	}
+
+	ss := strings.Split(t.AppListen, ":")
+	if port := ss[len(ss)-1]; port != "" {
+		return ":" + port
+	}
+
+	return ""
 }
 
 // TargetChangeEvent

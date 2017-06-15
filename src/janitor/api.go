@@ -34,7 +34,7 @@ func (s *JanitorServer) upsertUpstream(c *gin.Context) {
 		return
 	}
 
-	if err := s.upstreams.upsertTarget(target); err != nil {
+	if err := s.upsertBackend(target); err != nil {
 		http.Error(c.Writer, err.Error(), 500)
 		return
 	}
@@ -49,9 +49,7 @@ func (s *JanitorServer) delUpstream(c *gin.Context) {
 		return
 	}
 
-	s.upstreams.removeTarget(target)
-	s.stats.del(target.AppID, target.TaskID)
-
+	s.removeBackend(target)
 	c.Writer.WriteHeader(204)
 }
 
@@ -64,7 +62,14 @@ func (s *JanitorServer) showConfigs(c *gin.Context) {
 }
 
 func (s *JanitorServer) showStats(c *gin.Context) {
-	c.JSON(200, s.stats)
+	wrapper := map[string]interface{}{
+		"httpd":          s.config.ListenAddr,
+		"httpdTLS":       s.config.TLSListenAddr,
+		"queuing_events": len(s.eventChan),
+		"counter":        s.stats,
+		"tcpd":           s.tcpd,
+	}
+	c.JSON(200, wrapper)
 }
 
 func (s *JanitorServer) showAppStats(c *gin.Context) {

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -23,33 +24,34 @@ func init() {
 }
 
 type JanitorServer struct {
-	upstreams *Upstreams
-	eventChan chan *TargetChangeEvent
-	stats     *Stats
-	httpd     *http.Server
-	httpdTLS  *http.Server
-	config    *config.Janitor
+	config       *config.Janitor
+	upstreams    *Upstreams
+	eventChan    chan *TargetChangeEvent
+	stats        *Stats
+	httpd        *http.Server
+	httpdTLS     *http.Server
+	tcpd         map[string]*tcpProxyServer // listen -> tcp proxy server
+	sync.RWMutex                            // protect tcpd
 }
 
 func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
 		config:    cfg,
+		upstreams: &Upstreams{Upstreams: make([]*Upstream, 0, 0)},
 		eventChan: make(chan *TargetChangeEvent, 1024),
 		stats:     newStats(),
-		upstreams: &Upstreams{
-			Upstreams: make([]*Upstream, 0, 0),
-		},
+		tcpd:      make(map[string]*tcpProxyServer),
 	}
 
 	s.httpd = &http.Server{
 		Addr:    s.config.ListenAddr,
-		Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats),
+		Handler: s.newHTTPProxyHandler(),
 	}
 
 	if s.config.TLSListenAddr != "" {
 		s.httpdTLS = &http.Server{
 			Addr:    s.config.TLSListenAddr,
-			Handler: NewHTTPProxy(cfg.Domain, s.upstreams, s.stats),
+			Handler: s.newHTTPProxyHandler(),
 		}
 	}
 
@@ -86,21 +88,16 @@ func (s *JanitorServer) watchEvent() {
 	for ev := range s.eventChan {
 		log.Printf("proxy caught event: %s", ev)
 
-		target := &ev.Target
+		target := ev.Target.format()
 
 		switch strings.ToLower(ev.Change) {
 		case "add", "change":
-			if err := target.valid(); err != nil {
-				log.Errorln("invalid event target:", err)
-				continue
-			}
-			if err := s.upstreams.upsertTarget(target); err != nil {
-				log.Errorln("upstream upsert error:", err)
+			if err := s.upsertBackend(target); err != nil {
+				log.Errorln("upsert backend error:", err)
 			}
 
 		case "del":
-			s.upstreams.removeTarget(target)
-			s.stats.del(target.AppID, target.TaskID)
+			s.removeBackend(target)
 
 		default:
 			log.Warnln("unrecognized event change type", ev.Change)
@@ -108,4 +105,58 @@ func (s *JanitorServer) watchEvent() {
 	}
 
 	panic("event channel closed, never be here")
+}
+
+func (s *JanitorServer) upsertBackend(target *Target) error {
+	if err := target.valid(); err != nil {
+		return err
+	}
+
+	first, err := s.upstreams.upsertTarget(target)
+	if err != nil {
+		return err
+	}
+
+	if !first {
+		return nil
+	}
+
+	l := target.AppListen
+	if l == "" {
+		return nil
+	}
+
+	tcpProxy := s.newTCPProxyServer(l)
+	if err := tcpProxy.listen(); err != nil {
+		return err
+	}
+
+	go tcpProxy.serve()
+
+	s.Lock()
+	s.tcpd[l] = tcpProxy
+	s.Unlock()
+
+	return nil
+}
+
+func (s *JanitorServer) removeBackend(target *Target) {
+	onLast := s.upstreams.removeTarget(target)
+	s.stats.del(target.AppID, target.TaskID)
+
+	if !onLast {
+		return
+	}
+
+	l := target.AppListen
+	if l == "" {
+		return
+	}
+
+	s.Lock()
+	if tcpProxy, ok := s.tcpd[l]; ok {
+		tcpProxy.stop()
+	}
+	delete(s.tcpd, l)
+	s.Unlock()
 }

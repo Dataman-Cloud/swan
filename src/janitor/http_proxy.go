@@ -14,23 +14,25 @@ import (
 )
 
 const (
-	RESERVED_API_GATEWAY_DOMAIN = "gateway"
+	APIGATEWAY = "gateway"
 )
 
+// generic http proxy handler
 type httpProxy struct {
 	upstreams *Upstreams
 	stats     *Stats
 	suffix    string
 }
 
-func NewHTTPProxy(domain string, ups *Upstreams, sta *Stats) http.Handler {
+func (s *JanitorServer) newHTTPProxyHandler() http.Handler {
 	return &httpProxy{
-		upstreams: ups,
-		stats:     sta,
-		suffix:    "." + RESERVED_API_GATEWAY_DOMAIN + "." + domain,
+		upstreams: s.upstreams,
+		stats:     s.stats,
+		suffix:    "." + APIGATEWAY + "." + s.config.Domain,
 	}
 }
 
+// lookup a proper backend according by request
 func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
@@ -71,17 +73,17 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 	}
 
 	if selected == nil {
-		return nil, fmt.Errorf("not found any matched targets for request Host [%s]", host)
+		return nil, fmt.Errorf("no matched targets for request [%s]", host)
 	}
 
-	log.Debugf("proxy redirecting request [%s-%s-%s] -> [%s-%s]",
-		remoteIP, r.Method, r.Host,
-		selected.TaskID, selected.addr(),
+	log.Debugf("[HTTP] proxy redirecting request [%s] -> [%s-%s] -> [%s-%s]",
+		remoteIP, r.Method, r.Host, selected.TaskID, selected.addr(),
 	)
 
 	return selected, nil
 }
 
+// implements http.Handler interface
 func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		err  error
@@ -92,10 +94,10 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if err != nil {
-			log.Errorf("proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
+			log.Errorf("[HTTP] proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
 			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
-			log.Debugf("proxy serve succeed: recived:%d, transmitted:%d", in, out)
+			log.Printf("[HTTP] proxy serve succeed: recived:%d, transmitted:%d", in, out)
 			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 0}
 		}
 		p.stats.incr(nil, dGlb)
@@ -149,7 +151,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 
-	// proxy
+	// do proxy
 	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
 	in, out, err = p.doRawProxy(conn, r, sche, addr)
 	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
@@ -252,6 +254,7 @@ func detectHTTPs(addr string) (https bool, err error) {
 	return
 }
 
+// wrap a plain net.Conn with tls and try tls handshake
 func wrapWithTLS(plainConn net.Conn) (net.Conn, error) {
 	tlsConn := tls.Client(plainConn, &tls.Config{InsecureSkipVerify: true})
 
