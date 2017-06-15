@@ -37,7 +37,7 @@ func (cancelUpdate *StateCancelUpdate) OnEnter() {
 	}
 
 	cancelUpdate.CurrentSlot, _ = cancelUpdate.App.GetSlot(cancelUpdate.CurrentSlotIndex)
-	cancelUpdate.CurrentSlot.KillTask()
+	cancelUpdate.CurrentSlot.KillTask(true)
 }
 
 func (cancelUpdate *StateCancelUpdate) OnExit() {
@@ -63,7 +63,7 @@ func (cancelUpdate *StateCancelUpdate) Step() {
 
 		cancelUpdate.CurrentSlotIndex -= 1
 		cancelUpdate.CurrentSlot, _ = cancelUpdate.App.GetSlot(cancelUpdate.CurrentSlotIndex)
-		cancelUpdate.CurrentSlot.KillTask()
+		cancelUpdate.CurrentSlot.KillTask(true)
 
 		// when last slot got killed
 	} else if (cancelUpdate.CurrentSlot.StateIs(SLOT_STATE_REAP) ||

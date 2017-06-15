@@ -37,7 +37,7 @@ func (scaleDown *StateScaleDown) OnEnter() {
 
 	scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
 	if scaleDown.CurrentSlot != nil {
-		scaleDown.CurrentSlot.KillTask()
+		scaleDown.CurrentSlot.KillTask(true)
 	}
 }
 
@@ -60,7 +60,7 @@ func (scaleDown *StateScaleDown) Step() {
 			scaleDown.App.CurrentVersion.IP = scaleDown.App.CurrentVersion.IP[:scaleDown.CurrentSlotIndex]
 		}
 		scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
-		scaleDown.CurrentSlot.KillTask()
+		scaleDown.CurrentSlot.KillTask(true)
 
 		scaleDown.lock.Unlock()
 	} else {
