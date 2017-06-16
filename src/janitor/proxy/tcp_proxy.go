@@ -1,4 +1,4 @@
-package janitor
+package proxy
 
 import (
 	"encoding/json"
@@ -9,15 +9,15 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/Dataman-Cloud/swan/src/janitor/stats"
+	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
 )
 
 // generic tcp proxy server
-type tcpProxyServer struct {
+type TCPProxyServer struct {
 	listenAddr string
-	upstreams  *Upstreams
-	stats      *Stats
-
-	listener net.Listener
+	listener   net.Listener
 
 	sync.RWMutex // protect clients
 	clients      map[string]net.Conn
@@ -26,16 +26,14 @@ type tcpProxyServer struct {
 	serving   bool
 }
 
-func (s *JanitorServer) newTCPProxyServer(listen string) *tcpProxyServer {
-	return &tcpProxyServer{
+func NewTCPProxyServer(listen string) *TCPProxyServer {
+	return &TCPProxyServer{
 		listenAddr: listen,
-		upstreams:  s.upstreams,
-		stats:      s.stats,
 		clients:    make(map[string]net.Conn),
 	}
 }
 
-func (p *tcpProxyServer) MarshalJSON() ([]byte, error) {
+func (p *TCPProxyServer) MarshalJSON() ([]byte, error) {
 	p.RLock()
 	n := len(p.clients)
 	p.RUnlock()
@@ -49,7 +47,7 @@ func (p *tcpProxyServer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (p *tcpProxyServer) listen() error {
+func (p *TCPProxyServer) Listen() error {
 	p.startedAt = time.Now()
 
 	l, err := net.Listen("tcp", p.listenAddr)
@@ -61,7 +59,7 @@ func (p *tcpProxyServer) listen() error {
 	return nil
 }
 
-func (p *tcpProxyServer) serve() {
+func (p *TCPProxyServer) Serve() {
 	defer func() {
 		p.serving = false
 	}()
@@ -70,7 +68,7 @@ func (p *tcpProxyServer) serve() {
 	for {
 		conn, err := p.listener.Accept()
 		if err != nil {
-			log.Errorf("[TCP] listener :%s Accept error: %v", p.listen, err)
+			log.Errorf("[TCP] listener :%s Accept error: %v", p.listenAddr, err)
 			return
 		}
 
@@ -78,7 +76,7 @@ func (p *tcpProxyServer) serve() {
 	}
 }
 
-func (p *tcpProxyServer) stop() {
+func (p *TCPProxyServer) Stop() {
 	if p.listener != nil {
 		p.listener.Close()
 	}
@@ -90,7 +88,7 @@ func (p *tcpProxyServer) stop() {
 	p.RUnlock()
 }
 
-func (p *tcpProxyServer) lookup(conn net.Conn) (*Target, error) {
+func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.Target, error) {
 	var (
 		local  = conn.LocalAddr().String()
 		remote = conn.RemoteAddr().String()
@@ -107,18 +105,18 @@ func (p *tcpProxyServer) lookup(conn net.Conn) (*Target, error) {
 
 	listen := ":" + localPort // TODO
 
-	selected := p.upstreams.lookupListen(remoteHost, listen)
+	selected := upstream.LookupListen(remoteHost, listen)
 	if selected == nil {
 		return nil, fmt.Errorf("no matched targets for request [%s]", listen)
 	}
 
 	log.Debugf("[TCP]: proxy redirecting request [%s] -> [%s] -> [%s-%s]",
-		remoteHost, listen, selected.TaskID, selected.addr(),
+		remoteHost, listen, selected.TaskID, selected.Addr(),
 	)
 	return selected, nil
 }
 
-func (p *tcpProxyServer) serveTCP(conn net.Conn) {
+func (p *TCPProxyServer) serveTCP(conn net.Conn) {
 	remote := conn.RemoteAddr().String()
 
 	p.Lock()
@@ -137,19 +135,19 @@ func (p *tcpProxyServer) serveTCP(conn net.Conn) {
 		err  error
 		in   int64
 		out  int64
-		dGlb *deltaGlb // delta global
+		dGlb *stats.DeltaGlb // delta global
 	)
 
 	defer func() {
 		if err != nil {
 			conn.Write([]byte(err.Error()))
 			log.Errorf("[TCP] proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
-			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
+			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
 			log.Printf("[TCP] proxy serve succeed: recived:%d, transmitted:%d", in, out)
-			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 0}
+			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 0}
 		}
-		p.stats.incr(nil, dGlb)
+		stats.Incr(nil, dGlb)
 	}()
 
 	// lookup a proper backend according by src ip & dest port
@@ -159,18 +157,18 @@ func (p *tcpProxyServer) serveTCP(conn net.Conn) {
 	}
 
 	var (
-		addr = selected.addr()
+		addr = selected.Addr()
 		aid  = selected.AppID
 		tid  = selected.TaskID
 	)
 
 	// do proxy
-	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	stats.Incr(&stats.DeltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
 	in, out, err = p.doRawProxy(conn, addr)
-	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
+	stats.Incr(&stats.DeltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
-func (p *tcpProxyServer) doRawProxy(src net.Conn, addr string) (int64, int64, error) {
+func (p *TCPProxyServer) doRawProxy(src net.Conn, addr string) (int64, int64, error) {
 	var in, out int64
 
 	// dial backend

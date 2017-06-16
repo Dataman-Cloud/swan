@@ -1,4 +1,4 @@
-package janitor
+package upstream
 
 import (
 	"encoding/json"

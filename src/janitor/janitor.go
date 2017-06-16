@@ -1,21 +1,20 @@
 package janitor
 
 import (
-	"math/rand"
 	"net/http"
 	"os"
 	"strings"
 	"sync"
-	"time"
 
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/src/janitor/proxy"
+	"github.com/Dataman-Cloud/swan/src/janitor/stats"
+	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
 )
 
 func init() {
-	rand.Seed(time.Now().UnixNano())
-
 	// disable HTTP/2 server side support, because when `Chrome/Firefox` visit `https://`,
 	// http.ResponseWriter is actually implemented by *http.http2responseWriter which
 	// does NOT implemented http.Hijacker
@@ -25,40 +24,36 @@ func init() {
 
 type JanitorServer struct {
 	config       *config.Janitor
-	upstreams    *Upstreams
-	eventChan    chan *TargetChangeEvent
-	stats        *Stats
+	eventChan    chan *upstream.TargetChangeEvent
 	httpd        *http.Server
 	httpdTLS     *http.Server
-	tcpd         map[string]*tcpProxyServer // listen -> tcp proxy server
-	sync.RWMutex                            // protect tcpd
+	tcpd         map[string]*proxy.TCPProxyServer // listen -> tcp proxy server
+	sync.RWMutex                                  // protect tcpd
 }
 
 func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
 		config:    cfg,
-		upstreams: &Upstreams{Upstreams: make([]*Upstream, 0, 0)},
-		eventChan: make(chan *TargetChangeEvent, 1024),
-		stats:     newStats(),
-		tcpd:      make(map[string]*tcpProxyServer),
+		eventChan: make(chan *upstream.TargetChangeEvent, 1024),
+		tcpd:      make(map[string]*proxy.TCPProxyServer),
 	}
 
 	s.httpd = &http.Server{
 		Addr:    s.config.ListenAddr,
-		Handler: s.newHTTPProxyHandler(),
+		Handler: proxy.NewHTTPProxyHandler(cfg.Domain),
 	}
 
 	if s.config.TLSListenAddr != "" {
 		s.httpdTLS = &http.Server{
 			Addr:    s.config.TLSListenAddr,
-			Handler: s.newHTTPProxyHandler(),
+			Handler: proxy.NewHTTPProxyHandler(cfg.Domain),
 		}
 	}
 
 	return s
 }
 
-func (s *JanitorServer) EmitChange(ev *TargetChangeEvent) {
+func (s *JanitorServer) EmitChange(ev *upstream.TargetChangeEvent) {
 	s.eventChan <- ev
 }
 
@@ -88,7 +83,7 @@ func (s *JanitorServer) watchEvent() {
 	for ev := range s.eventChan {
 		log.Printf("proxy caught event: %s", ev)
 
-		target := ev.Target.format()
+		target := ev.Target.Format()
 
 		switch strings.ToLower(ev.Change) {
 		case "add", "change":
@@ -107,12 +102,12 @@ func (s *JanitorServer) watchEvent() {
 	panic("event channel closed, never be here")
 }
 
-func (s *JanitorServer) upsertBackend(target *Target) error {
-	if err := target.valid(); err != nil {
+func (s *JanitorServer) upsertBackend(target *upstream.Target) error {
+	if err := target.Valid(); err != nil {
 		return err
 	}
 
-	first, err := s.upstreams.upsertTarget(target)
+	first, err := upstream.UpsertTarget(target)
 	if err != nil {
 		return err
 	}
@@ -126,12 +121,12 @@ func (s *JanitorServer) upsertBackend(target *Target) error {
 		return nil
 	}
 
-	tcpProxy := s.newTCPProxyServer(l)
-	if err := tcpProxy.listen(); err != nil {
+	tcpProxy := proxy.NewTCPProxyServer(l)
+	if err := tcpProxy.Listen(); err != nil {
 		return err
 	}
 
-	go tcpProxy.serve()
+	go tcpProxy.Serve()
 
 	s.Lock()
 	s.tcpd[l] = tcpProxy
@@ -140,9 +135,9 @@ func (s *JanitorServer) upsertBackend(target *Target) error {
 	return nil
 }
 
-func (s *JanitorServer) removeBackend(target *Target) {
-	onLast := s.upstreams.removeTarget(target)
-	s.stats.del(target.AppID, target.TaskID)
+func (s *JanitorServer) removeBackend(target *upstream.Target) {
+	onLast := upstream.RemoveTarget(target)
+	stats.Del(target.AppID, target.TaskID)
 
 	if !onLast {
 		return
@@ -155,7 +150,7 @@ func (s *JanitorServer) removeBackend(target *Target) {
 
 	s.Lock()
 	if tcpProxy, ok := s.tcpd[l]; ok {
-		tcpProxy.stop()
+		tcpProxy.Stop()
 	}
 	delete(s.tcpd, l)
 	s.Unlock()

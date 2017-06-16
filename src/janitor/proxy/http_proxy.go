@@ -1,4 +1,4 @@
-package janitor
+package proxy
 
 import (
 	"crypto/tls"
@@ -11,6 +11,9 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
+
+	"github.com/Dataman-Cloud/swan/src/janitor/stats"
+	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
 )
 
 const (
@@ -18,22 +21,18 @@ const (
 )
 
 // generic http proxy handler
-type httpProxy struct {
-	upstreams *Upstreams
-	stats     *Stats
-	suffix    string
+type HTTPProxy struct {
+	suffix string
 }
 
-func (s *JanitorServer) newHTTPProxyHandler() http.Handler {
-	return &httpProxy{
-		upstreams: s.upstreams,
-		stats:     s.stats,
-		suffix:    "." + APIGATEWAY + "." + s.config.Domain,
+func NewHTTPProxyHandler(domain string) http.Handler {
+	return &HTTPProxy{
+		suffix: "." + APIGATEWAY + "." + domain,
 	}
 }
 
 // lookup a proper backend according by request
-func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
+func (p *HTTPProxy) lookup(r *http.Request) (*upstream.Target, error) {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return nil, fmt.Errorf("request RemoteAddr [%s] unrecognized", r.RemoteAddr)
@@ -46,14 +45,14 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 	var (
 		host     = strings.Split(r.Host, ":")[0]
 		byAlias  bool // flag on looking up by target alias or not
-		selected *Target
+		selected *upstream.Target
 	)
 	if !strings.HasSuffix(host, p.suffix) {
 		byAlias = true
 	}
 
 	if byAlias {
-		selected = p.upstreams.lookupAlias(remoteIP, host)
+		selected = upstream.LookupAlias(remoteIP, host)
 
 	} else {
 		trimed := strings.TrimSuffix(host, p.suffix)
@@ -62,11 +61,11 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 		switch len(ss) {
 		case 4: // app
 			appID := fmt.Sprintf("%s-%s-%s-%s", ss[0], ss[1], ss[2], ss[3])
-			selected = p.upstreams.lookup(remoteIP, appID, "")
+			selected = upstream.Lookup(remoteIP, appID, "")
 		case 5: // task
 			appID := fmt.Sprintf("%s-%s-%s-%s", ss[1], ss[2], ss[3], ss[4])
 			taskID := fmt.Sprintf("%s-%s", ss[0], appID)
-			selected = p.upstreams.lookup(remoteIP, appID, taskID)
+			selected = upstream.Lookup(remoteIP, appID, taskID)
 		default:
 			return nil, fmt.Errorf("request Host [%s] invalid", host)
 		}
@@ -77,30 +76,30 @@ func (p *httpProxy) lookup(r *http.Request) (*Target, error) {
 	}
 
 	log.Debugf("[HTTP] proxy redirecting request [%s] -> [%s-%s] -> [%s-%s]",
-		remoteIP, r.Method, r.Host, selected.TaskID, selected.addr(),
+		remoteIP, r.Method, r.Host, selected.TaskID, selected.Addr(),
 	)
 
 	return selected, nil
 }
 
 // implements http.Handler interface
-func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (p *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var (
 		err  error
-		in   int64     // received bytes
-		out  int64     // transmitted bytes
-		dGlb *deltaGlb // delta global
+		in   int64           // received bytes
+		out  int64           // transmitted bytes
+		dGlb *stats.DeltaGlb // delta global
 	)
 
 	defer func() {
 		if err != nil {
 			log.Errorf("[HTTP] proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
-			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 1}
+			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
 			log.Printf("[HTTP] proxy serve succeed: recived:%d, transmitted:%d", in, out)
-			dGlb = &deltaGlb{uint64(in), uint64(out), 1, 0}
+			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 0}
 		}
-		p.stats.incr(nil, dGlb)
+		stats.Incr(nil, dGlb)
 	}()
 
 	// lookup a proper backend according by request
@@ -112,7 +111,7 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// detect & update target scheme
 	if selected.Scheme == "" {
-		https, err := detectHTTPs(selected.addr())
+		https, err := detectHTTPs(selected.Addr())
 		if err != nil {
 			err = fmt.Errorf("detect selected scheme error: %v", err)
 			http.Error(w, err.Error(), 500)
@@ -125,11 +124,11 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			selected.Scheme = "http"
 		}
 
-		p.upstreams.upsertTarget(selected)
+		upstream.UpsertTarget(selected)
 	}
 
 	var (
-		addr = selected.addr()
+		addr = selected.Addr()
 		sche = selected.Scheme
 		aid  = selected.AppID
 		tid  = selected.TaskID
@@ -152,12 +151,12 @@ func (p *httpProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// do proxy
-	p.stats.incr(&deltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	stats.Incr(&stats.DeltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
 	in, out, err = p.doRawProxy(conn, r, sche, addr)
-	p.stats.incr(&deltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
+	stats.Incr(&stats.DeltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
-func (p *httpProxy) doRawProxy(src net.Conn, req *http.Request, sche, addr string) (int64, int64, error) {
+func (p *HTTPProxy) doRawProxy(src net.Conn, req *http.Request, sche, addr string) (int64, int64, error) {
 	var in, out int64
 
 	// dial backend

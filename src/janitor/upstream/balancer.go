@@ -1,16 +1,23 @@
-package janitor
+package upstream
 
-import "math/rand"
+import (
+	"math/rand"
+	"time"
+)
+
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
 
 type Balancer interface {
 	Next([]*Target) *Target
 }
 
-type RoundRobinBalancer struct {
+type rrBalancer struct {
 	current int
 }
 
-func (b *RoundRobinBalancer) Next(ts []*Target) *Target {
+func (b *rrBalancer) Next(ts []*Target) *Target {
 	if len(ts) == 0 {
 		return nil
 	}
@@ -24,9 +31,9 @@ func (b *RoundRobinBalancer) Next(ts []*Target) *Target {
 	return t
 }
 
-type WeightBalancer struct{}
+type weightBalancer struct{}
 
-func (b *WeightBalancer) Next(ts []*Target) *Target {
+func (b *weightBalancer) Next(ts []*Target) *Target {
 	if len(ts) == 0 {
 		return nil
 	}

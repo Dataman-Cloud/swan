@@ -12,6 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/src/config"
 	eventbus "github.com/Dataman-Cloud/swan/src/event"
 	"github.com/Dataman-Cloud/swan/src/janitor"
+	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/src/nameserver"
 	"github.com/Dataman-Cloud/swan/src/types"
 	"github.com/Dataman-Cloud/swan/src/utils"
@@ -234,9 +235,9 @@ func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.T
 }
 
 func janitorTargetChangeEventFromTaskInfoEvent(eventType string,
-	taskInfoEvent *types.TaskInfoEvent) *janitor.TargetChangeEvent {
+	taskInfoEvent *types.TaskInfoEvent) *upstream.TargetChangeEvent {
 
-	janitorEvent := &janitor.TargetChangeEvent{}
+	janitorEvent := &upstream.TargetChangeEvent{}
 	switch eventType {
 	case eventbus.EventTypeTaskHealthy:
 		janitorEvent.Change = "add"

@@ -4,6 +4,9 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+
+	"github.com/Dataman-Cloud/swan/src/janitor/stats"
+	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
 )
 
 func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
@@ -19,17 +22,17 @@ func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
 }
 
 func (s *JanitorServer) listUpstreams(c *gin.Context) {
-	c.JSON(200, s.upstreams.allUps())
+	c.JSON(200, upstream.AllUpstreams())
 }
 
 func (s *JanitorServer) upsertUpstream(c *gin.Context) {
-	var target *Target
+	var target *upstream.Target
 	if err := c.BindJSON(&target); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
 
-	if err := target.valid(); err != nil {
+	if err := target.Valid(); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
@@ -43,7 +46,7 @@ func (s *JanitorServer) upsertUpstream(c *gin.Context) {
 }
 
 func (s *JanitorServer) delUpstream(c *gin.Context) {
-	var target *Target
+	var target *upstream.Target
 	if err := c.BindJSON(&target); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
@@ -54,7 +57,7 @@ func (s *JanitorServer) delUpstream(c *gin.Context) {
 }
 
 func (s *JanitorServer) listSessions(c *gin.Context) {
-	c.JSON(200, s.upstreams.allSess())
+	c.JSON(200, upstream.AllSessions())
 }
 
 func (s *JanitorServer) showConfigs(c *gin.Context) {
@@ -66,7 +69,7 @@ func (s *JanitorServer) showStats(c *gin.Context) {
 		"httpd":          s.config.ListenAddr,
 		"httpdTLS":       s.config.TLSListenAddr,
 		"queuing_events": len(s.eventChan),
-		"counter":        s.stats,
+		"counter":        stats.Get(),
 		"tcpd":           s.tcpd,
 	}
 	c.JSON(200, wrapper)
@@ -74,7 +77,7 @@ func (s *JanitorServer) showStats(c *gin.Context) {
 
 func (s *JanitorServer) showAppStats(c *gin.Context) {
 	aid := c.Param("aid")
-	if m, ok := s.stats.App[aid]; ok {
+	if m, ok := stats.AppStats()[aid]; ok {
 		c.JSON(200, m)
 		return
 	}
@@ -83,7 +86,7 @@ func (s *JanitorServer) showAppStats(c *gin.Context) {
 
 func (s *JanitorServer) showTaskStats(c *gin.Context) {
 	aid, tid := c.Param("aid"), c.Param("tid")
-	if a, ok := s.stats.App[aid]; ok {
+	if a, ok := stats.AppStats()[aid]; ok {
 		if t, ok := a[tid]; ok {
 			c.JSON(200, t)
 			return

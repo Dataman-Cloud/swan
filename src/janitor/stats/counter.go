@@ -1,4 +1,4 @@
-package janitor
+package stats
 
 import (
 	"encoding/json"
@@ -6,18 +6,31 @@ import (
 )
 
 var (
+	stats         *Stats
 	rateFreshIntv = time.Second * 2  // rate calculation interval
 	gcIntv        = time.Second * 10 // interval to scan & clean up removal-marked task counter
 )
+
+func init() {
+	stats = &Stats{
+		Global:   &GlobalCounter{startedAt: time.Now()},
+		App:      make(AppCounter),
+		inGlbCh:  make(chan *DeltaGlb, 1024),
+		inAppCh:  make(chan *DeltaApp, 1024),
+		delAppCh: make(chan *DeltaApp, 128),
+	}
+
+	go stats.runCounters()
+}
 
 // Stats holds all of statistics data.
 type Stats struct {
 	Global *GlobalCounter `json:"global"` // global counter
 	App    AppCounter     `json:"app"`    // app -> task -> counter
 
-	inGlbCh  chan *deltaGlb // new global counter delta received
-	inAppCh  chan *deltaApp // new app counter delta received
-	delAppCh chan *deltaApp // removal signal app->task counter delta
+	inGlbCh  chan *DeltaGlb // new global counter delta received
+	inAppCh  chan *DeltaApp // new app counter delta received
+	delAppCh chan *DeltaApp // removal signal app->task counter delta
 }
 
 // GlobalCounter hold current global statistics
@@ -89,48 +102,41 @@ func (c *TaskCounter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(wrapper)
 }
 
-type deltaApp struct {
-	aid string
-	tid string
-	ac  int
-	rx  uint64
-	tx  uint64
-	req uint64
+type DeltaApp struct {
+	Aid string
+	Tid string
+	Ac  int
+	Rx  uint64
+	Tx  uint64
+	Req uint64
 }
 
-type deltaGlb struct {
-	rx   uint64
-	tx   uint64
-	req  uint64
-	fail uint64
+type DeltaGlb struct {
+	Rx   uint64
+	Tx   uint64
+	Req  uint64
+	Fail uint64
 }
 
-func newStats() *Stats {
-	c := &Stats{
-		Global: &GlobalCounter{
-			startedAt: time.Now(),
-		},
-		App:      make(AppCounter),
-		inGlbCh:  make(chan *deltaGlb, 1024),
-		inAppCh:  make(chan *deltaApp, 1024),
-		delAppCh: make(chan *deltaApp, 128),
-	}
-
-	go c.runCounters()
-	return c
+func Get() *Stats {
+	return stats
 }
 
-func (c *Stats) incr(dapp *deltaApp, dglb *deltaGlb) {
+func AppStats() AppCounter {
+	return stats.App
+}
+
+func Incr(dapp *DeltaApp, dglb *DeltaGlb) {
 	if dapp != nil {
-		c.inAppCh <- dapp
+		stats.inAppCh <- dapp
 	}
 	if dglb != nil {
-		c.inGlbCh <- dglb
+		stats.inGlbCh <- dglb
 	}
 }
 
-func (c *Stats) del(aid, tid string) {
-	c.delAppCh <- &deltaApp{aid: aid, tid: tid}
+func Del(aid, tid string) {
+	stats.delAppCh <- &DeltaApp{Aid: aid, Tid: tid}
 }
 
 func (c *Stats) runCounters() {
@@ -244,43 +250,48 @@ func (c *Stats) gc() {
 	}
 }
 
-func (c *Stats) updateGlb(d *deltaGlb) {
-	c.Global.RxBytes += d.rx
-	c.Global.TxBytes += d.tx
-	c.Global.Requests += d.req
-	c.Global.Fails += d.fail
+func (c *Stats) updateGlb(d *DeltaGlb) {
+	c.Global.RxBytes += d.Rx
+	c.Global.TxBytes += d.Tx
+	c.Global.Requests += d.Req
+	c.Global.Fails += d.Fail
 	c.Global.freshed = true
 }
 
-func (c *Stats) updateApp(d *deltaApp) {
-	if d.aid == "" || d.tid == "" {
+func (c *Stats) updateApp(d *DeltaApp) {
+	var (
+		aid = d.Aid
+		tid = d.Tid
+	)
+
+	if aid == "" || tid == "" {
 		return
 	}
 
-	if _, ok := c.App[d.aid]; !ok {
-		c.App[d.aid] = make(map[string]*TaskCounter)
+	if _, ok := c.App[aid]; !ok {
+		c.App[aid] = make(map[string]*TaskCounter)
 	}
-	app := c.App[d.aid]
+	app := c.App[aid]
 
-	if _, ok := app[d.tid]; !ok {
-		app[d.tid] = &TaskCounter{
+	if _, ok := app[tid]; !ok {
+		app[tid] = &TaskCounter{
 			startedAt: time.Now(),
 		}
 	}
-	task := app[d.tid]
+	task := app[tid]
 
-	task.ActiveClients += uint(d.ac)
+	task.ActiveClients += uint(d.Ac)
 	if task.ActiveClients < 0 {
 		task.ActiveClients = 0
 	}
 
-	if n := d.rx; n > 0 {
+	if n := d.Rx; n > 0 {
 		task.RxBytes += n
 	}
-	if n := d.tx; n > 0 {
+	if n := d.Tx; n > 0 {
 		task.TxBytes += n
 	}
-	if n := d.req; n > 0 {
+	if n := d.Req; n > 0 {
 		task.Requests += n
 	}
 
@@ -289,16 +300,21 @@ func (c *Stats) updateApp(d *deltaApp) {
 
 // note: removeApp() only mark the removal flag on specified task counter,
 // counter will be actually removed by gc() until its `active-clients` decreased to zero
-func (c *Stats) removeApp(d *deltaApp) {
-	if d.aid == "" || d.tid == "" {
-		return
-	}
-	if _, ok := c.App[d.aid]; !ok {
-		return
-	}
-	app := c.App[d.aid]
+func (c *Stats) removeApp(d *DeltaApp) {
+	var (
+		aid = d.Aid
+		tid = d.Tid
+	)
 
-	if task, ok := app[d.tid]; ok {
+	if aid == "" || tid == "" {
+		return
+	}
+	if _, ok := c.App[aid]; !ok {
+		return
+	}
+	app := c.App[aid]
+
+	if task, ok := app[tid]; ok {
 		task.removed = true
 	}
 }
