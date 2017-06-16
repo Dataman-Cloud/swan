@@ -161,14 +161,14 @@ func (us *Upstreams) lookup(remoteIP, appID, taskID string) *Target {
 		}
 	}()
 
-	// obtain session
-	if t = u.sessions.get(remoteIP); t != nil {
-		return t
-	}
-
 	// obtain specified task backend
 	if taskID != "" {
 		t = us.getTarget(appID, taskID)
+		return t
+	}
+
+	// obtain session by remoteIP
+	if t = u.sessions.get(remoteIP); t != nil {
 		return t
 	}
 
