@@ -88,7 +88,7 @@ func (p *TCPProxyServer) Stop() {
 	p.RUnlock()
 }
 
-func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.Target, error) {
+func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.BackendCombined, error) {
 	var (
 		local  = conn.LocalAddr().String()
 		remote = conn.RemoteAddr().String()
@@ -107,11 +107,11 @@ func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.Target, error) {
 
 	selected := upstream.LookupListen(remoteHost, listen)
 	if selected == nil {
-		return nil, fmt.Errorf("no matched targets for request [%s]", listen)
+		return nil, fmt.Errorf("no matched backends for request [%s]", listen)
 	}
 
 	log.Debugf("[TCP]: proxy redirecting request [%s] -> [%s] -> [%s-%s]",
-		remoteHost, listen, selected.TaskID, selected.Addr(),
+		remoteHost, listen, selected.Backend.ID, selected.Addr(),
 	)
 	return selected, nil
 }
@@ -157,15 +157,15 @@ func (p *TCPProxyServer) serveTCP(conn net.Conn) {
 	}
 
 	var (
-		addr = selected.Addr()
-		aid  = selected.AppID
-		tid  = selected.TaskID
+		addr    = selected.Addr()
+		ups     = selected.Upstream.Name
+		backend = selected.Backend.ID
 	)
 
 	// do proxy
-	stats.Incr(&stats.DeltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	stats.Incr(&stats.DeltaBackend{ups, backend, 1, 0, 0, 1}, nil) // conn, active
 	in, out, err = p.doRawProxy(conn, addr)
-	stats.Incr(&stats.DeltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
+	stats.Incr(&stats.DeltaBackend{ups, backend, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
 func (p *TCPProxyServer) doRawProxy(src net.Conn, addr string) (int64, int64, error) {

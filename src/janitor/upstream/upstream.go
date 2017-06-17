@@ -1,7 +1,9 @@
 package upstream
 
 import (
+	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -13,41 +15,146 @@ func init() {
 	}
 }
 
+// Type & Method Definations ...
+//
 type UpsManager struct {
 	Upstreams []*Upstream `json:"upstreams"`
 	sync.RWMutex
 }
 
 type Upstream struct {
-	AppID     string    `json:"app_id"` // uniq id of upstream
-	AppAlias  string    `json:"app_alias"`
-	AppListen string    `json:"app_listen"`
-	Targets   []*Target `json:"targets"`
+	Name     string     `json:"name"`     // uniq name
+	Alias    string     `json:"alias"`    // advertised url
+	Listen   string     `json:"listen"`   // listen addr
+	Backends []*Backend `json:"backends"` // backend servers
 
-	sessions *Sessions
-	balancer Balancer
+	sessions *Sessions // runtime
+	balancer Balancer  // runtime
 }
 
-func (u *Upstream) search(taskID string) (int, *Target) {
-	for i, v := range u.Targets {
-		if v.TaskID == taskID {
+func newUpstream(first *BackendCombined) *Upstream {
+	return &Upstream{
+		Name:     first.Upstream.Name,
+		Alias:    first.Upstream.Alias,
+		Listen:   first.Upstream.Listen,
+		Backends: []*Backend{first.Backend},
+		sessions: newSessions(),     // sessions store
+		balancer: &weightBalancer{}, // default balancer
+	}
+}
+
+func (u *Upstream) valid() error {
+	if u == nil {
+		return errors.New("nil upstream")
+	}
+	if u.Name == "" {
+		return errors.New("upstream name required")
+	}
+	return nil
+}
+
+func (u *Upstream) search(name string) (int, *Backend) {
+	for i, v := range u.Backends {
+		if v.ID == name {
 			return i, v
 		}
 	}
 	return -1, nil
 }
 
-func newUpstream(first *Target) *Upstream {
-	return &Upstream{
-		AppID:     first.AppID,
-		AppAlias:  first.AppAlias,
-		AppListen: first.AppListen,
-		Targets:   []*Target{first},
-		balancer:  &weightBalancer{}, // default balancer
-		sessions:  newSessions(),     // sessions store
+func (u *Upstream) tcpListen() string {
+	if u.Listen == "" {
+		return ""
+	}
+
+	ss := strings.Split(u.Listen, ":")
+	if port := ss[len(ss)-1]; port != "" {
+		return ":" + port
+	}
+
+	return ""
+}
+
+// Backend
+type Backend struct {
+	ID      string  `json:"id"`     // backend server id(name)
+	IP      string  `json:"ip"`     // backend server ip
+	Port    uint32  `json:"port"`   // backend server port
+	Scheme  string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
+	Version string  `json:"version"`
+	Weight  float64 `json:"weihgt"`
+}
+
+func (b *Backend) valid() error {
+	if b == nil {
+		return errors.New("nil backend")
+	}
+	if b.ID == "" {
+		return errors.New("backend id required")
+	}
+	if b.IP == "" {
+		return errors.New("backend ip required")
+	}
+	if b.Port == 0 {
+		return errors.New("backend port required")
+	}
+	return nil
+}
+
+func (b *Backend) Addr() string {
+	return fmt.Sprintf("%s:%d", b.IP, b.Port)
+}
+
+// BackendEvent
+type BackendEvent struct {
+	Action string // add/del/update
+	*BackendCombined
+}
+
+func (ev *BackendEvent) String() string {
+	return fmt.Sprintf("{%s upstream:%s backend:%s addr:%s:%d weight:%f}",
+		ev.Action, ev.Upstream.Name, ev.Backend.ID,
+		ev.Backend.IP, ev.Backend.Port, ev.Backend.Weight)
+}
+
+func (ev *BackendEvent) Format() {
+	ev.Upstream.Listen = ev.Upstream.tcpListen() // rewrite Upstream.Listen
+}
+
+func BuildBackendEvent(act, ups, alias, listen, backend, ip, ver string, port uint32, weight float64) *BackendEvent {
+	return &BackendEvent{
+		Action: act,
+		BackendCombined: &BackendCombined{
+			Upstream: &Upstream{Name: ups, Alias: alias, Listen: listen},
+			Backend:  &Backend{backend, ip, port, "", ver, weight},
+		},
 	}
 }
 
+// BackendCombined
+type BackendCombined struct {
+	*Upstream `json:"upstream"`
+	*Backend  `json:"backend"`
+}
+
+func (cmb *BackendCombined) Valid() error {
+	if cmb == nil {
+		return errors.New("nil backend combined")
+	}
+	if err := cmb.Upstream.valid(); err != nil {
+		return err
+	}
+	if err := cmb.Backend.valid(); err != nil {
+		return err
+	}
+	if !strings.HasSuffix(cmb.Backend.ID, "-"+cmb.Upstream.Name) {
+		return errors.New("backend name must be suffixed by upstream name")
+	}
+	return nil
+}
+
+// Exported Functions ....
+//
 func AllUpstreams() []*Upstream {
 	mgr.RLock()
 	defer mgr.RUnlock()
@@ -60,97 +167,107 @@ func AllSessions() map[string]*Sessions {
 
 	ret := make(map[string]*Sessions)
 	for _, u := range mgr.Upstreams {
-		ret[u.AppID] = u.sessions
+		ret[u.Name] = u.sessions
 	}
 	return ret
 }
 
-func UpsertTarget(target *Target) (onFirst bool, err error) {
+func GetUpstream(ups string) *Upstream {
+	mgr.RLock()
+	defer mgr.RUnlock()
+
+	_, u := getUpstreamByName(ups)
+	return u
+}
+
+func UpsertBackend(cmb *BackendCombined) (onFirst bool, err error) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
 	var (
-		appID     = target.AppID
-		appAlias  = target.AppAlias
-		appListen = target.AppListen
-		taskID    = target.TaskID
+		ups     = cmb.Upstream.Name
+		alias   = cmb.Upstream.Alias
+		listen  = cmb.Upstream.Listen
+		backend = cmb.Backend.ID
 	)
 
-	_, u := getUpstreamByID(appID)
+	_, u := getUpstreamByName(ups)
 	// add new upstream
 	if u == nil {
 		onFirst = true
 
-		if i, _ := getUpstreamByAlias(appAlias); i >= 0 {
-			err = fmt.Errorf("alias address [%s] conflict", appAlias)
+		if i, _ := getUpstreamByAlias(alias); i >= 0 {
+			err = fmt.Errorf("alias address [%s] conflict", alias)
 			return
 		}
-		if i, _ := getUpstreamByListen(appListen); i >= 0 {
-			err = fmt.Errorf("listen address [%s] conflict", appListen)
+		if i, _ := getUpstreamByListen(listen); i >= 0 {
+			err = fmt.Errorf("listen address [%s] conflict", listen)
 			return
 		}
 
-		mgr.Upstreams = append(mgr.Upstreams, newUpstream(target))
+		mgr.Upstreams = append(mgr.Upstreams, newUpstream(cmb))
 		return
 	}
 
-	_, t := u.search(taskID)
+	_, b := u.search(backend)
 
-	// add new target
-	if t == nil {
-		u.Targets = append(u.Targets, target)
+	// add new backend
+	if b == nil {
+		u.Backends = append(u.Backends, cmb.Backend)
 		return
 	}
 
-	// update target
-	t.VersionID = target.VersionID
-	t.AppVersion = target.AppVersion
-	t.TaskIP = target.TaskIP
-	t.TaskPort = target.TaskPort
-	t.Scheme = ""
-	t.Weight = target.Weight
+	// update upstream
+	u.Alias = cmb.Upstream.Alias
+
+	// update backend
+	b.IP = cmb.Backend.IP
+	b.Port = cmb.Backend.Port
+	b.Scheme = cmb.Backend.Scheme
+	b.Version = cmb.Backend.Version
+	b.Weight = cmb.Backend.Weight
 
 	return
 }
 
-func GetTarget(appID, taskID string) *Target {
+func GetBackend(ups, backend string) *Backend {
 	mgr.RLock()
 	defer mgr.RUnlock()
 
-	_, u := getUpstreamByID(appID)
+	_, u := getUpstreamByName(ups)
 	if u == nil {
 		return nil
 	}
 
-	_, t := u.search(taskID)
-	return t
+	_, b := u.search(backend)
+	return b
 }
 
-func RemoveTarget(target *Target) (onLast bool) {
+func RemoveBackend(cmb *BackendCombined) (onLast bool) {
 	mgr.Lock()
 	defer mgr.Unlock()
 
 	var (
-		appID  = target.AppID
-		taskID = target.TaskID
+		ups     = cmb.Upstream.Name
+		backend = cmb.Backend.ID
 	)
 
-	idxu, u := getUpstreamByID(appID)
+	idxu, u := getUpstreamByName(ups)
 	if u == nil {
 		return
 	}
 
-	idxt, t := u.search(taskID)
-	if t == nil {
+	idxb, b := u.search(backend)
+	if b == nil {
 		return
 	}
 
-	// remove target & session
-	u.Targets = append(u.Targets[:idxt], u.Targets[idxt+1:]...)
-	u.sessions.remove(taskID)
+	// remove backend & session
+	u.Backends = append(u.Backends[:idxb], u.Backends[idxb+1:]...)
+	u.sessions.remove(backend)
 
 	// remove empty upstream & stop sessions gc
-	if len(u.Targets) == 0 {
+	if len(u.Backends) == 0 {
 		onLast = true
 		u.sessions.stop()
 		mgr.Upstreams = append(mgr.Upstreams[:idxu], mgr.Upstreams[idxu+1:]...)
@@ -159,83 +276,87 @@ func RemoveTarget(target *Target) (onLast bool) {
 	return
 }
 
-// similar as lookup, but by app alias
-func LookupAlias(remoteIP, appAlias string) *Target {
+// similar as lookup, but by upstream alias
+func LookupAlias(remoteIP, alias string) *BackendCombined {
 	mgr.RLock()
-	_, u := getUpstreamByAlias(appAlias)
+	_, u := getUpstreamByAlias(alias)
 	mgr.RUnlock()
 
 	if u == nil {
 		return nil
 	}
 
-	appID := u.AppID
-	return Lookup(remoteIP, appID, "")
+	return Lookup(remoteIP, u.Name, "")
 }
 
-// similar as lookup, but by app listen
-func LookupListen(remoteIP, appListen string) *Target {
+// similar as lookup, but by upstream listen
+func LookupListen(remoteIP, listen string) *BackendCombined {
 	mgr.RLock()
-	_, u := getUpstreamByListen(appListen)
+	_, u := getUpstreamByListen(listen)
 	mgr.RUnlock()
 
 	if u == nil {
 		return nil
 	}
 
-	appID := u.AppID
-	return Lookup(remoteIP, appID, "")
+	return Lookup(remoteIP, u.Name, "")
 }
 
 // lookup select a suitable backend according by sessions & balancer
-func Lookup(remoteIP, appID, taskID string) *Target {
+func Lookup(remoteIP, ups, backend string) *BackendCombined {
 	var (
 		u *Upstream
-		t *Target
+		b *Backend
 	)
 
-	if _, u = getUpstreamByID(appID); u == nil {
+	if _, u = getUpstreamByName(ups); u == nil {
 		return nil
 	}
 
 	defer func() {
-		if t != nil {
-			u.sessions.update(remoteIP, t)
+		if b != nil {
+			u.sessions.update(remoteIP, b)
 		}
 	}()
 
-	// obtain specified task backend
-	if taskID != "" {
-		t = GetTarget(appID, taskID)
-		return t
+	// obtain specified backend
+	if backend != "" {
+		b = GetBackend(ups, backend)
+		if b == nil {
+			return nil
+		}
+		return &BackendCombined{u, b}
 	}
 
 	// obtain session by remoteIP
-	if t = u.sessions.get(remoteIP); t != nil {
-		return t
+	if b = u.sessions.get(remoteIP); b != nil {
+		return &BackendCombined{u, b}
 	}
 
 	// use balancer to obtain a new backend
-	t = nextTarget(appID)
-	return t
+	if b = nextBackend(ups); b != nil {
+		return &BackendCombined{u, b}
+	}
+
+	return nil
 }
 
-func nextTarget(appID string) *Target {
+func nextBackend(ups string) *Backend {
 	mgr.RLock()
 	defer mgr.RUnlock()
 
-	_, u := getUpstreamByID(appID)
+	_, u := getUpstreamByName(ups)
 	if u == nil {
 		return nil
 	}
 
-	return u.balancer.Next(u.Targets)
+	return u.balancer.Next(u.Backends)
 }
 
 // note: must be called under protection of mutext lock
-func getUpstreamByID(appID string) (int, *Upstream) {
+func getUpstreamByName(ups string) (int, *Upstream) {
 	for i, v := range mgr.Upstreams {
-		if v.AppID == appID {
+		if v.Name == ups {
 			return i, v
 		}
 	}
@@ -248,7 +369,7 @@ func getUpstreamByAlias(alias string) (int, *Upstream) {
 		return -1, nil
 	}
 	for i, v := range mgr.Upstreams {
-		if v.AppAlias == alias {
+		if v.Alias == alias {
 			return i, v
 		}
 	}
@@ -261,7 +382,7 @@ func getUpstreamByListen(listen string) (int, *Upstream) {
 		return -1, nil
 	}
 	for i, v := range mgr.Upstreams {
-		if v.AppListen == listen {
+		if v.Listen == listen {
 			return i, v
 		}
 	}

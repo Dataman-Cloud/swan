@@ -32,7 +32,7 @@ func NewHTTPProxyHandler(domain string) http.Handler {
 }
 
 // lookup a proper backend according by request
-func (p *HTTPProxy) lookup(r *http.Request) (*upstream.Target, error) {
+func (p *HTTPProxy) lookup(r *http.Request) (*upstream.BackendCombined, error) {
 	remoteIP, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return nil, fmt.Errorf("request RemoteAddr [%s] unrecognized", r.RemoteAddr)
@@ -44,8 +44,8 @@ func (p *HTTPProxy) lookup(r *http.Request) (*upstream.Target, error) {
 
 	var (
 		host     = strings.Split(r.Host, ":")[0]
-		byAlias  bool // flag on looking up by target alias or not
-		selected *upstream.Target
+		byAlias  bool // flag on looking up by upstream alias or not
+		selected *upstream.BackendCombined
 	)
 	if !strings.HasSuffix(host, p.suffix) {
 		byAlias = true
@@ -59,24 +59,24 @@ func (p *HTTPProxy) lookup(r *http.Request) (*upstream.Target, error) {
 		ss := strings.Split(trimed, ".")
 
 		switch len(ss) {
-		case 4: // app
-			appID := fmt.Sprintf("%s-%s-%s-%s", ss[0], ss[1], ss[2], ss[3])
-			selected = upstream.Lookup(remoteIP, appID, "")
-		case 5: // task
-			appID := fmt.Sprintf("%s-%s-%s-%s", ss[1], ss[2], ss[3], ss[4])
-			taskID := fmt.Sprintf("%s-%s", ss[0], appID)
-			selected = upstream.Lookup(remoteIP, appID, taskID)
+		case 4: // upstream
+			ups := fmt.Sprintf("%s-%s-%s-%s", ss[0], ss[1], ss[2], ss[3])
+			selected = upstream.Lookup(remoteIP, ups, "")
+		case 5: // specified backend
+			ups := fmt.Sprintf("%s-%s-%s-%s", ss[1], ss[2], ss[3], ss[4])
+			backend := fmt.Sprintf("%s-%s", ss[0], ups)
+			selected = upstream.Lookup(remoteIP, ups, backend)
 		default:
 			return nil, fmt.Errorf("request Host [%s] invalid", host)
 		}
 	}
 
 	if selected == nil {
-		return nil, fmt.Errorf("no matched targets for request [%s]", host)
+		return nil, fmt.Errorf("no matched backends for request [%s]", host)
 	}
 
 	log.Debugf("[HTTP] proxy redirecting request [%s] -> [%s-%s] -> [%s-%s]",
-		remoteIP, r.Method, r.Host, selected.TaskID, selected.Addr(),
+		remoteIP, r.Method, r.Host, selected.Backend.ID, selected.Addr(),
 	)
 
 	return selected, nil
@@ -109,8 +109,8 @@ func (p *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// detect & update target scheme
-	if selected.Scheme == "" {
+	// detect & update backend scheme
+	if selected.Backend.Scheme == "" {
 		https, err := detectHTTPs(selected.Addr())
 		if err != nil {
 			err = fmt.Errorf("detect selected scheme error: %v", err)
@@ -119,19 +119,19 @@ func (p *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if https {
-			selected.Scheme = "https"
+			selected.Backend.Scheme = "https"
 		} else {
-			selected.Scheme = "http"
+			selected.Backend.Scheme = "http"
 		}
 
-		upstream.UpsertTarget(selected)
+		upstream.UpsertBackend(selected)
 	}
 
 	var (
-		addr = selected.Addr()
-		sche = selected.Scheme
-		aid  = selected.AppID
-		tid  = selected.TaskID
+		addr    = selected.Backend.Addr()
+		sche    = selected.Backend.Scheme
+		ups     = selected.Upstream.Name
+		backend = selected.Backend.ID
 	)
 
 	// obtian the underlying net.Conn
@@ -151,9 +151,9 @@ func (p *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// do proxy
-	stats.Incr(&stats.DeltaApp{aid, tid, 1, 0, 0, 1}, nil) // conn, active
+	stats.Incr(&stats.DeltaBackend{ups, backend, 1, 0, 0, 1}, nil) // conn, active
 	in, out, err = p.doRawProxy(conn, r, sche, addr)
-	stats.Incr(&stats.DeltaApp{aid, tid, -1, uint64(in), uint64(out), 0}, nil) // disconnect
+	stats.Incr(&stats.DeltaBackend{ups, backend, -1, uint64(in), uint64(out), 0}, nil) // disconnect
 }
 
 func (p *HTTPProxy) doRawProxy(src net.Conn, req *http.Request, sche, addr string) (int64, int64, error) {

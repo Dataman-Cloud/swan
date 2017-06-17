@@ -128,7 +128,7 @@ func (agent *Agent) dispatchEvents() {
 		}
 
 		if taskInfoEvent.GatewayEnabled {
-			agent.Janitor.EmitChange(janitorTargetChangeEventFromTaskInfoEvent(
+			agent.Janitor.EmitEvent(genJanitorBackendEvent(
 				event.name, &taskInfoEvent))
 		}
 
@@ -234,27 +234,33 @@ func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.T
 	return resolverEvent
 }
 
-func janitorTargetChangeEventFromTaskInfoEvent(eventType string,
-	taskInfoEvent *types.TaskInfoEvent) *upstream.TargetChangeEvent {
+func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *upstream.BackendEvent {
+	var (
+		act string
 
-	janitorEvent := &upstream.TargetChangeEvent{}
+		// upstream
+		ups    = taskInfoEvent.AppID
+		alias  = "" // TODO
+		listen = "" // TODO
+
+		// backend
+		backend = taskInfoEvent.TaskID
+		ip      = taskInfoEvent.IP
+		port    = taskInfoEvent.Port
+		weight  = taskInfoEvent.Weight
+		version = taskInfoEvent.VersionID
+	)
+
 	switch eventType {
 	case eventbus.EventTypeTaskHealthy:
-		janitorEvent.Change = "add"
+		act = "add"
 	case eventbus.EventTypeTaskUnhealthy:
-		janitorEvent.Change = "del"
+		act = "del"
 	case eventbus.EventTypeTaskWeightChange:
-		janitorEvent.Change = "change"
+		act = "change"
 	default:
 		return nil
 	}
 
-	janitorEvent.TaskIP = taskInfoEvent.IP
-	janitorEvent.TaskPort = taskInfoEvent.Port
-	janitorEvent.AppID = taskInfoEvent.AppID
-	janitorEvent.Weight = taskInfoEvent.Weight
-	janitorEvent.TaskID = strings.ToLower(taskInfoEvent.TaskID)
-	janitorEvent.AppVersion = taskInfoEvent.AppVersion
-	janitorEvent.VersionID = taskInfoEvent.VersionID
-	return janitorEvent
+	return upstream.BuildBackendEvent(act, ups, alias, listen, backend, ip, version, port, weight)
 }

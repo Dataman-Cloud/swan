@@ -24,7 +24,7 @@ func init() {
 
 type JanitorServer struct {
 	config       *config.Janitor
-	eventChan    chan *upstream.TargetChangeEvent
+	eventChan    chan *upstream.BackendEvent
 	httpd        *http.Server
 	httpdTLS     *http.Server
 	tcpd         map[string]*proxy.TCPProxyServer // listen -> tcp proxy server
@@ -34,7 +34,7 @@ type JanitorServer struct {
 func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
 		config:    cfg,
-		eventChan: make(chan *upstream.TargetChangeEvent, 1024),
+		eventChan: make(chan *upstream.BackendEvent, 1024),
 		tcpd:      make(map[string]*proxy.TCPProxyServer),
 	}
 
@@ -53,7 +53,7 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	return s
 }
 
-func (s *JanitorServer) EmitChange(ev *upstream.TargetChangeEvent) {
+func (s *JanitorServer) EmitEvent(ev *upstream.BackendEvent) {
 	s.eventChan <- ev
 }
 
@@ -78,36 +78,36 @@ func (s *JanitorServer) Start() error {
 }
 
 func (s *JanitorServer) watchEvent() {
-	log.Println("proxy listening on app event ...")
+	log.Println("proxy listening on backends event ...")
 
 	for ev := range s.eventChan {
 		log.Printf("proxy caught event: %s", ev)
 
-		target := ev.Target.Format()
+		ev.Format()
 
-		switch strings.ToLower(ev.Change) {
+		switch strings.ToLower(ev.Action) {
 		case "add", "change":
-			if err := s.upsertBackend(target); err != nil {
+			if err := s.upsertBackend(ev.BackendCombined); err != nil {
 				log.Errorln("upsert backend error:", err)
 			}
 
 		case "del":
-			s.removeBackend(target)
+			s.removeBackend(ev.BackendCombined)
 
 		default:
-			log.Warnln("unrecognized event change type", ev.Change)
+			log.Warnln("unrecognized event action", ev.Action)
 		}
 	}
 
 	panic("event channel closed, never be here")
 }
 
-func (s *JanitorServer) upsertBackend(target *upstream.Target) error {
-	if err := target.Valid(); err != nil {
+func (s *JanitorServer) upsertBackend(cmb *upstream.BackendCombined) error {
+	if err := cmb.Valid(); err != nil {
 		return err
 	}
 
-	first, err := upstream.UpsertTarget(target)
+	first, err := upstream.UpsertBackend(cmb)
 	if err != nil {
 		return err
 	}
@@ -116,13 +116,14 @@ func (s *JanitorServer) upsertBackend(target *upstream.Target) error {
 		return nil
 	}
 
-	l := target.AppListen
+	l := cmb.Upstream.Listen
 	if l == "" {
 		return nil
 	}
 
 	tcpProxy := proxy.NewTCPProxyServer(l)
 	if err := tcpProxy.Listen(); err != nil {
+		upstream.RemoveBackend(cmb) // roll back
 		return err
 	}
 
@@ -135,15 +136,20 @@ func (s *JanitorServer) upsertBackend(target *upstream.Target) error {
 	return nil
 }
 
-func (s *JanitorServer) removeBackend(target *upstream.Target) {
-	onLast := upstream.RemoveTarget(target)
-	stats.Del(target.AppID, target.TaskID)
+func (s *JanitorServer) removeBackend(cmb *upstream.BackendCombined) {
+	u := upstream.GetUpstream(cmb.Upstream.Name)
+	if u == nil {
+		return
+	}
+
+	onLast := upstream.RemoveBackend(cmb)
+	stats.Del(cmb.Upstream.Name, cmb.Backend.ID)
 
 	if !onLast {
 		return
 	}
 
-	l := target.AppListen
+	l := u.Listen
 	if l == "" {
 		return
 	}

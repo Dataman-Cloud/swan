@@ -18,7 +18,7 @@ type Sessions struct {
 }
 
 type session struct {
-	*Target
+	*Backend
 	UpdatedAt time.Time `json:"updated_at"`
 }
 
@@ -38,26 +38,26 @@ func (s *Sessions) MarshalJSON() ([]byte, error) {
 	return json.Marshal(s.m)
 }
 
-func (s *Sessions) get(ip string) *Target {
+func (s *Sessions) get(ip string) *Backend {
 	s.RLock()
 	defer s.RUnlock()
 	sess, ok := s.m[ip]
 	if !ok {
 		return nil
 	}
-	return sess.Target
+	return sess.Backend
 }
 
-func (s *Sessions) update(ip string, t *Target) {
+func (s *Sessions) update(ip string, b *Backend) {
 	s.Lock()
-	s.m[ip] = &session{t, time.Now()}
+	s.m[ip] = &session{b, time.Now()}
 	s.Unlock()
 }
 
-func (s *Sessions) remove(taskID string) {
+func (s *Sessions) remove(backend string) {
 	s.Lock()
 	for k, v := range s.m {
-		if v.TaskID == taskID {
+		if v.Backend.ID == backend {
 			delete(s.m, k)
 		}
 	}
@@ -75,7 +75,7 @@ func (s *Sessions) gc() {
 			s.Lock()
 			for key, session := range s.m {
 				if session.UpdatedAt.Before(time.Now().Add(-s.timeout)) {
-					log.Printf("clean up outdated session: %s -> %s", key, session.TaskID)
+					log.Printf("clean up outdated session: %s -> %s", key, session.Backend.ID)
 					delete(s.m, key)
 				}
 			}

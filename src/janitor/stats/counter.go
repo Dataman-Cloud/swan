@@ -8,16 +8,16 @@ import (
 var (
 	stats         *Stats
 	rateFreshIntv = time.Second * 2  // rate calculation interval
-	gcIntv        = time.Second * 10 // interval to scan & clean up removal-marked task counter
+	gcIntv        = time.Second * 10 // interval to scan & clean up removal-marked backend counter
 )
 
 func init() {
 	stats = &Stats{
-		Global:   &GlobalCounter{startedAt: time.Now()},
-		App:      make(AppCounter),
-		inGlbCh:  make(chan *DeltaGlb, 1024),
-		inAppCh:  make(chan *DeltaApp, 1024),
-		delAppCh: make(chan *DeltaApp, 128),
+		Global:       &GlobalCounter{startedAt: time.Now()},
+		Upstream:     make(UpstreamCounter),
+		inGlbCh:      make(chan *DeltaGlb, 1024),
+		inBackendCh:  make(chan *DeltaBackend, 1024),
+		delBackendCh: make(chan *DeltaBackend, 128),
 	}
 
 	go stats.runCounters()
@@ -25,12 +25,12 @@ func init() {
 
 // Stats holds all of statistics data.
 type Stats struct {
-	Global *GlobalCounter `json:"global"` // global counter
-	App    AppCounter     `json:"app"`    // app -> task -> counter
+	Global   *GlobalCounter  `json:"global"`   // global counter
+	Upstream UpstreamCounter `json:"upstream"` // upstream -> backend -> counter
 
-	inGlbCh  chan *DeltaGlb // new global counter delta received
-	inAppCh  chan *DeltaApp // new app counter delta received
-	delAppCh chan *DeltaApp // removal signal app->task counter delta
+	inGlbCh      chan *DeltaGlb     // new global counter delta received
+	inBackendCh  chan *DeltaBackend // new upstream/backend counter delta received
+	delBackendCh chan *DeltaBackend // removal signal upstream->backend counter delta
 }
 
 // GlobalCounter hold current global statistics
@@ -66,11 +66,11 @@ func (c *GlobalCounter) MarshalJSON() ([]byte, error) {
 	return json.Marshal(wrapper)
 }
 
-// AppCounter hold app current statistics
-type AppCounter map[string]map[string]*TaskCounter
+// UpstreamCounter hold upstream & backends current statistics
+type UpstreamCounter map[string]map[string]*BackendCounter
 
-// TaskCounter hold one app-task's current statistics
-type TaskCounter struct {
+// BackendCounter hold one upstream-backend's current statistics
+type BackendCounter struct {
 	ActiveClients uint   `json:"active_clients"` // active clients
 	RxBytes       uint64 `json:"rx_bytes"`       // nb of received bytes
 	TxBytes       uint64 `json:"tx_bytes"`       // nb of transmitted bytes
@@ -89,22 +89,22 @@ type TaskCounter struct {
 	removed bool // removal flag, actually removed by gc() until `ActiveClients` decreased to 0
 }
 
-type TaskCounterAlias TaskCounter
+type BackendCounterAlias BackendCounter
 
-func (c *TaskCounter) MarshalJSON() ([]byte, error) {
+func (c *BackendCounter) MarshalJSON() ([]byte, error) {
 	var wrapper struct {
-		TaskCounterAlias
+		BackendCounterAlias
 		Uptime string `json:"uptime"`
 	}
 
-	wrapper.TaskCounterAlias = TaskCounterAlias(*c)
+	wrapper.BackendCounterAlias = BackendCounterAlias(*c)
 	wrapper.Uptime = time.Now().Sub(c.startedAt).String()
 	return json.Marshal(wrapper)
 }
 
-type DeltaApp struct {
-	Aid string
-	Tid string
+type DeltaBackend struct {
+	Uid string
+	Bid string
 	Ac  int
 	Rx  uint64
 	Tx  uint64
@@ -122,21 +122,21 @@ func Get() *Stats {
 	return stats
 }
 
-func AppStats() AppCounter {
-	return stats.App
+func UpstreamStats() UpstreamCounter {
+	return stats.Upstream
 }
 
-func Incr(dapp *DeltaApp, dglb *DeltaGlb) {
-	if dapp != nil {
-		stats.inAppCh <- dapp
+func Incr(dbackend *DeltaBackend, dglb *DeltaGlb) {
+	if dbackend != nil {
+		stats.inBackendCh <- dbackend
 	}
 	if dglb != nil {
 		stats.inGlbCh <- dglb
 	}
 }
 
-func Del(aid, tid string) {
-	stats.delAppCh <- &DeltaApp{Aid: aid, Tid: tid}
+func Del(ups, backend string) {
+	stats.delBackendCh <- &DeltaBackend{Uid: ups, Bid: backend}
 }
 
 func (c *Stats) runCounters() {
@@ -152,12 +152,12 @@ func (c *Stats) runCounters() {
 			c.freshRate()
 		case <-gcTicker.C:
 			c.gc()
-		case d := <-c.inAppCh:
-			c.updateApp(d)
+		case d := <-c.inBackendCh:
+			c.updateBackend(d)
 		case d := <-c.inGlbCh:
 			c.updateGlb(d)
-		case d := <-c.delAppCh:
-			c.removeApp(d)
+		case d := <-c.delBackendCh:
+			c.removeBackend(d)
 		}
 	}
 }
@@ -165,9 +165,9 @@ func (c *Stats) runCounters() {
 func (c *Stats) freshRate() {
 	c.Global.freshRate()
 
-	for _, app := range c.App {
-		for _, task := range app {
-			task.freshRate()
+	for _, ups := range c.Upstream {
+		for _, backend := range ups {
+			backend.freshRate()
 		}
 	}
 }
@@ -203,8 +203,8 @@ func (c *GlobalCounter) freshRate() {
 	c.freshed = false // mark as consumed
 }
 
-// fresh task counter
-func (c *TaskCounter) freshRate() {
+// fresh backend counter
+func (c *BackendCounter) freshRate() {
 	if !c.freshed {
 		c.RxRate = 0
 		c.TxRate = 0
@@ -230,22 +230,22 @@ func (c *TaskCounter) freshRate() {
 	c.freshed = false // mark as consumed
 }
 
-// gc actually delete removal-marked task counters
+// gc actually delete removal-marked backend counters
 // until the `active-clients` decreased to zero
 func (c *Stats) gc() {
-	for aid, app := range c.App {
+	for uid, ups := range c.Upstream {
 
-		for tid, task := range app {
-			if !task.removed {
+		for bid, backend := range ups {
+			if !backend.removed {
 				continue
 			}
-			if task.ActiveClients <= 0 {
-				delete(app, tid)
+			if backend.ActiveClients <= 0 {
+				delete(ups, bid)
 			}
 		}
 
-		if len(app) == 0 {
-			delete(c.App, aid)
+		if len(ups) == 0 {
+			delete(c.Upstream, uid)
 		}
 	}
 }
@@ -258,63 +258,63 @@ func (c *Stats) updateGlb(d *DeltaGlb) {
 	c.Global.freshed = true
 }
 
-func (c *Stats) updateApp(d *DeltaApp) {
+func (c *Stats) updateBackend(d *DeltaBackend) {
 	var (
-		aid = d.Aid
-		tid = d.Tid
+		uid = d.Uid
+		bid = d.Bid
 	)
 
-	if aid == "" || tid == "" {
+	if uid == "" || bid == "" {
 		return
 	}
 
-	if _, ok := c.App[aid]; !ok {
-		c.App[aid] = make(map[string]*TaskCounter)
+	if _, ok := c.Upstream[uid]; !ok {
+		c.Upstream[uid] = make(map[string]*BackendCounter)
 	}
-	app := c.App[aid]
+	ups := c.Upstream[uid]
 
-	if _, ok := app[tid]; !ok {
-		app[tid] = &TaskCounter{
+	if _, ok := ups[bid]; !ok {
+		ups[bid] = &BackendCounter{
 			startedAt: time.Now(),
 		}
 	}
-	task := app[tid]
+	backend := ups[bid]
 
-	task.ActiveClients += uint(d.Ac)
-	if task.ActiveClients < 0 {
-		task.ActiveClients = 0
+	backend.ActiveClients += uint(d.Ac)
+	if backend.ActiveClients < 0 {
+		backend.ActiveClients = 0
 	}
 
 	if n := d.Rx; n > 0 {
-		task.RxBytes += n
+		backend.RxBytes += n
 	}
 	if n := d.Tx; n > 0 {
-		task.TxBytes += n
+		backend.TxBytes += n
 	}
 	if n := d.Req; n > 0 {
-		task.Requests += n
+		backend.Requests += n
 	}
 
-	task.freshed = true
+	backend.freshed = true
 }
 
-// note: removeApp() only mark the removal flag on specified task counter,
+// note: removeBackend() only mark the removal flag on specified backend counter,
 // counter will be actually removed by gc() until its `active-clients` decreased to zero
-func (c *Stats) removeApp(d *DeltaApp) {
+func (c *Stats) removeBackend(d *DeltaBackend) {
 	var (
-		aid = d.Aid
-		tid = d.Tid
+		uid = d.Uid
+		bid = d.Bid
 	)
 
-	if aid == "" || tid == "" {
+	if uid == "" || bid == "" {
 		return
 	}
-	if _, ok := c.App[aid]; !ok {
+	if _, ok := c.Upstream[uid]; !ok {
 		return
 	}
-	app := c.App[aid]
+	ups := c.Upstream[uid]
 
-	if task, ok := app[tid]; ok {
-		task.removed = true
+	if backend, ok := ups[bid]; ok {
+		backend.removed = true
 	}
 }

@@ -17,8 +17,8 @@ func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {
 	r.GET("/sessions", s.listSessions)
 	r.GET("/configs", s.showConfigs)
 	r.GET("/stats", s.showStats)
-	r.GET("/stats/:aid", s.showAppStats)
-	r.GET("/stats/:aid/:tid", s.showTaskStats)
+	r.GET("/stats/:uid", s.showUpstreamStats)
+	r.GET("/stats/:uid/:bid", s.showBackendStats)
 }
 
 func (s *JanitorServer) listUpstreams(c *gin.Context) {
@@ -26,18 +26,18 @@ func (s *JanitorServer) listUpstreams(c *gin.Context) {
 }
 
 func (s *JanitorServer) upsertUpstream(c *gin.Context) {
-	var target *upstream.Target
-	if err := c.BindJSON(&target); err != nil {
+	var cmb *upstream.BackendCombined
+	if err := c.BindJSON(&cmb); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
 
-	if err := target.Valid(); err != nil {
+	if err := cmb.Valid(); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
 
-	if err := s.upsertBackend(target); err != nil {
+	if err := s.upsertBackend(cmb); err != nil {
 		http.Error(c.Writer, err.Error(), 500)
 		return
 	}
@@ -46,13 +46,13 @@ func (s *JanitorServer) upsertUpstream(c *gin.Context) {
 }
 
 func (s *JanitorServer) delUpstream(c *gin.Context) {
-	var target *upstream.Target
-	if err := c.BindJSON(&target); err != nil {
+	var cmb *upstream.BackendCombined
+	if err := c.BindJSON(&cmb); err != nil {
 		http.Error(c.Writer, err.Error(), 400)
 		return
 	}
 
-	s.removeBackend(target)
+	s.removeBackend(cmb)
 	c.Writer.WriteHeader(204)
 }
 
@@ -75,20 +75,20 @@ func (s *JanitorServer) showStats(c *gin.Context) {
 	c.JSON(200, wrapper)
 }
 
-func (s *JanitorServer) showAppStats(c *gin.Context) {
-	aid := c.Param("aid")
-	if m, ok := stats.AppStats()[aid]; ok {
+func (s *JanitorServer) showUpstreamStats(c *gin.Context) {
+	uid := c.Param("uid")
+	if m, ok := stats.UpstreamStats()[uid]; ok {
 		c.JSON(200, m)
 		return
 	}
 	c.JSON(200, make(map[string]interface{}))
 }
 
-func (s *JanitorServer) showTaskStats(c *gin.Context) {
-	aid, tid := c.Param("aid"), c.Param("tid")
-	if a, ok := stats.AppStats()[aid]; ok {
-		if t, ok := a[tid]; ok {
-			c.JSON(200, t)
+func (s *JanitorServer) showBackendStats(c *gin.Context) {
+	uid, bid := c.Param("uid"), c.Param("bid")
+	if ups, ok := stats.UpstreamStats()[uid]; ok {
+		if backend, ok := ups[bid]; ok {
+			c.JSON(200, backend)
 			return
 		}
 	}
