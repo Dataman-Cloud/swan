@@ -48,13 +48,12 @@ type DNS struct {
 }
 
 type Janitor struct {
-	ListenAddr    string        `json:"listenAddr"`
-	TLSListenAddr string        `json:"tlsListenAddr"`
-	TLSCertFile   string        `json:"tlsCertFile"`
-	TLSKeyFile    string        `json:"tlsKeyFile"`
-	FlushInterval time.Duration `json:"flushInterval"`
-	Domain        string        `json:"domain"`
-	AdvertiseIP   string        `json:"advertiseIP"`
+	ListenAddr    string `json:"listenAddr"`
+	TLSListenAddr string `json:"tlsListenAddr"`
+	TLSCertFile   string `json:"tlsCertFile"`
+	TLSKeyFile    string `json:"tlsKeyFile"`
+	Domain        string `json:"domain"`
+	AdvertiseIP   string `json:"advertiseIP"`
 }
 
 func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
@@ -74,9 +73,8 @@ func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 		},
 
 		Janitor: Janitor{
-			ListenAddr:    "0.0.0.0:80",
-			FlushInterval: time.Second * 1,
-			Domain:        "swan.com",
+			ListenAddr: "0.0.0.0:80",
+			Domain:     "swan.com",
 		},
 	}
 
