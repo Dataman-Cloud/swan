@@ -54,12 +54,16 @@ func (scaleDown *StateScaleDown) Step() {
 	} else if scaleDown.SlotSafeToRemoveFromApp(scaleDown.CurrentSlot) && (scaleDown.CurrentSlotIndex > scaleDown.TargetSlotIndex) {
 		scaleDown.lock.Lock()
 
+	Next:
 		scaleDown.App.RemoveSlot(scaleDown.CurrentSlotIndex)
 		scaleDown.CurrentSlotIndex -= 1
 		if scaleDown.App.IsFixed() {
 			scaleDown.App.CurrentVersion.IP = scaleDown.App.CurrentVersion.IP[:scaleDown.CurrentSlotIndex]
 		}
 		scaleDown.CurrentSlot, _ = scaleDown.App.GetSlot(scaleDown.CurrentSlotIndex)
+		if scaleDown.CurrentSlot == nil {
+			goto Next
+		}
 		scaleDown.CurrentSlot.KillTask(true)
 
 		scaleDown.lock.Unlock()
@@ -69,6 +73,9 @@ func (scaleDown *StateScaleDown) Step() {
 }
 
 func (scaleDown *StateScaleDown) SlotSafeToRemoveFromApp(slot *Slot) bool {
+	if slot == nil {
+		return true
+	}
 	return slot.StateIs(SLOT_STATE_REAP) || slot.Abnormal()
 }
 
