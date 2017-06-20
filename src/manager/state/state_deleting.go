@@ -79,6 +79,9 @@ func (deleting *StateDeleting) Step() {
 }
 
 func (deleting *StateDeleting) SlotSafeToRemoveFromApp(slot *Slot) bool {
+	if slot == nil {
+		return true
+	}
 	return slot.StateIs(SLOT_STATE_REAP) || slot.Abnormal()
 }
 
