@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	mesosproto "github.com/Dataman-Cloud/swan/proto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 )
 

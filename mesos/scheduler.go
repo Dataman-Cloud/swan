@@ -13,8 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
-	mesosproto "github.com/Dataman-Cloud/swan/proto/mesos"
-	"github.com/Dataman-Cloud/swan/proto/sched"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
 )
@@ -44,8 +43,8 @@ type Scheduler struct {
 	zkCfg     *ZKConfig
 	framework *mesosproto.FrameworkInfo
 
-	eventCh chan *sched.Event // mesos events
-	errCh   chan error        // subscriber's error events
+	eventCh chan *mesosproto.Event // mesos events
+	errCh   chan error             // subscriber's error events
 	quit    chan struct{}
 
 	//endPoint string // eg: http://master/api/v1/scheduler
@@ -57,7 +56,7 @@ type Scheduler struct {
 	sync.RWMutex
 	agents map[string]*Agent
 
-	handlers map[sched.Event_Type]eventHandler
+	handlers map[mesosproto.Event_Type]eventHandler
 	tasks    map[string]*Task
 
 	offerTimeout time.Duration
@@ -117,15 +116,15 @@ func (s *Scheduler) init() error {
 		s.cluster = "unnamed" // set default cluster name
 	}
 
-	s.handlers = map[sched.Event_Type]eventHandler{
-		sched.Event_SUBSCRIBED: s.subscribedHandler,
-		sched.Event_OFFERS:     s.offersHandler,
-		sched.Event_RESCIND:    s.rescindedHandler,
-		sched.Event_UPDATE:     s.updateHandler,
-		sched.Event_HEARTBEAT:  s.heartbeatHandler,
-		sched.Event_ERROR:      s.errHandler,
-		sched.Event_FAILURE:    s.failureHandler,
-		sched.Event_MESSAGE:    s.messageHandler,
+	s.handlers = map[mesosproto.Event_Type]eventHandler{
+		mesosproto.Event_SUBSCRIBED: s.subscribedHandler,
+		mesosproto.Event_OFFERS:     s.offersHandler,
+		mesosproto.Event_RESCIND:    s.rescindedHandler,
+		mesosproto.Event_UPDATE:     s.updateHandler,
+		mesosproto.Event_HEARTBEAT:  s.heartbeatHandler,
+		mesosproto.Event_ERROR:      s.errHandler,
+		mesosproto.Event_FAILURE:    s.failureHandler,
+		mesosproto.Event_MESSAGE:    s.messageHandler,
 	}
 
 	if id := s.db.GetFrameworkId(); id != "" {
@@ -163,7 +162,7 @@ func (s *Scheduler) FrameworkId() *mesosproto.FrameworkID {
 
 // Send send mesos request against the mesos master's scheduler api endpoint.
 // NOTE it's the caller's responsibility to deal with the Send() error
-func (s *Scheduler) Send(call *sched.Call) (*http.Response, error) {
+func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
 	payload, err := proto.Marshal(call)
 	if err != nil {
 		return nil, err
@@ -176,12 +175,13 @@ func (s *Scheduler) Send(call *sched.Call) (*http.Response, error) {
 func (s *Scheduler) Subscribe() error {
 	log.Infof("Subscribing to mesos leader: %s", s.leader)
 
-	call := &sched.Call{
-		Type: sched.Call_SUBSCRIBE.Enum(),
-		Subscribe: &sched.Call_Subscribe{
+	call := &mesosproto.Call{
+		Type: mesosproto.Call_SUBSCRIBE.Enum(),
+		Subscribe: &mesosproto.Call_Subscribe{
 			FrameworkInfo: s.framework,
 		},
 	}
+
 	if s.framework.Id != nil {
 		call.FrameworkId = &mesosproto.FrameworkID{
 			Value: proto.String(s.framework.Id.GetValue()),
@@ -234,11 +234,11 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 		case <-s.quit:
 			return
 		default:
-			ev := new(sched.Event)
+			ev := new(mesosproto.Event)
 			if err := dec.Decode(ev); err != nil {
 				log.Error("mesos events subscriber decode events error:", err)
-				s.watcher.Stop()
-				go s.connect()
+				//s.watcher.Stop()
+				//go s.connect()
 				return
 			}
 
@@ -273,10 +273,10 @@ func (s *Scheduler) removeOffer(offer *mesosproto.Offer) bool {
 }
 
 func (s *Scheduler) declineOffer(offer *mesosproto.Offer) error {
-	call := &sched.Call{
+	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
-		Type:        sched.Call_DECLINE.Enum(),
-		Decline: &sched.Call_Decline{
+		Type:        mesosproto.Call_DECLINE.Enum(),
+		Decline: &mesosproto.Call_Decline{
 			OfferIds: []*mesosproto.OfferID{
 				{
 					Value: offer.GetId().Value,
@@ -410,10 +410,10 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 		return fmt.Errorf("update task status error: %v", err)
 	}
 
-	call := &sched.Call{
+	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
-		Type:        sched.Call_ACCEPT.Enum(),
-		Accept: &sched.Call_Accept{
+		Type:        mesosproto.Call_ACCEPT.Enum(),
+		Accept: &mesosproto.Call_Accept{
 			OfferIds: []*mesosproto.OfferID{
 				offer.GetId(),
 			},
@@ -489,10 +489,10 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 
 	s.addTask(t)
 
-	call := &sched.Call{
+	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
-		Type:        sched.Call_KILL.Enum(),
-		Kill: &sched.Call_Kill{
+		Type:        mesosproto.Call_KILL.Enum(),
+		Kill: &mesosproto.Call_Kill{
 			TaskId: &mesosproto.TaskID{
 				Value: proto.String(taskId),
 			},
@@ -560,16 +560,16 @@ func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
 }
 
 func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.AgentID) error {
-	call := &sched.Call{
+	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
-		Type:        sched.Call_RECONCILE.Enum(),
-		Reconcile: &sched.Call_Reconcile{
-			Tasks: []*sched.Call_Reconcile_Task{},
+		Type:        mesosproto.Call_RECONCILE.Enum(),
+		Reconcile: &mesosproto.Call_Reconcile{
+			Tasks: []*mesosproto.Call_Reconcile_Task{},
 		},
 	}
 
 	for t, a := range tasks {
-		call.Reconcile.Tasks = append(call.Reconcile.Tasks, &sched.Call_Reconcile_Task{
+		call.Reconcile.Tasks = append(call.Reconcile.Tasks, &mesosproto.Call_Reconcile_Task{
 			TaskId:  t,
 			AgentId: a,
 		})
@@ -581,7 +581,7 @@ func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.Agen
 	}
 
 	if code := resp.StatusCode; code != http.StatusAccepted {
-		return fmt.Errorf("send reconcile call got %d not 202")
+		return fmt.Errorf("send reconcile call got %d not 202", code)
 	}
 
 	return nil
@@ -617,10 +617,10 @@ func (s *Scheduler) DetectError(status *mesosproto.TaskStatus) error {
 
 func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 	if status.GetUuid() != nil {
-		call := &sched.Call{
+		call := &mesosproto.Call{
 			FrameworkId: s.FrameworkId(),
-			Type:        sched.Call_ACKNOWLEDGE.Enum(),
-			Acknowledge: &sched.Call_Acknowledge{
+			Type:        mesosproto.Call_ACKNOWLEDGE.Enum(),
+			Acknowledge: &mesosproto.Call_Acknowledge{
 				AgentId: status.GetAgentId(),
 				TaskId:  status.GetTaskId(),
 				Uuid:    status.GetUuid(),

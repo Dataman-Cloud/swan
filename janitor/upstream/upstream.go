@@ -79,7 +79,7 @@ func (u *Upstream) tcpListen() string {
 type Backend struct {
 	ID      string  `json:"id"`     // backend server id(name)
 	IP      string  `json:"ip"`     // backend server ip
-	Port    uint32  `json:"port"`   // backend server port
+	Port    uint64  `json:"port"`   // backend server port
 	Scheme  string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
 	Version string  `json:"version"`
 	Weight  float64 `json:"weihgt"`
@@ -121,7 +121,7 @@ func (ev *BackendEvent) Format() {
 	ev.Upstream.Listen = ev.Upstream.tcpListen() // rewrite Upstream.Listen
 }
 
-func BuildBackendEvent(act, ups, alias, listen, backend, ip, ver string, port uint32, weight float64) *BackendEvent {
+func BuildBackendEvent(act, ups, alias, listen, backend, ip, ver string, port uint64, weight float64) *BackendEvent {
 	return &BackendEvent{
 		Action: act,
 		BackendCombined: &BackendCombined{

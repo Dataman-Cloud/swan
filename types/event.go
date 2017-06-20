@@ -17,7 +17,7 @@ type TaskEvent struct {
 	AppAlias       string  `json:"app_alias"`
 	VersionID      string  `json:"version_id"`
 	AppVersion     string  `json:"app_version"`
-	ID             string  `json:"task_id"`
+	TaskID         string  `json:"task_id"`
 	IP             string  `json:"task_ip"`
 	Port           uint64  `json:"task_port"`
 	Weight         float64 `json:"weihgt"`

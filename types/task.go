@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	mesosproto "github.com/Dataman-Cloud/swan/proto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/gogo/protobuf/proto"
 )
 

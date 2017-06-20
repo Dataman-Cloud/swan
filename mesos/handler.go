@@ -5,8 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/proto/mesos"
-	"github.com/Dataman-Cloud/swan/proto/sched"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 
 	log "github.com/Sirupsen/logrus"
@@ -19,13 +18,13 @@ const (
 
 var lock sync.Mutex
 
-type eventHandler func(*sched.Event)
+type eventHandler func(*mesosproto.Event)
 
-func (s *Scheduler) subscribedHandler(event *sched.Event) {
+func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 	var (
-		ev       = event.GetSubscribed()
-		id       = ev.FrameworkId
-		interval = ev.GetHeartbeatIntervalSeconds()
+		ev = event.GetSubscribed()
+		id = ev.FrameworkId
+		//interval = ev.GetHeartbeatIntervalSeconds()
 	)
 
 	log.Printf("Subscription successful with frameworkId %s", id.GetValue())
@@ -36,12 +35,12 @@ func (s *Scheduler) subscribedHandler(event *sched.Event) {
 		log.Errorf("update frameworkid got error:%s", err)
 	}
 
-	s.watchConn(interval)
+	//s.watchConn(interval)
 
 	s.reconcile()
 }
 
-func (s *Scheduler) offersHandler(event *sched.Event) {
+func (s *Scheduler) offersHandler(event *mesosproto.Event) {
 	var (
 		offers = event.Offers.Offers
 	)
@@ -61,7 +60,7 @@ func (s *Scheduler) offersHandler(event *sched.Event) {
 	}
 }
 
-func (s *Scheduler) rescindedHandler(event *sched.Event) {
+func (s *Scheduler) rescindedHandler(event *mesosproto.Event) {
 	var (
 		offerId = event.GetRescind().OfferId.GetValue()
 	)
@@ -76,7 +75,7 @@ func (s *Scheduler) rescindedHandler(event *sched.Event) {
 	}
 }
 
-func (s *Scheduler) updateHandler(event *sched.Event) {
+func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	lock.Lock()
 	defer lock.Unlock()
 
@@ -124,7 +123,7 @@ func (s *Scheduler) updateHandler(event *sched.Event) {
 		}
 	}
 
-	if state != mesos.TaskState_TASK_RUNNING {
+	if state != mesosproto.TaskState_TASK_RUNNING {
 		task.ErrMsg = status.GetReason().String() + ":" + status.GetMessage()
 	}
 
@@ -142,7 +141,7 @@ func (s *Scheduler) updateHandler(event *sched.Event) {
 		Type:           typ,
 		AppID:          appId,
 		AppAlias:       ver.Proxy.Alias,
-		ID:             taskId,
+		TaskID:         taskId,
 		IP:             task.IP,
 		Port:           task.Port,
 		Weight:         task.Weight,
@@ -154,19 +153,20 @@ func (s *Scheduler) updateHandler(event *sched.Event) {
 	return
 }
 
-func (s *Scheduler) heartbeatHandler(event *sched.Event) {
+func (s *Scheduler) heartbeatHandler(event *mesosproto.Event) {
 	log.Debug("Receive heartbeat msg from mesos")
 
-	s.watcher.Reset(s.heartbeatTimeout)
+	//s.watcher.Reset(s.heartbeatTimeout)
 }
 
-func (s *Scheduler) errHandler(event *sched.Event) {
+func (s *Scheduler) errHandler(event *mesosproto.Event) {
 	ev := event.GetError()
 
 	log.Debugf("Receive error msg %s", ev.GetMessage())
+	s.connect()
 }
 
-func (s *Scheduler) failureHandler(event *sched.Event) {
+func (s *Scheduler) failureHandler(event *mesosproto.Event) {
 	var (
 		ev      = event.GetFailure()
 		agentId = ev.GetAgentId()
@@ -183,5 +183,5 @@ func (s *Scheduler) failureHandler(event *sched.Event) {
 
 }
 
-func (s *Scheduler) messageHandler(event *sched.Event) {
+func (s *Scheduler) messageHandler(event *mesosproto.Event) {
 }

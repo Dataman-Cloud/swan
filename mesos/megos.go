@@ -7,9 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	log "github.com/Sirupsen/logrus"
 	"github.com/andygrunwald/megos"
-	"github.com/bbklab/swan-ng/mesos/protobuf/mesos"
 	"github.com/samuel/go-zookeeper/zk"
 )
 
@@ -59,7 +59,7 @@ func (s *Scheduler) megosClient() (*megos.Client, error) {
 
 	var (
 		masters    = make([]*url.URL, 0)
-		masterInfo = new(mesos.MasterInfo)
+		masterInfo = new(mesosproto.MasterInfo)
 	)
 
 	children, _, err := conn.Children(s.zkCfg.Path)

@@ -12,8 +12,8 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
-	"github.com/Dataman-Cloud/swan/src/janitor/stats"
-	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/janitor/stats"
+	"github.com/Dataman-Cloud/swan/janitor/upstream"
 )
 
 const (

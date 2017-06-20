@@ -14,11 +14,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package mesos.v1;
+syntax = "proto2";
 
-option java_package = "org.apache.mesos.v1";
-option java_outer_classname = "Protos";
+package mesos;
 
+option go_package = "mesosproto";
 
 /**
  * Status is used to indicate the state of the scheduler and executor

@@ -1,9 +1,9 @@
 {
-  "name": "nginx009",
+  "name": "nginx001",
   "cmd": null,
   "args": null,
   "cpus": 0.01,
-  "mem": 6,
+  "mem": 32,
   "disk": 0,
   "runAs": "xcm",
   "priority": 100,
@@ -11,7 +11,7 @@
   "constraints": [],
   "container": {
     "docker": {
-      "image": "nginx",
+      "image": "offlineregistry.dataman-inc.com:5000/library/blackicebird-2048",
       "network": "bridge",
       "forcePullImage": false,
       "privileged": true,
@@ -48,6 +48,17 @@
   "label": {
     "USER_ID": "1"
   },
+  "healthCheck": 
+    {
+      "protocol": "http",
+      "path": "/",
+      "delaySeconds": 2,
+      "gracePeriodSeconds": 5,
+      "intervalSeconds": 1,
+      "portName": "web",
+      "timeoutSeconds": 1,
+      "consecutiveFailures": 5
+    },
   "proxy": {
 	    "enabled": false,
 	    "alias": ""

@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/src/config"
-	eventbus "github.com/Dataman-Cloud/swan/src/event"
-	"github.com/Dataman-Cloud/swan/src/janitor"
-	"github.com/Dataman-Cloud/swan/src/janitor/upstream"
-	"github.com/Dataman-Cloud/swan/src/nameserver"
-	"github.com/Dataman-Cloud/swan/src/types"
-	"github.com/Dataman-Cloud/swan/src/utils"
-	"github.com/Dataman-Cloud/swan/src/utils/httpclient"
+	"github.com/Dataman-Cloud/swan/config"
+	eventbus "github.com/Dataman-Cloud/swan/event"
+	"github.com/Dataman-Cloud/swan/janitor"
+	"github.com/Dataman-Cloud/swan/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/nameserver"
+	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/utils"
+	"github.com/Dataman-Cloud/swan/utils/httpclient"
 
 	"github.com/Sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -120,23 +120,23 @@ func (agent *Agent) dispatchEvents() {
 	})
 
 	for event := range agent.eventCh {
-		var taskInfoEvent types.TaskInfoEvent
-		err := json.Unmarshal(event.payload, &taskInfoEvent)
+		var taskEvent types.TaskEvent
+		err := json.Unmarshal(event.payload, &taskEvent)
 		if err != nil {
 			logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
 			continue
 		}
 
-		if taskInfoEvent.GatewayEnabled {
+		if taskEvent.GatewayEnabled {
 			agent.Janitor.EmitEvent(genJanitorBackendEvent(
-				event.name, &taskInfoEvent))
+				event.name, &taskEvent))
 		}
 
 		// Resolver only recongnize these two events
 		if event.name == eventbus.EventTypeTaskHealthy ||
 			event.name == eventbus.EventTypeTaskUnhealthy {
 			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
-				event.name, &taskInfoEvent))
+				event.name, &taskEvent))
 		}
 	}
 }
@@ -216,25 +216,17 @@ func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.T
 	}
 
 	// port & type
-	if taskInfoEvent.Mode == "replicates" {
-		resolverEvent.Type = nameserver.SRV ^ nameserver.A
-		resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
-	} else {
-		resolverEvent.Type = nameserver.A
-	}
+	resolverEvent.Type = nameserver.SRV ^ nameserver.A
+	resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
 	// the rest
-	resolverEvent.Cluster = taskInfoEvent.ClusterID
-	resolverEvent.RunAs = taskInfoEvent.RunAs
-	resolverEvent.AppName = taskInfoEvent.AppName
-	resolverEvent.InsName = taskInfoEvent.InsName
-	resolverEvent.SlotID = fmt.Sprintf("%d", taskInfoEvent.SlotIndex)
+	resolverEvent.AppName = taskInfoEvent.AppID
 	resolverEvent.Ip = taskInfoEvent.IP
 	resolverEvent.Weight = taskInfoEvent.Weight
 
 	return resolverEvent
 }
 
-func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskInfoEvent) *upstream.BackendEvent {
+func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskEvent) *upstream.BackendEvent {
 	var (
 		act string
 

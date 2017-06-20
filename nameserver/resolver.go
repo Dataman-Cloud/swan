@@ -10,7 +10,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 
-	"github.com/Dataman-Cloud/swan/src/config"
+	"github.com/Dataman-Cloud/swan/config"
 )
 
 const (

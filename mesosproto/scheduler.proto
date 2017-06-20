@@ -16,9 +16,9 @@
 
 syntax = "proto2";
 
-package mesos;
-import "mesos/mesos.proto";
-option go_package = "sched";
+package mesos.scheduler;
+import "mesos.proto";
+option go_package = "mesosproto";
 
 
 /**

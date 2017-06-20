@@ -5,7 +5,7 @@ import (
 	"path"
 	"strings"
 
-	"github.com/Dataman-Cloud/swan/proto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 
 	log "github.com/Sirupsen/logrus"
@@ -172,7 +172,7 @@ func (zk *ZKStore) versions(p, id string) (types.VersionList, error) {
 
 func (zk *ZKStore) status(tasks types.TaskList) string {
 	for _, task := range tasks {
-		if task.Status == mesos.TaskState_TASK_RUNNING.String() {
+		if task.Status == mesosproto.TaskState_TASK_RUNNING.String() {
 			return "available"
 		}
 	}

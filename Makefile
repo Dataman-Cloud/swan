@@ -26,12 +26,8 @@ docker-build:
 build:
 	go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go
 
-install:
-	install -v bin/swan /usr/local/bin
-	install -v bin/swancfg /usr/local/bin
-
-generate:
-	go generate ./src/manager/framework/state/constraints.go
+image: build
+	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm .
 
 clean:
 	rm -rf bin/*
@@ -52,23 +48,3 @@ test-cover-html:
 
 test-cover-func:
 	go tool cover -func=coverage-all.out
-
-release: list-authors
-
-list-authors:
-	./contrib/list-authors.sh
-
-
-build-docker-image:
-	docker build --tag swan:$(VERSION) --rm .
-
-docker-run-manager-init:
-	docker rm -f swan-manager 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_manager --name swan-manager  --rm  -p 9999:9999 swan:$(VERSION) manager
-
-docker-run-agent:
-	docker rm -f swan-agent 2>&1 || echo 0
-	docker run --interactive --tty --env-file ./contrib/envfiles/Envfile_agent --name swan-agent  --rm  -p 9998:9998 -p 53:53/udp -p 80:80 -p 5000:5000 swan:$(VERSION) agent
-
-
-

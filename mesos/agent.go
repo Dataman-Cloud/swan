@@ -3,7 +3,7 @@ package mesos
 import (
 	"sync"
 
-	mesosproto "github.com/Dataman-Cloud/swan/proto/mesos"
+	"github.com/Dataman-Cloud/swan/mesosproto"
 )
 
 type Agent struct {

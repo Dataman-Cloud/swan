@@ -1,4 +1,0 @@
-swan-manager1: bin/swan manager init --zk-path=zk://192.168.59.104:2181,192.168.59.105:2181,192.168.59.106:2181/mesos --listen-addr=0.0.0.0:9999 --raft-listen-addr=http://127.0.0.1:2111 --data-dir=./data/1/
-swan-manager2: bin/swan manager join --zk-path=zk://192.168.59.104:2181,192.168.59.105:2181,192.168.59.106:2181/mesos --listen-addr=0.0.0.0:9998 --raft-listen-addr=http://127.0.0.1:2112 --data-dir=./data/2/ --join-addrs=0.0.0.0:9999
-swan-manager3: bin/swan manager join --zk-path=zk://192.168.59.104:2181,192.168.59.105:2181,192.168.59.106:2181/mesos --listen-addr=0.0.0.0:9997 --raft-listen-addr=http://127.0.0.1:2113 --data-dir=./data/3/ --join-addrs=0.0.0.0:9999,0.0.0.0:9998
-swan-agent1: sudo bin/swan agent join --join-addrs=0.0.0.0:9999 --data-dir=./data/4 --listen-addr=0.0.0.0:8888
