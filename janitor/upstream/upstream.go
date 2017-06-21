@@ -309,7 +309,11 @@ func Lookup(remoteIP, ups, backend string) *BackendCombined {
 		b *Backend
 	)
 
-	if _, u = getUpstreamByName(ups); u == nil {
+	mgr.RLock()
+	_, u = getUpstreamByName(ups)
+	mgr.RUnlock()
+
+	if u == nil {
 		return nil
 	}
 
