@@ -23,8 +23,9 @@ type Version struct {
 	Labels       map[string]string `json:"labels"`
 	HealthCheck  *HealthCheck      `json:"healthCheck"`
 	Env          map[string]string `json:"env"`
-	KillPolicy   *KillPolicy       `json:"killPolicy"`
-	UpdatePolicy *UpdatePolicy     `json:"updatPolicy"`
+	DeployPolic  *DeployPolicy     `json:"deploy"`
+	KillPolicy   *KillPolicy       `json:"kill"`
+	UpdatePolicy *UpdatePolicy     `json:"update"`
 	Constraints  []*Constraint     `json:"constraints"`
 	URIs         []string          `json:"uris"`
 	IPs          []string          `json:"ips"`
@@ -72,6 +73,11 @@ type UpdatePolicy struct {
 	Step          int64   `json:"step"`
 	Delay         float64 `json":delay"`
 	FailureAction string  `json:"action,omitempty"`
+}
+
+type DeployPolicy struct {
+	Step      int64  `json:"step"`
+	OnFailure string `json:"onfailure"`
 }
 
 type HealthCheck struct {
