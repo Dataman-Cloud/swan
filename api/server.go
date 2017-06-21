@@ -86,6 +86,7 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 				return
 			}
 			handler(w, r)
+			return
 		}
 
 		handler(w, r)

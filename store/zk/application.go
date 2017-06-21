@@ -69,6 +69,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	app.Tasks = tasks
 	app.Status = zk.status(tasks)
 	app.Version = zk.version(tasks)
+	app.Health = zk.health(tasks)
 
 	versions, err := zk.versions(p, id)
 	if err != nil {
@@ -178,6 +179,31 @@ func (zk *ZKStore) status(tasks types.TaskList) string {
 	}
 
 	return "unavailable"
+}
+
+func (zk *ZKStore) health(tasks types.TaskList) *types.Health {
+	var (
+		healthy   int64
+		unhealthy int64
+		unset     int64
+	)
+
+	for _, task := range tasks {
+		switch task.Healthy {
+		case types.TaskHealthy:
+			healthy++
+		case types.TaskUnHealthy:
+			unhealthy++
+		case types.TaskHealthyUnset:
+			unset++
+		}
+	}
+
+	return &types.Health{
+		Healthy:   healthy,
+		UnHealthy: unhealthy,
+		UnSet:     unset,
+	}
 }
 
 func (zk *ZKStore) version(tasks types.TaskList) []string {

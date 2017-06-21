@@ -66,6 +66,7 @@ type Application struct {
 	UpdatingVersion string      `json:"-"`
 	Versions        VersionList `json:"versions"`
 	Status          string      `json:"status"`
+	Health          *Health     `json:"health"`
 	CreatedAt       time.Time   `json:"created"`
 	UpdatedAt       time.Time   `json:"updated"`
 }
@@ -100,4 +101,10 @@ type UpdateWeightParam struct {
 
 type UpdateWeightsParam struct {
 	Weights map[string]float64 `json:"weights"`
+}
+
+type Health struct {
+	Healthy   int64 `json:"healthy"`
+	UnHealthy int64 `json:"unhealthy"`
+	UnSet     int64 `json:"unset"`
 }

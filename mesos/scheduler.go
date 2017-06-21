@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	//"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -171,10 +172,7 @@ func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
 	return s.http.send(payload)
 }
 
-// Subscribe ...
-func (s *Scheduler) Subscribe() error {
-	log.Infof("Subscribing to mesos leader: %s", s.leader)
-
+func (s *Scheduler) connect() (*http.Response, error) {
 	call := &mesosproto.Call{
 		Type: mesosproto.Call_SUBSCRIBE.Enum(),
 		Subscribe: &mesosproto.Call_Subscribe{
@@ -190,16 +188,29 @@ func (s *Scheduler) Subscribe() error {
 
 	resp, err := s.Send(call)
 	if err != nil {
-		return fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
+		return nil, fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
 	}
 
 	if code := resp.StatusCode; code != 200 {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		return fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
+		return nil, fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
+	}
+
+	return resp, nil
+}
+
+// Subscribe ...
+func (s *Scheduler) Subscribe() error {
+	log.Infof("Subscribing to mesos leader: %s", s.leader)
+
+	resp, err := s.connect()
+	if err != nil {
+		return err
 	}
 
 	go s.watchEvents(resp)
+
 	return nil
 }
 
@@ -209,11 +220,20 @@ func (s *Scheduler) Unsubscribe() error {
 	return nil
 }
 
-func (s *Scheduler) connect() {
+func (s *Scheduler) reconnect() {
 	s.http.Reset()
 
+	var (
+		resp *http.Response
+		err  error
+	)
+
 	for {
-		if err := s.Subscribe(); err == nil {
+		log.Printf("Reconnecting to mesos leader: %s", s.leader)
+
+		resp, err = s.connect()
+		if err == nil {
+			go s.watchEvents(resp)
 			return
 		}
 
@@ -239,6 +259,7 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 				log.Error("mesos events subscriber decode events error:", err)
 				//s.watcher.Stop()
 				//go s.connect()
+				go s.reconnect()
 				return
 			}
 
@@ -653,7 +674,7 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 func (s *Scheduler) watchConn(interval float64) {
 	du := interval + 5
 	s.heartbeatTimeout = time.Duration(du) * time.Second
-	s.watcher = time.AfterFunc(s.heartbeatTimeout, s.connect)
+	//s.watcher = time.AfterFunc(s.heartbeatTimeout, s.connect)
 }
 
 func (s *Scheduler) reconcile() {
