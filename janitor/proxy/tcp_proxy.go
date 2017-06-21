@@ -103,7 +103,7 @@ func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.BackendCombined, error
 		return nil, err
 	}
 
-	listen := ":" + localPort // TODO
+	listen := ":" + localPort
 
 	selected := upstream.LookupListen(remoteHost, listen)
 	if selected == nil {
