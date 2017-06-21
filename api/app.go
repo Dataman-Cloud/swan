@@ -149,7 +149,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}()
 
-	writeJSON(w, http.StatusCreated, app.ID)
+	writeJSON(w, http.StatusCreated, map[string]string{"Id": app.ID})
 }
 
 func (r *Router) listApps(w http.ResponseWriter, req *http.Request) {
@@ -252,7 +252,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, "ok")
+	writeJSON(w, http.StatusNoContent, "")
 }
 
 func (r *Router) scale(w http.ResponseWriter, req *http.Request) {
@@ -806,4 +806,246 @@ func filterByFieldsSelectors(fieldSelector fields.Selector, ver *types.Version) 
 	fieldMap := make(map[string]string)
 	fieldMap["runAs"] = ver.RunAs
 	return fieldSelector.Matches(fields.Set(fieldMap))
+}
+
+func (r *Router) deleteTask(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars   = mux.Vars(req)
+		appId  = vars["app_id"]
+		taskId = vars["task_id"]
+	)
+
+	task, err := r.db.GetTask(appId, taskId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := r.db.DeleteTask(task.ID); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusNoContent, "")
+}
+
+func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars   = mux.Vars(req)
+		appId  = vars["app_id"]
+		taskId = vars["task_id"]
+	)
+
+	var version types.Version
+	if err := decode(req.Body, &version); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := version.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	if err := r.db.CreateVersion(appId, &version); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	t, err := r.db.GetTask(appId, taskId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
+		t.Status = "Failed"
+		t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
+
+		if err = r.db.UpdateTask(appId, t); err != nil {
+			log.Errorf("update task %s got error: %v", t.ID, err)
+		}
+
+		return
+	}
+
+	if err := r.db.DeleteTask(t.ID); err != nil {
+		log.Errorf("delete task %s got error: %v", t.ID, err)
+		return
+	}
+
+	cfg := types.NewTaskConfig(&version)
+
+	var (
+		name = t.Name
+		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+	)
+
+	task := &types.Task{
+		ID:      id,
+		Name:    name,
+		Weight:  100,
+		Status:  "updating",
+		Version: version.ID,
+		Created: t.Created,
+		Updated: time.Now(),
+	}
+
+	if err := r.db.CreateTask(appId, task); err != nil {
+		log.Errorf("create task failed: %s", err)
+		return
+	}
+
+	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+
+	if err := r.driver.LaunchTask(mtask); err != nil {
+		log.Errorf("launch task %s got error: %v", t.ID, err)
+
+		task.Status = "Failed"
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+
+		if err = r.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", t.ID, err)
+		}
+
+		return
+	}
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
+func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars   = mux.Vars(req)
+		appId  = vars["app_id"]
+		taskId = vars["task_id"]
+	)
+
+	if err := req.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	app, err := r.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		return
+	}
+
+	app.OpStatus = types.OpStatusRollback
+
+	if err := r.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error), http.StatusInternalServerError)
+		return
+	}
+
+	defer func() {
+		app.OpStatus = types.OpStatusNoop
+		if err := r.db.UpdateApp(app); err != nil {
+			log.Errorf("updating app status from rollback to noop got error: %v", err)
+		}
+	}()
+
+	verId := req.Form.Get("version")
+
+	var desired *types.Version
+
+	if verId != "" {
+		ver, err := r.db.GetVersion(appId, verId)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		desired = ver
+	}
+
+	if verId == "" {
+		if len(app.Versions) < 2 {
+			http.Error(w, fmt.Sprintf("no more versions to rollback"), http.StatusInternalServerError)
+			return
+		}
+
+		vers := app.Versions.Sort()
+		for idx, ver := range vers {
+			if ver.ID == app.Version[0] {
+				if (idx - 1) < 0 {
+					http.Error(w, fmt.Sprintf("version error"), http.StatusInternalServerError)
+					return
+				}
+				desired = vers[idx-1]
+			}
+		}
+	}
+
+	t, err := r.db.GetTask(appId, taskId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
+		t.Status = "Failed"
+		t.ErrMsg = fmt.Sprintf("kill task for rollback :%v", err)
+
+		if err = r.db.UpdateTask(appId, t); err != nil {
+			log.Errorf("update task %s got error: %v", t.ID, err)
+		}
+
+		return
+	}
+
+	if err := r.db.DeleteTask(t.ID); err != nil {
+		log.Errorf("delete task %s got error: %v", t.ID, err)
+		return
+	}
+
+	cfg := types.NewTaskConfig(desired)
+
+	var (
+		name = t.Name
+		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+	)
+
+	task := &types.Task{
+		ID:      id,
+		Name:    name,
+		Weight:  100,
+		Status:  "updating",
+		Version: desired.ID,
+		Created: t.Created,
+		Updated: time.Now(),
+	}
+
+	if err := r.db.CreateTask(appId, task); err != nil {
+		log.Errorf("create task failed: %s", err)
+		return
+	}
+
+	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+
+	if err := r.driver.LaunchTask(mtask); err != nil {
+		log.Errorf("launch task %s got error: %v", t.ID, err)
+
+		task.Status = "Failed"
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+
+		if err = r.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", t.ID, err)
+		}
+
+		return
+	}
+
+	writeJSON(w, http.StatusAccepted, "accepted")
 }
