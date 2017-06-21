@@ -8,6 +8,7 @@ GET /v1/apps
 ```
 Example response:
 ```
+[
   {
     "id": "nginx0r1.default.xcm.dataman",
     "name": "nginx0r1",
