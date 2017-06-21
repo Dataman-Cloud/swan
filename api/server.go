@@ -83,48 +83,18 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 		if s.cfg.Listen != s.leader {
 			if r.Method != "GET" {
 				s.forwardRequest(w, r)
+				return
 			}
-			return
+			handler(w, r)
 		}
 
 		handler(w, r)
 	}
 }
 
-func (s *Server) wrapHandlerWithMiddlewares(handler HandlerFunc) HandlerFunc {
-	for _, m := range s.middlewares {
-		handler = m.WrapHandler(handler)
-	}
-
-	return handler
-}
-
-//func (s *Server) initRouter(driver Driver, db Store) {
-//	s.router = api.NewRouter(driver, db)
-//}
-
 func (s *Server) InstallRouter(r *Router) {
 	s.router = r
 }
-
-//func (s *Server) initMiddlewares() {
-//	s.middlewares = []Middleware{
-//		middleware.NewCORSMiddleware(),
-//		//middleware.NewNCSACommonLogMiddleware(),
-//	}
-//}
-//
-//func (s *Server) InstallMiddleware(mid Middleware) {
-//	s.middlewares = append(s.middlewares, mid)
-//}
-//
-//func (s *Server) UninstallMiddleware(mid Middleware) {
-//	for idx, midle := range s.middlewares {
-//		if midle.Name() == mid.Name() {
-//			s.middlewares = append(s.middlewares[:idx], s.middlewares[idx+1:]...)
-//		}
-//	}
-//}
 
 func (s *Server) Run() error {
 	srv := &http.Server{

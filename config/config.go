@@ -12,8 +12,9 @@ import (
 )
 
 type ManagerConfig struct {
-	LogLevel string `json:"logLevel"`
-	Listen   string `json:"listenAddr"`
+	LogLevel   string `json:"logLevel"`
+	Listen     string `json:"listenAddr"`
+	EnableCORS bool
 
 	MesosURL *url.URL `json:"mesosURL"`
 	ZKURL    *url.URL `json:"zkURL"`

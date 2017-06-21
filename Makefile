@@ -26,7 +26,7 @@ docker-build:
 build:
 	go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go
 
-image: build
+image: docker-build 
 	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm .
 
 clean:
