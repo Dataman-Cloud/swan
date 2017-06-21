@@ -94,6 +94,8 @@ Then you can compile `Swan` with:
 | GET           | /v1/events |
 | GET           | /version |
 
+[API](https://github.com/Dataman-Cloud/swan/tree/master/docs/api.md)
+
 ## Contributing
 If you want to contribute to swan, make a PR or report a issue.
 The goal of swan is to become the default and best scheduler for mesos, so let's do it!
