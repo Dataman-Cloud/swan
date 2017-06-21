@@ -91,9 +91,11 @@ func (zk *ZKStore) ListApps() ([]*types.Application, error) {
 
 	apps := make([]*types.Application, 0)
 	for _, node := range nodes {
-		if app, _ := zk.GetApp(node); app != nil {
-			apps = append(apps, app)
+		app, err := zk.GetApp(node)
+		if err != nil {
+			log.Errorf("%v", err)
 		}
+		apps = append(apps, app)
 	}
 
 	return apps, nil

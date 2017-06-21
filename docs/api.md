@@ -1,3 +1,20 @@
+| Method        | API                                         | Desc                         |
+| ------------- |:--------------------------------------------|------------------------------|
+| GET           | /v1/apps                                    | List all apps                |
+| POST          | /v1/apps                                    | Create a app                 |
+| GET           | /v1/apps/{app_id}                           | Inspect a app                |
+| DELETE        | /v1/apps/{app_id}                           | Delete a app                 |
+| PATCH         | /v1/apps/{app_id}/scale                     | Scale up/down                |
+| PUT           | /v1/apps/{app_id}/update                    | Rolling update a app         |
+| PUT           | /v1/apps/{app_id}/rollback                  | Roll back a app              |
+| GET           | /v1/apps/{app_id}/tasks                     | List all tasks for a app     |
+| GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
+| GET           | /v1/apps/{app_id}/tasks/{task_id}           | Inspect a task               |
+| DELETE        | /v1/apps/{app_id}/tasks/{task_id}           | Delete a task                |
+| PUT           | /v1/apps/{app_id}/tasks/{task_id}/update    | Update a task                |        
+| PUT           | /v1/apps/{app_id}/tasks/{task_id}/rollback  | Roll back a task             |
+| GET           | /v1/apps/{app_id}/versions/{version_id}     | Inspect a version            |
+
 #### List all apps
 ```
 GET /v1/apps 
@@ -643,7 +660,11 @@ HTTP/1.1 204 No Content
 
 #### Update a task
 ```
+<<<<<<< HEAD
 PUT /v1/apps/{app_id}/tasks/{task_id}
+=======
+PUT /v1/apps/{app_id}/tasks/{task_id}/update
+>>>>>>> update api doc
 ```
 Example request:
 ```
