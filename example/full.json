@@ -62,5 +62,9 @@
   "proxy": {
 	    "enabled": false,
 	    "alias": ""
+  },
+  "deploy": {
+	  "step": 10,
+	  "onfailure": "stop"
   }
 }
