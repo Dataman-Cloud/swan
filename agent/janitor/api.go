@@ -5,8 +5,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/Dataman-Cloud/swan/janitor/stats"
-	"github.com/Dataman-Cloud/swan/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/agent/janitor/stats"
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 )
 
 func (s *JanitorServer) ApiServe(r *gin.RouterGroup) {

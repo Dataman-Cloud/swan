@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/agent/janitor"
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/config"
 	eventbus "github.com/Dataman-Cloud/swan/event"
-	"github.com/Dataman-Cloud/swan/janitor"
-	"github.com/Dataman-Cloud/swan/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/nameserver"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"

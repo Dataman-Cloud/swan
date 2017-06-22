@@ -8,10 +8,10 @@ import (
 
 	log "github.com/Sirupsen/logrus"
 
+	"github.com/Dataman-Cloud/swan/agent/janitor/proxy"
+	"github.com/Dataman-Cloud/swan/agent/janitor/stats"
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/config"
-	"github.com/Dataman-Cloud/swan/janitor/proxy"
-	"github.com/Dataman-Cloud/swan/janitor/stats"
-	"github.com/Dataman-Cloud/swan/janitor/upstream"
 )
 
 func init() {
