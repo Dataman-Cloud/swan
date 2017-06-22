@@ -137,11 +137,8 @@ func (s *Scheduler) init() error {
 	s.reconcileTimer = time.NewTicker(reconcileInterval)
 	// TOOD(nmg): stop timer.
 	go func() {
-		for {
-			select {
-			case <-s.reconcileTimer.C:
-				s.reconcile()
-			}
+		for range s.reconcileTimer.C {
+			s.reconcile()
 		}
 	}()
 
@@ -467,6 +464,7 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 	s.launch.Unlock()
 
 	wait := time.NewTicker(creationTimeout)
+	defer wait.Stop()
 
 	first := true
 
@@ -532,6 +530,7 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 	}
 
 	timeout := time.NewTicker(deleteTimeout)
+	defer timeout.Stop()
 
 	first := true
 	// waitting for task's update events here until task finished or met error.
@@ -690,9 +689,8 @@ func (s *Scheduler) reconcile() {
 		for _, task := range app.Tasks {
 			m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
 		}
-
-		if err := s.reconcileTasks(m); err != nil {
-			log.Errorf("reconcile tasks got error: %v", err)
-		}
+	}
+	if err := s.reconcileTasks(m); err != nil {
+		log.Errorf("reconcile tasks got error: %v", err)
 	}
 }
