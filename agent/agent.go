@@ -15,10 +15,8 @@ import (
 	"github.com/Dataman-Cloud/swan/config"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
-	"github.com/Dataman-Cloud/swan/utils/httpclient"
 
 	"github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const REJOIN_BACKOFF = 3 * time.Second
@@ -141,19 +139,17 @@ func (agent *Agent) dispatchEvents() {
 }
 
 // todo
-func (agent *Agent) detectManagerLeader() (leaderAddr string, err error) {
+func (agent *Agent) detectManagerLeader() (string, error) {
 	for _, managerAddr := range agent.Config.JoinAddrs {
-		nodeRegistrationPath := managerAddr + "/ping"
-		_, err := httpclient.NewDefaultClient().GET(context.TODO(), nodeRegistrationPath, nil, nil)
-		if err != nil {
-			logrus.Infof("register to %s got error: %s", nodeRegistrationPath, err.Error())
+		if _, err := http.Get(managerAddr + "/ping"); err != nil {
+			logrus.Infof("detect manager %s error %v", managerAddr, err)
 			continue
 		}
 
 		return managerAddr, nil
 	}
 
-	return "", errors.New("try join all managers are failed")
+	return "", errors.New("try join all swan managers failed")
 }
 
 func (agent *Agent) watchManagerEvents(leaderAddr string) error {
