@@ -137,11 +137,8 @@ func (s *Scheduler) init() error {
 	s.reconcileTimer = time.NewTicker(reconcileInterval)
 	// TOOD(nmg): stop timer.
 	go func() {
-		for {
-			select {
-			case <-s.reconcileTimer.C:
-				s.reconcile()
-			}
+		for range s.reconcileTimer.C {
+			s.reconcile()
 		}
 	}()
 
@@ -215,7 +212,7 @@ func (s *Scheduler) Subscribe() error {
 }
 
 func (s *Scheduler) Unsubscribe() error {
-	log.Println("Unscribing from mesos leader: %s", s.leader)
+	log.Println("Unscribing from mesos leader:", s.leader)
 	close(s.quit)
 	return nil
 }
@@ -467,6 +464,7 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 	s.launch.Unlock()
 
 	wait := time.NewTicker(creationTimeout)
+	defer wait.Stop()
 
 	first := true
 
@@ -495,8 +493,6 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 			return errCreationTimeout
 		}
 	}
-
-	return nil
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
@@ -534,6 +530,7 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 	}
 
 	timeout := time.NewTicker(deleteTimeout)
+	defer timeout.Stop()
 
 	first := true
 	// waitting for task's update events here until task finished or met error.
@@ -654,7 +651,7 @@ func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 		}
 
 		if code := resp.StatusCode; code != http.StatusAccepted {
-			return fmt.Errorf("send ack got %d not 202")
+			return fmt.Errorf("send ack got %d not 202", code)
 		}
 	}
 
@@ -692,9 +689,8 @@ func (s *Scheduler) reconcile() {
 		for _, task := range app.Tasks {
 			m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
 		}
-
-		if err := s.reconcileTasks(m); err != nil {
-			log.Errorf("reconcile tasks got error: %v", err)
-		}
+	}
+	if err := s.reconcileTasks(m); err != nil {
+		log.Errorf("reconcile tasks got error: %v", err)
 	}
 }

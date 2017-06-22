@@ -152,11 +152,9 @@ func (c *TaskConfig) network() *mesosproto.ContainerInfo_DockerInfo_Network {
 		return mesosproto.ContainerInfo_DockerInfo_HOST.Enum()
 	case "bridge":
 		return mesosproto.ContainerInfo_DockerInfo_BRIDGE.Enum()
-	default:
-		return mesosproto.ContainerInfo_DockerInfo_USER.Enum()
 	}
 
-	return mesosproto.ContainerInfo_DockerInfo_NONE.Enum()
+	return mesosproto.ContainerInfo_DockerInfo_USER.Enum()
 }
 
 func (c *TaskConfig) portMappings(offer *mesosproto.Offer) []*mesosproto.ContainerInfo_DockerInfo_PortMapping {

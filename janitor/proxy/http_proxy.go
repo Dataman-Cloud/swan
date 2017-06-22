@@ -93,10 +93,10 @@ func (p *HTTPProxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if err != nil {
-			log.Errorf("[HTTP] proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
+			log.Errorf("[HTTP] proxy serve error: %v, received:%d, transmitted:%d", err, in, out)
 			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
-			log.Printf("[HTTP] proxy serve succeed: recived:%d, transmitted:%d", in, out)
+			log.Printf("[HTTP] proxy serve succeed: received:%d, transmitted:%d", in, out)
 			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 0}
 		}
 		stats.Incr(nil, dGlb)

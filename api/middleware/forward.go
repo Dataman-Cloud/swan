@@ -91,8 +91,6 @@ func (m *forwardMiddleware) WrapHandler(handler api.HandlerFunc) api.HandlerFunc
 				return err
 			}
 		}
-
-		return nil
 	}
 }
 
