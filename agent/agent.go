@@ -13,7 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/agent/nameserver"
 	"github.com/Dataman-Cloud/swan/config"
-	eventbus "github.com/Dataman-Cloud/swan/event"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
 	"github.com/Dataman-Cloud/swan/utils/httpclient"
@@ -133,8 +132,8 @@ func (agent *Agent) dispatchEvents() {
 		}
 
 		// Resolver only recongnize these two events
-		if event.name == eventbus.EventTypeTaskHealthy ||
-			event.name == eventbus.EventTypeTaskUnhealthy {
+		if event.name == types.EventTypeTaskHealthy ||
+			event.name == types.EventTypeTaskUnhealthy {
 			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
 				event.name, &taskEvent))
 		}
@@ -159,9 +158,9 @@ func (agent *Agent) detectManagerLeader() (leaderAddr string, err error) {
 
 func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 	eventsDoesMatter := []string{
-		eventbus.EventTypeTaskUnhealthy,
-		eventbus.EventTypeTaskHealthy,
-		eventbus.EventTypeTaskWeightChange,
+		types.EventTypeTaskUnhealthy,
+		types.EventTypeTaskHealthy,
+		types.EventTypeTaskWeightChange,
 	}
 
 	eventsPath := fmt.Sprintf("http://%s/events?catchUp=true", leaderAddr)
@@ -209,7 +208,7 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 
 func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskEvent) *nameserver.RecordChangeEvent {
 	resolverEvent := &nameserver.RecordChangeEvent{}
-	if eventType == eventbus.EventTypeTaskHealthy {
+	if eventType == types.EventTypeTaskHealthy {
 		resolverEvent.Change = "add"
 	} else {
 		resolverEvent.Change = "del"
@@ -244,11 +243,11 @@ func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskEvent) *u
 	)
 
 	switch eventType {
-	case eventbus.EventTypeTaskHealthy:
+	case types.EventTypeTaskHealthy:
 		act = "add"
-	case eventbus.EventTypeTaskUnhealthy:
+	case types.EventTypeTaskUnhealthy:
 		act = "del"
-	case eventbus.EventTypeTaskWeightChange:
+	case types.EventTypeTaskWeightChange:
 		act = "change"
 	default:
 		return nil
