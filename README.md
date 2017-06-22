@@ -20,7 +20,7 @@ With `Swan` you can deploy long running `application` on mesos cluster, control 
 
 #### `Swan` is created and maintained by [Dataman-Cloud](https://github.com/Dataman-Cloud), and licensed under the Apache License, Version 2.0.
 
-#### for more documentation about `Swan` please refer to [swan-docs](https://github.com/Dataman-Cloud/swan/docs/)
+#### for more documentation about `Swan` please refer to [swan-docs](https://dataman-cloud.github.io/swan-site/docs/)
 
 
 ## Features
