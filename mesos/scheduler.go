@@ -24,7 +24,7 @@ const (
 	resourceTimeout   = time.Duration(10 * time.Second)
 	creationTimeout   = time.Duration(300 * time.Second)
 	deleteTimeout     = time.Duration(300 * time.Second)
-	reconcileInterval = time.Duration(3600 * time.Second)
+	reconcileInterval = time.Duration(36000000 * time.Second)
 )
 
 var (

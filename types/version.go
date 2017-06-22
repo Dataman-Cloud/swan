@@ -9,6 +9,8 @@ import (
 	"github.com/Dataman-Cloud/swan/utils"
 )
 
+const MaxDeployStep = 100
+
 type Version struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
@@ -23,7 +25,7 @@ type Version struct {
 	Labels       map[string]string `json:"labels"`
 	HealthCheck  *HealthCheck      `json:"healthCheck"`
 	Env          map[string]string `json:"env"`
-	DeployPolic  *DeployPolicy     `json:"deploy"`
+	DeployPolicy *DeployPolicy     `json:"deploy"`
 	KillPolicy   *KillPolicy       `json:"kill"`
 	UpdatePolicy *UpdatePolicy     `json:"update"`
 	Constraints  []*Constraint     `json:"constraints"`

@@ -6,12 +6,12 @@
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
-  "priority": 100,
+  "priority": 0,
   "instances": 1,
   "constraints": [],
   "container": {
     "docker": {
-      "image": "offlineregistry.dataman-inc.com:5000/library/blackicebird-2048",
+      "image": "nginx",
       "network": "bridge",
       "forcePullImage": false,
       "privileged": true,

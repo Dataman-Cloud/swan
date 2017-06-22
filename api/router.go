@@ -45,6 +45,7 @@ func (r *Router) setupRoutes() {
 		NewRoute("PATCH", "/v1/apps/{app_id}/tasks/{task_id}/weight", r.updateWeight),
 		NewRoute("GET", "/v1/apps/{app_id}/versions", r.getVersions),
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", r.getVersion),
+		NewRoute("PUT", "/v1/apps/{app_id}/versions", r.createVersion),
 
 		NewRoute("POST", "/v1/compose", r.newCompose),
 		NewRoute("POST", "/v1/compose/parse", r.parseYAML),
@@ -57,5 +58,6 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/v1/stats", r.stats),
 		NewRoute("GET", "/version", r.version),
 		NewRoute("GET", "/leader", r.leader),
+		NewRoute("GET", "/v1/purge", r.purge),
 	}
 }

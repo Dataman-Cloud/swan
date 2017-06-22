@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -85,6 +86,15 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	//var (
+	//	step      = spec.DeployPolicy.Step
+	//	onfailure = spec.DeployPolicy.OnFailure
+	//)
+
+	//if step > types.MaxDeployStep {
+	//	step = types.MaxDeployStep
+	//}
+
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -94,6 +104,9 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for i := 0; i < count; i++ {
+			//for j := i * step; j < i*step; j++ {
+
+			//}
 			var (
 				name = fmt.Sprintf("%d.%s", i, app.ID)
 				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
@@ -210,6 +223,7 @@ func (r *Router) listApps(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) getApp(w http.ResponseWriter, req *http.Request) {
+	// TODO(nmg): mux.Vars should be wrapped in context.
 	id := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(id)
@@ -235,16 +249,36 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, task := range app.Tasks {
-		if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	var (
+		errch chan error
+		wg    sync.WaitGroup
+	)
 
-		if err := r.db.DeleteTask(task.ID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	for _, task := range app.Tasks {
+		wg.Add(1)
+		go func(errch chan error) {
+			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				errch <- err
+				return
+			}
+
+			if err := r.db.DeleteTask(task.ID); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				errch <- err
+				return
+			}
+
+			wg.Done()
+		}(errch)
+	}
+
+	select {
+	case err := <-errch:
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	default:
+		wg.Wait()
 	}
 
 	if err := r.db.DeleteApp(id); err != nil {
@@ -787,6 +821,43 @@ func (r *Router) getVersion(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, version)
+}
+
+// TODO(nmg): named version should be supported.
+func (r *Router) createVersion(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars  = mux.Vars(req)
+		appId = vars["app_id"]
+	)
+
+	if err := checkForJSON(req); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := req.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var version types.Version
+	if err := decode(req.Body, &version); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := version.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+
+	if err := r.db.CreateVersion(appId, &version); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"Id": version.ID})
 }
 
 func filterByLabelsSelectors(labelsSelector labels.Selector, appLabels map[string]string) bool {
