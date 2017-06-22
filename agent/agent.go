@@ -9,17 +9,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/agent/janitor"
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/agent/nameserver"
 	"github.com/Dataman-Cloud/swan/config"
-	eventbus "github.com/Dataman-Cloud/swan/event"
-	"github.com/Dataman-Cloud/swan/janitor"
-	"github.com/Dataman-Cloud/swan/janitor/upstream"
-	"github.com/Dataman-Cloud/swan/nameserver"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
-	"github.com/Dataman-Cloud/swan/utils/httpclient"
 
 	"github.com/Sirupsen/logrus"
-	"golang.org/x/net/context"
 )
 
 const REJOIN_BACKOFF = 3 * time.Second
@@ -133,8 +130,8 @@ func (agent *Agent) dispatchEvents() {
 		}
 
 		// Resolver only recongnize these two events
-		if event.name == eventbus.EventTypeTaskHealthy ||
-			event.name == eventbus.EventTypeTaskUnhealthy {
+		if event.name == types.EventTypeTaskHealthy ||
+			event.name == types.EventTypeTaskUnhealthy {
 			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
 				event.name, &taskEvent))
 		}
@@ -142,26 +139,24 @@ func (agent *Agent) dispatchEvents() {
 }
 
 // todo
-func (agent *Agent) detectManagerLeader() (leaderAddr string, err error) {
+func (agent *Agent) detectManagerLeader() (string, error) {
 	for _, managerAddr := range agent.Config.JoinAddrs {
-		nodeRegistrationPath := managerAddr + "/ping"
-		_, err := httpclient.NewDefaultClient().GET(context.TODO(), nodeRegistrationPath, nil, nil)
-		if err != nil {
-			logrus.Infof("register to %s got error: %s", nodeRegistrationPath, err.Error())
+		if _, err := http.Get(managerAddr + "/ping"); err != nil {
+			logrus.Infof("detect manager %s error %v", managerAddr, err)
 			continue
 		}
 
 		return managerAddr, nil
 	}
 
-	return "", errors.New("try join all managers are failed")
+	return "", errors.New("try join all swan managers failed")
 }
 
 func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 	eventsDoesMatter := []string{
-		eventbus.EventTypeTaskUnhealthy,
-		eventbus.EventTypeTaskHealthy,
-		eventbus.EventTypeTaskWeightChange,
+		types.EventTypeTaskUnhealthy,
+		types.EventTypeTaskHealthy,
+		types.EventTypeTaskWeightChange,
 	}
 
 	eventsPath := fmt.Sprintf("http://%s/events?catchUp=true", leaderAddr)
@@ -209,7 +204,7 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 
 func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskEvent) *nameserver.RecordChangeEvent {
 	resolverEvent := &nameserver.RecordChangeEvent{}
-	if eventType == eventbus.EventTypeTaskHealthy {
+	if eventType == types.EventTypeTaskHealthy {
 		resolverEvent.Change = "add"
 	} else {
 		resolverEvent.Change = "del"
@@ -244,11 +239,11 @@ func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskEvent) *u
 	)
 
 	switch eventType {
-	case eventbus.EventTypeTaskHealthy:
+	case types.EventTypeTaskHealthy:
 		act = "add"
-	case eventbus.EventTypeTaskUnhealthy:
+	case types.EventTypeTaskUnhealthy:
 		act = "del"
-	case eventbus.EventTypeTaskWeightChange:
+	case types.EventTypeTaskWeightChange:
 		act = "change"
 	default:
 		return nil
