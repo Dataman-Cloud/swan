@@ -11,9 +11,9 @@ import (
 
 	"github.com/Dataman-Cloud/swan/agent/janitor"
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/agent/nameserver"
 	"github.com/Dataman-Cloud/swan/config"
 	eventbus "github.com/Dataman-Cloud/swan/event"
-	"github.com/Dataman-Cloud/swan/nameserver"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
 	"github.com/Dataman-Cloud/swan/utils/httpclient"
