@@ -17,7 +17,7 @@ func (zk *ZKStore) CreateApp(app *types.Application) error {
 	data, _, err := zk.get(p)
 	if err != nil {
 		if !strings.Contains(err.Error(), "node does not exist") {
-			log.Errorf("find app %s got error: %v", app.ID)
+			log.Errorf("find app %s got error: %v", app.ID, err)
 			return err
 		}
 	}

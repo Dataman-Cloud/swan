@@ -71,7 +71,7 @@ type KillPolicy struct {
 
 type UpdatePolicy struct {
 	Step          int64   `json:"step"`
-	Delay         float64 `json":delay"`
+	Delay         float64 `json:"delay"`
 	FailureAction string  `json:"action,omitempty"`
 }
 

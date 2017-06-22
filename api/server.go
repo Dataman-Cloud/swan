@@ -220,8 +220,6 @@ func (s *Server) forwardRequest(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-
-	return
 }
 
 func copyHeader(src http.Header, dest *http.Header) {

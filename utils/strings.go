@@ -27,7 +27,7 @@ func StripSpaces(str string) string {
 func LegalDomain(str string) error {
 	for i := 0; i < len(str); i++ {
 		if !strings.Contains(legalDomainChars, string(str[i])) {
-			return fmt.Errorf("character %s not allowed.", str[i])
+			return fmt.Errorf("character %q not allowed.", str[i])
 		}
 	}
 

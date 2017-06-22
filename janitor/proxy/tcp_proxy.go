@@ -141,10 +141,10 @@ func (p *TCPProxyServer) serveTCP(conn net.Conn) {
 	defer func() {
 		if err != nil {
 			conn.Write([]byte(err.Error()))
-			log.Errorf("[TCP] proxy serve error: %v, recived:%d, transmitted:%d", err, in, out)
+			log.Errorf("[TCP] proxy serve error: %v, received:%d, transmitted:%d", err, in, out)
 			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 1}
 		} else {
-			log.Printf("[TCP] proxy serve succeed: recived:%d, transmitted:%d", in, out)
+			log.Printf("[TCP] proxy serve succeed: received:%d, transmitted:%d", in, out)
 			dGlb = &stats.DeltaGlb{uint64(in), uint64(out), 1, 0}
 		}
 		stats.Incr(nil, dGlb)

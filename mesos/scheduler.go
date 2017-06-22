@@ -215,7 +215,7 @@ func (s *Scheduler) Subscribe() error {
 }
 
 func (s *Scheduler) Unsubscribe() error {
-	log.Println("Unscribing from mesos leader: %s", s.leader)
+	log.Println("Unscribing from mesos leader:", s.leader)
 	close(s.quit)
 	return nil
 }
@@ -495,8 +495,6 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 			return errCreationTimeout
 		}
 	}
-
-	return nil
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
@@ -654,7 +652,7 @@ func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 		}
 
 		if code := resp.StatusCode; code != http.StatusAccepted {
-			return fmt.Errorf("send ack got %d not 202")
+			return fmt.Errorf("send ack got %d not 202", code)
 		}
 	}
 

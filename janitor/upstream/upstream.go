@@ -15,7 +15,7 @@ func init() {
 	}
 }
 
-// Type & Method Definations ...
+// Type & Method Definitions ...
 //
 type UpsManager struct {
 	Upstreams []*Upstream `json:"upstreams"`
