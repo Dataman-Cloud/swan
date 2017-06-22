@@ -67,7 +67,7 @@ func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 			ListenAddr: "0.0.0.0:53",
 
 			RecurseOn:       true,
-			TTL:             3,
+			TTL:             0,
 			Resolvers:       []string{"114.114.114.114"},
 			ExchangeTimeout: time.Second * 3,
 		},
@@ -125,6 +125,10 @@ func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 
 	if c.String("dns-resolvers") != "" {
 		cfg.DNS.Resolvers = strings.Split(c.String("dns-resolvers"), ",")
+	}
+
+	if ttl := c.Int("dns-ttl"); ttl > 0 {
+		cfg.DNS.TTL = ttl
 	}
 
 	if c.String("join-addrs") != "" {

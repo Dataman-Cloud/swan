@@ -85,6 +85,15 @@ func FlagDNSListenAddr() cli.Flag {
 	}
 }
 
+func FlagDNSTTL() cli.Flag {
+	return cli.IntFlag{
+		Name:   "dns-ttl",
+		Usage:  "dns records ttl",
+		Value:  0,
+		EnvVar: "SWAN_DNS_TTL",
+	}
+}
+
 func FlagDNSResolvers() cli.Flag {
 	return cli.StringFlag{
 		Name:   "dns-resolvers",

@@ -27,6 +27,7 @@ func AgentCmd() cli.Command {
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSCertFile())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSKeyFile())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDNSListenAddr())
+	agentCmd.Flags = append(agentCmd.Flags, FlagDNSTTL())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDNSResolvers())
 	agentCmd.Flags = append(agentCmd.Flags, FlagLogLevel())
 	agentCmd.Flags = append(agentCmd.Flags, FlagDomain())
