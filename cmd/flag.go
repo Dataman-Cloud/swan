@@ -27,7 +27,7 @@ func FlagStrategy() cli.Flag {
 		Name:   "strategy",
 		Usage:  "scheduler strategy",
 		EnvVar: "SWAN_SCHEDULER_STRATEGY",
-		Value:  "binpack",
+		Value:  "spread",
 	}
 }
 
