@@ -104,9 +104,6 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for i := 0; i < count; i++ {
-			//for j := i * step; j < i*step; j++ {
-
-			//}
 			var (
 				name = fmt.Sprintf("%d.%s", i, app.ID)
 				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
@@ -154,8 +151,6 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 				if err = r.db.UpdateTask(app.ID, task); err != nil {
 					log.Errorf("update task %s status got error: %v", id, err)
 				}
-
-				break
 			}
 		}
 
@@ -249,42 +244,42 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var (
-		errch chan error
-		wg    sync.WaitGroup
-	)
+	go func(tasks []*types.Task, id string) {
+		var (
+			chErrors = make(chan error, 0)
+			wg       sync.WaitGroup
+		)
+		wg.Add(len(tasks))
+		for _, task := range tasks {
+			go func(task *types.Task) {
+				defer wg.Done()
 
-	for _, task := range app.Tasks {
-		wg.Add(1)
-		go func(errch chan error) {
-			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				errch <- err
-				return
-			}
+				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					chErrors <- err
+					return
+				}
 
-			if err := r.db.DeleteTask(task.ID); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				errch <- err
-				return
-			}
+				if err := r.db.DeleteTask(task.ID); err != nil {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+					chErrors <- err
+					return
+				}
 
-			wg.Done()
-		}(errch)
-	}
+			}(task)
+		}
 
-	select {
-	case err := <-errch:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	default:
 		wg.Wait()
-	}
 
-	if err := r.db.DeleteApp(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+		if len(chErrors) == 0 {
+			if err := r.db.DeleteApp(id); err != nil {
+				// TODO(nmg): should show failed reason.
+				log.Error("Delete app %s got error: %v", id, err)
+				return
+			}
+		}
+
+	}(app.Tasks, id)
 
 	writeJSON(w, http.StatusNoContent, "")
 }
