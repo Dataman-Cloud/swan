@@ -58,6 +58,6 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/v1/stats", r.stats),
 		NewRoute("GET", "/version", r.version),
 		NewRoute("GET", "/leader", r.leader),
-		NewRoute("GET", "/v1/purge", r.purge),
+		NewRoute("DELETE", "/v1/purge", r.purge),
 	}
 }

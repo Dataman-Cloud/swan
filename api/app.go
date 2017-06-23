@@ -244,24 +244,22 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	go func(tasks []*types.Task, id string) {
+	go func(app *types.Application) {
 		var (
 			chErrors = make(chan error, 0)
 			wg       sync.WaitGroup
 		)
-		wg.Add(len(tasks))
-		for _, task := range tasks {
+		wg.Add(len(app.Tasks))
+		for _, task := range app.Tasks {
 			go func(task *types.Task) {
 				defer wg.Done()
 
 				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
 					chErrors <- err
 					return
 				}
 
 				if err := r.db.DeleteTask(task.ID); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
 					chErrors <- err
 					return
 				}
@@ -272,14 +270,14 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		wg.Wait()
 
 		if len(chErrors) == 0 {
-			if err := r.db.DeleteApp(id); err != nil {
+			if err := r.db.DeleteApp(app.ID); err != nil {
 				// TODO(nmg): should show failed reason.
-				log.Error("Delete app %s got error: %v", id, err)
+				log.Error("Delete app %s got error: %v", app.ID, err)
 				return
 			}
 		}
 
-	}(app.Tasks, id)
+	}(app)
 
 	writeJSON(w, http.StatusNoContent, "")
 }

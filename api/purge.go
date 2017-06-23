@@ -3,6 +3,9 @@ package api
 import (
 	"net/http"
 	"sync"
+
+	"github.com/Dataman-Cloud/swan/types"
+	log "github.com/Sirupsen/logrus"
 )
 
 func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
@@ -12,53 +15,42 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var wg sync.WaitGroup
 	for _, app := range apps {
-		wg.Add(1)
-		go func() {
+		go func(app *types.Application) {
 			var (
-				errch chan error
-				wg    sync.WaitGroup
+				chErrors = make(chan error, 0)
+				wg       sync.WaitGroup
 			)
-
+			wg.Add(len(app.Tasks))
 			for _, task := range app.Tasks {
-				wg.Add(1)
-				go func(errch chan error) {
+				go func(task *types.Task) {
+					defer wg.Done()
+
 					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						errch <- err
+						chErrors <- err
 						return
 					}
 
 					if err := r.db.DeleteTask(task.ID); err != nil {
-						http.Error(w, err.Error(), http.StatusInternalServerError)
-						errch <- err
+						chErrors <- err
 						return
 					}
 
-					wg.Done()
-				}(errch)
+				}(task)
 			}
 
-			select {
-			case err := <-errch:
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			default:
-				wg.Wait()
+			wg.Wait()
+
+			if len(chErrors) == 0 {
+				if err := r.db.DeleteApp(app.ID); err != nil {
+					// TODO(nmg): should show failed reason.
+					log.Error("Delete app %s got error: %v", app.ID, err)
+					return
+				}
 			}
 
-			if err := r.db.DeleteApp(app.ID); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			wg.Done()
-		}()
-
+		}(app)
 	}
 
-	wg.Wait()
-
-	writeJSON(w, http.StatusOK, "OK")
+	writeJSON(w, http.StatusNoContent, "")
 }
