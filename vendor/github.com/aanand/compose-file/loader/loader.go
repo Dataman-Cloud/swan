@@ -73,7 +73,7 @@ func Load(configDetails types.ConfigDetails) (*types.Config, error) {
 	}
 
 	if services, ok := configDict["services"]; ok {
-		servicesConfig, err := interpolation.Interpolate(services.(types.Dict), "service", configDetails.LookupEnv)
+		servicesConfig, err := interpolation.Interpolate(services.(types.Dict), "service", os.LookupEnv)
 		if err != nil {
 			return nil, err
 		}
@@ -87,7 +87,7 @@ func Load(configDetails types.ConfigDetails) (*types.Config, error) {
 	}
 
 	if networks, ok := configDict["networks"]; ok {
-		networksConfig, err := interpolation.Interpolate(networks.(types.Dict), "network", configDetails.LookupEnv)
+		networksConfig, err := interpolation.Interpolate(networks.(types.Dict), "network", os.LookupEnv)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func Load(configDetails types.ConfigDetails) (*types.Config, error) {
 	}
 
 	if volumes, ok := configDict["volumes"]; ok {
-		volumesConfig, err := interpolation.Interpolate(volumes.(types.Dict), "volume", configDetails.LookupEnv)
+		volumesConfig, err := interpolation.Interpolate(volumes.(types.Dict), "volume", os.LookupEnv)
 		if err != nil {
 			return nil, err
 		}
