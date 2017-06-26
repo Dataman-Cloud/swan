@@ -40,6 +40,7 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/v1/apps/{app_id}/tasks", r.getTasks),
 		NewRoute("GET", "/v1/apps/{app_id}/tasks/{task_id}", r.getTask),
 		NewRoute("DELETE", "/v1/apps/{app_id}/tasks/{task_id}", r.deleteTask),
+		NewRoute("DELETE", "/v1/apps/{app_id}/tasks", r.deleteTasks),
 		NewRoute("PUT", "/v1/apps/{app_id}/tasks/{task_id}/update", r.updateTask),
 		NewRoute("PUT", "/v1/apps/{app_id}/tasks/{task_id}/rollback", r.rollbackTask),
 		NewRoute("PATCH", "/v1/apps/{app_id}/tasks/{task_id}/weight", r.updateWeight),

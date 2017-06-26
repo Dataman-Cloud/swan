@@ -36,6 +36,12 @@ func (vl VersionList) Sort() VersionList {
 	return vl
 }
 
+func (vl VersionList) Reverse() VersionList {
+	sort.Sort(sort.Reverse(vl))
+
+	return vl
+}
+
 type TaskList []*Task
 
 func (tl TaskList) Len() int      { return len(tl) }
@@ -49,6 +55,12 @@ func (tl TaskList) Less(i, j int) bool {
 
 func (tl TaskList) Reverse() TaskList {
 	sort.Sort(sort.Reverse(tl))
+
+	return tl
+}
+
+func (tl TaskList) Sort() TaskList {
+	sort.Sort(tl)
 
 	return tl
 }
@@ -104,6 +116,7 @@ type UpdateWeightsParam struct {
 }
 
 type Health struct {
+	Total     int64 `json:"total"`
 	Healthy   int64 `json:"healthy"`
 	UnHealthy int64 `json:"unhealthy"`
 	UnSet     int64 `json:"unset"`
