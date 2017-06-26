@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -17,18 +18,19 @@ const (
 )
 
 type Task struct {
-	ID      string    `json:"id,omitempty"`
-	Name    string    `json:"name,omitempty"`
-	IP      string    `json:"ip"`
-	Port    uint64    `json:"port"`
-	Healthy string    `json:"healthy"`
-	Weight  float64   `json:"weight"`
-	AgentId string    `json:"agentId"`
-	Version string    `json:"version"`
-	Status  string    `json:"status,omitempty"`
-	ErrMsg  string    `json:"errmsg, omitempty"`
-	Created time.Time `json:"created,omitempty"`
-	Updated time.Time `json:"updated,omitempty"`
+	ID       string    `json:"id"`
+	Name     string    `json:"name"`
+	IP       string    `json:"ip"`
+	Port     uint64    `json:"port"`
+	Healthy  string    `json:"healthy"`
+	Weight   float64   `json:"weight"`
+	AgentId  string    `json:"agentId"`
+	Version  string    `json:"version"`
+	Status   string    `json:"status"`
+	ErrMsg   string    `json:"errmsg"`
+	OpStatus string    `json:"opstatus"`
+	Created  time.Time `json:"created"`
+	Updated  time.Time `json:"updated"`
 }
 
 type TaskConfig struct {
@@ -164,6 +166,10 @@ func (c *TaskConfig) portMappings(offer *mesosproto.Offer) []*mesosproto.Contain
 	)
 
 	ports := ports(offer)
+	if len(ports) <= 0 {
+		log.Error("no ports  available")
+		return nil
+	}
 
 	if c.Network == "bridge" {
 		for i, m := range pms {
@@ -276,6 +282,10 @@ func (c *TaskConfig) BuildResources(offer *mesosproto.Offer) []*mesosproto.Resou
 
 	for i, pm := range c.PortMappings {
 		ports := ports(offer)
+		if len(ports) <= 0 {
+			log.Error("no ports  available")
+			return nil
+		}
 
 		switch c.Network {
 		case "host":

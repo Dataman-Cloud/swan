@@ -8,6 +8,7 @@ import (
 	"net/http/pprof"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -25,6 +26,7 @@ type Server struct {
 	router      *Router
 	server      *http.Server
 	middlewares []Middleware
+	sync.Mutex
 }
 
 func NewServer(cfg *Config) *Server {
@@ -80,7 +82,7 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.enableCORS(w)
 
-		if s.cfg.Listen != s.leader {
+		if s.cfg.Listen != s.getLeader() {
 			if r.Method != "GET" {
 				s.forwardRequest(w, r)
 				return
@@ -153,7 +155,17 @@ func (s *Server) Reload() error {
 }
 
 func (s *Server) Update(leader string) {
+	s.Lock()
+	defer s.Unlock()
+
 	s.leader = leader
+}
+
+func (s *Server) getLeader() string {
+	s.Lock()
+	defer s.Unlock()
+
+	return s.leader
 }
 
 func (s *Server) forwardRequest(w http.ResponseWriter, r *http.Request) {

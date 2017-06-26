@@ -2,7 +2,6 @@ package mesos
 
 import (
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
@@ -15,8 +14,6 @@ const (
 	defaultOfferTimeout  = 30 * time.Second
 	defaultRefuseTimeout = 5 * time.Second
 )
-
-var lock sync.Mutex
 
 type eventHandler func(*mesosproto.Event)
 
@@ -37,7 +34,7 @@ func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 
 	//s.watchConn(interval)
 
-	s.reconcile()
+	//s.reconcile()
 }
 
 func (s *Scheduler) offersHandler(event *mesosproto.Event) {
@@ -76,9 +73,6 @@ func (s *Scheduler) rescindedHandler(event *mesosproto.Event) {
 }
 
 func (s *Scheduler) updateHandler(event *mesosproto.Event) {
-	lock.Lock()
-	defer lock.Unlock()
-
 	var (
 		status  = event.GetUpdate().GetStatus()
 		state   = status.GetState()

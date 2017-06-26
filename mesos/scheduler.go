@@ -21,10 +21,10 @@ import (
 
 const (
 	reconnectDuration = time.Duration(20 * time.Second)
-	resourceTimeout   = time.Duration(10 * time.Second)
-	creationTimeout   = time.Duration(300 * time.Second)
-	deleteTimeout     = time.Duration(300 * time.Second)
-	reconcileInterval = time.Duration(3600 * time.Second)
+	resourceTimeout   = time.Duration(360000 * time.Second)
+	creationTimeout   = time.Duration(360000 * time.Second)
+	deleteTimeout     = time.Duration(360000 * time.Second)
+	reconcileInterval = time.Duration(24 * time.Hour)
 )
 
 var (
@@ -134,13 +134,13 @@ func (s *Scheduler) init() error {
 		}
 	}
 
-	s.reconcileTimer = time.NewTicker(reconcileInterval)
-	// TOOD(nmg): stop timer.
-	go func() {
-		for range s.reconcileTimer.C {
-			s.reconcile()
-		}
-	}()
+	//s.reconcileTimer = time.NewTicker(reconcileInterval)
+	//// TOOD(nmg): stop timer.
+	//go func() {
+	//	for range s.reconcileTimer.C {
+	//		s.reconcile()
+	//	}
+	//}()
 
 	return nil
 }

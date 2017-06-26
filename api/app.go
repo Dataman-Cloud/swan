@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -85,6 +86,16 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// TODO(nmg): ONGOING, TESTING
+	//var (
+	//	step      = spec.DeployPolicy.Step
+	//	onfailure = spec.DeployPolicy.OnFailure
+	//)
+
+	//if step > types.MaxDeployStep {
+	//	step = types.MaxDeployStep
+	//}
+
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -141,8 +152,6 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 				if err = r.db.UpdateTask(app.ID, task); err != nil {
 					log.Errorf("update task %s status got error: %v", id, err)
 				}
-
-				break
 			}
 		}
 
@@ -210,6 +219,7 @@ func (r *Router) listApps(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) getApp(w http.ResponseWriter, req *http.Request) {
+	// TODO(nmg): mux.Vars should be wrapped in context.
 	id := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(id)
@@ -235,22 +245,58 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, task := range app.Tasks {
-		if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+	go func(app *types.Application) {
+		var (
+			hasError = false
+			wg       sync.WaitGroup
+		)
+
+		wg.Add(len(app.Tasks))
+		for _, task := range app.Tasks {
+			go func(task *types.Task, appId string) {
+				defer wg.Done()
+
+				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+					log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+					hasError = true
+
+					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
+					}
+
+					return
+				}
+
+				if err := r.db.DeleteTask(task.ID); err != nil {
+					log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+					hasError = true
+
+					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
+					}
+
+					return
+				}
+
+			}(task, app.ID)
+		}
+
+		wg.Wait()
+
+		if hasError {
+			log.Errorf("Delete some tasks of app %s got error.", app.ID)
 			return
 		}
 
-		if err := r.db.DeleteTask(task.ID); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
+		if err := r.db.DeleteApp(app.ID); err != nil {
+			log.Error("Delete app %s got error: %v", app.ID, err)
 		}
-	}
 
-	if err := r.db.DeleteApp(id); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
+	}(app)
 
 	writeJSON(w, http.StatusNoContent, "")
 }
@@ -787,6 +833,43 @@ func (r *Router) getVersion(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, version)
+}
+
+// TODO(nmg): named version should be supported.
+func (r *Router) createVersion(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars  = mux.Vars(req)
+		appId = vars["app_id"]
+	)
+
+	if err := checkForJSON(req); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := req.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var version types.Version
+	if err := decode(req.Body, &version); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if err := version.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+
+	if err := r.db.CreateVersion(appId, &version); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]string{"Id": version.ID})
 }
 
 func filterByLabelsSelectors(labelsSelector labels.Selector, appLabels map[string]string) bool {
