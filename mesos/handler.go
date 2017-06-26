@@ -131,9 +131,13 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		typ = types.EventTypeTaskHealthy
 	}
 
-	var alias string
+	var (
+		alias        string
+		proxyEnabled bool
+	)
 	if ver.Proxy != nil {
 		alias = ver.Proxy.Alias
+		proxyEnabled = ver.Proxy.Enabled
 	}
 
 	if err := s.eventmgr.broadcast(&types.TaskEvent{
@@ -144,7 +148,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		IP:             task.IP,
 		Port:           task.Port,
 		Weight:         task.Weight,
-		GatewayEnabled: ver.Proxy.Enabled,
+		GatewayEnabled: proxyEnabled,
 	}); err != nil {
 		log.Errorf("broadcast task event got error: %v", err)
 	}
