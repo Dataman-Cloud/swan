@@ -1,9 +1,21 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 )
 
-func (r *Router) leader(w http.ResponseWriter, req *http.Request) {
-	writeJSON(w, http.StatusOK, r.db.GetLeader())
+func (r *Router) getLeader(w http.ResponseWriter, req *http.Request) {
+
+	lead, err := r.db.GetLeader()
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Find leader got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	leader := &leader{
+		Leader: lead,
+	}
+
+	writeJSON(w, http.StatusOK, leader)
 }

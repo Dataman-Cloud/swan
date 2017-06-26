@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -72,10 +71,9 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 	if err := r.db.CreateApp(app); err != nil {
 		if strings.Contains(err.Error(), "app already exists") {
 			http.Error(w, fmt.Sprintf("app %s has already exists", id), http.StatusConflict)
-		} else {
-
-			http.Error(w, fmt.Sprintf("create app error: %v", err), http.StatusInternalServerError)
+			return
 		}
+		http.Error(w, fmt.Sprintf("create app error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -238,10 +236,10 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 	if err != nil {
 		if strings.Contains(err.Error(), "node does not exist") {
 			http.Error(w, fmt.Sprintf("app %s not exists", id), http.StatusNotFound)
-		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
@@ -315,16 +313,16 @@ func (r *Router) scale(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var param types.ScaleParam
-	if err := decode(req.Body, &param); err != nil {
+	var body scaleBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	var (
 		current = len(app.Tasks)
-		goal    = param.Instances
-		ips     = param.IPs
+		goal    = body.instances
+		ips     = body.ips // TODO(nmg): remove after automatic ipam
 	)
 
 	if goal < 0 {
@@ -501,7 +499,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	sort.Sort(types.TaskSorter(app.Tasks))
+	tasks := app.Tasks.Sort()
 
 	spec := &version
 
@@ -513,7 +511,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
-		for _, t := range app.Tasks {
+		for _, t := range tasks {
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
@@ -713,15 +711,15 @@ func (r *Router) stopUpdate(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
-	var param types.UpdateWeightsParam
-	if err := decode(req.Body, &param); err != nil {
+	var body updateWeightsBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var (
 		appId   = mux.Vars(req)["app_id"]
-		weights = param.Weights
+		weights = body.weights
 	)
 
 	app, err := r.db.GetApp(appId)
@@ -776,8 +774,8 @@ func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
-	var weight types.UpdateWeightParam
-	if err := decode(req.Body, &weight); err != nil {
+	var body updateWeightBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -794,7 +792,7 @@ func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	task.Weight = weight.Weight
+	task.Weight = body.weight
 
 	if err := r.db.UpdateTask(appId, task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -912,6 +910,55 @@ func (r *Router) deleteTask(w http.ResponseWriter, req *http.Request) {
 	if err := r.db.DeleteTask(task.ID); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	writeJSON(w, http.StatusNoContent, "")
+}
+
+func (r *Router) deleteTasks(w http.ResponseWriter, req *http.Request) {
+	var (
+		vars  = mux.Vars(req)
+		appId = vars["app_id"]
+	)
+
+	app, err := r.db.GetApp(appId)
+	if err != nil {
+		if strings.Contains(err.Error(), "node does not exist") {
+			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	tasks := app.Tasks
+
+	for _, task := range tasks {
+		go func(task *types.Task, appId string) {
+			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+				log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+				task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", task.Name, err)
+				}
+
+				return
+			}
+
+			if err := r.db.DeleteTask(task.ID); err != nil {
+				log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+				task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", task.Name, err)
+				}
+
+				return
+			}
+
+		}(task, app.ID)
 	}
 
 	writeJSON(w, http.StatusNoContent, "")

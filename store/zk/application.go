@@ -79,6 +79,10 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 
 	app.Versions = versions
 
+	if len(app.Version) == 0 {
+		app.Version = append(app.Version, versions.Reverse()[0].ID)
+	}
+
 	return &app, nil
 }
 
@@ -94,6 +98,7 @@ func (zk *ZKStore) ListApps() ([]*types.Application, error) {
 		app, err := zk.GetApp(node)
 		if err != nil {
 			log.Errorf("%v", err)
+			continue
 		}
 		apps = append(apps, app)
 	}
@@ -185,6 +190,7 @@ func (zk *ZKStore) status(tasks types.TaskList) string {
 
 func (zk *ZKStore) health(tasks types.TaskList) *types.Health {
 	var (
+		total     int64
 		healthy   int64
 		unhealthy int64
 		unset     int64
@@ -199,9 +205,12 @@ func (zk *ZKStore) health(tasks types.TaskList) *types.Health {
 		case types.TaskHealthyUnset:
 			unset++
 		}
+
+		total++
 	}
 
 	return &types.Health{
+		Total:     total,
 		Healthy:   healthy,
 		UnHealthy: unhealthy,
 		UnSet:     unset,
