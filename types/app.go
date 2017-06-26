@@ -88,33 +88,6 @@ type AppFilterOptions struct {
 	FieldsSelector fields.Selector
 }
 
-type ProceedUpdateParam struct {
-	Instances  int                `json:"instances"`
-	NewWeights map[string]float64 `json:"weights"`
-}
-
-type ScaleUpParam struct {
-	Instances int      `json:"instances"`
-	IPs       []string `json:"ips"`
-}
-
-type ScaleDownParam struct {
-	Instances int `json:"instances"`
-}
-
-type ScaleParam struct {
-	Instances int      `json:"instances"`
-	IPs       []string `json:"ips"`
-}
-
-type UpdateWeightParam struct {
-	Weight float64 `json:"weight"`
-}
-
-type UpdateWeightsParam struct {
-	Weights map[string]float64 `json:"weights"`
-}
-
 type Health struct {
 	Total     int64 `json:"total"`
 	Healthy   int64 `json:"healthy"`

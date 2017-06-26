@@ -30,5 +30,5 @@ type Store interface {
 	GetCompose(idOrName string) (*types.Compose, error)
 	ListComposes() ([]*types.Compose, error)
 
-	GetLeader() string
+	GetLeader() (string, error)
 }

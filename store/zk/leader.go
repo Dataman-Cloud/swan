@@ -7,22 +7,22 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func (zk *ZKStore) GetLeader() string {
-	p := "/leader-election"
+const LeaderElectionPath = "/leader-election" // TODO(nmg)
 
-	children, err := zk.list(p)
+func (zk *ZKStore) GetLeader() (string, error) {
+	children, err := zk.list(LeaderElectionPath)
 	if err != nil {
 		log.Errorf("%v", err)
-		return ""
+		return "", err
 	}
 
 	sort.Strings(children)
 
-	data, _, err := zk.get(path.Join(p, children[0]))
+	data, _, err := zk.get(path.Join(LeaderElectionPath, children[0]))
 	if err != nil {
 		log.Errorf("%v", err)
-		return ""
+		return "", err
 	}
 
-	return string(data)
+	return string(data), nil
 }

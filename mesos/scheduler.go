@@ -255,7 +255,6 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 			if err := dec.Decode(ev); err != nil {
 				log.Error("mesos events subscriber decode events error:", err)
 				//s.watcher.Stop()
-				//go s.connect()
 				go s.reconnect()
 				return
 			}

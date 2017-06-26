@@ -313,16 +313,16 @@ func (r *Router) scale(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var param types.ScaleParam
-	if err := decode(req.Body, &param); err != nil {
+	var body scaleBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	var (
 		current = len(app.Tasks)
-		goal    = param.Instances
-		ips     = param.IPs
+		goal    = body.instances
+		ips     = body.ips // TODO(nmg): remove after automatic ipam
 	)
 
 	if goal < 0 {
@@ -711,15 +711,15 @@ func (r *Router) stopUpdate(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
-	var param types.UpdateWeightsParam
-	if err := decode(req.Body, &param); err != nil {
+	var body updateWeightsBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var (
 		appId   = mux.Vars(req)["app_id"]
-		weights = param.Weights
+		weights = body.weights
 	)
 
 	app, err := r.db.GetApp(appId)
@@ -774,8 +774,8 @@ func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
-	var weight types.UpdateWeightParam
-	if err := decode(req.Body, &weight); err != nil {
+	var body updateWeightBody
+	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -792,7 +792,7 @@ func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	task.Weight = weight.Weight
+	task.Weight = body.weight
 
 	if err := r.db.UpdateTask(appId, task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
