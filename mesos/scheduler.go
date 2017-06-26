@@ -260,9 +260,23 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 				return
 			}
 
-			s.handlers[ev.GetType()](ev)
+			s.handleEvent(ev)
 		}
 	}
+}
+
+func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
+	var (
+		typ     = ev.GetType()
+		handler = s.handlers[typ]
+	)
+	if handler == nil {
+		log.Error("without any proper event handler for mesos event:", typ)
+		return
+	}
+
+	// TODO panic protection on each event handling ?
+	handler(ev)
 }
 
 func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
