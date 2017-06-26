@@ -131,10 +131,15 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		typ = types.EventTypeTaskHealthy
 	}
 
+	var alias string
+	if ver.Proxy != nil {
+		alias = ver.Proxy.Alias
+	}
+
 	if err := s.eventmgr.broadcast(&types.TaskEvent{
 		Type:           typ,
 		AppID:          appId,
-		AppAlias:       ver.Proxy.Alias,
+		AppAlias:       alias,
 		TaskID:         taskId,
 		IP:             task.IP,
 		Port:           task.Port,
