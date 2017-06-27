@@ -308,7 +308,7 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var body scaleBody
+	var body types.ScaleBody
 	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusInternalServerError)
 		return
@@ -316,8 +316,8 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		current = len(app.Tasks)
-		goal    = body.instances
-		ips     = body.ips // TODO(nmg): remove after automatic ipam
+		goal    = body.Instances
+		ips     = body.IPs // TODO(nmg): remove after automatic ipam
 	)
 
 	if goal < 0 {
@@ -469,7 +469,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := new(updateBody)
+	body := new(types.UpdateBody)
 	if err := decode(req.Body, body); err != nil {
 		http.Error(w, fmt.Sprintf("decode update body got error: %v", err), http.StatusInternalServerError)
 		return
@@ -483,8 +483,9 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		instances = body.Instances
-		//weights   = body.Weights
-		spec = versions[0]
+		canary    = body.Canary
+		newVer    = versions[0]
+		tasks     = app.Tasks.Sort()
 	)
 
 	if instances == 0 {
@@ -492,16 +493,17 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks := app.Tasks.Sort()
-
-	from := 0
+	new := 0
+	newTasks := make([]*types.Task, 0)
 	for _, task := range tasks {
-		if task.Version == spec.ID {
-			from++
+		if task.Version == newVer.ID {
+			new++
+
+			newTasks = append(newTasks, task)
 		}
 	}
 
-	if from >= len(tasks) {
+	if new >= len(tasks) {
 		writeJSON(w, http.StatusNotModified, "all tasks have been updated")
 		return
 	}
@@ -517,13 +519,28 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		instances = -instances
 	}
 
-	to := from + instances
+	newWeight := float64(100)
+	if canary.Enabled {
+		newWeight = utils.ComputeWeight(float64(new+instances), float64(len(tasks)), canary.Value)
+
+		for _, task := range newTasks {
+			task.Weight = newWeight
+
+			if err = r.db.UpdateTask(appId, task); err != nil {
+				log.Errorf("update task %s got error: %v", task.ID, err)
+			}
+
+			// notify proxy
+		}
+	}
+
+	to := new + instances
 
 	if to >= len(tasks) {
 		to = len(tasks)
 	}
 
-	want := tasks[from:to]
+	pending := tasks[new:to]
 
 	go func() {
 		defer func() {
@@ -533,7 +550,9 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
-		for _, t := range want {
+		for _, t := range pending {
+			// notify proxy
+
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
@@ -550,7 +569,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			cfg := types.NewTaskConfig(spec)
+			cfg := types.NewTaskConfig(newVer)
 
 			var (
 				name = t.Name
@@ -560,9 +579,9 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			task := &types.Task{
 				ID:      id,
 				Name:    name,
-				Weight:  0,
+				Weight:  newWeight,
 				Status:  "updating",
-				Version: spec.ID,
+				Version: newVer.ID,
 				Created: t.Created,
 				Updated: time.Now(),
 			}
@@ -587,62 +606,13 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			// notify proxy
+
 			time.Sleep(5 * time.Second)
 		}
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
-}
-
-func (r *Router) grayPublish(w http.ResponseWriter, req *http.Request) {
-	appId := mux.Vars(req)["app_id"]
-
-	app, err := r.db.GetApp(appId)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
-		return
-	}
-
-	body := new(grayPublishBody)
-	if err := decode(req.Body, body); err != nil {
-		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	var (
-		coefficient = body.Coefficient
-		newVer      = app.Versions.Reverse()[0]
-		tasks       = app.Tasks
-	)
-
-	new := 0
-	newTasks := make([]*types.Task, 0)
-	for _, task := range tasks {
-		if task.Version == newVer.ID {
-			new++
-
-			newTasks = append(newTasks, task)
-		}
-	}
-
-	newWeight := utils.ComputeWeight(float64(new), float64(len(tasks)), coefficient)
-
-	for _, task := range newTasks {
-		task.Weight = newWeight
-
-		if err = r.db.UpdateTask(appId, task); err != nil {
-			log.Errorf("update task %s got error: %v", task.ID, err)
-		}
-
-		// notify proxy
-	}
-
-	writeJSON(w, http.StatusNoContent, "")
 }
 
 func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
@@ -775,7 +745,7 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
-	var body updateWeightsBody
+	var body types.UpdateWeightsBody
 	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -783,7 +753,7 @@ func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		appId   = mux.Vars(req)["app_id"]
-		weights = body.weights
+		weights = body.Weights
 	)
 
 	app, err := r.db.GetApp(appId)
@@ -838,7 +808,7 @@ func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
-	var body updateWeightBody
+	var body types.UpdateWeightBody
 	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -856,7 +826,7 @@ func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	task.Weight = body.weight
+	task.Weight = body.Weight
 
 	if err := r.db.UpdateTask(appId, task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

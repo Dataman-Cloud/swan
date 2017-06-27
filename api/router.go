@@ -48,8 +48,6 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", r.getVersion),
 		NewRoute("POST", "/v1/apps/{app_id}/versions", r.createVersion),
 
-		NewRoute("POST", "/v1/apps/{app_id}/gray", r.grayPublish),
-
 		NewRoute("POST", "/v1/compose", r.newCompose),
 		NewRoute("POST", "/v1/compose/parse", r.parseYAML),
 		NewRoute("GET", "/v1/compose", r.listComposes),

@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/Dataman-Cloud/swan/types"
 )
 
 func (r *Router) getLeader(w http.ResponseWriter, req *http.Request) {
@@ -13,7 +15,7 @@ func (r *Router) getLeader(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	leader := &leader{
+	leader := &types.Leader{
 		Leader: lead,
 	}
 
