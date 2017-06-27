@@ -27,6 +27,11 @@ func NewTask(cfg *types.TaskConfig, id, name string) *Task {
 
 	return task
 }
+
+func (t *Task) ID() string {
+	return t.TaskId.GetValue()
+}
+
 func (t *Task) Build(offer *mesosproto.Offer) {
 	t.AgentId = offer.GetAgentId()
 

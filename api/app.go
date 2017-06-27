@@ -84,16 +84,6 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO(nmg): ONGOING, TESTING
-	//var (
-	//	step      = spec.DeployPolicy.Step
-	//	onfailure = spec.DeployPolicy.OnFailure
-	//)
-
-	//if step > types.MaxDeployStep {
-	//	step = types.MaxDeployStep
-	//}
-
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -222,6 +212,11 @@ func (r *Router) getApp(w http.ResponseWriter, req *http.Request) {
 
 	app, err := r.db.GetApp(id)
 	if err != nil {
+		if strings.Contains(err.Error(), "not exists") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -299,7 +294,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusNoContent, "")
 }
 
-func (r *Router) scale(w http.ResponseWriter, req *http.Request) {
+func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(appId)
@@ -461,24 +456,7 @@ func (r *Router) scale(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
-	var version types.Version
-	if err := decode(req.Body, &version); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := version.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
 	appId := mux.Vars(req)["app_id"]
-
-	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
-	if err := r.db.CreateVersion(appId, &version); err != nil {
-		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
-		return
-	}
 
 	app, err := r.db.GetApp(appId)
 	if err != nil {
@@ -491,17 +469,61 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	body := new(updateBody)
+	if err := decode(req.Body, body); err != nil {
+		http.Error(w, fmt.Sprintf("decode update body got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	versions := app.Versions.Reverse()
+	if len(versions) < 2 {
+		http.Error(w, fmt.Sprintf("no new version found for update"), http.StatusNotModified)
+		return
+	}
+
+	var (
+		instances = body.Instances
+		//weights   = body.Weights
+		spec = versions[0]
+	)
+
+	if instances == 0 {
+		http.Error(w, fmt.Sprintf("no instance to be updated. instances: %d", instances), http.StatusNotModified)
+		return
+	}
+
+	tasks := app.Tasks.Sort()
+
+	from := 0
+	for _, task := range tasks {
+		if task.Version == spec.ID {
+			from++
+		}
+	}
+
+	if from >= len(tasks) {
+		writeJSON(w, http.StatusNotModified, "all tasks have been updated")
+		return
+	}
+
 	app.OpStatus = types.OpStatusUpdating
-	app.UpdatingVersion = version.ID
 
 	if err := r.db.UpdateApp(app); err != nil {
 		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
 		return
 	}
 
-	tasks := app.Tasks.Sort()
+	if instances < 0 {
+		instances = -instances
+	}
 
-	spec := &version
+	to := from + instances
+
+	if to >= len(tasks) {
+		to = len(tasks)
+	}
+
+	want := tasks[from:to]
 
 	go func() {
 		defer func() {
@@ -511,7 +533,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
-		for _, t := range tasks {
+		for _, t := range want {
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
@@ -538,7 +560,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			task := &types.Task{
 				ID:      id,
 				Name:    name,
-				Weight:  100,
+				Weight:  0,
 				Status:  "updating",
 				Version: spec.ID,
 				Created: t.Created,
@@ -553,13 +575,13 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			mtask := mesos.NewTask(cfg, task.ID, task.Name)
 
 			if err := r.driver.LaunchTask(mtask); err != nil {
-				log.Errorf("launch task %s got error: %v", t.ID, err)
+				log.Errorf("launch task %s got error: %v", task.ID, err)
 
 				task.Status = "Failed"
 				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", t.ID, err)
+					log.Errorf("update task %s got error: %v", task.ID, err)
 				}
 
 				return
@@ -572,7 +594,55 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) cancelUpdate(w http.ResponseWriter, req *http.Request) {
+func (r *Router) grayPublish(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := r.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		return
+	}
+
+	body := new(grayPublishBody)
+	if err := decode(req.Body, body); err != nil {
+		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		coefficient = body.Coefficient
+		newVer      = app.Versions.Reverse()[0]
+		tasks       = app.Tasks
+	)
+
+	new := 0
+	newTasks := make([]*types.Task, 0)
+	for _, task := range tasks {
+		if task.Version == newVer.ID {
+			new++
+
+			newTasks = append(newTasks, task)
+		}
+	}
+
+	newWeight := utils.ComputeWeight(float64(new), float64(len(tasks)), coefficient)
+
+	for _, task := range newTasks {
+		task.Weight = newWeight
+
+		if err = r.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", task.ID, err)
+		}
+
+		// notify proxy
+	}
+
+	writeJSON(w, http.StatusNoContent, "")
 }
 
 func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
@@ -684,13 +754,13 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 			mtask := mesos.NewTask(cfg, task.ID, task.Name)
 
 			if err := r.driver.LaunchTask(mtask); err != nil {
-				log.Errorf("launch task %s got error: %v", t.ID, err)
+				log.Errorf("launch task %s got error: %v", task.ID, err)
 
 				task.Status = "Failed"
 				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", t.ID, err)
+					log.Errorf("update task %s got error: %v", task.ID, err)
 				}
 
 				return
@@ -702,12 +772,6 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
-}
-
-func (r *Router) stopScale(w http.ResponseWriter, req *http.Request) {
-}
-
-func (r *Router) stopUpdate(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {

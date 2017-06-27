@@ -1,8 +1,15 @@
 package api
 
+import ()
+
 type scaleBody struct {
 	instances int      `json:"instances"`
 	ips       []string `json:"ips"` // TODO(nmg): Removed after automatic IPAM.
+}
+
+type updateBody struct {
+	Instances int       `json:"instances"`
+	Weights   []float64 `json:"weights"`
 }
 
 type updateWeightBody struct {
@@ -11,6 +18,10 @@ type updateWeightBody struct {
 
 type updateWeightsBody struct {
 	weights map[string]float64 `json:"weights"`
+}
+
+type grayPublishBody struct {
+	Coefficient float64 `json:"coefficient"`
 }
 
 type leader struct {

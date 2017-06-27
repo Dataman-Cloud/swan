@@ -66,21 +66,20 @@ func (tl TaskList) Sort() TaskList {
 }
 
 type Application struct {
-	ID              string      `json:"id"`
-	Name            string      `json:"name"`
-	Alias           string      `json:"alias"`
-	RunAs           string      `json:"runAs"`
-	Priority        int         `json:"priority"`
-	Cluster         string      `json:"cluster"`
-	OpStatus        string      `json:"operationStatus"`
-	Tasks           TaskList    `json:"tasks"`
-	Version         []string    `json:"currentVersion"`
-	UpdatingVersion string      `json:"-"`
-	Versions        VersionList `json:"versions"`
-	Status          string      `json:"status"`
-	Health          *Health     `json:"health"`
-	CreatedAt       time.Time   `json:"created"`
-	UpdatedAt       time.Time   `json:"updated"`
+	ID        string      `json:"id"`
+	Name      string      `json:"name"`
+	Alias     string      `json:"alias"`
+	RunAs     string      `json:"runAs"`
+	Priority  int         `json:"priority"`
+	Cluster   string      `json:"cluster"`
+	OpStatus  string      `json:"operationStatus"`
+	Tasks     TaskList    `json:"tasks"`
+	Version   []string    `json:"currentVersion"`
+	Versions  VersionList `json:"versions"`
+	Status    string      `json:"status"`
+	Health    *Health     `json:"health"`
+	CreatedAt time.Time   `json:"created"`
+	UpdatedAt time.Time   `json:"updated"`
 }
 
 type AppFilterOptions struct {
