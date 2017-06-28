@@ -392,7 +392,7 @@ func (s *Scheduler) removeTask(taskID string) bool {
 }
 
 func (s *Scheduler) LaunchTask(t *Task) error {
-	log.Info("launching task ", *t.Name)
+	log.Printf("launching task %s", t.ID())
 
 	s.launch.Lock()
 
