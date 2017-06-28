@@ -25,6 +25,9 @@ const (
 	creationTimeout   = time.Duration(360000 * time.Second)
 	deleteTimeout     = time.Duration(360000 * time.Second)
 	reconcileInterval = time.Duration(24 * time.Hour)
+
+	statusConnecting = "connecting"
+	statusConnected  = "connected"
 )
 
 var (
@@ -74,6 +77,10 @@ type Scheduler struct {
 	eventmgr *eventManager
 
 	launch sync.Mutex
+
+	status string
+
+	connection *http.Response //TODO(nmg)
 }
 
 // NewScheduler...
@@ -135,14 +142,6 @@ func (s *Scheduler) init() error {
 		}
 	}
 
-	//s.reconcileTimer = time.NewTicker(reconcileInterval)
-	//// TOOD(nmg): stop timer.
-	//go func() {
-	//	for range s.reconcileTimer.C {
-	//		s.reconcile()
-	//	}
-	//}()
-
 	return nil
 }
 
@@ -170,7 +169,7 @@ func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
 	return s.http.send(payload)
 }
 
-func (s *Scheduler) connect() (*http.Response, error) {
+func (s *Scheduler) connect() error {
 	call := &mesosproto.Call{
 		Type: mesosproto.Call_SUBSCRIBE.Enum(),
 		Subscribe: &mesosproto.Call_Subscribe{
@@ -186,52 +185,61 @@ func (s *Scheduler) connect() (*http.Response, error) {
 
 	resp, err := s.Send(call)
 	if err != nil {
-		return nil, fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
+		return fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
 	}
 
 	if code := resp.StatusCode; code != 200 {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		return nil, fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
+		return fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
 	}
 
-	return resp, nil
+	s.status = statusConnected
+
+	s.connection = resp
+
+	return nil
 }
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
 	log.Infof("Subscribing to mesos leader: %s", s.leader)
 
-	resp, err := s.connect()
+	s.status = statusConnecting
+
+	err := s.connect()
 	if err != nil {
 		return err
 	}
 
-	go s.watchEvents(resp)
+	go s.watchEvents()
 
 	return nil
 }
 
 func (s *Scheduler) Unsubscribe() error {
 	log.Println("Unscribing from mesos leader:", s.leader)
-	close(s.quit)
+	s.stop()
 	return nil
 }
 
 func (s *Scheduler) reconnect() {
+	// Empty Mesos-Stream-Id for new connect.
 	s.http.Reset()
 
+	s.status = statusConnecting
+
 	var (
-		resp *http.Response
-		err  error
+		err error
 	)
 
 	for {
 		log.Printf("Reconnecting to mesos leader: %s", s.leader)
 
-		resp, err = s.connect()
+		err = s.connect()
 		if err == nil {
-			go s.watchEvents(resp)
+			go s.watchEvents()
+
 			return
 		}
 
@@ -239,33 +247,35 @@ func (s *Scheduler) reconnect() {
 	}
 }
 
-func (s *Scheduler) watchEvents(resp *http.Response) {
-	defer func() {
-		resp.Body.Close()
-	}()
+func (s *Scheduler) stop() {
+	log.Debugln("Close connection with mesos leader.")
+	s.connection.Body.Close()
+}
 
-	r := NewReader(resp.Body)
+func (s *Scheduler) watchEvents() {
+	defer s.stopWatcher()
+
+	r := NewReader(s.connection.Body)
 	dec := json.NewDecoder(r)
 
+	var (
+		ev  *mesosproto.Event
+		err error
+	)
+
 	for {
-		select {
-		case <-s.quit:
-			return
-		default:
-			ev := new(mesosproto.Event)
-			if err := dec.Decode(ev); err != nil {
-				log.Error("mesos events subscriber decode events error:", err)
-
-				// stop tasks reconciliation befor re-connect.
-				s.stopReconcile()
-
-				go s.reconnect()
-
-				return
+		if err = dec.Decode(&ev); err != nil {
+			log.Errorf("mesos events subscriber decode events error: %v", err)
+			if !strings.Contains(err.Error(), "use of closed network connection") {
+				s.stop()
 			}
 
-			s.handleEvent(ev)
+			go s.reconnect()
+
+			return
 		}
+
+		s.handleEvent(ev)
 	}
 }
 
@@ -277,6 +287,10 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 	if handler == nil {
 		log.Error("without any proper event handler for mesos event:", typ)
 		return
+	}
+
+	if typ != mesosproto.Event_SUBSCRIBED {
+		s.resetWatcher()
 	}
 
 	// TODO panic protection on each event handling ?
@@ -687,10 +701,30 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 	return nil
 }
 
-func (s *Scheduler) watchConn(interval float64) {
-	du := interval + 5
-	s.heartbeatTimeout = time.Duration(du) * time.Second
-	//s.watcher = time.AfterFunc(s.heartbeatTimeout, s.connect)
+// heartbeat timeout watcher
+func (s *Scheduler) startWatcher(interval float64) {
+	log.Debugln("Start heartbeat timeout watcher")
+	d := interval * 2
+	s.heartbeatTimeout = time.Duration(d) * time.Second
+	s.watcher = time.AfterFunc(s.heartbeatTimeout, s.stop)
+}
+
+func (s *Scheduler) resetWatcher() {
+	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.heartbeatTimeout.Seconds())
+	if s.watcher != nil {
+		if !s.watcher.Stop() {
+			select {
+			case <-s.watcher.C: //try to drain from the channel
+			default:
+			}
+		}
+		s.watcher.Reset(s.heartbeatTimeout)
+	}
+}
+
+func (s *Scheduler) stopWatcher() {
+	log.Debugln("Stop heartbeat timeout watcher.")
+	s.watcher.Stop()
 }
 
 func (s *Scheduler) reconcile() {

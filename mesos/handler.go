@@ -19,9 +19,9 @@ type eventHandler func(*mesosproto.Event)
 
 func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 	var (
-		ev = event.GetSubscribed()
-		id = ev.FrameworkId
-		//interval = ev.GetHeartbeatIntervalSeconds()
+		ev       = event.GetSubscribed()
+		id       = ev.FrameworkId
+		interval = ev.GetHeartbeatIntervalSeconds()
 	)
 
 	log.Printf("Subscription successful with frameworkId %s", id.GetValue())
@@ -32,7 +32,7 @@ func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 		log.Errorf("update frameworkid got error:%s", err)
 	}
 
-	//s.watchConn(interval)
+	s.startWatcher(interval) // connection watcher
 
 	s.startReconcile()
 }
@@ -179,16 +179,17 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 }
 
 func (s *Scheduler) heartbeatHandler(event *mesosproto.Event) {
-	log.Debug("Receive heartbeat msg from mesos")
+	log.Debugln("Receive heartbeat msg from mesos")
 
-	//s.watcher.Reset(s.heartbeatTimeout)
+	//s.resetWatcher()
 }
 
 func (s *Scheduler) errHandler(event *mesosproto.Event) {
 	ev := event.GetError()
 
 	log.Debugf("Receive error msg %s", ev.GetMessage())
-	s.connect()
+	s.stop()
+	s.reconnect()
 }
 
 func (s *Scheduler) failureHandler(event *mesosproto.Event) {
