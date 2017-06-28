@@ -3,23 +3,12 @@ package config
 import (
 	"fmt"
 	"net"
-	"net/url"
 	"os"
 	"strings"
 	"time"
 
 	"github.com/urfave/cli"
 )
-
-type ManagerConfig struct {
-	LogLevel   string `json:"logLevel"`
-	Listen     string `json:"listenAddr"`
-	EnableCORS bool
-
-	MesosURL *url.URL `json:"mesosURL"`
-	ZKURL    *url.URL `json:"zkURL"`
-	Strategy string   `json:"strategy"`
-}
 
 type AgentConfig struct {
 	DataDir       string   `json:"dataDir"`
@@ -142,58 +131,4 @@ func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 	}
 
 	return cfg, nil
-}
-
-func NewManagerConfig(c *cli.Context) (ManagerConfig, error) {
-	var err error
-	cfg := ManagerConfig{
-		LogLevel: "info",
-		Listen:   "0.0.0.0:9999",
-	}
-
-	cfg.MesosURL, err = url.Parse(c.String("mesos"))
-	if err != nil {
-		return cfg, err
-	}
-	if err := validZKURL("--mesos", cfg.MesosURL); err != nil {
-		return cfg, err
-	}
-
-	cfg.ZKURL, err = url.Parse(c.String("zk"))
-	if err != nil {
-		return cfg, err
-	}
-	if err := validZKURL("--zk", cfg.ZKURL); err != nil {
-		return cfg, err
-	}
-
-	if c.String("listen") != "" {
-		cfg.Listen = c.String("listen")
-	}
-
-	if c.String("log-level") != "" {
-		cfg.LogLevel = c.String("log-level")
-	}
-
-	if c.String("strategy") != "" {
-		cfg.Strategy = c.String("strategy")
-	}
-
-	return cfg, nil
-}
-
-func validZKURL(p string, zkURL *url.URL) error {
-	if zkURL.Host == "" {
-		return fmt.Errorf("%s not present", p)
-	}
-
-	if zkURL.Scheme != "zk" {
-		return fmt.Errorf("%s scheme invalid. should be zk://", p)
-	}
-
-	if len(zkURL.Path) == 0 {
-		return fmt.Errorf("no path found %s", p)
-	}
-
-	return nil
 }

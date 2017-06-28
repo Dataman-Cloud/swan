@@ -39,7 +39,7 @@ type Manager struct {
 	apiserver *api.Server
 	ZKClient  *zk.Conn
 
-	cfg                config.ManagerConfig
+	cfg                *config.ManagerConfig
 	leadershipChangeCh chan Leadership
 	errCh              chan error
 	electRootPath      string
@@ -47,7 +47,7 @@ type Manager struct {
 	myid               string
 }
 
-func New(cfg config.ManagerConfig) (*Manager, error) {
+func New(cfg *config.ManagerConfig) (*Manager, error) {
 	conn, err := connect(strings.Split(cfg.ZKURL.Host, ","))
 	if err != nil {
 		return nil, err
@@ -58,9 +58,12 @@ func New(cfg config.ManagerConfig) (*Manager, error) {
 		log.Fatalln(err)
 	}
 
-	mesoscfg := mesos.ZKConfig{
-		Host: strings.Split(cfg.MesosURL.Host, ","),
-		Path: cfg.MesosURL.Path,
+	scfg := mesos.SchedulerConfig{
+		ZKHost:                  strings.Split(cfg.MesosURL.Host, ","),
+		ZKPath:                  cfg.MesosURL.Path,
+		ReconciliationInterval:  cfg.ReconciliationInterval,
+		ReconciliationStep:      cfg.ReconciliationStep,
+		ReconciliationStepDelay: cfg.ReconciliationStepDelay,
 	}
 
 	var s mesos.Strategy
@@ -77,7 +80,7 @@ func New(cfg config.ManagerConfig) (*Manager, error) {
 
 	eventMgr := mesos.NewEventManager()
 
-	sched, err := mesos.NewScheduler(&mesoscfg, db, s, eventMgr)
+	sched, err := mesos.NewScheduler(&scfg, db, s, eventMgr)
 	if err != nil {
 		return nil, err
 	}

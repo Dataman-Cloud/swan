@@ -33,15 +33,19 @@ var (
 	errDeletingTimeout   = errors.New("task delete timeout")
 )
 
-type ZKConfig struct {
-	Host []string
-	Path string
+type SchedulerConfig struct {
+	ZKHost []string
+	ZKPath string
+
+	ReconciliationInterval  float64
+	ReconciliationStep      int64
+	ReconciliationStepDelay float64
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
 type Scheduler struct {
 	http      *httpClient
-	zkCfg     *ZKConfig
+	cfg       *SchedulerConfig
 	framework *mesosproto.FrameworkInfo
 
 	eventCh chan *mesosproto.Event // mesos events
@@ -75,9 +79,9 @@ type Scheduler struct {
 }
 
 // NewScheduler...
-func NewScheduler(cfg *ZKConfig, db store.Store, strategy Strategy, mgr *eventManager) (*Scheduler, error) {
+func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, mgr *eventManager) (*Scheduler, error) {
 	s := &Scheduler{
-		zkCfg:        cfg,
+		cfg:          cfg,
 		framework:    defaultFramework(),
 		errCh:        make(chan error, 1),
 		quit:         make(chan struct{}),
@@ -254,8 +258,12 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 			ev := new(mesosproto.Event)
 			if err := dec.Decode(ev); err != nil {
 				log.Error("mesos events subscriber decode events error:", err)
-				//s.watcher.Stop()
+
+				// stop tasks reconciliation befor re-connect.
+				s.stopReconcile()
+
 				go s.reconnect()
+
 				return
 			}
 
@@ -706,4 +714,53 @@ func (s *Scheduler) reconcile() {
 	if err := s.reconcileTasks(m); err != nil {
 		log.Errorf("reconcile tasks got error: %v", err)
 	}
+}
+
+func (s *Scheduler) startReconcile() {
+	var (
+		interval = time.Duration(s.cfg.ReconciliationInterval) * time.Second
+		step     = int(s.cfg.ReconciliationStep)
+		delay    = time.Duration(s.cfg.ReconciliationStepDelay) * time.Second
+	)
+
+	s.reconcileTimer = time.NewTicker(interval)
+	go func() {
+		for range s.reconcileTimer.C {
+			apps, err := s.db.ListApps()
+			if err != nil {
+				log.Errorf("List app got error for task reconcile. %v", err)
+				return
+			}
+
+			ch := make(chan *types.Task, step)
+			go func() {
+				for _, app := range apps {
+					for _, task := range app.Tasks {
+						ch <- task
+					}
+				}
+			}()
+
+			m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+			for _, app := range apps {
+				for _, task := range app.Tasks {
+					m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
+
+					if len(m) >= step {
+						if err := s.reconcileTasks(m); err != nil {
+							log.Errorf("reconcile tasks got error: %v", err)
+						}
+
+						m = make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+
+						time.Sleep(delay)
+					}
+				}
+			}
+		}
+	}()
+}
+
+func (s *Scheduler) stopReconcile() {
+	s.reconcileTimer.Stop()
 }
