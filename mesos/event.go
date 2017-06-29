@@ -49,11 +49,6 @@ func (em *eventManager) broadcast(e event) error {
 	return nil
 }
 
-// unicast send mgs to single client
-func (em *eventManager) unicast(e event) error {
-	return nil
-}
-
 // subscribe() add an event client
 func (em *eventManager) subscribe(remoteAddr string, w io.Writer) {
 	c := &eventClient{
