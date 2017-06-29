@@ -21,14 +21,15 @@ func (r *Router) events(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// notify new client all of current tasks' stats throught sse firstly
 	if catchUp := req.Form.Get("catchUp"); strings.ToLower(catchUp) == "true" {
-		go func() {
-			for _, ev := range r.driver.TaskEvents() {
-				if _, err := w.Write(ev.Format()); err != nil {
-					log.Errorf("write event message to client [%s] error: [%v]", req.RemoteAddr, err)
-				}
+		for _, ev := range r.driver.TaskEvents() {
+			if _, err := w.Write(ev.Format()); err != nil {
+				log.Errorf("write event message to client [%s] error: [%v]", req.RemoteAddr, err)
+				continue
 			}
-		}()
+			w.(http.Flusher).Flush()
+		}
 	}
 
 	if err := r.driver.SubscribeEvent(w, req.RemoteAddr); err != nil {

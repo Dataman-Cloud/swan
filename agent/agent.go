@@ -121,6 +121,8 @@ func (agent *Agent) dispatchEvents() {
 	agent.resolver.EmitChange(ev)
 
 	for evBody := range agent.eventCh {
+		logrus.Printf("agent caught sse task event: %s", string(evBody))
+
 		var taskEv types.TaskEvent
 		if err := json.Unmarshal(evBody, &taskEv); err != nil {
 			logrus.Errorf("agent unmarshal task event error: %v", err)
