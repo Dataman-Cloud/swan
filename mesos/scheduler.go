@@ -58,7 +58,7 @@ type Scheduler struct {
 	agents map[string]*Agent
 
 	handlers map[mesosproto.Event_Type]eventHandler
-	tasks    map[string]*Task
+	tasks    map[string]*Task // ongoing tasks
 
 	offerTimeout time.Duration
 

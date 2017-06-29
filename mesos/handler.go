@@ -82,10 +82,12 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	log.Debugf("Received status update %s for task %s", status.GetState(), taskId)
 
+	// ack firstly
 	if err := s.AckUpdateEvent(status); err != nil {
 		log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
 	}
 
+	// emit event status to ongoing task
 	if task, ok := s.tasks[taskId]; ok {
 		task.SendStatus(status)
 	}
@@ -96,6 +98,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
+	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
 		log.Errorf("find task from zk got error: %v", err)
@@ -104,17 +107,22 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	task.Status = state.String()
 
-	ver, err := s.db.GetVersion(appId, task.Version)
+	ver, err := s.db.GetVersion(appId, task.Version) // task corresponding version
 	if err != nil {
 		log.Errorf("find task version got error: %v. task %s, version %s", err, task.ID, task.Version)
 		return
 	}
 
+	var (
+		previousHealthy = task.Healthy // save previous
+	)
 	if ver.HealthCheck != nil {
 		task.Healthy = types.TaskUnHealthy
 		if healthy {
 			task.Healthy = types.TaskHealthy
 		}
+	} else {
+		task.Healthy = types.TaskHealthyUnset
 	}
 
 	if state != mesosproto.TaskState_TASK_RUNNING {
@@ -126,9 +134,21 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		return
 	}
 
-	typ := types.EventTypeTaskUnhealthy
-	if healthy {
-		typ = types.EventTypeTaskHealthy
+	// broadcasting task events
+	log.Debugf("task %s healthy: %s --> %s (%s)", taskId, previousHealthy, task.Healthy, task.Status)
+	if previousHealthy == task.Healthy { // skip on no-change
+		return
+	}
+
+	evType := types.EventTypeTaskUnhealthy
+	switch task.Healthy {
+	case types.TaskHealthy:
+		evType = types.EventTypeTaskHealthy
+	case types.TaskHealthyUnset:
+		if task.Status == "TASK_RUNNING" {
+			evType = types.EventTypeTaskHealthy
+		}
+	case types.TaskUnHealthy:
 	}
 
 	var (
@@ -141,7 +161,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	if err := s.eventmgr.broadcast(&types.TaskEvent{
-		Type:           typ,
+		Type:           evType,
 		AppID:          appId,
 		AppAlias:       alias,
 		TaskID:         taskId,
