@@ -732,29 +732,34 @@ func (s *Scheduler) startReconcile() {
 				return
 			}
 
-			ch := make(chan *types.Task, step)
-			go func() {
-				for _, app := range apps {
-					for _, task := range app.Tasks {
-						ch <- task
-					}
-				}
-			}()
+			tasks := make([]*types.Task, 0)
 
-			m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
 			for _, app := range apps {
 				for _, task := range app.Tasks {
-					m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
+					tasks = append(tasks, task)
+				}
+			}
 
-					if len(m) >= step {
-						if err := s.reconcileTasks(m); err != nil {
-							log.Errorf("reconcile tasks got error: %v", err)
-						}
+			var (
+				total = len(tasks)
+				send  = 0
+			)
 
-						m = make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+			m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
 
-						time.Sleep(delay)
+			for _, task := range tasks {
+				m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
+
+				if len(m) >= step || (len(m)+send) >= total {
+					if err := s.reconcileTasks(m); err != nil {
+						log.Errorf("reconcile tasks got error: %v", err)
 					}
+
+					send += len(m)
+
+					m = make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+
+					time.Sleep(delay)
 				}
 			}
 		}
