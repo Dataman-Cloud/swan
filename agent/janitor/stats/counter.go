@@ -18,6 +18,7 @@ func init() {
 		inGlbCh:      make(chan *DeltaGlb, 1024),
 		inBackendCh:  make(chan *DeltaBackend, 1024),
 		delBackendCh: make(chan *DeltaBackend, 128),
+		queryCh:      make(chan chan Stats),
 	}
 
 	go stats.runCounters()
@@ -31,6 +32,7 @@ type Stats struct {
 	inGlbCh      chan *DeltaGlb     // new global counter delta received
 	inBackendCh  chan *DeltaBackend // new upstream/backend counter delta received
 	delBackendCh chan *DeltaBackend // removal signal upstream->backend counter delta
+	queryCh      chan chan Stats
 }
 
 // GlobalCounter hold current global statistics
@@ -119,11 +121,15 @@ type DeltaGlb struct {
 }
 
 func Get() *Stats {
-	return stats
+	ch := make(chan Stats)
+	stats.queryCh <- ch
+	s := <-ch
+	return &s
 }
 
 func UpstreamStats() UpstreamCounter {
-	return stats.Upstream
+	return Get().Upstream
+
 }
 
 func Incr(dbackend *DeltaBackend, dglb *DeltaGlb) {
@@ -158,6 +164,8 @@ func (c *Stats) runCounters() {
 			c.updateGlb(d)
 		case d := <-c.delBackendCh:
 			c.removeBackend(d)
+		case ch := <-c.queryCh:
+			ch <- *c
 		}
 	}
 }
