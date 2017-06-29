@@ -241,7 +241,7 @@ func genJanitorBackendEvent(taskEv *types.TaskEvent) *upstream.BackendEvent {
 
 		// upstream
 		ups    = taskEv.AppID
-		alias  = "" // TODO
+		alias  = taskEv.AppAlias
 		listen = "" // TODO
 
 		// backend
