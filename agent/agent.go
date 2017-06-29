@@ -9,53 +9,39 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/gin-gonic/gin"
+
 	"github.com/Dataman-Cloud/swan/agent/janitor"
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/agent/nameserver"
 	"github.com/Dataman-Cloud/swan/config"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
-
-	"github.com/Sirupsen/logrus"
 )
 
-const REJOIN_BACKOFF = 3 * time.Second
-const SSE_DATA_PREFIX = "data:"
-const SSE_EVENT_PREFIX = "event:"
-const SSE_BLANK_LINE = ""
-
-// Agent struct
 type Agent struct {
-	Resolver   *nameserver.Resolver
-	Janitor    *janitor.JanitorServer
-	HTTPServer *HTTPServer
-	Config     config.AgentConfig
-	eventCh    chan *event
+	config   config.AgentConfig
+	resolver *nameserver.Resolver
+	janitor  *janitor.JanitorServer
+	eventCh  chan []byte
 }
 
-type event struct {
-	name    string
-	payload []byte
-}
-
-// New agent func
-func New(agentConf config.AgentConfig) *Agent {
+func New(cfg config.AgentConfig) *Agent {
 	agent := &Agent{
-		Config:   agentConf,
-		Resolver: nameserver.NewResolver(&agentConf.DNS),
-		Janitor:  janitor.NewJanitorServer(&agentConf.Janitor),
-		eventCh:  make(chan *event, 1024),
+		config:   cfg,
+		resolver: nameserver.NewResolver(&cfg.DNS),
+		janitor:  janitor.NewJanitorServer(&cfg.Janitor),
+		eventCh:  make(chan []byte, 1024),
 	}
-	agent.HTTPServer = NewHTTPServer(agentConf.ListenAddr, agent)
 	return agent
 }
 
-// StartAndJoin func
 func (agent *Agent) StartAndJoin() error {
 	errCh := make(chan error)
 
 	go func() {
-		err := agent.Resolver.Start()
+		err := agent.resolver.Start()
 		if err != nil {
 			errCh <- err
 		}
@@ -63,7 +49,7 @@ func (agent *Agent) StartAndJoin() error {
 	}()
 
 	go func() {
-		err := agent.Janitor.Start()
+		err := agent.janitor.Start()
 		if err != nil {
 			errCh <- err
 		}
@@ -71,11 +57,11 @@ func (agent *Agent) StartAndJoin() error {
 	}()
 
 	go func() {
-		err := agent.HTTPServer.Start()
+		err := agent.apiServe()
 		if err != nil {
 			errCh <- err
 		}
-		logrus.Warnln("http server quit, error:", err)
+		logrus.Warnln("api server quit, error:", err)
 	}()
 
 	go agent.watchEvents()
@@ -84,89 +70,116 @@ func (agent *Agent) StartAndJoin() error {
 	return <-errCh
 }
 
-// watchEvents establish a connection to swan master's stream events endpoint
-// and broadcast received events
+func (agent *Agent) apiServe() error {
+	engine := gin.Default()
+
+	engine.GET("/", func(c *gin.Context) { c.String(200, "OK") })
+	engine.GET("/ping", func(c *gin.Context) { c.String(200, "pong") })
+	agent.janitor.ApiServe(engine.Group("/proxy"))
+	agent.resolver.ApiServe(engine.Group("/dns"))
+
+	return engine.Run(agent.config.ListenAddr)
+}
+
 func (agent *Agent) watchEvents() {
+	var (
+		delayMin = time.Millisecond * 500 // min retry delay 0.5s
+		delayMax = time.Second * 60       // max retry delay 60s
+		delay    = delayMin               // retry delay
+	)
+
 	for {
-		leaderAddr, err := agent.detectManagerLeader()
+		managerAddr, err := agent.detectManagerAddr()
 		if err != nil {
-			logrus.Errorf("detect manager leader got error: %v, retry ...", err)
-			time.Sleep(REJOIN_BACKOFF)
+			logrus.Errorln("agent Join error:", err)
+			delay *= 2
+			if delay > delayMax {
+				delay = delayMax // reset to max
+			}
+			logrus.Printf("agent Rejoin in %s ...", delay)
+			time.Sleep(delay)
 			continue
 		}
-		logrus.Printf("detected manager addr %s, listening on events ...", leaderAddr)
 
-		err = agent.watchManagerEvents(leaderAddr)
+		logrus.Printf("agent Join to manager %s succeed, ready for events ...", managerAddr)
+		delay = delayMin // reset to min
+
+		err = agent.watchManagerEvents(managerAddr)
 		if err != nil {
-			logrus.Errorf("watch manager events got error: %v, retry ...", err)
-			time.Sleep(REJOIN_BACKOFF)
+			logrus.Errorf("agent watch on manager events error: %v, retry ...", err)
+			time.Sleep(time.Second)
 		}
 	}
 }
 
-// dispatchEvents dispatch received events to dns & proxy goroutines
 func (agent *Agent) dispatchEvents() {
-	// send proxy info to dns proxy listener
-	agent.Resolver.EmitChange(&nameserver.RecordChangeEvent{
-		Change: "add",
-		Record: nameserver.Record{
-			Type:    nameserver.A,
-			Ip:      agent.Config.Janitor.AdvertiseIP,
-			IsProxy: true,
-		},
-	})
+	// send local proxy dns record to dns
+	var (
+		proxyIP = agent.config.Janitor.AdvertiseIP
+		ev      = nameserver.BuildRecordEvent("add", "local_proxy", "PROXY", proxyIP, "80", 0, true)
+	)
+	agent.resolver.EmitChange(ev)
 
-	for event := range agent.eventCh {
-		var taskEvent types.TaskEvent
-		err := json.Unmarshal(event.payload, &taskEvent)
+	for evBody := range agent.eventCh {
+		var taskEv types.TaskEvent
+		if err := json.Unmarshal(evBody, &taskEv); err != nil {
+			logrus.Errorf("agent unmarshal task event error: %v", err)
+			continue
+		}
+
+		if taskEv.GatewayEnabled {
+			ev := genJanitorBackendEvent(&taskEv)
+			if ev != nil {
+				agent.janitor.EmitEvent(ev)
+			}
+		}
+
+		if taskEv.Type == types.EventTypeTaskHealthy || taskEv.Type == types.EventTypeTaskUnhealthy {
+			ev := genDNSRecordEvent(&taskEv)
+			if ev != nil {
+				agent.resolver.EmitChange(ev)
+			}
+		}
+	}
+}
+
+func (agent *Agent) detectManagerAddr() (string, error) {
+	for _, addr := range agent.config.JoinAddrs {
+		resp, err := http.Get("http://" + addr + "/ping")
 		if err != nil {
-			logrus.Errorf("unmarshal taskInfoEvent go error: %s", err.Error())
+			logrus.Warnf("detect swan manager %s error %v", addr, err)
 			continue
 		}
+		resp.Body.Close() // prevent fd leak
 
-		if taskEvent.GatewayEnabled {
-			agent.Janitor.EmitEvent(genJanitorBackendEvent(
-				event.name, &taskEvent))
-		}
-
-		// Resolver only recongnize these two events
-		if event.name == types.EventTypeTaskHealthy ||
-			event.name == types.EventTypeTaskUnhealthy {
-			agent.Resolver.EmitChange(recordChangeEventFromTaskInfoEvent(
-				event.name, &taskEvent))
-		}
-	}
-}
-
-// todo
-func (agent *Agent) detectManagerLeader() (string, error) {
-	for _, managerAddr := range agent.Config.JoinAddrs {
-		if _, err := http.Get(managerAddr + "/ping"); err != nil {
-			logrus.Infof("detect manager %s error %v", managerAddr, err)
-			continue
-		}
-
-		return managerAddr, nil
+		logrus.Infof("detect swan manager %s succeed", addr)
+		return addr, nil
 	}
 
-	return "", errors.New("try join all swan managers failed")
+	return "", errors.New("all of swan manager unavailable")
 }
 
-func (agent *Agent) watchManagerEvents(leaderAddr string) error {
+func (agent *Agent) watchManagerEvents(managerAddr string) error {
 	eventsDoesMatter := []string{
 		types.EventTypeTaskUnhealthy,
 		types.EventTypeTaskHealthy,
 		types.EventTypeTaskWeightChange,
 	}
 
-	eventsPath := fmt.Sprintf("http://%s/events?catchUp=true", leaderAddr)
+	eventsPath := fmt.Sprintf("http://%s/v1/events?catchUp=true", managerAddr)
 	resp, err := http.Get(eventsPath)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
 
-	reader := bufio.NewReader(resp.Body)
+	var (
+		ssePrefixData  = "data:"
+		ssePrefixEvent = "event:"
+		prefixDataLen  = len(ssePrefixData)
+		prefixEventLen = len(ssePrefixEvent)
+		reader         = bufio.NewReader(resp.Body)
+	)
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil {
@@ -174,12 +187,12 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 		}
 
 		// skip blank line
-		if line == SSE_BLANK_LINE {
+		if line == "" {
 			continue
 		}
 
-		if strings.HasPrefix(line, SSE_EVENT_PREFIX) {
-			eventType := strings.TrimSpace(line[len(SSE_EVENT_PREFIX):len(line)])
+		if strings.HasPrefix(line, ssePrefixEvent) {
+			eventType := strings.TrimSpace(line[prefixEventLen:])
 			if !utils.SliceContains(eventsDoesMatter, eventType) {
 				continue
 			}
@@ -190,55 +203,54 @@ func (agent *Agent) watchManagerEvents(leaderAddr string) error {
 				return err
 			}
 			// if line is not data section
-			if !strings.HasPrefix(line, SSE_DATA_PREFIX) {
+			if !strings.HasPrefix(line, ssePrefixData) {
 				continue
 			}
 
-			agent.eventCh <- &event{
-				name:    eventType,
-				payload: []byte(line[len(SSE_DATA_PREFIX):len(line)]),
-			}
+			agent.eventCh <- []byte(line[prefixDataLen:])
 		}
 	}
 }
 
-func recordChangeEventFromTaskInfoEvent(eventType string, taskInfoEvent *types.TaskEvent) *nameserver.RecordChangeEvent {
-	resolverEvent := &nameserver.RecordChangeEvent{}
-	if eventType == types.EventTypeTaskHealthy {
-		resolverEvent.Change = "add"
-	} else {
-		resolverEvent.Change = "del"
+func genDNSRecordEvent(taskEv *types.TaskEvent) *nameserver.RecordEvent {
+	var (
+		act    string
+		aid    = taskEv.AppID
+		tid    = taskEv.TaskID
+		ip     = taskEv.IP
+		port   = fmt.Sprintf("%d", taskEv.Port)
+		weight = taskEv.Weight
+	)
+	switch taskEv.Type {
+	case types.EventTypeTaskHealthy:
+		act = "add"
+	case types.EventTypeTaskUnhealthy:
+		act = "del"
+	default:
+		return nil
 	}
 
-	// port & type
-	resolverEvent.Type = nameserver.SRV ^ nameserver.A
-	resolverEvent.Port = fmt.Sprintf("%d", taskInfoEvent.Port)
-	// the rest
-	resolverEvent.AppName = taskInfoEvent.AppID
-	resolverEvent.Ip = taskInfoEvent.IP
-	resolverEvent.Weight = taskInfoEvent.Weight
-
-	return resolverEvent
+	return nameserver.BuildRecordEvent(act, tid, aid, ip, port, weight, false)
 }
 
-func genJanitorBackendEvent(eventType string, taskInfoEvent *types.TaskEvent) *upstream.BackendEvent {
+func genJanitorBackendEvent(taskEv *types.TaskEvent) *upstream.BackendEvent {
 	var (
 		act string
 
 		// upstream
-		ups    = taskInfoEvent.AppID
+		ups    = taskEv.AppID
 		alias  = "" // TODO
 		listen = "" // TODO
 
 		// backend
-		backend = taskInfoEvent.TaskID
-		ip      = taskInfoEvent.IP
-		port    = taskInfoEvent.Port
-		weight  = taskInfoEvent.Weight
-		version = taskInfoEvent.VersionID
+		backend = taskEv.TaskID
+		ip      = taskEv.IP
+		port    = taskEv.Port
+		weight  = taskEv.Weight
+		version = taskEv.VersionID
 	)
 
-	switch eventType {
+	switch taskEv.Type {
 	case types.EventTypeTaskHealthy:
 		act = "add"
 	case types.EventTypeTaskUnhealthy:

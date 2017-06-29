@@ -3,258 +3,274 @@ package nameserver
 import (
 	"errors"
 	"net"
-	"strconv"
+	"regexp"
 	"strings"
-	"time"
+	"sync"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/miekg/dns"
 
 	"github.com/Dataman-Cloud/swan/config"
 )
 
 const (
-	RESERVED_API_GATEWAY_DOMAIN = "gateway"
+	GATEWAY = "gateway"
+)
+
+var (
+	isDigitPrefix = regexp.MustCompile(`^[0-9]+\.`) // prefix with DigitsAndDot
 )
 
 type Resolver struct {
-	recordChangeChan chan *RecordChangeEvent
-
-	recordHolder *RecordHolder
 	config       *config.DNS
-	defaultFwd   Forwarder
+	base         string               // base domain suffix
+	gwbase       string               // gateway base domain suffix
+	m            map[string][]*Record // records store:  parents -> []records
+	sync.RWMutex                      // protect m
+	dnsClient    *dns.Client          // for forwarders
+	forwardAddrs []string             // for forwarders
+	eventCh      chan *RecordEvent    // dns record events
 }
 
-func NewResolver(config *config.DNS) *Resolver {
-	resolver := &Resolver{
-		recordChangeChan: make(chan *RecordChangeEvent, 1),
-
-		config:       config,
-		defaultFwd:   NewForwarder(config.Resolvers, exchangers(config.ExchangeTimeout, "udp")),
-		recordHolder: NewRecordHolder(config.Domain),
+func NewResolver(cfg *config.DNS) *Resolver {
+	base := cfg.Domain
+	if !strings.HasSuffix(base, ".") {
+		base = base + "."
 	}
 
-	go resolver.watchEvent()
+	resolver := &Resolver{
+		config:  cfg,
+		base:    base,
+		gwbase:  GATEWAY + "." + base,
+		m:       make(map[string][]*Record),
+		eventCh: make(chan *RecordEvent, 1024),
+		dnsClient: &dns.Client{
+			Net:          "udp",
+			DialTimeout:  cfg.ExchangeTimeout,
+			ReadTimeout:  cfg.ExchangeTimeout,
+			WriteTimeout: cfg.ExchangeTimeout,
+		},
+	}
+
+	resolver.forwardAddrs = make([]string, len(cfg.Resolvers))
+	for i, addr := range cfg.Resolvers {
+		host, port, err := net.SplitHostPort(addr)
+		if err != nil {
+			host = addr
+			port = "53"
+		}
+		resolver.forwardAddrs[i] = net.JoinHostPort(host, port)
+	}
+
+	go resolver.watchEvents()
 
 	return resolver
 }
 
-func (resolver *Resolver) AllRecords() map[string]*Record {
-	return resolver.recordHolder.All()
+func (r *Resolver) EmitChange(ev *RecordEvent) {
+	r.eventCh <- ev
 }
 
-func (resolver *Resolver) EmitChange(ev *RecordChangeEvent) {
-	resolver.recordChangeChan <- ev
-}
+func (r *Resolver) watchEvents() {
+	log.Println("resolver listening on dns records event ...")
 
-func (resolver *Resolver) watchEvent() {
-	for e := range resolver.recordChangeChan {
-		switch e.Change {
-		case "del":
-			resolver.recordHolder.Del(e.record())
+	for ev := range r.eventCh {
+		log.Debugln("dns record event:", ev)
+
+		switch ev.Action {
 		case "add":
-			resolver.recordHolder.Add(e.record())
+			r.upsert(&ev.Record)
+		case "del":
+			r.remove(&ev.Record)
+		default:
+			log.Warnln("unrecognized event action", ev.Action)
 		}
 	}
 }
+func (r *Resolver) allRecords() map[string][]*Record {
+	r.RLock()
+	defer r.RUnlock()
+	return r.m
+}
 
-func (res *Resolver) Start() error {
-	dns.HandleFunc(res.config.Domain, res.HandleSwan)
-	dns.HandleFunc(".", res.HandleNonSwan(res.defaultFwd))
+func (r *Resolver) upsert(record *Record) {
+	var (
+		parent = record.Parent
+		id     = record.ID
+	)
+
+	// verify & rewrite
+	if err := record.rewrite(r.base); err != nil {
+		log.Warnf("resolver veriy & rewrite record error: %v", err)
+		return
+	}
+
+	r.Lock()
+	defer r.Unlock()
+
+	records, ok := r.m[parent]
+	if !ok {
+		r.m[parent] = []*Record{record}
+		return
+	}
+
+	var idx int = -1
+	for i, record := range records {
+		if record.ID == id {
+			idx = i
+			break
+		}
+	}
+
+	if idx >= 0 {
+		return
+	}
+
+	r.m[parent] = append(r.m[parent], record)
+}
+
+func (r *Resolver) remove(record *Record) {
+	var (
+		parent = record.Parent
+		id     = record.ID
+	)
+
+	r.Lock()
+	defer r.Unlock()
+
+	records, ok := r.m[parent]
+	if !ok {
+		return
+	}
+
+	var idx int = -1
+	for i, record := range records {
+		if record.ID == id {
+			idx = i
+			break
+		}
+	}
+
+	if idx < 0 {
+		return
+	}
+
+	r.m[parent] = append(r.m[parent][:idx], r.m[parent][idx+1:]...)
+	if len(r.m[parent]) == 0 {
+		delete(r.m, parent)
+	}
+}
+
+func (r *Resolver) search(name string) []*Record {
+	r.RLock()
+	defer r.RUnlock()
+
+	// dns query for gateway
+	if strings.HasSuffix(name, r.gwbase) {
+		return r.m["PROXY"]
+	}
+
+	parent := strings.TrimSuffix(name, "."+r.base)
+
+	// by parent
+	if !isDigitPrefix.MatchString(name) {
+		return r.m[parent] // all sub records
+	}
+
+	// by index
+	fields := strings.SplitN(parent, ".", 2)
+	if len(fields) == 2 {
+		parent = fields[1]
+	}
+
+	// specified index record
+	for _, record := range r.m[parent] {
+		if record.CleanName == name {
+			return []*Record{record}
+		}
+	}
+	return nil
+}
+
+func (r *Resolver) Start() error {
+	dns.HandleFunc(r.base, r.handleLocal)
+	dns.HandleFunc(".", r.handleForward)
 
 	server := &dns.Server{
-		Addr:       res.config.ListenAddr,
-		Net:        "udp",
-		TsigSecret: nil,
+		Addr: r.config.ListenAddr,
+		Net:  "udp",
 	}
 
 	return server.ListenAndServe()
 }
 
-func (res *Resolver) HandleSwan(w dns.ResponseWriter, req *dns.Msg) {
-	msg := &dns.Msg{MsgHdr: dns.MsgHdr{
-		Authoritative:      true,
-		RecursionAvailable: res.config.RecurseOn,
-	}}
+func (r *Resolver) handleLocal(w dns.ResponseWriter, req *dns.Msg) {
+	msg := &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Authoritative:      true,
+			RecursionAvailable: r.config.RecurseOn,
+		}}
 	msg.SetReply(req)
 
-	var errs multiError
-	name := strings.ToLower(req.Question[0].Name)
+	var (
+		name = strings.ToLower(req.Question[0].Name)
+		ttl  = r.config.TTL
+	)
 
-	logrus.Debugf("resolve dns hostname %s", name)
+	switch typ := req.Question[0].Qtype; typ {
 
-	switch req.Question[0].Qtype {
-	case dns.TypeSRV:
-		errs.Add(res.handleSRV(name, msg, req))
 	case dns.TypeA:
-		errs.Add(res.handleA(name, msg))
-	case dns.TypeANY:
-		errs.Add(
-			res.handleSRV(name, msg, req),
-			res.handleA(name, msg),
-		)
+		for _, record := range r.search(name) {
+			a := record.buildA(name, ttl)
+			msg.Answer = append(msg.Answer, a)
+		}
+
+	case dns.TypeSRV:
+		for _, record := range r.search(name) {
+			srv, ext := record.buildSRV(name, ttl)
+			msg.Answer = append(msg.Answer, srv)
+			msg.Extra = append(msg.Extra, ext)
+		}
 	}
 
 	if len(msg.Answer) == 0 {
-		errs.Add(errors.New("no record found"))
+		log.Warnf("resolve [%s] got non of matched records", name)
+	} else {
+		log.Debugf("resolve [%s] -> [%s]", name, msg.Answer)
 	}
 
-	if !errs.Nil() {
-		logrus.Errorln(errs.Error())
-	}
-
-	reply(w, msg)
-}
-
-func (res *Resolver) handleSRV(name string, m, r *dns.Msg) error {
-	var errs multiError
-	for _, record := range res.recordHolder.GetSRV(name) {
-		srv, ext, err := res.buildSRV(name, record)
-		if err != nil {
-			errs.Add(err)
-		} else {
-			m.Answer = append(m.Answer, srv)
-			m.Extra = append(m.Extra, ext)
-		}
-	}
-
-	return errs
-}
-
-func (res *Resolver) handleA(name string, m *dns.Msg) error {
-	var errs multiError
-	for _, record := range res.recordHolder.GetA(name) {
-		rr, err := res.buildA(name, record)
-		if err != nil {
-			errs.Add(err)
-		} else {
-			m.Answer = append(m.Answer, rr)
-		}
-	}
-
-	return errs
-}
-
-func (res *Resolver) HandleNonSwan(fwd Forwarder) func(dns.ResponseWriter, *dns.Msg) {
-	return func(w dns.ResponseWriter, r *dns.Msg) {
-		m, err := fwd(r, w.RemoteAddr().Network())
-		if err != nil {
-			m = new(dns.Msg).SetRcode(r, rcode(err))
-		} else if len(m.Answer) == 0 {
-			logrus.Debugf("no answer found")
-		}
-		reply(w, m)
+	// write reply whatever...
+	if err := w.WriteMsg(msg); err != nil {
+		log.Errorln("resolve [%s] error on dns reply: %v", name, err)
 	}
 }
 
-// reply writes the given dns.Msg out to the given dns.ResponseWriter,
-// compressing the message first and truncating it accordingly.
-func reply(w dns.ResponseWriter, m *dns.Msg) {
+func (r *Resolver) handleForward(w dns.ResponseWriter, req *dns.Msg) {
+	m, err := r.Forward(req)
+	if err != nil {
+		log.Errorln("forwarder:", err)
+		m = new(dns.Msg).SetRcode(req, dns.RcodeServerFailure)
+	} else if len(m.Answer) == 0 {
+		log.Debugf("forwarder: no answer found")
+	}
+
 	if err := w.WriteMsg(m); err != nil {
-		logrus.Errorln(err)
+		log.Errorln(err)
 	}
 }
 
-func exchangers(timeout time.Duration, protos ...string) map[string]Exchanger {
-	exs := make(map[string]Exchanger, len(protos))
-	for _, proto := range protos {
-		exs[proto] = Decorate(
-			&dns.Client{
-				Net:          proto,
-				DialTimeout:  timeout,
-				ReadTimeout:  timeout,
-				WriteTimeout: timeout,
-			},
-		)
+func (r *Resolver) Forward(req *dns.Msg) (reply *dns.Msg, err error) {
+	if len(r.forwardAddrs) == 0 {
+		err = errors.New("no avaliable forwarders")
+		return
 	}
-	return exs
-}
 
-type multiError []error
-
-func (e *multiError) Add(err ...error) {
-	for _, e1 := range err {
-		if me, ok := e1.(multiError); ok {
-			*e = append(*e, me...)
-		} else if e1 != nil {
-			*e = append(*e, e1)
+	for _, addr := range r.forwardAddrs {
+		reply, _, err = r.dnsClient.Exchange(req, addr)
+		if err == nil {
+			break
 		}
 	}
-}
 
-func (e multiError) Error() string {
-	errs := make([]string, len(e))
-	for i := range errs {
-		if e[i] != nil {
-			errs[i] = e[i].Error()
-		}
-	}
-	return strings.Join(errs, "; ")
-}
-
-func (e multiError) Nil() bool {
-	for _, err := range e {
-		if err != nil {
-			return false
-		}
-	}
-	return true
-}
-
-func (res *Resolver) buildSRV(name string, record *Record) (*dns.SRV, *dns.A, error) {
-	ttl := uint32(res.config.TTL)
-
-	p, err := strconv.Atoi(record.Port)
-	if err != nil {
-		return nil, nil, errors.New("invalid target port")
-	}
-
-	target := record.WithSlotDomain() + "." + res.config.Domain + "."
-
-	srv := &dns.SRV{
-		Hdr: dns.RR_Header{
-			Name:   name,
-			Rrtype: dns.TypeSRV,
-			Class:  dns.ClassINET,
-			Ttl:    ttl,
-		},
-		Priority: 0,
-		Weight:   uint16(record.Weight),
-		Port:     uint16(p),
-		Target:   target,
-	}
-
-	a, err := res.buildA(target, record)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return srv, a, nil
-}
-
-func (res *Resolver) buildA(name string, record *Record) (*dns.A, error) {
-	ttl := uint32(res.config.TTL)
-
-	a := net.ParseIP(record.Ip)
-	if a == nil {
-		return nil, errors.New("invalid target")
-	}
-
-	return &dns.A{
-		Hdr: dns.RR_Header{
-			Name:   name,
-			Rrtype: dns.TypeA,
-			Class:  dns.ClassINET,
-			Ttl:    ttl},
-		A: a.To4(),
-	}, nil
-}
-
-func rcode(err error) int {
-	switch err.(type) {
-	case *ForwardError:
-		return dns.RcodeRefused
-	default:
-		return dns.RcodeServerFailure
-	}
+	return reply, err
 }
