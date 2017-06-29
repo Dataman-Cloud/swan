@@ -55,7 +55,7 @@ func (u *Upstream) valid() error {
 
 func (u *Upstream) search(name string) (int, *Backend) {
 	for i, v := range u.Backends {
-		if v.ID == name {
+		if v.ID == name || v.CleanName == name {
 			return i, v
 		}
 	}
@@ -77,12 +77,13 @@ func (u *Upstream) tcpListen() string {
 
 // Backend
 type Backend struct {
-	ID      string  `json:"id"`     // backend server id(name)
-	IP      string  `json:"ip"`     // backend server ip
-	Port    uint64  `json:"port"`   // backend server port
-	Scheme  string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
-	Version string  `json:"version"`
-	Weight  float64 `json:"weihgt"`
+	ID        string  `json:"id"`     // backend server id(name)
+	IP        string  `json:"ip"`     // backend server ip
+	Port      uint64  `json:"port"`   // backend server port
+	Scheme    string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
+	Version   string  `json:"version"`
+	Weight    float64 `json:"weihgt"`
+	CleanName string  `json:"clean_name"` // backend server clean id(name)
 }
 
 func (b *Backend) valid() error {
@@ -118,15 +119,34 @@ func (ev *BackendEvent) String() string {
 }
 
 func (ev *BackendEvent) Format() {
-	ev.Upstream.Listen = ev.Upstream.tcpListen() // rewrite Upstream.Listen
+	// rewrite Upstream.Listen
+	ev.Upstream.Listen = ev.Upstream.tcpListen()
+
+	// rewrite backend clean name
+	fields := strings.SplitN(ev.Backend.ID, ".", 2)
+	if len(fields) == 2 {
+		ev.Backend.CleanName = fields[1]
+	}
 }
 
 func BuildBackendEvent(act, ups, alias, listen, backend, ip, ver string, port uint64, weight float64) *BackendEvent {
 	return &BackendEvent{
 		Action: act,
 		BackendCombined: &BackendCombined{
-			Upstream: &Upstream{Name: ups, Alias: alias, Listen: listen},
-			Backend:  &Backend{backend, ip, port, "", ver, weight},
+			Upstream: &Upstream{
+				Name:   ups,
+				Alias:  alias,
+				Listen: listen,
+			},
+			Backend: &Backend{
+				ID:        backend,
+				IP:        ip,
+				Port:      port,
+				Scheme:    "",
+				Version:   ver,
+				Weight:    weight,
+				CleanName: "",
+			},
 		},
 	}
 }
@@ -147,7 +167,7 @@ func (cmb *BackendCombined) Valid() error {
 	if err := cmb.Backend.valid(); err != nil {
 		return err
 	}
-	if !strings.HasSuffix(cmb.Backend.ID, "-"+cmb.Upstream.Name) {
+	if !strings.HasSuffix(cmb.Backend.ID, "."+cmb.Upstream.Name) {
 		return errors.New("backend name must be suffixed by upstream name")
 	}
 	return nil
