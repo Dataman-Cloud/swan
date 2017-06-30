@@ -31,9 +31,9 @@ func (r *Router) setupRoutes() {
 		NewRoute("POST", "/v1/apps", r.createApp),
 		NewRoute("GET", "/v1/apps/{app_id}", r.getApp),
 		NewRoute("DELETE", "/v1/apps/{app_id}", r.deleteApp),
-		NewRoute("PATCH", "/v1/apps/{app_id}", r.scaleApp),
+		NewRoute("POST", "/v1/apps/{app_id}/scale", r.scaleApp),
 		NewRoute("PUT", "/v1/apps/{app_id}", r.updateApp),
-		NewRoute("POST", "/v1/apps/{app_id}", r.rollback),
+		NewRoute("POST", "/v1/apps/{app_id}/rollback", r.rollback),
 		NewRoute("PATCH", "/v1/apps/{app_id}/weights", r.updateWeights),
 
 		NewRoute("GET", "/v1/apps/{app_id}/tasks", r.getTasks),

@@ -4,16 +4,23 @@
 | POST          | /v1/apps                                    | Create a app                 |
 | GET           | /v1/apps/{app_id}                           | Inspect a app                |
 | DELETE        | /v1/apps/{app_id}                           | Delete a app                 |
-| PATCH         | /v1/apps/{app_id}/scale                     | Scale up/down                |
-| PUT           | /v1/apps/{app_id}/update                    | Rolling update a app         |
-| PUT           | /v1/apps/{app_id}/rollback                  | Roll back a app              |
+| POST          | /v1/apps/{app_id}/scale                     | Scale up/down                |
+| PUT           | /v1/apps/{app_id}                           | Rolling update a app         |
+| POST          | /v1/apps/{app_id}/rollback                  | Roll back a app              |
 | GET           | /v1/apps/{app_id}/tasks                     | List all tasks for a app     |
-| GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
 | GET           | /v1/apps/{app_id}/tasks/{task_id}           | Inspect a task               |
-| DELETE        | /v1/apps/{app_id}/tasks/{task_id}           | Delete a task                |
-| PUT           | /v1/apps/{app_id}/tasks/{task_id}/update    | Update a task                |        
-| PUT           | /v1/apps/{app_id}/tasks/{task_id}/rollback  | Roll back a task             |
+| GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
 | GET           | /v1/apps/{app_id}/versions/{version_id}     | Inspect a version            |
+| POST          | /v1/apps/{app_id}/versions                  | Create a version for a app   |
+| PATCH         | /v1/apps/{app_id}/weights                   | Update tasks's weights       |
+| PATCH         | /v1/apps/{app_id}/tasks/{task_id}/weight    | Update task's weight         |
+| POST          | /v1/compose                                 | Create a compose             |
+| GET           | /v1/compose                                 | List all compose             |
+| GET           | /v1/compose/{compose_id}                    | Inspect a compose            |
+| DELETE        | /v1/compose/{compose_id}                    | Delete a compose             |
+| GET           | /ping                                       | Health check                 |
+| GET           | /version                                    | Version information          |
+| GET           | /v1/leader                                  | Inspect leader info          |
 
 #### List all apps
 ```
@@ -332,11 +339,11 @@ HTTP/1.1 204 No Content
 ```
 ##### Scale up/down
 ```
-PATCH /v1/apps/{app_id}/scale
+POST /v1/apps/{app_id}/scale
 ```
 Example request:
 ```
-PATCH /v1/apps/nginx0r2.default.xcm.dataman HTTP/1.1
+POST /v1/apps/nginx0r2.default.xcm.dataman/scale HTTP/1.1
 Content-Type: application/json
 {
     "instances": 5, 
@@ -353,14 +360,17 @@ Example response:
 HTTP/1.1 202 Accepted
 ```
 
-#### Rolling update
+#### Update
+
+First, create a new version for the app you plan to update.
+
 ```
-PUT /v1/apps/{app_id}/update
+POST /v1/apps/{app_id}/versions
 ```
 Example request:
 ```
-PUT /v1/apps HTTP/1.1
-Content-Type: application/json
+ POST /v1/apps/{nginx004.default.testuser.dataman}/versions HTTP/1.1
+ Content-Type: application/json
  
  {
   "name": "nginx002",
@@ -431,20 +441,61 @@ Content-Type: application/json
 ```
 Example response:
 ```
-HTTP/1.1 202 Accepted
-```
+  HTTP/1.1 201 Created
+  Content-Type: application/json
 
-#### Roll back
+  {
+      "Id":"1498791358276219465"
+  }
 ```
-PUT /v1/apps/{app_id}/rollback
+Second, process updating.
+
+```
+PUT /v1/apps/{app_id}
 ```
 Example request:
 ```
-PUT /v1/apps/nginx0r2.default.xcm.dataman?version=1498029948754163146
+PUT /v1/apps/nginx0r2.default.xcm.dataman HTTP/1.1
+Content-Type: application/json
+{
+    "instances": 5, 
+    "canary": {
+        "enabled": false,
+        "value": 0.1,
+    }
+}
 ```
-Query parameters:
+Json parameters:
 ```
-version: the version id to be updated
+instances: the number of tasks to be updated.
+canary:
+    enabled: Disable or Enabled canary publish(gray publish). If Disabled, value is ignore. Default is Disabled.
+    value:   Percentage of traffic for new version. 0.1 means ten percent. value is between (0, 1].
+```
+Example response:
+```
+HTTP/1.1 202 Accepted
+```
+
+
+```
+During the update process, swan will be automatic find the new version you created previous step, and updated the old tasks to the new version
+according you strategy.
+
+If canary is enabled, the traffic control will be enabled. you can control how much traffic the new version is divided.
+```
+
+
+#### Roll back
+```
+POST /v1/apps/{app_id}/rollback
+```
+Example request:
+```
+POST /v1/apps/nginx0r2.default.xcm.dataman/rollback
+```
+```
+Rollback will update app to the previous version.
 ```
 Example response:
 ```
@@ -644,32 +695,14 @@ Content-Type: application/json
   }
 }
 ```
-
-#### Delete a task
+#### Create a version 
 ```
-DELETE /v1/apps/{app_id}/tasks/{task_id}
-```
-Example request:
-```
-DELETE /v1/apps/nginx0r1.default.xcm.dataman/tasks/e6404f0324d2.0.nginx0r1.default.xcm.dataman
-```
-Example response:
-```
-HTTP/1.1 204 No Content
-```
-
-#### Update a task
-```
-<<<<<<< HEAD
-PUT /v1/apps/{app_id}/tasks/{task_id}
-=======
-PUT /v1/apps/{app_id}/tasks/{task_id}/update
->>>>>>> update api doc
+POST /v1/apps/{app_id}/versions
 ```
 Example request:
 ```
-PUT /v1/apps/nginx0r1.default.xcm.dataman/tasks/e6404f0324d2.0.nginx0r1.default.xcm.dataman/update HTTP/1.1
-Content-Type: application/json
+ POST /v1/apps/{nginx004.default.testuser.dataman}/versions HTTP/1.1
+ Content-Type: application/json
  
  {
   "name": "nginx002",
@@ -740,24 +773,101 @@ Content-Type: application/json
 ```
 Example response:
 ```
-HTTP/1.1 202 Accepted
-```
+  HTTP/1.1 201 Created
+  Content-Type: application/json
 
-#### Rollback a task
+  {
+      "Id":"1498791358276219465"
+  }
 ```
-PUT /v1/apps/{app_id}/tasks/{task_id}/rollback
+#### Update weights 
+```
+PATCH /v1/apps/{app_id}/weights
 ```
 Example request:
 ```
-PUT /v1/apps/nginx0r1.default.xcm.dataman/tasks/e6404f0324d2.0.nginx0r1.default.xcm.dataman/rollback?version=1498029948754163146
+ PATCH /v1/apps/nginx004.default.testuser.dataman/weights HTTP/1.1
+ Content-Type: application/json
+ 
+ {
+     Weights: {
+         "0": 10,
+         "1": 20,
+         "3": 30,
+     }
+ }
 ```
-Query parameters:
+Json parameters:
 ```
-version: the version id to be updated
+Weights:
+    Key(string)  : task index, eg. 0, 1, 2...
+    Value(float) : weight of task. value is between (0, 100].
 ```
 Example response:
 ```
 HTTP/1.1 202 Accepted
 ```
 
+#### Update weight
+```
+PATCH /v1/apps/{app_id}/tasks/{task_id}/weight
+```
+Example request:
+```
+PATCH /v1/apps/nginx004.default.testuser.dataman}/tasks/0.nginx004.default.testuser.dataman/weight HTTP/1.1
+Content-Type: application/json
+{
+    Weight: 50,
+}
+```
+Json parameters:
+```
+Weight: the task weight
+```
+Example response:
+```
+HTTP/1.1 202 Accepted
+```
+
+#### Ping
+```
+GET /ping
+```
+Example request:
+```
+GET /ping
+```
+Example response:
+```
+"pong"
+```
+
+#### Version
+```
+GET /version
+```
+
+Example response:
+```
+{
+  "version": "v0.1.11",
+  "commit": "v0.1.11-153-g397f477-dirty",
+  "build_time": "2017-05-27:11-27-19",
+  "go_version": "go1.8.1",
+  "os": "linux",
+  "arch": "amd64"
+}
+```
+
+#### Leader
+```
+GET /v1/leader
+```
+
+Example response:
+```
+{
+    "leader": "192.168.1.92:5016"
+}
+```
 
