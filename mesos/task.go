@@ -8,6 +8,7 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 )
 
+// runtime Task object
 type Task struct {
 	mesosproto.TaskInfo
 
