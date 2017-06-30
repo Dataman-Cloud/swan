@@ -1,62 +1,83 @@
-## API Demo
+#### Constraints
 
-## Constraints
-
-`Constraints` is a main feature we want support for now. Without
-`Constraints` it is not possible to dispatch a set of tasks to
-desired Mesos agents.
-
-## Example Constraints supported
-
-  ```
-      UNIQUE hostname
-  ```
-
-  ```
-      UNIQUE agentid
-  ```
-
-  ```
-      LIKE hostname "ssd-machine*"
-  ```
-
-  ```
-      LIKE ip "192.168*"
-  ```
-
-  ```
-      NOT( LIKE ip "192.168*" )
-  ```
-
-  ```
-      AND ( LIKE ip "192.168*" ) (UNIQUE hostname)
-  ```
-
-  ```
-      OR ( LIKE ip "192.168*" ) (UNIQUE hostname)
-  ```
-
-  ```
-      OR ( AND ( LIKE ip "192.168*" ) ( UNIQUE agentid) ) (UNIQUE hostname)
-  ```
-
-
-
-## Mesos Agent attributes
-
-Also `Swan` allow to use `Mesos` attributes to filter desired agent,
-before doing that Mesos agent should started with attributes added, for
-example:
-
+##### Spec
 ```
-  ./mesos-agent.sh --attribues="label:ssd;mem-intensive:true"
+{
+    attribute : "vcluster"
+    operator  : "="
+    value     : "dataman"
+}
 ```
++ *attribute*(string) - Specifies the name of attribute setting on mesos agent. the attribute must be set on mesos agent.
 
-we can dispatch to these host with
-
++ *operator*(string) - Specifies the comparison operator. Possible values include:
 ```
-  LIKE label ssd
+==
+!=
+~=
 ```
++ *value*(string) - Specifies the value to compare the attribute against using the specified operation.
 
-
-
+##### Examples
++ schedule all tasks on agent with attribute "vcluster:dataman".
+```
+constraint: [
+    {
+      attribute   : "vcluster"
+      operator    : "=="
+      value       : "dataman"
+    }
+]
+```
++ schedule all tasks on agent with attribute "disk:ssd".
+```
+constraint: [
+    {
+      attribute   : "disk"
+      operator    : "=="
+      value       : "ssd"
+    }
+]
+```
++ scheduler all tasks on agent with attribute "vcluster:dataman" and with attribute "kernel.os: centos".
+```
+constraint: [
+    {
+      attribute   : "vcluster"
+      operator    : "=="
+      value       : "dataman"
+    },
+    {
+      attribute   : "kernel.os"
+      operator    : "=="
+      value       : "centos"
+    },
+]
+```
++ scheduler all tasks on linux box.
+```
+constraint: [
+    {
+      attribute : "kernel.name"
+      operator  : "=="
+      value     : "linux"
+    }
+]
+```
+In the future, `operator` will be optional in some cases. eg.:
+```
+constraint: [
+    {
+      attribute   : "vcluster"
+      value       : "dev"
+    }
+]
+```
+```
+constraint: [
+    {
+      attribute   : "kernel.name"
+      value       : "linux"
+    }
+]
+```
