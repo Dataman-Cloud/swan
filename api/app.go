@@ -310,7 +310,7 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 	var body types.ScaleBody
 	if err := decode(req.Body, &body); err != nil {
-		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -321,7 +321,8 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if goal < 0 {
-		goal = -goal
+		http.Error(w, "the goal count can't be negative", http.StatusBadRequest)
+		return
 	}
 
 	if goal == current {
@@ -332,7 +333,7 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 	app.OpStatus = types.OpStatusScaling
 
 	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to scaling got error: %v", err.Error), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("updating app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -345,11 +346,28 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				}
 			}()
 
-			for i := 1; i < current-goal+1; i++ {
-				tid := fmt.Sprintf("%d.%s", current-i, appId)
+			for i := 1; i <= current-goal; i++ {
+
+				var (
+					tname = fmt.Sprintf("%d.%s", current-i, appId)
+					tid   string
+				)
+
+				for _, task := range app.Tasks {
+					if task.Name == tname {
+						tid = task.ID
+						break
+					}
+				}
+
+				if tid == "" {
+					log.Errorln("no such task name:", tname)
+					break
+				}
 
 				t, err := r.db.GetTask(appId, tid)
 				if err != nil {
+					log.Errorln("get db task error:", err)
 					break
 				}
 
