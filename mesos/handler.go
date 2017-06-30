@@ -34,7 +34,7 @@ func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 
 	//s.watchConn(interval)
 
-	//s.reconcile()
+	s.startReconcile()
 }
 
 func (s *Scheduler) offersHandler(event *mesosproto.Event) {

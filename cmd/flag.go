@@ -39,6 +39,33 @@ func FlagEnableCORS() cli.Flag {
 	}
 }
 
+func FlagReconciliationInterval() cli.Flag {
+	return cli.Float64Flag{
+		Name:   "reconciliation-interval",
+		Usage:  "The period, in seconds, between task reconciliation operations.",
+		EnvVar: "SWAN_RECONCILIATION_INTERVAL",
+		Value:  900,
+	}
+}
+
+func FlagReconciliationStep() cli.Flag {
+	return cli.Int64Flag{
+		Name:   "reconciliation-step",
+		Usage:  "The number of tasks reconciled each time",
+		EnvVar: "SWAN_RECONCILIATION_STEP",
+		Value:  100,
+	}
+}
+
+func FlagReconciliationStepDelay() cli.Flag {
+	return cli.Float64Flag{
+		Name:   "reconciliation-step-delay",
+		Usage:  "The delay, in seconds, for each step of task reconciliation",
+		EnvVar: "SWAN_RECONCILIATION_DELAY",
+		Value:  15,
+	}
+}
+
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",

@@ -25,6 +25,9 @@ func ManagerCmd() cli.Command {
 	managerCmd.Flags = append(managerCmd.Flags, FlagLogLevel())
 	managerCmd.Flags = append(managerCmd.Flags, FlagStrategy())
 	managerCmd.Flags = append(managerCmd.Flags, FlagEnableCORS())
+	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationInterval())
+	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationStep())
+	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationStepDelay())
 
 	return managerCmd
 }

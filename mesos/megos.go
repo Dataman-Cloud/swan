@@ -43,7 +43,7 @@ func (s *Scheduler) FrameworkState() (*megos.Framework, error) {
 // megosClient is just a helper mesos http client via vendor `andygrunwald/megos` which
 // only `GET` on mesos http endpoints, we only use it to obtain cluster's states quickly.
 func (s *Scheduler) megosClient() (*megos.Client, error) {
-	conn, connCh, err := zk.Connect(s.zkCfg.Host, 10*time.Second)
+	conn, connCh, err := zk.Connect(s.cfg.ZKHost, 10*time.Second)
 	if err != nil {
 		return nil, err
 	}
@@ -62,9 +62,9 @@ func (s *Scheduler) megosClient() (*megos.Client, error) {
 		masterInfo = new(mesosproto.MasterInfo)
 	)
 
-	children, _, err := conn.Children(s.zkCfg.Path)
+	children, _, err := conn.Children(s.cfg.ZKPath)
 	if err != nil {
-		return nil, fmt.Errorf("get children on %s error: %v", s.zkCfg.Path, err)
+		return nil, fmt.Errorf("get children on %s error: %v", s.cfg.ZKPath, err)
 	}
 
 	for _, node := range children {
@@ -72,7 +72,7 @@ func (s *Scheduler) megosClient() (*megos.Client, error) {
 			continue
 		}
 
-		path := s.zkCfg.Path + "/" + node
+		path := s.cfg.ZKPath + "/" + node
 		data, _, err := conn.Get(path)
 		if err != nil {
 			return nil, fmt.Errorf("get node on %s error: %v", path, err)
