@@ -21,6 +21,7 @@
 | GET           | /ping                                       | Health check                 |
 | GET           | /version                                    | Version information          |
 | GET           | /v1/leader                                  | Inspect leader info          |
+| GET           | /v1/events                                  | Event Subscription           |
 
 #### List all apps
 ```
