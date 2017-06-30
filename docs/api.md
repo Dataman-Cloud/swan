@@ -4,9 +4,9 @@
 | POST          | /v1/apps                                    | Create a app                 |
 | GET           | /v1/apps/{app_id}                           | Inspect a app                |
 | DELETE        | /v1/apps/{app_id}                           | Delete a app                 |
-| PATCH         | /v1/apps/{app_id}                           | Scale up/down                |
+| POST          | /v1/apps/{app_id}/scale                     | Scale up/down                |
 | PUT           | /v1/apps/{app_id}                           | Rolling update a app         |
-| PUT           | /v1/apps/{app_id}                           | Roll back a app              |
+| POST          | /v1/apps/{app_id}/rollback                  | Roll back a app              |
 | GET           | /v1/apps/{app_id}/tasks                     | List all tasks for a app     |
 | GET           | /v1/apps/{app_id}/tasks/{task_id}           | Inspect a task               |
 | GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
@@ -336,11 +336,11 @@ HTTP/1.1 204 No Content
 ```
 ##### Scale up/down
 ```
-PATCH /v1/apps/{app_id}
+POST /v1/apps/{app_id}/scale
 ```
 Example request:
 ```
-PATCH /v1/apps/nginx0r2.default.xcm.dataman HTTP/1.1
+POST /v1/apps/nginx0r2.default.xcm.dataman/scale HTTP/1.1
 Content-Type: application/json
 {
     "instances": 5, 
@@ -377,8 +377,8 @@ Json parameters:
 ```
 instances: the number of tasks to be updated.
 canary:
-    enabled: disable or enabled canary publish(gray publish).
-    value: 
+    enabled: Disable or Enabled canary publish(gray publish). If Disabled, value is ignore. Default is Disabled.
+    value:   Percentage of traffic for new version. 0.1 means ten percent.
 ```
 Example response:
 ```
@@ -390,11 +390,11 @@ Before update, you must create a new version for app. more details see: [Update]
 
 #### Roll back
 ```
-PUT /v1/apps/{app_id}/rollback
+POST /v1/apps/{app_id}/rollback
 ```
 Example request:
 ```
-PUT /v1/apps/nginx0r2.default.xcm.dataman
+POST /v1/apps/nginx0r2.default.xcm.dataman/rollback
 ```
 ```
 Rollback will update app to the previous version.
@@ -702,8 +702,8 @@ Example request:
 Json parameters:
 ```
 Weights:
-    Key: task index, eg. 0, 1, 2...
-    Value: weight of task
+    Key(string)  : task index, eg. 0, 1, 2...
+    Value(float) : weight of task. value is between (0, 100].
 ```
 Example response:
 ```
