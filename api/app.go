@@ -764,7 +764,7 @@ func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
 
 	for n, weight := range weights {
 		for _, task := range app.Tasks {
-			if task.Name == n {
+			if task.Index() == n {
 				task.Weight = weight
 
 				if err := r.db.UpdateTask(appId, task); err != nil {

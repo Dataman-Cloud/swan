@@ -456,3 +456,7 @@ func (s TaskSorter) Less(i, j int) bool {
 
 	return a < b
 }
+
+func (t *Task) Index() string {
+	return strings.Split(t.Name, ".")[0]
+}
