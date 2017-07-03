@@ -46,10 +46,12 @@ func (s *Scheduler) offersHandler(event *mesosproto.Event) {
 
 	for _, offer := range offers {
 		agentId := offer.AgentId.GetValue()
+		attrs := offer.GetAttributes()
+		hostname := offer.GetHostname()
 
 		a := s.getAgent(agentId)
 		if a == nil {
-			a = newAgent(agentId)
+			a = newAgent(agentId, hostname, attrs)
 			s.addAgent(a)
 		}
 
