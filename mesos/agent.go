@@ -1,24 +1,41 @@
 package mesos
 
 import (
+	"encoding/json"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
 )
 
 type Agent struct {
-	id string
+	id       string
+	hostname string
+	attrs    []*mesosproto.Attribute
 
 	sync.RWMutex
 	offers map[string]*mesosproto.Offer
-	attrs  map[string]interface{}
 }
 
-func newAgent(id string) *Agent {
+func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 	return &Agent{
-		id:     id,
-		offers: make(map[string]*mesosproto.Offer),
+		id:       id,
+		hostname: hostname,
+		offers:   make(map[string]*mesosproto.Offer),
+		attrs:    attrs,
 	}
+}
+
+func (s *Agent) MarshalJSON() ([]byte, error) {
+	s.RLock()
+	defer s.RUnlock()
+
+	m := map[string]interface{}{
+		"id":         s.id,
+		"hostname":   s.hostname,
+		"attributes": s.attrs,
+		"offers":     s.offers,
+	}
+	return json.Marshal(m)
 }
 
 func (s *Agent) addOffer(offer *mesosproto.Offer) {

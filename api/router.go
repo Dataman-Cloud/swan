@@ -60,5 +60,7 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/version", r.version),
 		NewRoute("GET", "/v1/leader", r.getLeader),
 		NewRoute("DELETE", "/v1/purge", r.purge),
+
+		NewRoute("GET", "/v1/debug/dump", r.dump),
 	}
 }

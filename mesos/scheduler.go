@@ -44,13 +44,11 @@ type SchedulerConfig struct {
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
 type Scheduler struct {
-	http      *httpClient
+	http      *httpClient // mesos scheduler http client
 	cfg       *SchedulerConfig
 	framework *mesosproto.FrameworkInfo
 
-	eventCh chan *mesosproto.Event // mesos events
-	errCh   chan error             // subscriber's error events
-	quit    chan struct{}
+	quit chan struct{}
 
 	//endPoint string // eg: http://master/api/v1/scheduler
 	leader  string // mesos leader address
@@ -58,11 +56,11 @@ type Scheduler struct {
 
 	db store.Store
 
-	sync.RWMutex
-	agents map[string]*Agent
-
 	handlers map[mesosproto.Event_Type]eventHandler
-	tasks    map[string]*Task // ongoing tasks
+
+	sync.RWMutex                   // protect followings two
+	agents       map[string]*Agent // holding offers (agents)
+	tasks        map[string]*Task  // ongoing tasks
 
 	offerTimeout time.Duration
 
@@ -83,7 +81,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, mgr *
 	s := &Scheduler{
 		cfg:          cfg,
 		framework:    defaultFramework(),
-		errCh:        make(chan error, 1),
 		quit:         make(chan struct{}),
 		agents:       make(map[string]*Agent),
 		tasks:        make(map[string]*Task),
@@ -768,4 +765,17 @@ func (s *Scheduler) startReconcile() {
 
 func (s *Scheduler) stopReconcile() {
 	s.reconcileTimer.Stop()
+}
+
+func (s *Scheduler) Dump() interface{} {
+	s.RLock()
+	defer s.RUnlock()
+
+	return map[string]interface{}{
+		"agents":        s.agents,
+		"config":        s.cfg,
+		"cluster":       s.cluster,
+		"mesos_leader":  s.leader,
+		"ongoing_tasks": s.tasks,
+	}
 }

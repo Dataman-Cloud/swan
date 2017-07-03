@@ -15,4 +15,7 @@ type Driver interface {
 
 	SubscribeEvent(http.ResponseWriter, string) error
 	TaskEvents() []*types.TaskEvent
+
+	// for debug convenience
+	Dump() interface{}
 }
