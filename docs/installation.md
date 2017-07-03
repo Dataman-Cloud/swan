@@ -13,7 +13,9 @@ make
 
 Single
 ```
-./bin/swan manager --mesos=zk://192.168.1.92:2181/mesos --zk=zk://192.168.1.92:2181/swan  --listen=192.168.1.193:9999
+./bin/swan manager --mesos=zk://192.168.1.92:2181/mesos \
+                   --zk=zk://192.168.1.92:2181/swan \
+                   --listen=192.168.1.193:9999
 ```
 
 Cluster
