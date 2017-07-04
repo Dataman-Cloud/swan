@@ -21,6 +21,7 @@ var (
 	errAppAlreadyExists     = errors.New("app already exists")
 	errVersionAlreadyExists = errors.New("version already exists")
 	errInstanceNotFound     = errors.New("instance not found")
+	errAgentNotFound        = errors.New("agent not found")
 )
 
 const (
@@ -28,6 +29,7 @@ const (
 	//keyTask        = "/tasks"
 	//keyVersion     = "/versions"
 	keyCompose     = "/composes"  // compose instance (group apps)
+	keyAgent       = "/agents"    // swan agent
 	keyFrameworkID = "/framework" // framework id
 )
 
