@@ -121,7 +121,7 @@ func (agent *Agent) ServeApi(l net.Listener) error {
 func (agent *Agent) sysinfo(ctx *gin.Context) {
 	info, err := Gather()
 	if err != nil {
-		ctx.Error(err)
+		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
