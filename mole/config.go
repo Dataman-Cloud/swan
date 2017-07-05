@@ -7,32 +7,32 @@ import (
 )
 
 var (
-	roleMaster role = "master"
-	roleAgent  role = "agent"
+	RoleMaster Role = "master"
+	RoleAgent  Role = "agent"
 )
 
-type role string
+type Role string
 
 type Config struct {
-	role    role     // both
-	listen  string   // master only
-	master  *url.URL // agent only
-	backend *url.URL // agent only
+	Role    Role     // both
+	Listen  string   // master only
+	Master  *url.URL // agent only
+	Backend *url.URL // agent only
 }
 
 func (c *Config) valid() error {
-	switch c.role {
+	switch c.Role {
 
-	case roleAgent:
-		if c.master == nil {
+	case RoleAgent:
+		if c.Master == nil {
 			return errors.New("malform master endpoint")
 		}
-		if c.backend == nil {
+		if c.Backend == nil {
 			return errors.New("malform backend endpoint")
 		}
 
-	case roleMaster:
-		if c.listen == "" {
+	case RoleMaster:
+		if c.Listen == "" {
 			return errors.New("malform listen address")
 		}
 
@@ -45,14 +45,14 @@ func (c *Config) valid() error {
 
 func ConfigFromEnv() (*Config, error) {
 	cfg := &Config{
-		role:   role(os.Getenv("MOLE_ROLE")),
-		listen: os.Getenv("MOLE_LISTEN"),
+		Role:   Role(os.Getenv("MOLE_ROLE")),
+		Listen: os.Getenv("MOLE_LISTEN"),
 	}
 	if burl, err := url.Parse(os.Getenv("MOLE_BACKEND_ENDPOINT")); err == nil {
-		cfg.backend = burl
+		cfg.Backend = burl
 	}
 	if murl, err := url.Parse(os.Getenv("MOLE_MASTER_ENDPOINT")); err == nil {
-		cfg.master = murl
+		cfg.Master = murl
 	}
 	if err := cfg.valid(); err != nil {
 		return nil, err

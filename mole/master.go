@@ -20,7 +20,7 @@ type Master struct {
 
 func NewMaster(cfg *Config) *Master {
 	return &Master{
-		listen:    cfg.listen,
+		listen:    cfg.Listen,
 		authToken: "xxx",
 		heartbeat: time.Second * 60,
 		agents:    make(map[string]*ClusterAgent),

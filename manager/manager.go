@@ -12,6 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mesos"
 	"github.com/Dataman-Cloud/swan/mesos/filter"
 	"github.com/Dataman-Cloud/swan/mesos/strategy"
+	"github.com/Dataman-Cloud/swan/mole"
 	zkstore "github.com/Dataman-Cloud/swan/store/zk"
 
 	log "github.com/Sirupsen/logrus"
@@ -35,9 +36,10 @@ var (
 )
 
 type Manager struct {
-	sched     *mesos.Scheduler
-	apiserver *api.Server
-	ZKClient  *zk.Conn
+	sched         *mesos.Scheduler
+	apiserver     *api.Server
+	clusterMaster *mole.Master
+	ZKClient      *zk.Conn
 
 	cfg                *config.ManagerConfig
 	leadershipChangeCh chan Leadership
@@ -57,6 +59,12 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	if err != nil {
 		log.Fatalln(err)
 	}
+
+	// mole master
+	clusterMaster := mole.NewMaster(&mole.Config{
+		Role:   mole.RoleMaster,
+		Listen: "0.0.0.0:10000", // TODO
+	})
 
 	scfg := mesos.SchedulerConfig{
 		ZKHost:                  strings.Split(cfg.MesosURL.Host, ","),
@@ -98,13 +106,14 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 
 	srv := api.NewServer(&srvcfg)
 
-	router := api.NewRouter(sched, db)
+	router := api.NewRouter(sched, db, clusterMaster)
 
 	srv.InstallRouter(router)
 
 	return &Manager{
 		apiserver:          srv,
 		sched:              sched,
+		clusterMaster:      clusterMaster,
 		ZKClient:           conn,
 		cfg:                cfg,
 		leadershipChangeCh: make(chan Leadership),
@@ -174,6 +183,13 @@ func (m *Manager) start() error {
 	go func() {
 		if err := m.apiserver.Run(); err != nil {
 			log.Errorf("start apiserver error: %v", err)
+			m.errCh <- err
+		}
+	}()
+
+	go func() {
+		if err := m.clusterMaster.Serve(); err != nil {
+			log.Errorf("start mole master error: %v", err)
 			m.errCh <- err
 		}
 	}()

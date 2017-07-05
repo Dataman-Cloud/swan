@@ -1,6 +1,7 @@
 package api
 
 import (
+	"github.com/Dataman-Cloud/swan/mole"
 	. "github.com/Dataman-Cloud/swan/store"
 )
 
@@ -8,12 +9,14 @@ type Router struct {
 	routes []*Route
 	driver Driver
 	db     Store
+	master *mole.Master
 }
 
-func NewRouter(d Driver, s Store) *Router {
+func NewRouter(d Driver, s Store, master *mole.Master) *Router {
 	r := &Router{
 		driver: d,
 		db:     s,
+		master: master,
 	}
 
 	r.setupRoutes()
@@ -62,5 +65,8 @@ func (r *Router) setupRoutes() {
 		NewRoute("DELETE", "/v1/purge", r.purge),
 
 		NewRoute("GET", "/v1/debug/dump", r.dump),
+
+		NewRoute("GET", "/v1/cluster/agents", r.listAgents),
+		NewRoute("GET", "/v1/cluster/agents/{agent_id}", r.getAgent),
 	}
 }
