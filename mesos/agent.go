@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"sync"
 
+	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 )
 
@@ -13,15 +14,15 @@ type Agent struct {
 	attrs    []*mesosproto.Attribute
 
 	sync.RWMutex
-	offers map[string]*mesosproto.Offer
+	offers map[string]*mesos.Offer
 }
 
 func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 	return &Agent{
 		id:       id,
 		hostname: hostname,
-		offers:   make(map[string]*mesosproto.Offer),
 		attrs:    attrs,
+		offers:   make(map[string]*mesos.Offer),
 	}
 }
 
@@ -38,9 +39,9 @@ func (s *Agent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (s *Agent) addOffer(offer *mesosproto.Offer) {
+func (s *Agent) addOffer(offer *mesos.Offer) {
 	s.Lock()
-	s.offers[offer.Id.GetValue()] = offer
+	s.offers[offer.GetId()] = offer
 	s.Unlock()
 }
 
@@ -62,7 +63,7 @@ func (s *Agent) empty() bool {
 	return len(s.offers) == 0
 }
 
-func (s *Agent) getOffer(offerId string) *mesosproto.Offer {
+func (s *Agent) getOffer(offerId string) *mesos.Offer {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -74,7 +75,7 @@ func (s *Agent) getOffer(offerId string) *mesosproto.Offer {
 	return offer
 }
 
-func (s *Agent) getOffers() map[string]*mesosproto.Offer {
+func (s *Agent) getOffers() map[string]*mesos.Offer {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -83,28 +84,10 @@ func (s *Agent) getOffers() map[string]*mesosproto.Offer {
 
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
 	for _, offer := range s.getOffers() {
-		for _, resource := range offer.Resources {
-			if *resource.Name == "cpus" {
-				cpus += *resource.Scalar.Value
-			}
-
-			if *resource.Name == "mem" {
-				mem += *resource.Scalar.Value
-			}
-
-			if *resource.Name == "disk" {
-				disk += *resource.Scalar.Value
-			}
-
-			if *resource.Name == "ports" {
-				for _, rang := range resource.GetRanges().GetRange() {
-					for i := rang.GetBegin(); i <= rang.GetEnd(); i++ {
-						ports = append(ports, i)
-					}
-				}
-			}
-
-		}
+		cpus += offer.GetCpus()
+		mem += offer.GetMem()
+		disk += offer.GetDisk()
+		ports = append(ports, offer.GetPorts()...)
 	}
 
 	return
@@ -114,10 +97,8 @@ func (s *Agent) Attributes() map[string]string {
 	attrs := make(map[string]string)
 
 	for _, offer := range s.getOffers() {
-		for _, attr := range offer.Attributes {
-			if attr.GetType() == mesosproto.Value_TEXT {
-				attrs[attr.GetName()] = attr.GetText().GetValue()
-			}
+		for k, v := range offer.GetAttrs() {
+			attrs[k] = v
 		}
 	}
 

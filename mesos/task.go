@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 )
@@ -33,7 +34,7 @@ func (t *Task) ID() string {
 	return t.TaskId.GetValue()
 }
 
-func (t *Task) Build(offer *mesosproto.Offer) {
+func (t *Task) Build(offer *mesos.Offer) {
 	t.AgentId = offer.GetAgentId()
 
 	t.Resources = t.cfg.BuildResources(offer)

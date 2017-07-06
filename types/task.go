@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
@@ -159,13 +160,13 @@ func (c *TaskConfig) network() *mesosproto.ContainerInfo_DockerInfo_Network {
 	return mesosproto.ContainerInfo_DockerInfo_USER.Enum()
 }
 
-func (c *TaskConfig) portMappings(offer *mesosproto.Offer) []*mesosproto.ContainerInfo_DockerInfo_PortMapping {
+func (c *TaskConfig) portMappings(offer *mesos.Offer) []*mesosproto.ContainerInfo_DockerInfo_PortMapping {
 	var (
 		pms  = c.PortMappings
 		dpms = make([]*mesosproto.ContainerInfo_DockerInfo_PortMapping, 0, 0)
 	)
 
-	ports := ports(offer)
+	ports := offer.GetPorts()
 	if len(ports) <= 0 {
 		log.Error("no ports  available")
 		return nil
@@ -220,7 +221,7 @@ func (c *TaskConfig) parameters() []*mesosproto.Parameter {
 	return mps
 }
 
-func (c *TaskConfig) BuildContainer(offer *mesosproto.Offer) *mesosproto.ContainerInfo {
+func (c *TaskConfig) BuildContainer(offer *mesos.Offer) *mesosproto.ContainerInfo {
 	var (
 		image      = c.Image
 		privileged = c.Privileged
@@ -242,7 +243,7 @@ func (c *TaskConfig) BuildContainer(offer *mesosproto.Offer) *mesosproto.Contain
 
 }
 
-func (c *TaskConfig) BuildResources(offer *mesosproto.Offer) []*mesosproto.Resource {
+func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
 	var (
 		rs   = make([]*mesosproto.Resource, 0, 0)
 		cpus = c.CPUs
@@ -281,7 +282,7 @@ func (c *TaskConfig) BuildResources(offer *mesosproto.Offer) []*mesosproto.Resou
 	}
 
 	for i, pm := range c.PortMappings {
-		ports := ports(offer)
+		ports := offer.GetPorts()
 		if len(ports) <= 0 {
 			log.Error("no ports  available")
 			return nil
