@@ -14,6 +14,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
+	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
@@ -303,40 +304,77 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	a.addOffer(offer)
+	f := mesos.NewOffer(offer)
+
+	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v",
+		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange())
+
+	a.addOffer(f)
+
+	offers := a.getOffers()
+	if len(offers) > 1 {
+		fs := make([]*mesos.Offer, 0)
+		for _, f := range offers {
+			if s.removeOffer(f) {
+				fs = append(fs, f)
+			}
+		}
+
+		if err := s.declineOffers(fs); err != nil {
+			log.Errorf("Decline offers got error: %v", err)
+		}
+
+		return
+	}
+
+	go func(f *mesos.Offer) {
+		<-time.After(5 * time.Second)
+
+		if s.removeOffer(f) {
+			s.declineOffers([]*mesos.Offer{
+				f,
+			})
+		}
+	}(f)
 }
 
-func (s *Scheduler) removeOffer(offer *mesosproto.Offer) bool {
-	log.Debugf("Removing offer %s", offer.Id.GetValue())
+func (s *Scheduler) removeOffer(offer *mesos.Offer) bool {
+	log.Debugf("Removing offer %s", offer.GetId())
 
-	a := s.getAgent(offer.AgentId.GetValue())
+	a := s.getAgent(offer.GetAgentId().GetValue())
 	if a == nil {
 		return false
 	}
 
-	found := a.removeOffer(offer.Id.GetValue())
+	found := a.removeOffer(offer.GetId())
 	if a.empty() {
-		s.removeAgent(offer.AgentId.GetValue())
+		s.removeAgent(offer.GetAgentId().GetValue())
 	}
 
 	return found
 }
 
-func (s *Scheduler) declineOffer(offer *mesosproto.Offer) error {
+func (s *Scheduler) declineOffers(offers []*mesos.Offer) error {
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_DECLINE.Enum(),
 		Decline: &mesosproto.Call_Decline{
-			OfferIds: []*mesosproto.OfferID{
-				{
-					Value: offer.GetId().Value,
-				},
-			},
+			OfferIds: []*mesosproto.OfferID{},
 			Filters: &mesosproto.Filters{
 				RefuseSeconds: proto.Float64(1),
 			},
 		},
 	}
+
+	for _, offer := range offers {
+		call.Decline.OfferIds = append(call.Decline.OfferIds, &mesosproto.OfferID{
+			Value: proto.String(offer.GetId()),
+		})
+
+		log.Debugf("Prepare to decline offer %s", offer.GetId())
+	}
+
+	log.Debugf("Decline %d offer(s)", len(offers))
 
 	resp, err := s.Send(call)
 	if err != nil {
@@ -349,9 +387,6 @@ func (s *Scheduler) declineOffer(offer *mesosproto.Offer) error {
 
 	return nil
 
-}
-
-func (s *Scheduler) rescindOffer(offerId string) {
 }
 
 func (s *Scheduler) addAgent(agent *Agent) {
@@ -411,8 +446,6 @@ func (s *Scheduler) removeTask(taskID string) bool {
 }
 
 func (s *Scheduler) LaunchTask(t *Task) error {
-	log.Printf("launching task %s", t.ID())
-
 	s.launch.Lock()
 
 	s.addTask(t)
@@ -431,7 +464,7 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 
 	chosen := candidates[0]
 
-	var offer *mesosproto.Offer
+	var offer *mesos.Offer
 	for _, ofr := range chosen.getOffers() {
 		offer = ofr
 	}
@@ -465,7 +498,9 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 		Type:        mesosproto.Call_ACCEPT.Enum(),
 		Accept: &mesosproto.Call_Accept{
 			OfferIds: []*mesosproto.OfferID{
-				offer.GetId(),
+				{
+					Value: proto.String(offer.GetId()),
+				},
 			},
 			Operations: []*mesosproto.Offer_Operation{
 				&mesosproto.Offer_Operation{
@@ -479,6 +514,8 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 		},
 	}
 
+	log.Printf("launching task %s with offer %s", t.ID(), offer.GetId())
+
 	// send call
 	resp, err := s.Send(call)
 	if err != nil {
@@ -491,7 +528,9 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 		return fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
-	s.removeOffer(offer)
+	if !s.removeOffer(offer) {
+		log.Errorf("Remove offer %s failed", offer.GetId())
+	}
 
 	s.launch.Unlock()
 
