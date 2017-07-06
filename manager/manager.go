@@ -12,6 +12,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mesos"
 	"github.com/Dataman-Cloud/swan/mesos/filter"
 	"github.com/Dataman-Cloud/swan/mesos/strategy"
+	"github.com/Dataman-Cloud/swan/mole"
 	zkstore "github.com/Dataman-Cloud/swan/store/zk"
 
 	log "github.com/Sirupsen/logrus"
@@ -35,9 +36,11 @@ var (
 )
 
 type Manager struct {
-	sched     *mesos.Scheduler
-	apiserver *api.Server
-	ZKClient  *zk.Conn
+	sched         *mesos.Scheduler
+	apiserver     *api.Server
+	clusterMaster *mole.Master
+	tcpMux        *tcpMux // dispatch tcp Conn to clusterMaster & apiServer
+	ZKClient      *zk.Conn
 
 	cfg                *config.ManagerConfig
 	leadershipChangeCh chan Leadership
@@ -48,16 +51,19 @@ type Manager struct {
 }
 
 func New(cfg *config.ManagerConfig) (*Manager, error) {
+	// connect to zk leader
 	conn, err := connect(strings.Split(cfg.ZKURL.Host, ","))
 	if err != nil {
 		return nil, err
 	}
 
+	// zk db initilizing
 	db, err := zkstore.NewZKStore(cfg.ZKURL)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
+	// scheduler setup
 	scfg := mesos.SchedulerConfig{
 		ZKHost:                  strings.Split(cfg.MesosURL.Host, ","),
 		ZKPath:                  cfg.MesosURL.Path,
@@ -91,20 +97,29 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	}
 	sched.InitFilters(filters)
 
+	// tcpMux setup
+	tcpMux := newTCPMux(cfg.Listen)
+	hl := tcpMux.NewHTTPListener()
+	ml := tcpMux.NewMoleListener()
+
+	// mole protocol master
+	clusterMaster := mole.NewMaster(ml)
+
+	// api server
 	srvcfg := api.Config{
 		Listen:   cfg.Listen,
 		LogLevel: cfg.LogLevel,
 	}
-
-	srv := api.NewServer(&srvcfg)
-
-	router := api.NewRouter(sched, db)
-
+	srv := api.NewServer(&srvcfg, hl)
+	router := api.NewRouter(sched, db, clusterMaster)
 	srv.InstallRouter(router)
 
+	// final
 	return &Manager{
 		apiserver:          srv,
 		sched:              sched,
+		clusterMaster:      clusterMaster,
+		tcpMux:             tcpMux,
 		ZKClient:           conn,
 		cfg:                cfg,
 		leadershipChangeCh: make(chan Leadership),
@@ -172,8 +187,22 @@ func (m *Manager) start() error {
 	}()
 
 	go func() {
+		if err := m.tcpMux.ListenAndServe(); err != nil {
+			log.Errorf("start tcpMux error: %v", err)
+			m.errCh <- err
+		}
+	}()
+
+	go func() {
 		if err := m.apiserver.Run(); err != nil {
 			log.Errorf("start apiserver error: %v", err)
+			m.errCh <- err
+		}
+	}()
+
+	go func() {
+		if err := m.clusterMaster.Serve(); err != nil {
+			log.Errorf("start mole master error: %v", err)
 			m.errCh <- err
 		}
 	}()

@@ -5,26 +5,31 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor"
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 	"github.com/Dataman-Cloud/swan/agent/nameserver"
 	"github.com/Dataman-Cloud/swan/config"
+	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
 )
 
 type Agent struct {
-	config   config.AgentConfig
-	resolver *nameserver.Resolver
-	janitor  *janitor.JanitorServer
-	eventCh  chan []byte
+	config      config.AgentConfig
+	resolver    *nameserver.Resolver
+	janitor     *janitor.JanitorServer
+	clusterNode *mole.Agent
+	eventCh     chan []byte
 }
 
 func New(cfg config.AgentConfig) *Agent {
@@ -38,47 +43,156 @@ func New(cfg config.AgentConfig) *Agent {
 }
 
 func (agent *Agent) StartAndJoin() error {
-	errCh := make(chan error)
+	go agent.resolver.Start()
+	go agent.janitor.Start()
 
-	go func() {
-		err := agent.resolver.Start()
+	var (
+		delayMin = time.Second      // min retry delay 1s
+		delayMax = time.Second * 60 // max retry delay 60s
+		delay    = delayMin         // retry delay
+	)
+	for {
+		err := agent.Join()
 		if err != nil {
-			errCh <- err
+			log.Errorln("agent Join() error:", err)
+			delay *= 2
+			if delay > delayMax {
+				delay = delayMax // reset delay to max
+			}
+			log.Warnln("agent ReJoin in", delay.String())
+			time.Sleep(delay)
+			continue
 		}
-		logrus.Warnln("resolver quit, error:", err)
-	}()
 
-	go func() {
-		err := agent.janitor.Start()
+		l := agent.NewListener()
+
+		go func(l net.Listener) {
+			err := agent.ServeProtocol()
+			if err != nil {
+				log.Errorln("agent ServeProtocol() error:", err)
+				l.Close() // close the listener -> the ServeApi() return with error -> Rejoin triggered.
+			}
+		}(l)
+
+		log.Println("agent Joined succeed, ready ...")
+		delay = delayMin // reset dealy to min
+		err = agent.ServeApi(l)
 		if err != nil {
-			errCh <- err
+			log.Errorln("agent ServeApi() error:", err)
 		}
-		logrus.Warnln("janitor quit, error:", err)
-	}()
+	}
 
-	go func() {
-		err := agent.apiServe()
-		if err != nil {
-			errCh <- err
-		}
-		logrus.Warnln("api server quit, error:", err)
-	}()
-
-	go agent.watchEvents()
-	go agent.dispatchEvents()
-
-	return <-errCh
+	return nil
 }
 
-func (agent *Agent) apiServe() error {
-	engine := gin.Default()
+func (agent *Agent) Join() error {
+	// detect healhty master
+	addr, err := agent.detectManagerAddr()
+	if err != nil {
+		return err
+	}
+	masterURL, err := url.Parse(addr)
+	if err != nil {
+		return err
+	}
 
-	engine.GET("/", func(c *gin.Context) { c.String(200, "OK") })
-	engine.GET("/ping", func(c *gin.Context) { c.String(200, "pong") })
-	agent.janitor.ApiServe(engine.Group("/proxy"))
-	agent.resolver.ApiServe(engine.Group("/dns"))
+	// setup & join
+	agent.clusterNode = mole.NewAgent(&mole.Config{
+		Role:   mole.RoleAgent,
+		Master: masterURL,
+	})
 
-	return engine.Run(agent.config.ListenAddr)
+	return agent.clusterNode.Join()
+}
+
+func (agent *Agent) NewListener() net.Listener {
+	return agent.clusterNode.NewListener()
+}
+
+func (agent *Agent) ServeProtocol() error {
+	return agent.clusterNode.ServeProtocol()
+}
+
+func (agent *Agent) ServeApi(l net.Listener) error {
+	log.Println("agent api in serving ...")
+	mux := gin.Default()
+	mux.NoRoute(agent.serveProxy)
+	agent.janitor.ApiServe(mux.Group("/proxy")) // TODO
+	agent.resolver.ApiServe(mux.Group("/dns"))  // TODO
+	mux.GET("/sysinfo", agent.sysinfo)
+
+	httpd := &http.Server{
+		Handler: mux,
+	}
+
+	return httpd.Serve(l)
+}
+
+func (agent *Agent) sysinfo(ctx *gin.Context) {
+	info, err := Gather()
+	if err != nil {
+		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	ctx.JSON(200, info)
+}
+
+func (agent *Agent) serveProxy(ctx *gin.Context) {
+	var (
+		r = ctx.Request
+		w = ctx.Writer
+	)
+
+	hijacker, ok := w.(http.Hijacker)
+	if !ok {
+		w.WriteHeader(500)
+		return
+	}
+
+	connMaster, _, err := hijacker.Hijack()
+	if err != nil {
+		w.WriteHeader(500)
+		return
+	}
+	defer connMaster.Close()
+
+	connBackend, err := agent.dialBackend()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	defer connBackend.Close()
+
+	go func() {
+		r.Write(connBackend)
+	}()
+
+	io.Copy(connMaster, connBackend)
+}
+
+func (agent *Agent) dialBackend() (net.Conn, error) {
+	return net.Dial("unix", "/var/run/docker.sock")
+}
+
+//
+// clean up followings laster
+//
+
+func (agent *Agent) detectManagerAddr() (string, error) {
+	for _, addr := range agent.config.JoinAddrs {
+		resp, err := http.Get("http://" + addr + "/ping")
+		if err != nil {
+			log.Warnf("detect swan manager %s error %v", addr, err)
+			continue
+		}
+		resp.Body.Close() // prevent fd leak
+
+		log.Infof("detect swan manager %s succeed", addr)
+		return "http://" + addr, nil
+	}
+
+	return "", errors.New("all of swan manager unavailable")
 }
 
 func (agent *Agent) watchEvents() {
@@ -91,22 +205,22 @@ func (agent *Agent) watchEvents() {
 	for {
 		managerAddr, err := agent.detectManagerAddr()
 		if err != nil {
-			logrus.Errorln("agent Join error:", err)
+			log.Errorln("agent Join error:", err)
 			delay *= 2
 			if delay > delayMax {
 				delay = delayMax // reset to max
 			}
-			logrus.Printf("agent Rejoin in %s ...", delay)
+			log.Printf("agent Rejoin in %s ...", delay)
 			time.Sleep(delay)
 			continue
 		}
 
-		logrus.Printf("agent Join to manager %s succeed, ready for events ...", managerAddr)
+		log.Printf("agent Join to manager %s succeed, ready for events ...", managerAddr)
 		delay = delayMin // reset to min
 
 		err = agent.watchManagerEvents(managerAddr)
 		if err != nil {
-			logrus.Errorf("agent watch on manager events error: %v, retry ...", err)
+			log.Errorf("agent watch on manager events error: %v, retry ...", err)
 			time.Sleep(time.Second)
 		}
 	}
@@ -121,11 +235,11 @@ func (agent *Agent) dispatchEvents() {
 	agent.resolver.EmitChange(ev)
 
 	for evBody := range agent.eventCh {
-		logrus.Printf("agent caught sse task event: %s", string(evBody))
+		log.Printf("agent caught sse task event: %s", string(evBody))
 
 		var taskEv types.TaskEvent
 		if err := json.Unmarshal(evBody, &taskEv); err != nil {
-			logrus.Errorf("agent unmarshal task event error: %v", err)
+			log.Errorf("agent unmarshal task event error: %v", err)
 			continue
 		}
 
@@ -143,22 +257,6 @@ func (agent *Agent) dispatchEvents() {
 			}
 		}
 	}
-}
-
-func (agent *Agent) detectManagerAddr() (string, error) {
-	for _, addr := range agent.config.JoinAddrs {
-		resp, err := http.Get("http://" + addr + "/ping")
-		if err != nil {
-			logrus.Warnf("detect swan manager %s error %v", addr, err)
-			continue
-		}
-		resp.Body.Close() // prevent fd leak
-
-		logrus.Infof("detect swan manager %s succeed", addr)
-		return addr, nil
-	}
-
-	return "", errors.New("all of swan manager unavailable")
 }
 
 func (agent *Agent) watchManagerEvents(managerAddr string) error {
