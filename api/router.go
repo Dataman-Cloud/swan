@@ -66,7 +66,7 @@ func (r *Router) setupRoutes() {
 
 		NewRoute("GET", "/v1/debug/dump", r.dump),
 
-		NewRoute("GET", "/v1/cluster/agents", r.listAgents),
-		NewRoute("GET", "/v1/cluster/agents/{agent_id}", r.getAgent),
+		NewRoute("GET", "/v1/agents", r.listAgents),
+		NewRoute("GET", "/v1/agents/{agent_id}", r.getAgent),
 	}
 }

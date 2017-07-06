@@ -55,7 +55,7 @@ func (zk *ZKStore) ListAgents() ([]*types.Agent, error) {
 	}
 
 	for _, node := range nodes {
-		bs, _, err := zk.get(keyCompose + "/" + node)
+		bs, _, err := zk.get(keyAgent + "/" + node)
 		if err != nil {
 			log.Errorln("zk ListAgents.getnode error:", err)
 			continue

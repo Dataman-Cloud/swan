@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/pprof"
 	"net/url"
@@ -22,6 +23,7 @@ type Config struct {
 
 type Server struct {
 	cfg         *Config
+	listener    net.Listener // specified net listener
 	leader      string
 	router      *Router
 	server      *http.Server
@@ -29,9 +31,10 @@ type Server struct {
 	sync.Mutex
 }
 
-func NewServer(cfg *Config) *Server {
+func NewServer(cfg *Config, l net.Listener) *Server {
 	srv := &Server{
-		cfg: cfg,
+		cfg:      cfg,
+		listener: l,
 	}
 
 	//srv.initMiddlewares()
@@ -101,15 +104,12 @@ func (s *Server) InstallRouter(r *Router) {
 
 func (s *Server) Run() error {
 	srv := &http.Server{
-		Addr:    s.cfg.Listen,
 		Handler: s.createMux(),
 	}
 
 	s.server = srv
 
-	log.Infof("API Server listening on %s", s.cfg.Listen)
-
-	return srv.ListenAndServe()
+	return srv.Serve(s.listener)
 }
 
 // gracefully shutdown.

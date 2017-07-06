@@ -33,17 +33,11 @@ type Agent struct {
 }
 
 func New(cfg config.AgentConfig) *Agent {
-	masterURL, _ := url.Parse("http://0.0.0.0:10000") // TODO
-
 	agent := &Agent{
 		config:   cfg,
 		resolver: nameserver.NewResolver(&cfg.DNS),
 		janitor:  janitor.NewJanitorServer(&cfg.Janitor),
 		eventCh:  make(chan []byte, 1024),
-		clusterNode: mole.NewAgent(&mole.Config{
-			Role:   mole.RoleAgent,
-			Master: masterURL,
-		}),
 	}
 	return agent
 }
@@ -92,15 +86,31 @@ func (agent *Agent) StartAndJoin() error {
 }
 
 func (agent *Agent) Join() error {
-	return agent.clusterNode.Join()
-}
+	// detect healhty master
+	addr, err := agent.detectManagerAddr()
+	if err != nil {
+		return err
+	}
+	masterURL, err := url.Parse(addr)
+	if err != nil {
+		return err
+	}
 
-func (agent *Agent) ServeProtocol() error {
-	return agent.clusterNode.ServeProtocol()
+	// setup & join
+	agent.clusterNode = mole.NewAgent(&mole.Config{
+		Role:   mole.RoleAgent,
+		Master: masterURL,
+	})
+
+	return agent.clusterNode.Join()
 }
 
 func (agent *Agent) NewListener() net.Listener {
 	return agent.clusterNode.NewListener()
+}
+
+func (agent *Agent) ServeProtocol() error {
+	return agent.clusterNode.ServeProtocol()
 }
 
 func (agent *Agent) ServeApi(l net.Listener) error {
@@ -179,7 +189,7 @@ func (agent *Agent) detectManagerAddr() (string, error) {
 		resp.Body.Close() // prevent fd leak
 
 		log.Infof("detect swan manager %s succeed", addr)
-		return addr, nil
+		return "http://" + addr, nil
 	}
 
 	return "", errors.New("all of swan manager unavailable")

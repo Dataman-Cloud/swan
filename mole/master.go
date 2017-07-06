@@ -13,14 +13,14 @@ import (
 type Master struct {
 	sync.RWMutex                          // protect agents map
 	agents       map[string]*ClusterAgent // agents held all of joined agents
-	listen       string                   // listen address
+	listener     net.Listener             // specified listener
 	authToken    string                   // TODO auth token
 	heartbeat    time.Duration            // TODO heartbeat interval to ping agents
 }
 
-func NewMaster(cfg *Config) *Master {
+func NewMaster(l net.Listener) *Master {
 	return &Master{
-		listen:    cfg.Listen,
+		listener:  l,
 		authToken: "xxx",
 		heartbeat: time.Second * 60,
 		agents:    make(map[string]*ClusterAgent),
@@ -28,13 +28,8 @@ func NewMaster(cfg *Config) *Master {
 }
 
 func (m *Master) Serve() error {
-	l, err := net.Listen("tcp", m.listen)
-	if err != nil {
-		return err
-	}
-
 	for {
-		conn, err := l.Accept()
+		conn, err := m.listener.Accept()
 		if err != nil {
 			log.Errorln("master Accept error: %v", err)
 			return err
