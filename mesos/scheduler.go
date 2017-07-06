@@ -327,15 +327,11 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	go func(f *mesos.Offer) {
-		<-time.After(5 * time.Second)
-
+	time.AfterFunc(time.Second*5, func() { // release the offer later
 		if s.removeOffer(f) {
-			s.declineOffers([]*mesos.Offer{
-				f,
-			})
+			s.declineOffers([]*mesos.Offer{f})
 		}
-	}(f)
+	})
 }
 
 func (s *Scheduler) removeOffer(offer *mesos.Offer) bool {
