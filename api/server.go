@@ -49,9 +49,13 @@ func (s *Server) createMux() *mux.Router {
 	for _, r := range s.router.Routes() {
 		f := s.makeHTTPHandler(r.Handler())
 
-		log.Debugf("Registering %s, %s", r.Method(), r.Path())
+		log.Debugf("Registering %v, %s", r.Methods(), r.Path())
 
-		m.Path(r.Path()).Methods(r.Method()).Handler(f)
+		if r.prefix {
+			m.PathPrefix(r.Path()).Methods(r.Methods()...).Handler(f)
+		} else {
+			m.Path(r.Path()).Methods(r.Methods()...).Handler(f)
+		}
 	}
 
 	if s.cfg.LogLevel == "debug" {

@@ -68,5 +68,8 @@ func (r *Router) setupRoutes() {
 
 		NewRoute("GET", "/v1/agents", r.listAgents),
 		NewRoute("GET", "/v1/agents/{agent_id}", r.getAgent),
+		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/proxy", r.redirectAgentProxy),
+		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/dns", r.redirectAgentDNS),
+		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/docker", r.redirectAgentDocker),
 	}
 }

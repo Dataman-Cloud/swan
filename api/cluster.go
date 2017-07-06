@@ -30,6 +30,41 @@ func (r *Router) getAgent(w http.ResponseWriter, req *http.Request) {
 	r.proxyAgentHandle(id, agentReq, w)
 }
 
+func (r *Router) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
+	n := len(`/v1/agents/docker/`) + 16
+	r.redirectAgent(n, w, req)
+}
+
+func (r *Router) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
+	n := len(`/v1/agents/`) + 16
+	r.redirectAgent(n, w, req)
+}
+
+func (r *Router) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
+	n := len(`/v1/agents/`) + 16
+	r.redirectAgent(n, w, req)
+}
+
+func (r *Router) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
+	var (
+		id    = mux.Vars(req)["agent_id"]
+		agent = r.master.Agent(id)
+	)
+
+	if agent == nil {
+		http.Error(w, "no such agent: "+id, http.StatusNotFound)
+		return
+	}
+
+	// rewrite & proxy original request to agent docker remote api
+	req.URL.Scheme = "http"
+	req.URL.Host = id
+	req.URL.Path = req.URL.Path[stripN:]
+	req.RequestURI = "" // otherwise: http: Request.RequestURI can't be set in client requests.
+
+	r.proxyAgentHandle(id, req, w)
+}
+
 func (r *Router) proxyAgentHandle(id string, req *http.Request, w http.ResponseWriter) {
 	resp, err := r.proxyAgent(id, req)
 	if err != nil {
@@ -55,6 +90,5 @@ func (r *Router) proxyAgent(id string, req *http.Request) (*http.Response, error
 
 	log.Printf("proxying agent request: %s", req.URL.String())
 
-	client := agent.Client()
-	return client.Do(req)
+	return agent.Client().Do(req)
 }
