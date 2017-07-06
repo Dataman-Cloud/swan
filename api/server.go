@@ -22,12 +22,11 @@ type Config struct {
 }
 
 type Server struct {
-	cfg         *Config
-	listener    net.Listener // specified net listener
-	leader      string
-	router      *Router
-	server      *http.Server
-	middlewares []Middleware
+	cfg      *Config
+	listener net.Listener // specified net listener
+	leader   string
+	router   *Router
+	server   *http.Server
 	sync.Mutex
 }
 
