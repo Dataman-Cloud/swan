@@ -240,14 +240,20 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	go func(app *types.Application) {
 		var (
-			hasError = false
-			wg       sync.WaitGroup
+			hasError    = false
+			wg          sync.WaitGroup
+			tokenBucket = make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
 		)
 
 		wg.Add(len(app.Tasks))
 		for _, task := range app.Tasks {
+			tokenBucket <- struct{}{}
+
 			go func(task *types.Task, appId string) {
-				defer wg.Done()
+				defer func() {
+					wg.Done()
+					<-tokenBucket
+				}()
 
 				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
 					log.Errorf("Kill task %s got error: %v", task.ID, err)
@@ -279,6 +285,8 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		}
 
 		wg.Wait()
+
+		close(tokenBucket)
 
 		if hasError {
 			log.Errorf("Delete some tasks of app %s got error.", app.ID)

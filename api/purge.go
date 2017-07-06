@@ -16,16 +16,29 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	for _, app := range apps {
-		go func(app *types.Application) {
+	tokenBucket := make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
+
+	go func() {
+		var all sync.WaitGroup
+
+		for _, app := range apps {
 			var (
 				hasError = false
 				wg       sync.WaitGroup
 			)
+
 			wg.Add(len(app.Tasks))
 			for _, task := range app.Tasks {
+				tokenBucket <- struct{}{}
+
 				go func(task *types.Task, appId string) {
-					defer wg.Done()
+					all.Add(1)
+
+					defer func() {
+						wg.Done()
+						all.Done()
+						<-tokenBucket
+					}()
 
 					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
 						log.Errorf("Kill task %s got error: %v", task.ID, err)
@@ -68,8 +81,12 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-		}(app)
-	}
+		}
+
+		all.Wait()
+
+		close(tokenBucket)
+	}()
 
 	writeJSON(w, http.StatusNoContent, "")
 }
