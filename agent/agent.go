@@ -115,16 +115,10 @@ func (agent *Agent) ServeProtocol() error {
 
 func (agent *Agent) ServeApi(l net.Listener) error {
 	log.Println("agent api in serving ...")
-	mux := gin.Default()
-	mux.NoRoute(agent.serveProxy)
-	agent.janitor.ApiServe(mux.Group("/proxy")) // TODO
-	agent.resolver.ApiServe(mux.Group("/dns"))  // TODO
-	mux.GET("/sysinfo", agent.sysinfo)
 
 	httpd := &http.Server{
-		Handler: mux,
+		Handler: agent.NewHTTPMux(),
 	}
-
 	return httpd.Serve(l)
 }
 
