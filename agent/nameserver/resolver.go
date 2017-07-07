@@ -29,7 +29,6 @@ type Resolver struct {
 	sync.RWMutex                      // protect m
 	dnsClient    *dns.Client          // for forwarders
 	forwardAddrs []string             // for forwarders
-	eventCh      chan *RecordEvent    // dns record events
 }
 
 func NewResolver(cfg *config.DNS) *Resolver {
@@ -39,11 +38,10 @@ func NewResolver(cfg *config.DNS) *Resolver {
 	}
 
 	resolver := &Resolver{
-		config:  cfg,
-		base:    base,
-		gwbase:  GATEWAY + "." + base,
-		m:       make(map[string][]*Record),
-		eventCh: make(chan *RecordEvent, 1024),
+		config: cfg,
+		base:   base,
+		gwbase: GATEWAY + "." + base,
+		m:      make(map[string][]*Record),
 		dnsClient: &dns.Client{
 			Net:          "udp",
 			DialTimeout:  cfg.ExchangeTimeout,
@@ -62,31 +60,9 @@ func NewResolver(cfg *config.DNS) *Resolver {
 		resolver.forwardAddrs[i] = net.JoinHostPort(host, port)
 	}
 
-	go resolver.watchEvents()
-
 	return resolver
 }
 
-func (r *Resolver) EmitChange(ev *RecordEvent) {
-	r.eventCh <- ev
-}
-
-func (r *Resolver) watchEvents() {
-	log.Println("resolver listening on dns records event ...")
-
-	for ev := range r.eventCh {
-		log.Debugln("dns record event:", ev)
-
-		switch ev.Action {
-		case "add":
-			r.upsert(&ev.Record)
-		case "del":
-			r.remove(&ev.Record)
-		default:
-			log.Warnln("unrecognized event action", ev.Action)
-		}
-	}
-}
 func (r *Resolver) allRecords() map[string][]*Record {
 	r.RLock()
 	defer r.RUnlock()

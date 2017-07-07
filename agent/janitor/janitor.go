@@ -3,10 +3,7 @@ package janitor
 import (
 	"net/http"
 	"os"
-	"strings"
 	"sync"
-
-	log "github.com/Sirupsen/logrus"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor/proxy"
 	"github.com/Dataman-Cloud/swan/agent/janitor/stats"
@@ -24,7 +21,6 @@ func init() {
 
 type JanitorServer struct {
 	config       *config.Janitor
-	eventChan    chan *upstream.BackendEvent
 	httpd        *http.Server
 	httpdTLS     *http.Server
 	tcpd         map[string]*proxy.TCPProxyServer // listen -> tcp proxy server
@@ -33,9 +29,8 @@ type JanitorServer struct {
 
 func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	s := &JanitorServer{
-		config:    cfg,
-		eventChan: make(chan *upstream.BackendEvent, 1024),
-		tcpd:      make(map[string]*proxy.TCPProxyServer),
+		config: cfg,
+		tcpd:   make(map[string]*proxy.TCPProxyServer),
 	}
 
 	s.httpd = &http.Server{
@@ -53,13 +48,7 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 	return s
 }
 
-func (s *JanitorServer) EmitEvent(ev *upstream.BackendEvent) {
-	s.eventChan <- ev
-}
-
 func (s *JanitorServer) Start() error {
-	go s.watchEvent()
-
 	errCh := make(chan error, 2)
 
 	go func() {
@@ -77,35 +66,12 @@ func (s *JanitorServer) Start() error {
 	return <-errCh
 }
 
-func (s *JanitorServer) watchEvent() {
-	log.Println("proxy listening on backends event ...")
-
-	for ev := range s.eventChan {
-		log.Printf("proxy caught event: %s", ev)
-
-		ev.Format()
-
-		switch strings.ToLower(ev.Action) {
-		case "add", "change":
-			if err := s.upsertBackend(ev.BackendCombined); err != nil {
-				log.Errorln("upsert backend error:", err)
-			}
-
-		case "del":
-			s.removeBackend(ev.BackendCombined)
-
-		default:
-			log.Warnln("unrecognized event action", ev.Action)
-		}
-	}
-
-	panic("event channel closed, never be here")
-}
-
 func (s *JanitorServer) upsertBackend(cmb *upstream.BackendCombined) error {
 	if err := cmb.Valid(); err != nil {
 		return err
 	}
+
+	cmb.Format()
 
 	first, err := upstream.UpsertBackend(cmb)
 	if err != nil {

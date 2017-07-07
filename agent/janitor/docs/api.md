@@ -190,7 +190,6 @@
   },
   "httpd": ":80",
   "httpdTLS": "",
-  "queuing_events": 0,
   "tcpd": {            // 4层TCP代理  
     ":81": {           // 监听端口
       "active_clients": 1,  // 当前在线连接数
