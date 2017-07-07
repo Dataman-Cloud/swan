@@ -47,8 +47,17 @@ func (agent *Agent) StartAndJoin() error {
 	}
 
 	// startup resolver & janitor
-	go agent.resolver.Start()
-	go agent.janitor.Start()
+	go func() {
+		if err := agent.resolver.Start(); err != nil {
+			log.Fatalln("resolver occured fatal error:", err)
+		}
+	}()
+
+	go func() {
+		if err := agent.janitor.Start(); err != nil {
+			log.Fatalln("janitor occured fatal error:", err)
+		}
+	}()
 
 	// serving protocol & Api with underlying mole
 	var (
