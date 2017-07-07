@@ -30,8 +30,12 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 
 	// /dns/**
 	r = mux.Group("/dns")
-	r.GET("", resolver.ListAllRecords)
+	r.GET("", resolver.ListRecords)
+	r.GET("/records", resolver.ListRecords)
+	r.PUT("/records", resolver.UpsertRecord)
+	r.DELETE("/records", resolver.DelRecord)
 	r.GET("/configs", resolver.ShowConfigs)
+	r.GET("/stats", resolver.ShowStats)
 
 	mux.NoRoute(agent.serveProxy)
 	return mux

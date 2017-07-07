@@ -1,22 +1,17 @@
 package api
 
-import (
-	"github.com/Dataman-Cloud/swan/mole"
-	. "github.com/Dataman-Cloud/swan/store"
-)
+import . "github.com/Dataman-Cloud/swan/store"
 
 type Router struct {
 	routes []*Route
 	driver Driver
 	db     Store
-	master *mole.Master
 }
 
-func NewRouter(d Driver, s Store, master *mole.Master) *Router {
+func NewRouter(d Driver, s Store) *Router {
 	r := &Router{
 		driver: d,
 		db:     s,
-		master: master,
 	}
 
 	r.setupRoutes()

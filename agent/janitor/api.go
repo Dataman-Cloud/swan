@@ -54,11 +54,10 @@ func (s *JanitorServer) ShowConfigs(c *gin.Context) {
 
 func (s *JanitorServer) ShowStats(c *gin.Context) {
 	wrapper := map[string]interface{}{
-		"httpd":          s.config.ListenAddr,
-		"httpdTLS":       s.config.TLSListenAddr,
-		"queuing_events": len(s.eventChan),
-		"counter":        stats.Get(),
-		"tcpd":           s.tcpd,
+		"httpd":    s.config.ListenAddr,
+		"httpdTLS": s.config.TLSListenAddr,
+		"counter":  stats.Get(),
+		"tcpd":     s.tcpd,
 	}
 	c.JSON(200, wrapper)
 }

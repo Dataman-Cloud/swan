@@ -1,7 +1,6 @@
 package nameserver
 
 import (
-	"encoding/json"
 	"errors"
 	"net"
 	"strconv"
@@ -9,30 +8,6 @@ import (
 
 	"github.com/miekg/dns"
 )
-
-type RecordEvent struct {
-	Action string
-	Record
-}
-
-func (ev *RecordEvent) String() string {
-	bs, _ := json.Marshal(ev)
-	return string(bs)
-}
-
-func BuildRecordEvent(act, id, parent, ip, port string, weight float64, isProxyRecord bool) *RecordEvent {
-	return &RecordEvent{
-		Action: act,
-		Record: Record{
-			ID:          id,
-			Parent:      parent,
-			IP:          ip,
-			Port:        port,
-			Weight:      weight,
-			ProxyRecord: isProxyRecord,
-		},
-	}
-}
 
 type Record struct {
 	ID          string  `json:"id"`
@@ -50,13 +25,13 @@ type Record struct {
 func (r *Record) rewrite(base string) error {
 	ip := net.ParseIP(r.IP)
 	if ip == nil {
-		return errors.New("invlaid IP: " + r.IP)
+		return errors.New("dns-record: invlaid IP: " + r.IP)
 	}
 	r.ip = ip
 
 	port, err := strconv.Atoi(r.Port)
 	if err != nil {
-		return errors.New("invalid Port: " + r.Port)
+		return errors.New("dns-record: invalid Port: " + r.Port)
 	}
 	r.portN = port
 

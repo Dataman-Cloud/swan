@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Dataman-Cloud/swan/mesos"
+	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -15,6 +16,9 @@ type Driver interface {
 
 	SubscribeEvent(http.ResponseWriter, string) error
 	TaskEvents() []*types.TaskEvent
+
+	ClusterAgents() map[string]*mole.ClusterAgent
+	ClusterAgent(id string) *mole.ClusterAgent
 
 	// for debug convenience
 	Dump() interface{}

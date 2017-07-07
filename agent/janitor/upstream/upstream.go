@@ -106,51 +106,6 @@ func (b *Backend) Addr() string {
 	return fmt.Sprintf("%s:%d", b.IP, b.Port)
 }
 
-// BackendEvent
-type BackendEvent struct {
-	Action string // add/del/update
-	*BackendCombined
-}
-
-func (ev *BackendEvent) String() string {
-	return fmt.Sprintf("{%s upstream:%s backend:%s addr:%s:%d weight:%f}",
-		ev.Action, ev.Upstream.Name, ev.Backend.ID,
-		ev.Backend.IP, ev.Backend.Port, ev.Backend.Weight)
-}
-
-func (ev *BackendEvent) Format() {
-	// rewrite Upstream.Listen
-	ev.Upstream.Listen = ev.Upstream.tcpListen()
-
-	// rewrite backend clean name
-	fields := strings.SplitN(ev.Backend.ID, ".", 2)
-	if len(fields) == 2 {
-		ev.Backend.CleanName = fields[1]
-	}
-}
-
-func BuildBackendEvent(act, ups, alias, listen, backend, ip, ver string, port uint64, weight float64) *BackendEvent {
-	return &BackendEvent{
-		Action: act,
-		BackendCombined: &BackendCombined{
-			Upstream: &Upstream{
-				Name:   ups,
-				Alias:  alias,
-				Listen: listen,
-			},
-			Backend: &Backend{
-				ID:        backend,
-				IP:        ip,
-				Port:      port,
-				Scheme:    "",
-				Version:   ver,
-				Weight:    weight,
-				CleanName: "",
-			},
-		},
-	}
-}
-
 // BackendCombined
 type BackendCombined struct {
 	*Upstream `json:"upstream"`
@@ -171,6 +126,17 @@ func (cmb *BackendCombined) Valid() error {
 		return errors.New("backend name must be suffixed by upstream name")
 	}
 	return nil
+}
+
+func (cmb *BackendCombined) Format() {
+	// rewrite Upstream.Listen
+	cmb.Upstream.Listen = cmb.Upstream.tcpListen()
+
+	// rewrite backend clean name
+	fields := strings.SplitN(cmb.Backend.ID, ".", 2)
+	if len(fields) == 2 {
+		cmb.Backend.CleanName = fields[1]
+	}
 }
 
 // Exported Functions ....

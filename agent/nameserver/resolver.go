@@ -29,21 +29,19 @@ type Resolver struct {
 	sync.RWMutex                      // protect m
 	dnsClient    *dns.Client          // for forwarders
 	forwardAddrs []string             // for forwarders
-	eventCh      chan *RecordEvent    // dns record events
 }
 
-func NewResolver(cfg *config.DNS) *Resolver {
+func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 	base := cfg.Domain
 	if !strings.HasSuffix(base, ".") {
 		base = base + "."
 	}
 
 	resolver := &Resolver{
-		config:  cfg,
-		base:    base,
-		gwbase:  GATEWAY + "." + base,
-		m:       make(map[string][]*Record),
-		eventCh: make(chan *RecordEvent, 1024),
+		config: cfg,
+		base:   base,
+		gwbase: GATEWAY + "." + base,
+		m:      make(map[string][]*Record),
 		dnsClient: &dns.Client{
 			Net:          "udp",
 			DialTimeout:  cfg.ExchangeTimeout,
@@ -51,6 +49,17 @@ func NewResolver(cfg *config.DNS) *Resolver {
 			WriteTimeout: cfg.ExchangeTimeout,
 		},
 	}
+
+	// init with local proxy dns record
+	rr := &Record{
+		ID:          "local_proxy",
+		Parent:      "PROXY",
+		IP:          AdvertiseIP, // we've verified before
+		Port:        "80",
+		Weight:      0,
+		ProxyRecord: true,
+	}
+	resolver.upsert(rr)
 
 	resolver.forwardAddrs = make([]string, len(cfg.Resolvers))
 	for i, addr := range cfg.Resolvers {
@@ -62,38 +71,16 @@ func NewResolver(cfg *config.DNS) *Resolver {
 		resolver.forwardAddrs[i] = net.JoinHostPort(host, port)
 	}
 
-	go resolver.watchEvents()
-
 	return resolver
 }
 
-func (r *Resolver) EmitChange(ev *RecordEvent) {
-	r.eventCh <- ev
-}
-
-func (r *Resolver) watchEvents() {
-	log.Println("resolver listening on dns records event ...")
-
-	for ev := range r.eventCh {
-		log.Debugln("dns record event:", ev)
-
-		switch ev.Action {
-		case "add":
-			r.upsert(&ev.Record)
-		case "del":
-			r.remove(&ev.Record)
-		default:
-			log.Warnln("unrecognized event action", ev.Action)
-		}
-	}
-}
 func (r *Resolver) allRecords() map[string][]*Record {
 	r.RLock()
 	defer r.RUnlock()
 	return r.m
 }
 
-func (r *Resolver) upsert(record *Record) {
+func (r *Resolver) upsert(record *Record) error {
 	var (
 		parent = record.Parent
 		id     = record.ID
@@ -102,7 +89,7 @@ func (r *Resolver) upsert(record *Record) {
 	// verify & rewrite
 	if err := record.rewrite(r.base); err != nil {
 		log.Warnf("resolver veriy & rewrite record error: %v", err)
-		return
+		return err
 	}
 
 	r.Lock()
@@ -111,7 +98,7 @@ func (r *Resolver) upsert(record *Record) {
 	records, ok := r.m[parent]
 	if !ok {
 		r.m[parent] = []*Record{record}
-		return
+		return nil
 	}
 
 	var idx int = -1
@@ -123,10 +110,11 @@ func (r *Resolver) upsert(record *Record) {
 	}
 
 	if idx >= 0 {
-		return
+		return nil
 	}
 
 	r.m[parent] = append(r.m[parent], record)
+	return nil
 }
 
 func (r *Resolver) remove(record *Record) {

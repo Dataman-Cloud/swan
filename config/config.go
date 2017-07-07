@@ -96,6 +96,13 @@ func NewAgentConfig(c *cli.Context) (AgentConfig, error) {
 		}
 	}
 
+	// verify AdvertiseIP is valid ipaddr
+	if ip := cfg.Janitor.AdvertiseIP; ip != "" {
+		if net.ParseIP(ip) == nil {
+			return cfg, fmt.Errorf("invalid advertise ip: %v", ip)
+		}
+	}
+
 	if c.String("gateway-tls-listen-addr") != "" {
 		cfg.Janitor.TLSListenAddr = c.String("gateway-tls-listen-addr")
 	}

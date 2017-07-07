@@ -139,6 +139,10 @@ type ClusterAgent struct {
 	lastActive time.Time
 }
 
+func (ca *ClusterAgent) ID() string {
+	return ca.id
+}
+
 // Dial specifies the dial function for creating unencrypted TCP connections within the http.Client
 func (ca *ClusterAgent) Dial(network, addr string) (net.Conn, error) {
 	wid := randNumber(10)

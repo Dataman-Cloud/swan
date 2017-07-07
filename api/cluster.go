@@ -11,14 +11,14 @@ import (
 )
 
 func (r *Router) listAgents(w http.ResponseWriter, req *http.Request) {
-	ret := r.master.Agents()
+	ret := r.driver.ClusterAgents()
 	writeJSON(w, http.StatusOK, ret)
 }
 
 func (r *Router) getAgent(w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]
-		agent = r.master.Agent(id)
+		agent = r.driver.ClusterAgent(id)
 	)
 
 	if agent == nil {
@@ -48,7 +48,7 @@ func (r *Router) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
 func (r *Router) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]
-		agent = r.master.Agent(id)
+		agent = r.driver.ClusterAgent(id)
 	)
 
 	if agent == nil {
@@ -78,7 +78,7 @@ func (r *Router) proxyAgentHandle(id string, req *http.Request, w http.ResponseW
 }
 
 func (r *Router) proxyAgent(id string, req *http.Request) (*http.Response, error) {
-	agent := r.master.Agent(id)
+	agent := r.driver.ClusterAgent(id)
 	if agent == nil {
 		return nil, errors.New("no such agent: " + id)
 	}
