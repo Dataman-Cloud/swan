@@ -31,7 +31,7 @@ type Resolver struct {
 	forwardAddrs []string             // for forwarders
 }
 
-func NewResolver(cfg *config.DNS) *Resolver {
+func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 	base := cfg.Domain
 	if !strings.HasSuffix(base, ".") {
 		base = base + "."
@@ -49,6 +49,17 @@ func NewResolver(cfg *config.DNS) *Resolver {
 			WriteTimeout: cfg.ExchangeTimeout,
 		},
 	}
+
+	// init with local proxy dns record
+	rr := &Record{
+		ID:          "local_proxy",
+		Parent:      "PROXY",
+		IP:          AdvertiseIP, // we've verified before
+		Port:        "80",
+		Weight:      0,
+		ProxyRecord: true,
+	}
+	resolver.upsert(rr)
 
 	resolver.forwardAddrs = make([]string, len(cfg.Resolvers))
 	for i, addr := range cfg.Resolvers {

@@ -27,7 +27,7 @@ type Agent struct {
 func New(cfg config.AgentConfig) *Agent {
 	agent := &Agent{
 		config:   cfg,
-		resolver: nameserver.NewResolver(&cfg.DNS),
+		resolver: nameserver.NewResolver(&cfg.DNS, cfg.Janitor.AdvertiseIP),
 		janitor:  janitor.NewJanitorServer(&cfg.Janitor),
 	}
 	return agent
