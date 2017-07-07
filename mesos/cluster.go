@@ -10,7 +10,7 @@ import (
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
-	"github.com/Dataman-Cloud/swan/agent/nameserver"
+	"github.com/Dataman-Cloud/swan/agent/resolver"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/types"
 )
@@ -84,7 +84,7 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 }
 
 func (s *Scheduler) buildAgentDNSReq(ev *types.TaskEvent) (*http.Request, error) {
-	body := &nameserver.Record{
+	body := &resolver.Record{
 		ID:          ev.TaskID,
 		Parent:      ev.AppID,
 		IP:          ev.IP,

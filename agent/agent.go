@@ -12,14 +12,14 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor"
-	"github.com/Dataman-Cloud/swan/agent/nameserver"
+	"github.com/Dataman-Cloud/swan/agent/resolver"
 	"github.com/Dataman-Cloud/swan/config"
 	"github.com/Dataman-Cloud/swan/mole"
 )
 
 type Agent struct {
 	config      config.AgentConfig
-	resolver    *nameserver.Resolver
+	resolver    *resolver.Resolver
 	janitor     *janitor.JanitorServer
 	clusterNode *mole.Agent
 }
@@ -27,7 +27,7 @@ type Agent struct {
 func New(cfg config.AgentConfig) *Agent {
 	agent := &Agent{
 		config:   cfg,
-		resolver: nameserver.NewResolver(&cfg.DNS, cfg.Janitor.AdvertiseIP),
+		resolver: resolver.NewResolver(&cfg.DNS, cfg.Janitor.AdvertiseIP),
 		janitor:  janitor.NewJanitorServer(&cfg.Janitor),
 	}
 	return agent
