@@ -50,13 +50,13 @@ type Record struct {
 func (r *Record) rewrite(base string) error {
 	ip := net.ParseIP(r.IP)
 	if ip == nil {
-		return errors.New("invlaid IP: " + r.IP)
+		return errors.New("dns-record: invlaid IP: " + r.IP)
 	}
 	r.ip = ip
 
 	port, err := strconv.Atoi(r.Port)
 	if err != nil {
-		return errors.New("invalid Port: " + r.Port)
+		return errors.New("dns-record: invalid Port: " + r.Port)
 	}
 	r.portN = port
 

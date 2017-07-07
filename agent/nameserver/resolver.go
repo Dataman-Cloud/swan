@@ -93,7 +93,7 @@ func (r *Resolver) allRecords() map[string][]*Record {
 	return r.m
 }
 
-func (r *Resolver) upsert(record *Record) {
+func (r *Resolver) upsert(record *Record) error {
 	var (
 		parent = record.Parent
 		id     = record.ID
@@ -102,7 +102,7 @@ func (r *Resolver) upsert(record *Record) {
 	// verify & rewrite
 	if err := record.rewrite(r.base); err != nil {
 		log.Warnf("resolver veriy & rewrite record error: %v", err)
-		return
+		return err
 	}
 
 	r.Lock()
@@ -111,7 +111,7 @@ func (r *Resolver) upsert(record *Record) {
 	records, ok := r.m[parent]
 	if !ok {
 		r.m[parent] = []*Record{record}
-		return
+		return nil
 	}
 
 	var idx int = -1
@@ -123,10 +123,11 @@ func (r *Resolver) upsert(record *Record) {
 	}
 
 	if idx >= 0 {
-		return
+		return nil
 	}
 
 	r.m[parent] = append(r.m[parent], record)
+	return nil
 }
 
 func (r *Resolver) remove(record *Record) {
