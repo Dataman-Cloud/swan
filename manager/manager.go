@@ -63,6 +63,14 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		log.Fatalln(err)
 	}
 
+	// tcpMux setup
+	tcpMux := newTCPMux(cfg.Listen)
+	hl := tcpMux.NewHTTPListener()
+	ml := tcpMux.NewMoleListener()
+
+	// mole protocol master
+	clusterMaster := mole.NewMaster(ml)
+
 	// scheduler setup
 	scfg := mesos.SchedulerConfig{
 		ZKHost:                  strings.Split(cfg.MesosURL.Host, ","),
@@ -84,9 +92,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		s = strategy.NewBinPackStrategy()
 	}
 
-	eventMgr := mesos.NewEventManager()
-
-	sched, err := mesos.NewScheduler(&scfg, db, s, eventMgr)
+	sched, err := mesos.NewScheduler(&scfg, db, s, clusterMaster)
 	if err != nil {
 		return nil, err
 	}
@@ -97,21 +103,13 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	}
 	sched.InitFilters(filters)
 
-	// tcpMux setup
-	tcpMux := newTCPMux(cfg.Listen)
-	hl := tcpMux.NewHTTPListener()
-	ml := tcpMux.NewMoleListener()
-
-	// mole protocol master
-	clusterMaster := mole.NewMaster(ml)
-
 	// api server
 	srvcfg := api.Config{
 		Listen:   cfg.Listen,
 		LogLevel: cfg.LogLevel,
 	}
 	srv := api.NewServer(&srvcfg, hl)
-	router := api.NewRouter(sched, db, clusterMaster)
+	router := api.NewRouter(sched, db)
 	srv.InstallRouter(router)
 
 	// final

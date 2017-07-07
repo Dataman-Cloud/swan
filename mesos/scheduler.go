@@ -16,6 +16,7 @@ import (
 
 	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
+	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
 )
@@ -77,6 +78,8 @@ type Scheduler struct {
 
 	eventmgr *eventManager
 
+	clusterMaster *mole.Master
+
 	launch sync.Mutex
 
 	status string
@@ -85,18 +88,19 @@ type Scheduler struct {
 }
 
 // NewScheduler...
-func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, mgr *eventManager) (*Scheduler, error) {
+func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clusterMaster *mole.Master) (*Scheduler, error) {
 	s := &Scheduler{
-		cfg:          cfg,
-		framework:    defaultFramework(),
-		quit:         make(chan struct{}),
-		agents:       make(map[string]*Agent),
-		tasks:        make(map[string]*Task),
-		offerTimeout: time.Duration(10 * time.Second),
-		db:           db,
-		strategy:     strategy,
-		filters:      make([]Filter, 0),
-		eventmgr:     mgr,
+		cfg:           cfg,
+		framework:     defaultFramework(),
+		quit:          make(chan struct{}),
+		agents:        make(map[string]*Agent),
+		tasks:         make(map[string]*Task),
+		offerTimeout:  time.Duration(10 * time.Second),
+		db:            db,
+		strategy:      strategy,
+		filters:       make([]Filter, 0),
+		eventmgr:      NewEventManager(),
+		clusterMaster: clusterMaster,
 	}
 
 	if err := s.init(); err != nil {

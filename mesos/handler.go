@@ -162,7 +162,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		proxyEnabled = ver.Proxy.Enabled
 	}
 
-	if err := s.eventmgr.broadcast(&types.TaskEvent{
+	taskEv := &types.TaskEvent{
 		Type:           evType,
 		AppID:          appId,
 		AppAlias:       alias,
@@ -171,8 +171,15 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		Port:           task.Port,
 		Weight:         task.Weight,
 		GatewayEnabled: proxyEnabled,
-	}); err != nil {
-		log.Errorf("broadcast task event got error: %v", err)
+	}
+
+	if err := s.eventmgr.broadcast(taskEv); err != nil {
+		log.Errorln("broadcast task event got error:", err)
+	}
+
+	if err := s.broadcastEventRecords(taskEv); err != nil {
+		log.Errorln("broadcast to sync proxy & dns records error:", err)
+		// TODO: memo db task errmsg
 	}
 
 	return
