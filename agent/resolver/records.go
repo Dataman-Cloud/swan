@@ -1,4 +1,4 @@
-package nameserver
+package resolver
 
 import (
 	"errors"
