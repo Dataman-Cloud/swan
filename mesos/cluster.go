@@ -83,8 +83,8 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 	return res
 }
 
-func (s *Scheduler) buildAgentDNSReq(ev *types.TaskEvent) (*http.Request, error) {
-	body := &resolver.Record{
+func (s *Scheduler) buildAgentDNSRecord(ev *types.TaskEvent) *resolver.Record {
+	return &resolver.Record{
 		ID:          ev.TaskID,
 		Parent:      ev.AppID,
 		IP:          ev.IP,
@@ -92,6 +92,10 @@ func (s *Scheduler) buildAgentDNSReq(ev *types.TaskEvent) (*http.Request, error)
 		Weight:      ev.Weight,
 		ProxyRecord: false,
 	}
+}
+
+func (s *Scheduler) buildAgentDNSReq(ev *types.TaskEvent) (*http.Request, error) {
+	body := s.buildAgentDNSRecord(ev)
 
 	bs, err := json.Marshal(body)
 	if err != nil {
@@ -110,8 +114,8 @@ func (s *Scheduler) buildAgentDNSReq(ev *types.TaskEvent) (*http.Request, error)
 	}
 }
 
-func (s *Scheduler) buildAgentProxyReq(ev *types.TaskEvent) (*http.Request, error) {
-	body := &upstream.BackendCombined{
+func (s *Scheduler) buildAgentProxyRecord(ev *types.TaskEvent) *upstream.BackendCombined {
+	return &upstream.BackendCombined{
 		Upstream: &upstream.Upstream{
 			Name:   ev.AppID,
 			Alias:  ev.AppAlias,
@@ -127,6 +131,10 @@ func (s *Scheduler) buildAgentProxyReq(ev *types.TaskEvent) (*http.Request, erro
 			CleanName: "",
 		},
 	}
+}
+
+func (s *Scheduler) buildAgentProxyReq(ev *types.TaskEvent) (*http.Request, error) {
+	body := s.buildAgentProxyRecord(ev)
 
 	bs, err := json.Marshal(body)
 	if err != nil {

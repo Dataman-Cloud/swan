@@ -66,7 +66,7 @@ func (s *JanitorServer) Start() error {
 	return <-errCh
 }
 
-func (s *JanitorServer) upsertBackend(cmb *upstream.BackendCombined) error {
+func (s *JanitorServer) UpsertBackend(cmb *upstream.BackendCombined) error {
 	if err := cmb.Valid(); err != nil {
 		return err
 	}

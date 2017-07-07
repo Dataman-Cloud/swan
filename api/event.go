@@ -23,8 +23,8 @@ func (r *Router) events(w http.ResponseWriter, req *http.Request) {
 
 	// notify new client all of current tasks' stats throught sse firstly
 	if catchUp := req.Form.Get("catchUp"); strings.ToLower(catchUp) == "true" {
-		for _, ev := range r.driver.TaskEvents() {
-			if _, err := w.Write(ev.Format()); err != nil {
+		for _, cmbEv := range r.driver.FullTaskEventsAndRecords() {
+			if _, err := w.Write(cmbEv.Event.Format()); err != nil {
 				log.Errorf("write event message to client [%s] error: [%v]", req.RemoteAddr, err)
 				continue
 			}

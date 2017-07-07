@@ -30,6 +30,11 @@ func (r *Router) getAgent(w http.ResponseWriter, req *http.Request) {
 	r.proxyAgentHandle(id, agentReq, w)
 }
 
+func (r *Router) fullEventsAndRecords(w http.ResponseWriter, req *http.Request) {
+	ret := r.driver.FullTaskEventsAndRecords()
+	writeJSON(w, http.StatusOK, ret)
+}
+
 func (r *Router) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/docker/`) + 16
 	r.redirectAgent(n, w, req)

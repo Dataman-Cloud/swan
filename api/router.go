@@ -60,6 +60,7 @@ func (r *Router) setupRoutes() {
 		NewRoute("DELETE", "/v1/purge", r.purge),
 
 		NewRoute("GET", "/v1/debug/dump", r.dump),
+		NewRoute("GET", "/v1/fullsync", r.fullEventsAndRecords),
 
 		NewRoute("GET", "/v1/agents", r.listAgents),
 		NewRoute("GET", "/v1/agents/{agent_id}", r.getAgent),

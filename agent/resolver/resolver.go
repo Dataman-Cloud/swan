@@ -59,7 +59,7 @@ func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 		Weight:      0,
 		ProxyRecord: true,
 	}
-	resolver.upsert(rr)
+	resolver.Upsert(rr)
 
 	resolver.forwardAddrs = make([]string, len(cfg.Resolvers))
 	for i, addr := range cfg.Resolvers {
@@ -80,7 +80,7 @@ func (r *Resolver) allRecords() map[string][]*Record {
 	return r.m
 }
 
-func (r *Resolver) upsert(record *Record) error {
+func (r *Resolver) Upsert(record *Record) error {
 	var (
 		parent = record.Parent
 		id     = record.ID
