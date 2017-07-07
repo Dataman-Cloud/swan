@@ -25,7 +25,7 @@ func (s *JanitorServer) UpsertUpstream(c *gin.Context) {
 		return
 	}
 
-	if err := s.upsertBackend(cmb); err != nil {
+	if err := s.UpsertBackend(cmb); err != nil {
 		http.Error(c.Writer, err.Error(), 500)
 		return
 	}

@@ -17,7 +17,7 @@ func (s *Resolver) UpsertRecord(c *gin.Context) {
 		return
 	}
 
-	if err := s.upsert(record); err != nil {
+	if err := s.Upsert(record); err != nil {
 		http.Error(c.Writer, err.Error(), 500)
 		return
 	}

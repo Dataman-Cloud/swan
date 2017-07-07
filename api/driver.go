@@ -15,7 +15,7 @@ type Driver interface {
 	ClusterName() string
 
 	SubscribeEvent(http.ResponseWriter, string) error
-	TaskEvents() []*types.TaskEvent
+	FullTaskEventsAndRecords() []*types.CombinedEvents
 
 	ClusterAgents() map[string]*mole.ClusterAgent
 	ClusterAgent(id string) *mole.ClusterAgent

@@ -3,6 +3,9 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/agent/resolver"
 )
 
 const (
@@ -10,6 +13,12 @@ const (
 	EventTypeTaskWeightChange = "task_weight_change"
 	EventTypeTaskUnhealthy    = "task_unhealthy"
 )
+
+type CombinedEvents struct {
+	Event *TaskEvent
+	Proxy *upstream.BackendCombined // built from event
+	DNS   *resolver.Record          // built from event
+}
 
 type TaskEvent struct {
 	Type           string  `json:"type"`

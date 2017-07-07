@@ -2,6 +2,7 @@ package agent
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -34,9 +35,31 @@ func New(cfg config.AgentConfig) *Agent {
 }
 
 func (agent *Agent) StartAndJoin() error {
-	go agent.resolver.Start()
-	go agent.janitor.Start()
+	// detect healhty master firstly
+	addr, err := agent.detectManagerAddr()
+	if err != nil {
+		return err
+	}
 
+	// sync all of dns & proxy records on start up
+	if err := agent.syncFull(addr); err != nil {
+		return fmt.Errorf("full sync manager's records error: %v", err)
+	}
+
+	// startup resolver & janitor
+	go func() {
+		if err := agent.resolver.Start(); err != nil {
+			log.Fatalln("resolver occured fatal error:", err)
+		}
+	}()
+
+	go func() {
+		if err := agent.janitor.Start(); err != nil {
+			log.Fatalln("janitor occured fatal error:", err)
+		}
+	}()
+
+	// serving protocol & Api with underlying mole
 	var (
 		delayMin = time.Second      // min retry delay 1s
 		delayMax = time.Second * 60 // max retry delay 60s

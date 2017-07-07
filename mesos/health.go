@@ -6,13 +6,14 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 )
 
-// TaskEvents generate all of current app tasks' db stats into sse events
-func (s *Scheduler) TaskEvents() []*types.TaskEvent {
-	ret := make([]*types.TaskEvent, 0, 0)
+// FullTaskEventsAndRecords generate all of current app tasks' db stats into
+// sse events & proxy records & dns records
+func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
+	ret := make([]*types.CombinedEvents, 0, 0)
 
 	apps, err := s.db.ListApps()
 	if err != nil {
-		logrus.Errorln("Shceduler.TaskEvents() db ListApps error:", err)
+		logrus.Errorln("Shceduler.FullTaskEventsAndRecords() db ListApps error:", err)
 		return ret
 	}
 
@@ -50,7 +51,7 @@ func (s *Scheduler) TaskEvents() []*types.TaskEvent {
 				proxyEnabled = ver.Proxy.Enabled
 			}
 
-			ret = append(ret, &types.TaskEvent{
+			taskEv := &types.TaskEvent{
 				Type:           evType,
 				AppID:          app.ID,
 				AppAlias:       alias,
@@ -59,6 +60,12 @@ func (s *Scheduler) TaskEvents() []*types.TaskEvent {
 				Port:           task.Port,
 				Weight:         task.Weight,
 				GatewayEnabled: proxyEnabled,
+			}
+
+			ret = append(ret, &types.CombinedEvents{
+				Event: taskEv,
+				Proxy: s.buildAgentProxyRecord(taskEv),
+				DNS:   s.buildAgentDNSRecord(taskEv),
 			})
 		}
 	}
