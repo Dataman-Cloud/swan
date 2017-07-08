@@ -26,6 +26,7 @@ type Upstream struct {
 	Name     string     `json:"name"`     // uniq name
 	Alias    string     `json:"alias"`    // advertised url
 	Listen   string     `json:"listen"`   // listen addr
+	Sticky   bool       `json:"sticky"`   // session sticky enabled (default no)
 	Backends []*Backend `json:"backends"` // backend servers
 
 	sessions *Sessions // runtime
@@ -37,6 +38,7 @@ func newUpstream(first *BackendCombined) *Upstream {
 		Name:     first.Upstream.Name,
 		Alias:    first.Upstream.Alias,
 		Listen:   first.Upstream.Listen,
+		Sticky:   first.Upstream.Sticky,
 		Backends: []*Backend{first.Backend},
 		sessions: newSessions(),     // sessions store
 		balancer: &weightBalancer{}, // default balancer
@@ -205,6 +207,7 @@ func UpsertBackend(cmb *BackendCombined) (onFirst bool, err error) {
 
 	// update upstream
 	u.Alias = cmb.Upstream.Alias
+	u.Sticky = cmb.Upstream.Sticky
 
 	// update backend
 	b.IP = cmb.Backend.IP
@@ -304,7 +307,7 @@ func Lookup(remoteIP, ups, backend string) *BackendCombined {
 	}
 
 	defer func() {
-		if b != nil {
+		if u.Sticky && b != nil {
 			u.sessions.update(remoteIP, b)
 		}
 	}()
@@ -319,8 +322,10 @@ func Lookup(remoteIP, ups, backend string) *BackendCombined {
 	}
 
 	// obtain session by remoteIP
-	if b = u.sessions.get(remoteIP); b != nil {
-		return &BackendCombined{u, b}
+	if u.Sticky {
+		if b = u.sessions.get(remoteIP); b != nil {
+			return &BackendCombined{u, b}
+		}
 	}
 
 	// use balancer to obtain a new backend
