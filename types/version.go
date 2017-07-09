@@ -10,9 +10,9 @@ import (
 )
 
 const (
-	deployStop     = "stop"
-	deployContinue = "continue"
-	deployRollback = "rollback" // TODO(nmg)
+	DeployStop     = "stop"
+	DeployContinue = "continue"
+	DeployRollback = "rollback" // TODO(nmg)
 )
 
 type Version struct {

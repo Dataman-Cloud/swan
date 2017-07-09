@@ -177,7 +177,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 					}
 				}
 
-				if onfailure == types.deployStop {
+				if onfailure == types.DeployStop {
 					return
 				}
 			}
@@ -187,7 +187,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 					log.Errorf("launch task %s got error: %v", taskId, err)
 				}
 
-				if onfailure == types.deployStop {
+				if onfailure == types.DeployStop {
 					return
 				}
 
