@@ -98,7 +98,6 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	}
 
 	filters := []mesos.Filter{
-		filter.NewResourceFilter(),
 		filter.NewConstraintsFilter(),
 	}
 	sched.InitFilters(filters)
