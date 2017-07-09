@@ -82,7 +82,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		healthy = status.GetHealthy()
 	)
 
-	log.Debugf("Received status update %s for task %s", status.GetState(), taskId)
+	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
 	// ack firstly
 	if err := s.AckUpdateEvent(status); err != nil {
