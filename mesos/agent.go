@@ -15,6 +15,7 @@ type Agent struct {
 
 	sync.RWMutex
 	offers map[string]*mesos.Offer
+	tasks  *Tasks
 }
 
 func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
@@ -23,6 +24,7 @@ func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 		hostname: hostname,
 		attrs:    attrs,
 		offers:   make(map[string]*mesos.Offer),
+		tasks:    new(Tasks),
 	}
 }
 
@@ -80,6 +82,23 @@ func (s *Agent) getOffers() map[string]*mesos.Offer {
 	defer s.RUnlock()
 
 	return s.offers
+}
+
+func (s *Agent) offer() *mesos.Offer {
+	s.RLock()
+	defer s.RUnlock()
+
+	for _, offer := range s.offers {
+		return offer
+	}
+
+	return nil
+}
+
+func (s *Agent) addTask(t *Task) {
+	s.Lock()
+	s.tasks.push(t)
+	s.Unlock()
 }
 
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {

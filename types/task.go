@@ -173,32 +173,34 @@ func (c *TaskConfig) portMappings(offer *mesos.Offer) []*mesosproto.ContainerInf
 	}
 
 	if c.Network == "bridge" {
-		for i, m := range pms {
+		for _, m := range pms {
+			//p := f()
+
 			dpms = append(dpms,
 				&mesosproto.ContainerInfo_DockerInfo_PortMapping{
-					HostPort:      proto.Uint32(uint32(ports[i])),
+					HostPort:      proto.Uint32(uint32(c.Port)),
 					ContainerPort: proto.Uint32(uint32(m.ContainerPort)),
 					Protocol:      proto.String(m.Protocol),
 				})
 
 			if c.HealthCheck != nil {
 				if m.Name == c.HealthCheck.PortName {
-					c.Port = ports[i]
+					//c.Port = p
 				}
 			}
 
-			c.Port = ports[i]
+			//c.Port = p
 		}
 	}
 
 	if c.Network == "host" {
-		for i, m := range pms {
+		for _, m := range pms {
 			if c.HealthCheck != nil {
 				if m.Name == c.HealthCheck.PortName {
-					c.Port = ports[i]
+					//c.Port = p
 				}
 			}
-			c.Port = ports[i]
+			//c.Port = p
 		}
 	}
 
@@ -281,7 +283,7 @@ func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
 		})
 	}
 
-	for i, pm := range c.PortMappings {
+	for _, pm := range c.PortMappings {
 		ports := offer.GetPorts()
 		if len(ports) <= 0 {
 			log.Error("no ports  available")
@@ -297,15 +299,15 @@ func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
 					Ranges: &mesosproto.Value_Ranges{
 						Range: []*mesosproto.Value_Range{
 							{
-								Begin: proto.Uint64(uint64(ports[i])),
-								End:   proto.Uint64(uint64(ports[i])),
+								Begin: proto.Uint64(c.Port),
+								End:   proto.Uint64(c.Port),
 							},
 						},
 					},
 				})
 			}
 
-			c.Env[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(pm.Name))] = fmt.Sprintf("%d", ports[i])
+			c.Env[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(pm.Name))] = fmt.Sprintf("%d", c.Port)
 		case "bridge":
 			rs = append(rs, &mesosproto.Resource{
 				Name: proto.String("ports"),
@@ -313,8 +315,8 @@ func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
 				Ranges: &mesosproto.Value_Ranges{
 					Range: []*mesosproto.Value_Range{
 						{
-							Begin: proto.Uint64(uint64(ports[i])),
-							End:   proto.Uint64(uint64(ports[i])),
+							Begin: proto.Uint64(c.Port),
+							End:   proto.Uint64(c.Port),
 						},
 					},
 				},

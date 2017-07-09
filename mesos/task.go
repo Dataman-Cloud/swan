@@ -7,6 +7,7 @@ import (
 	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
+	"github.com/golang/protobuf/proto"
 )
 
 // runtime Task object
@@ -35,7 +36,9 @@ func (t *Task) ID() string {
 }
 
 func (t *Task) Build(offer *mesos.Offer) {
-	t.AgentId = offer.GetAgentId()
+	t.AgentId = &mesosproto.AgentID{
+		Value: proto.String(offer.GetAgentId()),
+	}
 
 	t.Resources = t.cfg.BuildResources(offer)
 	t.Command = t.cfg.BuildCommand()

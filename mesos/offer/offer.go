@@ -14,13 +14,16 @@ type Offer struct {
 	ports    []*portRange
 	attrs    map[string]string
 	hostname string
-	agentId  *mesosproto.AgentID
+	agentId  string
+	portPool []uint64
 }
 
 type portRange struct {
 	begin uint64
 	end   uint64
 }
+
+var ports []uint64
 
 func (r *portRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]uint64{r.begin, r.end})
@@ -30,7 +33,7 @@ func NewOffer(offer *mesosproto.Offer) *Offer {
 	f := &Offer{
 		id:       offer.GetId().GetValue(),
 		hostname: offer.GetHostname(),
-		agentId:  offer.GetAgentId(),
+		agentId:  offer.GetAgentId().GetValue(),
 	}
 
 	var (
@@ -113,7 +116,7 @@ func (f *Offer) GetPortRange() (ranges []string) {
 	return
 }
 
-func (f *Offer) GetAgentId() *mesosproto.AgentID {
+func (f *Offer) GetAgentId() string {
 	return f.agentId
 }
 
@@ -137,4 +140,39 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(m)
+}
+
+func (f *Offer) PortFactory() func() uint64 {
+	if len(ports) <= 0 {
+		ports = f.GetPorts()
+	}
+
+	//ch := make(chan uint64, 1)
+	//go func() {
+	//	for _, port := range ports {
+	//		ch <- port
+	//	}
+
+	//	close(ch)
+	//}()
+
+	//fn := func() uint64 {
+	//	port, ok := <-ch
+	//	if !ok {
+	//		return 0
+	//	}
+
+	//	fmt.Println("======", port)
+	//	return port
+	//}
+
+	fn := func() uint64 {
+		port := ports[0]
+
+		ports = ports[1:]
+
+		return port
+	}
+
+	return fn
 }
