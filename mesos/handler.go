@@ -100,6 +100,10 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
+	if state == mesosproto.TaskState_TASK_UNKNOWN {
+		return
+	}
+
 	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
