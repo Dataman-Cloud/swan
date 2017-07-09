@@ -628,7 +628,7 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 	for {
 		select {
 		case status := <-t.GetStatus():
-			if t.IsTerminated(status) {
+			if t.IsKilled(status) {
 				return nil
 			}
 		case <-timeout.C:

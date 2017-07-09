@@ -296,11 +296,11 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 			tokenBucket = make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
 		)
 
-		wg.Add(len(app.Tasks))
 		for _, task := range app.Tasks {
 			tokenBucket <- struct{}{}
 
 			go func(task *types.Task, appId string) {
+				wg.Add(1)
 				defer func() {
 					wg.Done()
 					<-tokenBucket
