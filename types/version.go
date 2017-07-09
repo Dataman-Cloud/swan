@@ -9,7 +9,11 @@ import (
 	"github.com/Dataman-Cloud/swan/utils"
 )
 
-const MaxDeployStep = 100
+const (
+	deployStop     = "stop"
+	deployContinue = "continue"
+	deployRollback = "rollback" // TODO(nmg)
+)
 
 type Version struct {
 	ID           string            `json:"id"`
