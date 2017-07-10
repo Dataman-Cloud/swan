@@ -2,12 +2,10 @@ package cmd
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/Dataman-Cloud/swan/config"
 	"github.com/Dataman-Cloud/swan/manager"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -35,22 +33,15 @@ func ManagerCmd() cli.Command {
 func StartManager(c *cli.Context) error {
 	conf, err := config.NewManagerConfig(c)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "[ERR] parse config got error: %s\n", err.Error())
-		os.Exit(1)
+		return fmt.Errorf("parse config error: %v", err)
 	}
 
 	setupLogger(conf.LogLevel)
 
 	managerNode, err := manager.New(conf)
 	if err != nil {
-		logrus.Error("Manager initialization failed")
-		return err
+		return fmt.Errorf("initilize manager failed: %v", err)
 	}
 
-	if err := managerNode.Start(); err != nil {
-		logrus.Errorf("start manager failed. Error: %s", err.Error())
-		return err
-	}
-
-	return nil
+	return managerNode.Start()
 }

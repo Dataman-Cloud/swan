@@ -1,7 +1,8 @@
 package cmd
 
 import (
-	"github.com/Sirupsen/logrus"
+	"fmt"
+
 	"github.com/urfave/cli"
 
 	"github.com/Dataman-Cloud/swan/agent"
@@ -18,8 +19,6 @@ func AgentCmd() cli.Command {
 		Action:      JoinAndStartAgent,
 	}
 
-	agentCmd.Flags = append(agentCmd.Flags, FlagListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagAdvertiseAddr())
 	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayAdvertiseIp())
 	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayListenAddr())
@@ -38,17 +37,11 @@ func AgentCmd() cli.Command {
 func JoinAndStartAgent(c *cli.Context) error {
 	conf, err := config.NewAgentConfig(c)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse config error: %v", err)
 	}
 
 	setupLogger(conf.LogLevel)
 
 	agent := agent.New(conf)
-
-	if err := agent.StartAndJoin(); err != nil {
-		logrus.Errorf("start node failed. Error: %s", err.Error())
-		return err
-	}
-
-	return nil
+	return agent.StartAndJoin()
 }
