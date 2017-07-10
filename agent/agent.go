@@ -19,17 +19,17 @@ import (
 )
 
 type Agent struct {
-	config      config.AgentConfig
+	config      *config.AgentConfig
 	resolver    *resolver.Resolver
 	janitor     *janitor.JanitorServer
 	clusterNode *mole.Agent
 }
 
-func New(cfg config.AgentConfig) *Agent {
+func New(cfg *config.AgentConfig) *Agent {
 	agent := &Agent{
 		config:   cfg,
-		resolver: resolver.NewResolver(&cfg.DNS, cfg.Janitor.AdvertiseIP),
-		janitor:  janitor.NewJanitorServer(&cfg.Janitor),
+		resolver: resolver.NewResolver(cfg.DNS, cfg.Janitor.AdvertiseIP),
+		janitor:  janitor.NewJanitorServer(cfg.Janitor),
 	}
 	return agent
 }

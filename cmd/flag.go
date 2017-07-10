@@ -13,15 +13,6 @@ func FlagListenAddr() cli.Flag {
 	}
 }
 
-func FlagAdvertiseAddr() cli.Flag {
-	return cli.StringFlag{
-		Name:   "advertise",
-		Usage:  "http advertised address, default is the listen addr, used when in docker env",
-		EnvVar: "SWAN_ADVERTISE_ADDR",
-		Value:  "",
-	}
-}
-
 func FlagStrategy() cli.Flag {
 	return cli.StringFlag{
 		Name:   "strategy",

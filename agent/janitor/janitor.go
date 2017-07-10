@@ -5,6 +5,8 @@ import (
 	"os"
 	"sync"
 
+	log "github.com/Sirupsen/logrus"
+
 	"github.com/Dataman-Cloud/swan/agent/janitor/proxy"
 	"github.com/Dataman-Cloud/swan/agent/janitor/stats"
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
@@ -73,6 +75,8 @@ func (s *JanitorServer) UpsertBackend(cmb *upstream.BackendCombined) error {
 
 	cmb.Format()
 
+	log.Printf("proxy upserting upstream backend: %s", cmb)
+
 	first, err := upstream.UpsertBackend(cmb)
 	if err != nil {
 		return err
@@ -103,6 +107,8 @@ func (s *JanitorServer) UpsertBackend(cmb *upstream.BackendCombined) error {
 }
 
 func (s *JanitorServer) removeBackend(cmb *upstream.BackendCombined) {
+	log.Printf("proxy removing upstream backend: %s", cmb)
+
 	u := upstream.GetUpstream(cmb.Upstream.Name)
 	if u == nil {
 		return
