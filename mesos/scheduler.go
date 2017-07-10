@@ -299,10 +299,6 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		return
 	}
 
-	if typ != mesosproto.Event_SUBSCRIBED {
-		s.resetWatcher()
-	}
-
 	if typ == mesosproto.Event_UPDATE {
 		var (
 			status = ev.GetUpdate().GetStatus()

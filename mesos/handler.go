@@ -188,7 +188,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 func (s *Scheduler) heartbeatHandler(event *mesosproto.Event) {
 	log.Debugln("Receive heartbeat msg from mesos")
 
-	//s.resetWatcher()
+	s.resetWatcher()
 }
 
 func (s *Scheduler) errHandler(event *mesosproto.Event) {
