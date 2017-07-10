@@ -293,7 +293,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		var (
 			hasError    = false
 			wg          sync.WaitGroup
-			tokenBucket = make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
+			tokenBucket = make(chan struct{}, 10) // TODO(nmg): delete step, make it configurable
 		)
 
 		for _, task := range app.Tasks {

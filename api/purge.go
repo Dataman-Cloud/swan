@@ -16,7 +16,7 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tokenBucket := make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
+	tokenBucket := make(chan struct{}, 10) // TODO(nmg): delete step, make it configurable
 
 	go func() {
 		var all sync.WaitGroup
