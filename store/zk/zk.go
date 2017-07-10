@@ -22,6 +22,7 @@ var (
 	errVersionAlreadyExists = errors.New("version already exists")
 	errInstanceNotFound     = errors.New("instance not found")
 	errAgentNotFound        = errors.New("agent not found")
+	errNotExists            = zk.ErrNoNode
 )
 
 const (
