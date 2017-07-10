@@ -9,7 +9,6 @@ import (
 )
 
 type Driver interface {
-	LaunchTask(*mesos.Task) error
 	KillTask(string, string) error
 	LaunchTasks(*mesos.Tasks) (map[string]error, error)
 
