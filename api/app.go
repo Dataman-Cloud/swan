@@ -318,7 +318,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 					hasError = true
 
-					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+					task.ErrMsg = fmt.Sprintf("kill task error: %v", err)
 					if err = r.db.UpdateTask(appId, task); err != nil {
 						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
@@ -331,7 +331,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 					hasError = true
 
-					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+					task.ErrMsg = fmt.Sprintf("delete task error: %v", err)
 					if err = r.db.UpdateTask(appId, task); err != nil {
 						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
