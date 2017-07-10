@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -294,6 +293,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		typ     = ev.GetType()
 		handler = s.handlers[typ]
 	)
+
 	if handler == nil {
 		log.Error("without any proper event handler for mesos event:", typ)
 		return
@@ -304,11 +304,20 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 	}
 
 	if typ == mesosproto.Event_UPDATE {
+		var (
+			status = ev.GetUpdate().GetStatus()
+			taskId = status.TaskId.GetValue()
+		)
+		// emit event status to ongoing task
+		if task, ok := s.tasks[taskId]; ok {
+			task.SendStatus(status)
+		}
+
 		s.events <- ev
+
 		return
 	}
 
-	// TODO panic protection on each event handling ?
 	go handler(ev)
 }
 
@@ -936,22 +945,30 @@ func (s *Scheduler) launch(offer *mesos.Offer, tasks *Tasks) (map[string]error, 
 
 	s.removeOffer(offer)
 
-	// waitting for task's update events
-	results := make(map[string]error)
+	var (
+		results = make(map[string]error)
+		wg      sync.WaitGroup
+	)
 
 	for _, task := range tasks.tasks {
-		done := false
-		for !done {
-			select {
-			case status := <-task.GetStatus():
-				if task.IsDone(status) {
-					results[task.ID()] = task.DetectError(status)
-					s.removeTask(task.ID())
-					done = true
+		wg.Add(1)
+		go func(task *Task) {
+			defer wg.Done()
+
+			for {
+				select {
+				case status := <-task.GetStatus():
+					if task.IsDone(status) {
+						results[task.ID()] = task.DetectError(status)
+						s.removeTask(task.ID())
+						return
+					}
 				}
 			}
-		}
+		}(task)
 	}
+
+	wg.Wait()
 
 	return results, nil
 }
@@ -978,7 +995,6 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 		if j >= len(candidates)-1 {
 			j = 0
 		}
-
 	}
 
 	var (
@@ -988,7 +1004,6 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 	results := make(map[string]error)
 
 	for _, agent := range candidates {
-
 		if agent.tasks.Len() <= 0 {
 			continue
 		}

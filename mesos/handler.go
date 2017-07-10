@@ -89,25 +89,15 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
 	}
 
-	// emit event status to ongoing task
-	if task, ok := s.tasks[taskId]; ok {
-		task.SendStatus(status)
-	}
-
 	var appId string
 	parts := strings.SplitN(taskId, ".", 3)
 	if len(parts) >= 3 {
 		appId = parts[2]
 	}
 
-	if state == mesosproto.TaskState_TASK_UNKNOWN {
-		return
-	}
-
 	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
-		log.Errorf("find task from zk got error: %v", err)
 		return
 	}
 
