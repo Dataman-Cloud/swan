@@ -289,6 +289,13 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	app.OpStatus = types.OpStatusDeleting
+
+	if err := r.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("updating app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	go func(app *types.Application) {
 		var (
 			hasError    = false
