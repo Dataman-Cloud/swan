@@ -117,6 +117,11 @@ func (p *TCPProxyServer) lookup(conn net.Conn) (*upstream.BackendCombined, error
 }
 
 func (p *TCPProxyServer) serveTCP(conn net.Conn) {
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		tcpConn.SetKeepAlive(true)
+		tcpConn.SetKeepAlivePeriod(time.Second * 30)
+	}
+
 	remote := conn.RemoteAddr().String()
 
 	p.Lock()
