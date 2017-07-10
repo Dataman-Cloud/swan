@@ -57,15 +57,6 @@ func (t *Tasks) Len() int {
 	return len(t.tasks)
 }
 
-func (t *Tasks) GetStatus() (updates map[string]*mesosproto.TaskStatus) {
-	for _, task := range t.tasks {
-		status := <-task.updates
-		updates[task.ID()] = status
-	}
-
-	return updates
-}
-
 func (t *Tasks) Tasks() []*Task {
 	t.RLock()
 	defer t.RUnlock()
