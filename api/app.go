@@ -562,42 +562,20 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := new(types.UpdateBody)
-	if err := decode(req.Body, body); err != nil {
-		http.Error(w, fmt.Sprintf("decode update body got error: %v", err), http.StatusInternalServerError)
+	newVer := new(types.Version)
+	if err := decode(req.Body, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("decode update version got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	versions := app.Versions.Reverse()
-	if len(versions) < 2 {
-		http.Error(w, fmt.Sprintf("no new version found for update"), http.StatusNotModified)
+	if err := newVer.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var (
-		instances = body.Instances
-		canary    = body.Canary
-		newVer    = versions[0]
-		tasks     = app.Tasks.Sort()
-	)
-
-	if instances == 0 {
-		http.Error(w, fmt.Sprintf("no instance to be updated. instances: %d", instances), http.StatusNotModified)
-		return
-	}
-
-	new := 0
-	newTasks := make([]*types.Task, 0)
-	for _, task := range tasks {
-		if task.Version == newVer.ID {
-			new++
-
-			newTasks = append(newTasks, task)
-		}
-	}
-
-	if new >= len(tasks) {
-		writeJSON(w, http.StatusNotModified, "all tasks have been updated")
+	newVer.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	if err := r.db.CreateVersion(appId, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -608,32 +586,18 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if instances < 0 {
-		instances = -instances
+	var (
+		delay     = float64(5)
+		onfailure = "stop"
+	)
+
+	update := newVer.UpdatePolicy
+	if update != nil {
+		delay = update.Delay
+		onfailure = update.OnFailure
 	}
 
-	newWeight := float64(100)
-	if canary.Enabled {
-		newWeight = utils.ComputeWeight(float64(new+instances), float64(len(tasks)), canary.Value)
-
-		for _, task := range newTasks {
-			task.Weight = newWeight
-
-			if err = r.db.UpdateTask(appId, task); err != nil {
-				log.Errorf("update task %s got error: %v", task.ID, err)
-			}
-
-			// notify proxy
-		}
-	}
-
-	to := new + instances
-
-	if to >= len(tasks) {
-		to = len(tasks)
-	}
-
-	pending := tasks[new:to]
+	pending := app.Tasks
 
 	go func() {
 		defer func() {
@@ -644,8 +608,6 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for _, t := range pending {
-			// notify proxy
-
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
@@ -672,8 +634,8 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			task := &types.Task{
 				ID:      id,
 				Name:    name,
-				Weight:  newWeight,
-				Status:  "updating",
+				Weight:  100,
+				Healthy: types.TaskHealthyUnset,
 				Version: newVer.ID,
 				Created: t.Created,
 				Updated: time.Now(),
@@ -684,24 +646,50 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			mtask := mesos.NewTask(cfg, task.ID, task.Name)
+			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			if err := r.driver.LaunchTask(mtask); err != nil {
-				log.Errorf("launch task %s got error: %v", task.ID, err)
+			tasks := mesos.NewTasks()
+			tasks.Push(m)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
+				log.Errorf("launch task %s got error: %v", id, err)
 
 				task.Status = "Failed"
-				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+				task.ErrMsg = err.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.ID, err)
+					log.Errorf("update task %s got error: %v", id, err)
 				}
 
-				return
+				if onfailure == types.UpdateStop {
+					return
+				}
+
+			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+				}
+
+				task, err := r.db.GetTask(appId, taskId)
+				if err == nil {
+					task.OpStatus = types.OpStatusNoop
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", id, err)
+					}
+				}
+
+				if onfailure == types.UpdateStop {
+					return
+				}
+
 			}
 
 			// notify proxy
 
-			time.Sleep(5 * time.Second)
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}()
 
