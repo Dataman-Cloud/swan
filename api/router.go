@@ -57,7 +57,7 @@ func (r *Router) setupRoutes() {
 		NewRoute("GET", "/v1/stats", r.stats),
 		NewRoute("GET", "/version", r.version),
 		NewRoute("GET", "/v1/leader", r.getLeader),
-		NewRoute("DELETE", "/v1/purge", r.purge),
+		NewRoute("POST", "/v1/purge", r.purge),
 
 		NewRoute("GET", "/v1/debug/dump", r.dump),
 		NewRoute("GET", "/v1/fullsync", r.fullEventsAndRecords),
