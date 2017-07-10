@@ -95,8 +95,9 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
-	// if TASK_FINISHED Event, we only broadcast unhealthy event and return
-	if state == mesosproto.TaskState_TASK_FINISHED {
+	// if TASK_FINISHED or TASK_UNKNOWN Event, we only broadcast unhealthy event and return
+	if state == mesosproto.TaskState_TASK_FINISHED ||
+		state == mesosproto.TaskState_TASK_UNKNOWN {
 		taskEv := &types.TaskEvent{
 			Type:   types.EventTypeTaskUnhealthy,
 			AppID:  appId,
