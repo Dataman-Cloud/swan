@@ -97,6 +97,8 @@ type HealthCheck struct {
 type Proxy struct {
 	Enabled bool   `json:"enabled"`
 	Alias   string `json:"alias"`
+	Listen  string `json:"listen"`
+	Sticky  bool   `json:"sticky"`
 }
 
 type Gateway struct {

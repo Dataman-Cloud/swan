@@ -156,16 +156,22 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	var (
 		alias        string
 		proxyEnabled bool
+		listen       string
+		sticky       bool
 	)
 	if ver.Proxy != nil {
-		alias = ver.Proxy.Alias
 		proxyEnabled = ver.Proxy.Enabled
+		alias = ver.Proxy.Alias
+		listen = ver.Proxy.Listen
+		sticky = ver.Proxy.Sticky
 	}
 
 	taskEv := &types.TaskEvent{
 		Type:           evType,
 		AppID:          appId,
 		AppAlias:       alias,
+		AppListen:      listen,
+		AppSticky:      sticky,
 		TaskID:         taskId,
 		IP:             task.IP,
 		Port:           task.Port,
