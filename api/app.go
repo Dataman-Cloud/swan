@@ -129,7 +129,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 				ID:      id,
 				Name:    name,
 				Weight:  100,
-				Status:  "creating",
+				Status:  "pending",
 				Healthy: types.TaskHealthyUnset,
 				Version: vid,
 				Created: time.Now(),
