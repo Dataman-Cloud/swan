@@ -80,23 +80,16 @@ func (t *Task) IsDone(status *mesosproto.TaskStatus) bool {
 	return false
 }
 
-func (t *Task) IsTerminated(status *mesosproto.TaskStatus) bool {
+func (t *Task) IsKilled(status *mesosproto.TaskStatus) bool {
 	state := status.GetState()
 	switch state {
 	case mesosproto.TaskState_TASK_FINISHED,
-		mesosproto.TaskState_TASK_FAILED,
-		mesosproto.TaskState_TASK_KILLED,
-		mesosproto.TaskState_TASK_ERROR,
-		mesosproto.TaskState_TASK_LOST,
-		mesosproto.TaskState_TASK_DROPPED,
-		mesosproto.TaskState_TASK_GONE,
 		mesosproto.TaskState_TASK_UNKNOWN:
 
 		return true
 	}
 
 	return false
-
 }
 
 func (t *Task) DetectError(status *mesosproto.TaskStatus) error {
