@@ -185,10 +185,10 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 			for taskId, err := range results {
 				if err != nil {
 					log.Errorf("launch task %s got error: %v", taskId, err)
-				}
 
-				if onfailure == types.DeployStop {
-					return
+					if onfailure == types.DeployStop {
+						return
+					}
 				}
 
 			}
