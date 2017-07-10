@@ -46,7 +46,17 @@ func (agent *Agent) StartAndJoin() error {
 		return fmt.Errorf("full sync manager's records error: %v", err)
 	}
 
-	// startup resolver & janitor
+	// startup pong & resolver & janitor
+	go func() {
+		http.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte(`pong`))
+		})
+
+		if err := http.ListenAndServe(agent.config.Listen, nil); err != nil {
+			log.Fatalln("httpd pong occured fatal error:", err)
+		}
+	}()
+
 	go func() {
 		if err := agent.resolver.Start(); err != nil {
 			log.Fatalln("resolver occured fatal error:", err)

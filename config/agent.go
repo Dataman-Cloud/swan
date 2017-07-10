@@ -11,6 +11,7 @@ import (
 )
 
 type AgentConfig struct {
+	Listen    string   `json:"listen"` // only for ping -> pong service
 	LogLevel  string   `json:"logLevel"`
 	JoinAddrs []string `json:"joinAddrs"`
 	DNS       *DNS     `json:"dns"`
@@ -44,6 +45,7 @@ type Janitor struct {
 
 func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 	cfg := &AgentConfig{
+		Listen:    "0.0.0.0:9999",
 		LogLevel:  "info",
 		JoinAddrs: []string{"0.0.0.0:9999"},
 		DNS: &DNS{
@@ -58,6 +60,10 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 			ListenAddr: "0.0.0.0:80",
 			Domain:     "swan.com",
 		},
+	}
+
+	if c.String("listen") != "" {
+		cfg.Listen = c.String("listen")
 	}
 
 	if c.String("log-level") != "" {
