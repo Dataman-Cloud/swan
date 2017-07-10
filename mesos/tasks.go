@@ -17,10 +17,6 @@ func NewTasks() *Tasks {
 	return &Tasks{}
 }
 
-func (t *Tasks) push(task *Task) {
-	t.tasks = append(t.tasks, task)
-}
-
 func (t *Tasks) Build(offer *mesos.Offer) {
 	f := offer.PortFactory()
 
@@ -42,7 +38,11 @@ func (t *Tasks) TaskInfos() (tasks []*mesosproto.TaskInfo) {
 	return
 }
 
-func (t *Tasks) Append(task *Task) {
+func (t *Tasks) Push(task *Task) {
+	t.push(task)
+}
+
+func (t *Tasks) push(task *Task) {
 	t.tasks = append(t.tasks, task)
 }
 

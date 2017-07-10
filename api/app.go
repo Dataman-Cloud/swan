@@ -149,7 +149,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 
 			counter++
 
-			tasks.Append(t)
+			tasks.Push(t)
 
 			if tasks.Len() >= step || counter >= count {
 				group = append(group, tasks)
