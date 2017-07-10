@@ -521,7 +521,11 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			if err := r.driver.LaunchTask(t); err != nil {
+			tasks := mesos.NewTasks()
+			tasks.Push(t)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
 				log.Errorf("launch task %s got error: %v", id, err)
 
 				task.Status = "Failed"
@@ -530,9 +534,14 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
 				}
-
-				return
 			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+				}
+			}
+
 		}
 	}()
 
