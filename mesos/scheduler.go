@@ -304,7 +304,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			taskId = status.TaskId.GetValue()
 		)
 		// emit event status to ongoing task
-		if task, ok := s.tasks[taskId]; ok {
+		if task := s.getTask(taskId); task != nil {
 			task.SendStatus(status)
 		}
 
@@ -357,7 +357,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	time.AfterFunc(time.Second*5, func() { // release the offer later
 		if s.removeOffer(f) {
-			s.declineOffers([]*mesos.Offer{f})
+			s.declineOffers([]*Offer{f})
 		}
 	})
 }
@@ -456,6 +456,18 @@ func (s *Scheduler) addTask(task *Task) {
 	defer s.Unlock()
 
 	s.tasks[task.TaskId.GetValue()] = task
+}
+
+func (s *Scheduler) getTask(taskId string) *Task {
+	s.RLock()
+	defer s.RUnlock()
+
+	task, ok := s.tasks[taskId]
+	if !ok {
+		return nil
+	}
+
+	return task
 }
 
 func (s *Scheduler) removeTask(taskID string) bool {
