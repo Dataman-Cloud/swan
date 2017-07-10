@@ -363,14 +363,12 @@ HTTP/1.1 202 Accepted
 
 #### Update
 
-First, create a new version for the app you plan to update.
-
 ```
-POST /v1/apps/{app_id}/versions
+PUT /v1/apps/{app_id}
 ```
 Example request:
 ```
- POST /v1/apps/{nginx004.default.testuser.dataman}/versions HTTP/1.1
+ PUT /v1/apps/nginx004.default.testuser.dataman HTTP/1.1
  Content-Type: application/json
  
  {
@@ -437,55 +435,17 @@ Example request:
   "proxy": {
             "enabled": false,
             "alias": ""
+  },
+  "update": {
+      "delay": 5,
+      "onfailure": "continue"
   }
 }
 ```
 Example response:
 ```
-  HTTP/1.1 201 Created
-  Content-Type: application/json
-
-  {
-      "Id":"1498791358276219465"
-  }
+  HTTP/1.1 202 Accepted 
 ```
-Second, process updating.
-
-```
-PUT /v1/apps/{app_id}
-```
-Example request:
-```
-PUT /v1/apps/nginx0r2.default.xcm.dataman HTTP/1.1
-Content-Type: application/json
-{
-    "instances": 5, 
-    "canary": {
-        "enabled": false,
-        "value": 0.1,
-    }
-}
-```
-Json parameters:
-```
-instances: the number of tasks to be updated.
-canary:
-    enabled: Disable or Enabled canary publish(gray publish). If Disabled, value is ignore. Default is Disabled.
-    value:   Percentage of traffic for new version. 0.1 means ten percent. value is between (0, 1].
-```
-Example response:
-```
-HTTP/1.1 202 Accepted
-```
-
-
-```
-During the update process, swan will be automatic find the new version you created previous step, and updated the old tasks to the new version
-according you strategy.
-
-If canary is enabled, the traffic control will be enabled. you can control how much traffic the new version is divided.
-```
-
 
 #### Roll back
 ```
