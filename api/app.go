@@ -1159,10 +1159,13 @@ func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+	m := mesos.NewTask(cfg, task.ID, task.Name)
+	tasks := mesos.NewTasks()
+	tasks.Push(m)
 
-	if err := r.driver.LaunchTask(mtask); err != nil {
-		log.Errorf("launch task %s got error: %v", t.ID, err)
+	results, err := r.driver.LaunchTasks(tasks)
+	if err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
 		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
@@ -1170,8 +1173,16 @@ func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
-
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for taskId, err := range results {
+		if err != nil {
+			log.Errorf("launch task %s got error: %v", taskId, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
@@ -1289,10 +1300,14 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+	m := mesos.NewTask(cfg, task.ID, task.Name)
 
-	if err := r.driver.LaunchTask(mtask); err != nil {
-		log.Errorf("launch task %s got error: %v", t.ID, err)
+	tasks := mesos.NewTasks()
+	tasks.Push(m)
+
+	results, err := r.driver.LaunchTasks(tasks)
+	if err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
 		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
@@ -1300,8 +1315,16 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
-
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for taskId, err := range results {
+		if err != nil {
+			log.Errorf("launch task %s got error: %v", taskId, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
