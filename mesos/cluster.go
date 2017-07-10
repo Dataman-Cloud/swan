@@ -119,8 +119,8 @@ func (s *Scheduler) buildAgentProxyRecord(ev *types.TaskEvent) *upstream.Backend
 		Upstream: &upstream.Upstream{
 			Name:   ev.AppID,
 			Alias:  ev.AppAlias,
-			Listen: "",    // TODO
-			Sticky: false, // TODO
+			Listen: ev.AppListen,
+			Sticky: ev.AppSticky,
 		},
 		Backend: &upstream.Backend{
 			ID:        ev.TaskID,

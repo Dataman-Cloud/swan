@@ -72,7 +72,9 @@
   },
   "proxy": {
     "enabled": true,
-    "alias": "g.cn"
+    "alias": "g.cn",
+	"listen": ":99",
+	"sticky": false
   },
   "deploy": {
     "step": 10,

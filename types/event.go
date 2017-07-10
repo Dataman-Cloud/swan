@@ -24,6 +24,8 @@ type TaskEvent struct {
 	Type           string  `json:"type"`
 	AppID          string  `json:"app_id"`
 	AppAlias       string  `json:"app_alias"`
+	AppListen      string  `json:"app_listen"`
+	AppSticky      bool    `json:"app_sticky"`
 	VersionID      string  `json:"version_id"`
 	AppVersion     string  `json:"app_version"`
 	TaskID         string  `json:"task_id"`
