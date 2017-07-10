@@ -37,7 +37,7 @@ func (t *Tasks) GetName() string {
 	return t.tasks[0].GetName()
 }
 
-func (t *Tasks) TaskInfos() (tasks []*mesosproto.TaskInfo) {
+func (t *Tasks) taskInfos() (tasks []*mesosproto.TaskInfo) {
 	for _, t := range t.tasks {
 		tasks = append(tasks, &t.TaskInfo)
 	}

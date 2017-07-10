@@ -918,7 +918,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 				&mesosproto.Offer_Operation{
 					Type: mesosproto.Offer_Operation_LAUNCH.Enum(),
 					Launch: &mesosproto.Offer_Operation_Launch{
-						TaskInfos: tasks.TaskInfos(),
+						TaskInfos: tasks.taskInfos(),
 					},
 				},
 			},
