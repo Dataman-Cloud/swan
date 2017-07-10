@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"sync"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 )
 
@@ -14,7 +13,7 @@ type Agent struct {
 	attrs    []*mesosproto.Attribute
 
 	sync.RWMutex
-	offers map[string]*mesos.Offer
+	offers map[string]*Offer
 	tasks  *Tasks
 }
 
@@ -23,7 +22,7 @@ func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 		id:       id,
 		hostname: hostname,
 		attrs:    attrs,
-		offers:   make(map[string]*mesos.Offer),
+		offers:   make(map[string]*Offer),
 		tasks:    new(Tasks),
 	}
 }
@@ -41,7 +40,7 @@ func (s *Agent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (s *Agent) addOffer(offer *mesos.Offer) {
+func (s *Agent) addOffer(offer *Offer) {
 	s.Lock()
 	s.offers[offer.GetId()] = offer
 	s.Unlock()
@@ -65,7 +64,7 @@ func (s *Agent) empty() bool {
 	return len(s.offers) == 0
 }
 
-func (s *Agent) getOffer(offerId string) *mesos.Offer {
+func (s *Agent) getOffer(offerId string) *Offer {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -77,14 +76,14 @@ func (s *Agent) getOffer(offerId string) *mesos.Offer {
 	return offer
 }
 
-func (s *Agent) getOffers() map[string]*mesos.Offer {
+func (s *Agent) getOffers() map[string]*Offer {
 	s.RLock()
 	defer s.RUnlock()
 
 	return s.offers
 }
 
-func (s *Agent) offer() *mesos.Offer {
+func (s *Agent) offer() *Offer {
 	s.RLock()
 	defer s.RUnlock()
 

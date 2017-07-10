@@ -6,9 +6,7 @@ import (
 	"strings"
 	"time"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
-	log "github.com/Sirupsen/logrus"
 	"github.com/gogo/protobuf/proto"
 )
 
@@ -160,47 +158,20 @@ func (c *TaskConfig) network() *mesosproto.ContainerInfo_DockerInfo_Network {
 	return mesosproto.ContainerInfo_DockerInfo_USER.Enum()
 }
 
-func (c *TaskConfig) portMappings(offer *mesos.Offer) []*mesosproto.ContainerInfo_DockerInfo_PortMapping {
+func (c *TaskConfig) portMappings() []*mesosproto.ContainerInfo_DockerInfo_PortMapping {
 	var (
 		pms  = c.PortMappings
 		dpms = make([]*mesosproto.ContainerInfo_DockerInfo_PortMapping, 0, 0)
 	)
 
-	ports := offer.GetPorts()
-	if len(ports) <= 0 {
-		log.Error("no ports  available")
-		return nil
-	}
-
 	if c.Network == "bridge" {
 		for _, m := range pms {
-			//p := f()
-
 			dpms = append(dpms,
 				&mesosproto.ContainerInfo_DockerInfo_PortMapping{
 					HostPort:      proto.Uint32(uint32(c.Port)),
 					ContainerPort: proto.Uint32(uint32(m.ContainerPort)),
 					Protocol:      proto.String(m.Protocol),
 				})
-
-			if c.HealthCheck != nil {
-				if m.Name == c.HealthCheck.PortName {
-					//c.Port = p
-				}
-			}
-
-			//c.Port = p
-		}
-	}
-
-	if c.Network == "host" {
-		for _, m := range pms {
-			if c.HealthCheck != nil {
-				if m.Name == c.HealthCheck.PortName {
-					//c.Port = p
-				}
-			}
-			//c.Port = p
 		}
 	}
 
@@ -223,7 +194,7 @@ func (c *TaskConfig) parameters() []*mesosproto.Parameter {
 	return mps
 }
 
-func (c *TaskConfig) BuildContainer(offer *mesos.Offer) *mesosproto.ContainerInfo {
+func (c *TaskConfig) BuildContainer() *mesosproto.ContainerInfo {
 	var (
 		image      = c.Image
 		privileged = c.Privileged
@@ -237,7 +208,7 @@ func (c *TaskConfig) BuildContainer(offer *mesos.Offer) *mesosproto.ContainerInf
 			Image:          proto.String(image),
 			Privileged:     proto.Bool(privileged),
 			Network:        c.network(),
-			PortMappings:   c.portMappings(offer),
+			PortMappings:   c.portMappings(),
 			Parameters:     c.parameters(),
 			ForcePullImage: proto.Bool(force),
 		},
@@ -245,7 +216,7 @@ func (c *TaskConfig) BuildContainer(offer *mesos.Offer) *mesosproto.ContainerInf
 
 }
 
-func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
+func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 	var (
 		rs   = make([]*mesosproto.Resource, 0, 0)
 		cpus = c.CPUs
@@ -284,12 +255,6 @@ func (c *TaskConfig) BuildResources(offer *mesos.Offer) []*mesosproto.Resource {
 	}
 
 	for _, pm := range c.PortMappings {
-		ports := offer.GetPorts()
-		if len(ports) <= 0 {
-			log.Error("no ports  available")
-			return nil
-		}
-
 		switch c.Network {
 		case "host":
 			if pm.HostPort == 0 {
@@ -408,45 +373,6 @@ func (c *TaskConfig) BuildLabels(name string) *mesosproto.Labels {
 	return &mesosproto.Labels{
 		Labels: labls,
 	}
-}
-
-func ports(offer *mesosproto.Offer) (ports []uint64) {
-	for _, res := range offer.Resources {
-		if res.GetName() == "ports" {
-			for _, rang := range res.GetRanges().GetRange() {
-				for i := rang.GetBegin(); i <= rang.GetEnd(); i++ {
-					ports = append(ports, i)
-				}
-			}
-		}
-	}
-	return ports
-}
-
-type TaskHistory struct {
-	ID         string `json:"id"`
-	AppID      string `json:"appID"`
-	VersionID  string `json:"versionID"`
-	AppVersion string `json:"appVersion"`
-
-	OfferID       string `json:"offerID"`
-	AgentID       string `json:"agentID"`
-	AgentHostname string `json:"agentHostname"`
-
-	CPU  float64 `json:"cpu"`
-	Mem  float64 `json:"mem"`
-	Disk float64 `json:"disk"`
-
-	State   string `json:"state,omitempty"`
-	Reason  string `json:"reason,omitempty"`
-	Message string `json:"message,omitempty"`
-	Stdout  string `json:"stdout,omitempty"`
-	Stderr  string `json:"stderr,omitempty"`
-
-	ArchivedAt    time.Time `json:"archivedAt, omitempty"`
-	ContainerId   string    `json:"containerId"`
-	ContainerName string    `json:"containerName"`
-	Weight        float64   `json:"weight,omitempty"`
 }
 
 type TaskSorter []*Task

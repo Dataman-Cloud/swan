@@ -13,7 +13,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
@@ -333,7 +332,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	f := mesos.NewOffer(offer)
+	f := newOffer(offer)
 
 	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
@@ -342,7 +341,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	offers := a.getOffers()
 	if len(offers) > 1 {
-		fs := make([]*mesos.Offer, 0)
+		fs := make([]*Offer, 0)
 		for _, f := range offers {
 			if s.removeOffer(f) {
 				fs = append(fs, f)
@@ -363,7 +362,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 	})
 }
 
-func (s *Scheduler) removeOffer(offer *mesos.Offer) bool {
+func (s *Scheduler) removeOffer(offer *Offer) bool {
 	log.Debugf("Removing offer %s", offer.GetId())
 
 	a := s.getAgent(offer.GetAgentId())
@@ -379,7 +378,7 @@ func (s *Scheduler) removeOffer(offer *mesos.Offer) bool {
 	return found
 }
 
-func (s *Scheduler) declineOffers(offers []*mesos.Offer) error {
+func (s *Scheduler) declineOffers(offers []*Offer) error {
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_DECLINE.Enum(),
@@ -489,12 +488,12 @@ func (s *Scheduler) LaunchTask(t *Task) error {
 
 	chosen := candidates[0]
 
-	var offer *mesos.Offer
+	var offer *Offer
 	for _, ofr := range chosen.getOffers() {
 		offer = ofr
 	}
 
-	t.Build(offer)
+	t.Build()
 
 	appId := strings.SplitN(t.GetName(), ".", 2)[1]
 
@@ -878,7 +877,7 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
-func (s *Scheduler) launch(offer *mesos.Offer, tasks *Tasks) (map[string]error, error) {
+func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error) {
 	tasks.Build(offer)
 
 	appId := strings.SplitN(tasks.GetName(), ".", 2)[1]

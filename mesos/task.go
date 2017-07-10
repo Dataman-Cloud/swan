@@ -4,10 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
-	"github.com/golang/protobuf/proto"
 )
 
 // runtime Task object
@@ -35,14 +33,10 @@ func (t *Task) ID() string {
 	return t.TaskId.GetValue()
 }
 
-func (t *Task) Build(offer *mesos.Offer) {
-	t.AgentId = &mesosproto.AgentID{
-		Value: proto.String(offer.GetAgentId()),
-	}
-
-	t.Resources = t.cfg.BuildResources(offer)
+func (t *Task) Build() {
+	t.Resources = t.cfg.BuildResources()
 	t.Command = t.cfg.BuildCommand()
-	t.Container = t.cfg.BuildContainer(offer)
+	t.Container = t.cfg.BuildContainer()
 	if t.cfg.HealthCheck != nil {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
 	}

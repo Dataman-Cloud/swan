@@ -4,8 +4,8 @@ import (
 	//"fmt"
 	"sync"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
+	"github.com/golang/protobuf/proto"
 )
 
 type Tasks struct {
@@ -17,12 +17,19 @@ func NewTasks() *Tasks {
 	return &Tasks{}
 }
 
-func (t *Tasks) Build(offer *mesos.Offer) {
-	f := offer.PortFactory()
+func (t *Tasks) Build(offer *Offer) {
+	port := offer.Ports()
 
 	for _, task := range t.tasks {
-		task.cfg.Port = f()
-		task.Build(offer)
+		if p := port(); p != 0 {
+			task.cfg.Port = p
+		}
+
+		task.AgentId = &mesosproto.AgentID{
+			Value: proto.String(offer.GetAgentId()),
+		}
+
+		task.Build()
 	}
 }
 

@@ -1,4 +1,4 @@
-package offer
+package mesos
 
 import (
 	"encoding/json"
@@ -7,15 +7,16 @@ import (
 )
 
 type Offer struct {
-	id       string
-	cpus     float64
-	mem      float64
-	disk     float64
-	ports    []*portRange
-	attrs    map[string]string
-	hostname string
-	agentId  string
-	portPool []uint64
+	id         string
+	cpus       float64
+	mem        float64
+	disk       float64
+	ports      []uint64
+	portRanges []*portRange
+	attrs      map[string]string
+	hostname   string
+	agentId    string
+	portPool   []uint64
 }
 
 type portRange struct {
@@ -23,13 +24,11 @@ type portRange struct {
 	end   uint64
 }
 
-var ports []uint64
-
 func (r *portRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]uint64{r.begin, r.end})
 }
 
-func NewOffer(offer *mesosproto.Offer) *Offer {
+func newOffer(offer *mesosproto.Offer) *Offer {
 	f := &Offer{
 		id:       offer.GetId().GetValue(),
 		hostname: offer.GetHostname(),
@@ -38,7 +37,8 @@ func NewOffer(offer *mesosproto.Offer) *Offer {
 
 	var (
 		cpus, mem, disk float64
-		ports           []*portRange
+		ports           []uint64
+		portRanges      []*portRange
 	)
 
 	for _, resource := range offer.Resources {
@@ -55,8 +55,16 @@ func NewOffer(offer *mesosproto.Offer) *Offer {
 		}
 
 		if *resource.Name == "ports" {
-			for _, rang := range resource.GetRanges().GetRange() {
-				ports = append(ports, &portRange{rang.GetBegin(), rang.GetEnd()})
+			for _, r := range resource.GetRanges().GetRange() {
+				var (
+					b = r.GetBegin()
+					e = r.GetEnd()
+				)
+
+				for i := b; i <= e; i++ {
+					ports = append(ports, i)
+				}
+				portRanges = append(portRanges, &portRange{b, e})
 			}
 		}
 
@@ -97,17 +105,11 @@ func (f *Offer) GetDisk() float64 {
 }
 
 func (f *Offer) GetPorts() (ports []uint64) {
-	for _, r := range f.ports {
-		for i := r.begin; i <= r.end; i++ {
-			ports = append(ports, i)
-		}
-	}
-
-	return
+	return f.ports
 }
 
 func (f *Offer) GetPortRange() (ranges []string) {
-	for _, r := range f.ports {
+	for _, r := range f.portRanges {
 		b, _ := json.Marshal(r)
 
 		ranges = append(ranges, string(b))
@@ -134,7 +136,7 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 		"cpus":     f.cpus,
 		"mem":      f.mem,
 		"disk":     f.disk,
-		"ports":    f.ports,
+		"ports":    f.portRanges,
 		"hostname": f.hostname,
 		"attrs":    f.attrs,
 	}
@@ -142,34 +144,21 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (f *Offer) PortFactory() func() uint64 {
-	if len(ports) <= 0 {
-		ports = f.GetPorts()
-	}
+func (f *Offer) Ports() func() uint64 {
+	ch := make(chan uint64, 1)
+	go func() {
+		for _, port := range f.ports {
+			ch <- port
+		}
 
-	//ch := make(chan uint64, 1)
-	//go func() {
-	//	for _, port := range ports {
-	//		ch <- port
-	//	}
-
-	//	close(ch)
-	//}()
-
-	//fn := func() uint64 {
-	//	port, ok := <-ch
-	//	if !ok {
-	//		return 0
-	//	}
-
-	//	fmt.Println("======", port)
-	//	return port
-	//}
+		close(ch)
+	}()
 
 	fn := func() uint64 {
-		port := ports[0]
-
-		ports = ports[1:]
+		port, ok := <-ch
+		if !ok {
+			return 0
+		}
 
 		return port
 	}
