@@ -95,6 +95,22 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
+	// if TASK_FINISHED Event, we only broadcast unhealthy event and return
+	if state == mesosproto.TaskState_TASK_FINISHED {
+		taskEv := &types.TaskEvent{
+			Type:   types.EventTypeTaskUnhealthy,
+			AppID:  appId,
+			TaskID: taskId,
+		}
+		if err := s.eventmgr.broadcast(taskEv); err != nil {
+			log.Errorln("broadcast task event got error:", err)
+		}
+		if err := s.broadcastEventRecords(taskEv); err != nil {
+			log.Errorln("broadcast to sync proxy & dns records error:", err)
+		}
+		return
+	}
+
 	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
