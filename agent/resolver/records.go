@@ -2,6 +2,7 @@ package resolver
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"strconv"
 	"strings"
@@ -20,6 +21,10 @@ type Record struct {
 
 	ip    net.IP
 	portN int
+}
+
+func (r *Record) String() string {
+	return fmt.Sprintf("id=%s, addr=%s:%s, weight=%.2f, proxy=%v", r.ID, r.IP, r.Port, r.Weight, r.ProxyRecord)
 }
 
 func (r *Record) rewrite(base string) error {

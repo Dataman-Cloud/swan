@@ -87,7 +87,7 @@ func (d *Decoder) Decode() (*command, error) {
 
 	// if previous buffered data length over than one header+length
 	// consume them firstly
-	if len(d.Buffered()) >= headerN {
+	if len(d.Buffered()) > headerN {
 		goto READ_HEADER
 	}
 
@@ -117,7 +117,7 @@ READ_HEADER:
 	)
 
 	// ensure protocol HEADER
-	if string(header) != "MOLE" {
+	if !bytes.Equal(header, HEADER) {
 		// slice down the consumed abnormal data in d.store
 		d.store = d.store[headerN:]
 		return nil, errors.New("NOT MOLE PROTOCOL")

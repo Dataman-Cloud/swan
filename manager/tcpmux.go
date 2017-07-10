@@ -49,12 +49,13 @@ func (m *tcpMux) dispatch(conn net.Conn) {
 	}
 
 	var (
+		remote     = conn.RemoteAddr().String()
 		header     = make([]byte, 4)
 		headerCopy = bytes.NewBuffer(nil) // buffer to hold another copy of header
 	)
 	_, err := io.ReadFull(io.TeeReader(conn, headerCopy), header)
 	if err != nil {
-		log.Errorln("failed to read protocol header:", err)
+		log.Errorln("failed to read protocol header:", remote, err)
 		return
 	}
 

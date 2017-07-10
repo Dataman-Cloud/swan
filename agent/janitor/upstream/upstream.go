@@ -33,6 +33,10 @@ type Upstream struct {
 	balancer Balancer  // runtime
 }
 
+func (u *Upstream) String() string {
+	return fmt.Sprintf("name=%s, alias=%s, listen=%s, sticky=%v", u.Name, u.Alias, u.Listen, u.Sticky)
+}
+
 func newUpstream(first *BackendCombined) *Upstream {
 	return &Upstream{
 		Name:     first.Upstream.Name,
@@ -88,6 +92,10 @@ type Backend struct {
 	CleanName string  `json:"clean_name"` // backend server clean id(name)
 }
 
+func (b *Backend) String() string {
+	return fmt.Sprintf("id=%s, addr=%s, weight=%.2f", b.ID, b.Addr(), b.Weight)
+}
+
 func (b *Backend) valid() error {
 	if b == nil {
 		return errors.New("nil backend")
@@ -112,6 +120,10 @@ func (b *Backend) Addr() string {
 type BackendCombined struct {
 	*Upstream `json:"upstream"`
 	*Backend  `json:"backend"`
+}
+
+func (cmb *BackendCombined) String() string {
+	return fmt.Sprintf("upstream: [%s], backend: [%s]", cmb.Upstream, cmb.Backend)
 }
 
 func (cmb *BackendCombined) Valid() error {

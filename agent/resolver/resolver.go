@@ -81,6 +81,8 @@ func (r *Resolver) allRecords() map[string][]*Record {
 }
 
 func (r *Resolver) Upsert(record *Record) error {
+	log.Printf("dns upserting record: %s", record)
+
 	var (
 		parent = record.Parent
 		id     = record.ID
@@ -118,6 +120,8 @@ func (r *Resolver) Upsert(record *Record) error {
 }
 
 func (r *Resolver) remove(record *Record) {
+	log.Printf("dns removing record: %s", record)
+
 	var (
 		parent = record.Parent
 		id     = record.ID
