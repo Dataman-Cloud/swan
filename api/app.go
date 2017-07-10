@@ -802,9 +802,13 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			mtask := mesos.NewTask(cfg, task.ID, task.Name)
+			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			if err := r.driver.LaunchTask(mtask); err != nil {
+			tasks := mesos.NewTasks()
+			tasks.Push(m)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
 				log.Errorf("launch task %s got error: %v", task.ID, err)
 
 				task.Status = "Failed"
@@ -817,7 +821,15 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			time.Sleep(5 * time.Second)
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+					return
+				}
+
+			}
+
+			time.Sleep(2 * time.Second)
 
 		}
 	}()
