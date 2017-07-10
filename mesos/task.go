@@ -78,7 +78,8 @@ func (t *Task) IsKilled(status *mesosproto.TaskStatus) bool {
 	state := status.GetState()
 	switch state {
 	case mesosproto.TaskState_TASK_FINISHED,
-		mesosproto.TaskState_TASK_UNKNOWN:
+		mesosproto.TaskState_TASK_UNKNOWN,
+		mesosproto.TaskState_TASK_UNREACHABLE:
 
 		return true
 	}

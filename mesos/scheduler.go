@@ -503,35 +503,13 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		return fmt.Errorf("kill call send but the status code not 202 got %d", code)
 	}
 
-	timeout := time.NewTicker(deleteTimeout)
-	defer timeout.Stop()
-
-	first := true
-	// waitting for task's update events here until task finished or met error.
-	for {
-		select {
-		case status := <-t.GetStatus():
-			if t.IsKilled(status) {
-				return nil
-			}
-		case <-timeout.C:
-			if first {
-				m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
-				m[&mesosproto.TaskID{Value: proto.String(taskId)}] = &mesosproto.AgentID{Value: proto.String(agentId)}
-
-				if err := s.reconcileTasks(m); err != nil {
-					log.Errorf("reconcile tasks got error: %v", err)
-					return errDeletingTimeout
-				}
-
-				first = false
-
-				continue
-			}
-
-			return errDeletingTimeout
+	for status := range t.GetStatus() {
+		if t.IsKilled(status) {
+			break
 		}
 	}
+
+	return nil
 }
 
 func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
