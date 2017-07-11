@@ -1,10 +1,5 @@
 package types
 
-type ScaleBody struct {
-	Instances int      `json:"instances"`
-	IPs       []string `json:"ips"` // TODO(nmg): Removed after automatic IPAM.
-}
-
 type UpdateBody struct {
 	Instances int     `json:"instances"`
 	Canary    *canary `json:"canary"`
