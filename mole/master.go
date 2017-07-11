@@ -99,6 +99,12 @@ func (m *Master) AddAgent(id string, conn net.Conn) {
 	m.agents[id] = ca
 }
 
+func (m *Master) CloseAllAgents() {
+	for id := range m.Agents() {
+		m.CloseAgent(id)
+	}
+}
+
 func (m *Master) CloseAgent(id string) {
 	m.Lock()
 	defer m.Unlock()

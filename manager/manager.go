@@ -216,7 +216,9 @@ func (m *Manager) start() error {
 				}
 
 				m.apiserver.Update(m.leader)
+
 			case LeadershipFollower:
+				m.clusterMaster.CloseAllAgents()
 				m.apiserver.Update(m.leader)
 			}
 
