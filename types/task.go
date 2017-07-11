@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,6 +31,25 @@ type Task struct {
 	OpStatus string    `json:"opstatus"`
 	Created  time.Time `json:"created"`
 	Updated  time.Time `json:"updated"`
+}
+
+type TaskList []*Task
+
+func (tl TaskList) Len() int      { return len(tl) }
+func (tl TaskList) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
+func (tl TaskList) Less(i, j int) bool {
+	m, _ := strconv.Atoi(strings.Split(tl[i].Name, ".")[0])
+	n, _ := strconv.Atoi(strings.Split(tl[j].Name, ".")[0])
+
+	return m < n
+}
+
+func (tl TaskList) Reverse() {
+	sort.Sort(sort.Reverse(tl))
+}
+
+func (tl TaskList) Sort() {
+	sort.Sort(tl)
 }
 
 type TaskConfig struct {

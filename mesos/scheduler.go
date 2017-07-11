@@ -670,7 +670,12 @@ func (s *Scheduler) reconcile() {
 
 	m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
 	for _, app := range apps {
-		for _, task := range app.Tasks {
+		tasks, err := s.db.ListTasks(app.ID)
+		if err != nil {
+			log.Errorf("List tasks got error: %v", err)
+			continue
+		}
+		for _, task := range tasks {
 			m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
 		}
 	}
@@ -698,7 +703,13 @@ func (s *Scheduler) startReconcile() {
 			tasks := make([]*types.Task, 0)
 
 			for _, app := range apps {
-				for _, task := range app.Tasks {
+				tasks, err := s.db.ListTasks(app.ID)
+				if err != nil {
+					log.Errorf("List tasks got error: %v", err)
+					continue
+				}
+
+				for _, task := range tasks {
 					tasks = append(tasks, task)
 				}
 			}

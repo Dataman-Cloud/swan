@@ -3,7 +3,6 @@ package types
 import (
 	"sort"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/utils/fields"
@@ -42,29 +41,6 @@ func (vl VersionList) Reverse() VersionList {
 	return vl
 }
 
-type TaskList []*Task
-
-func (tl TaskList) Len() int      { return len(tl) }
-func (tl TaskList) Swap(i, j int) { tl[i], tl[j] = tl[j], tl[i] }
-func (tl TaskList) Less(i, j int) bool {
-	m, _ := strconv.Atoi(strings.Split(tl[i].Name, ".")[0])
-	n, _ := strconv.Atoi(strings.Split(tl[j].Name, ".")[0])
-
-	return m < n
-}
-
-func (tl TaskList) Reverse() TaskList {
-	sort.Sort(sort.Reverse(tl))
-
-	return tl
-}
-
-func (tl TaskList) Sort() TaskList {
-	sort.Sort(tl)
-
-	return tl
-}
-
 type Application struct {
 	ID        string      `json:"id"`
 	Name      string      `json:"name"`
@@ -73,7 +49,7 @@ type Application struct {
 	Priority  int         `json:"priority"`
 	Cluster   string      `json:"cluster"`
 	OpStatus  string      `json:"operationStatus"`
-	Tasks     TaskList    `json:"tasks"`
+	Tasks     int         `json:"tasks"`
 	Version   []string    `json:"currentVersion"`
 	Versions  VersionList `json:"versions"`
 	Status    string      `json:"status"`

@@ -27,8 +27,14 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 				wg       sync.WaitGroup
 			)
 
-			wg.Add(len(app.Tasks))
-			for _, task := range app.Tasks {
+			tasks, err := r.db.ListTasks(app.ID)
+			if err != nil {
+				log.Errorf("list app tasks got error for purge: %v", err)
+				continue
+			}
+
+			wg.Add(len(tasks))
+			for _, task := range tasks {
 				tokenBucket <- struct{}{}
 
 				go func(task *types.Task, appId string) {

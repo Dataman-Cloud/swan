@@ -296,6 +296,23 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for delete app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if len(tasks) <= 0 {
+		if err := r.db.DeleteApp(app.ID); err != nil {
+			log.Error("Delete app %s got error: %v", app.ID, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		writeJSON(w, http.StatusNoContent, "")
+		return
+	}
+
 	go func(app *types.Application) {
 		var (
 			hasError    = false
@@ -303,7 +320,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 			tokenBucket = make(chan struct{}, 10) // TODO(nmg): delete step, make it configurable
 		)
 
-		for _, task := range app.Tasks {
+		for _, task := range tasks {
 			tokenBucket <- struct{}{}
 
 			go func(task *types.Task, appId string) {
@@ -380,8 +397,14 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for scale app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	var (
-		current = len(app.Tasks)
+		current = len(tasks)
 		goal    = body.Instances
 		ips     = body.IPs // TODO(nmg): remove after automatic ipam
 	)
@@ -419,7 +442,7 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 					tid   string
 				)
 
-				for _, task := range app.Tasks {
+				for _, task := range tasks {
 					if task.Name == tname {
 						tid = task.ID
 						break
@@ -579,6 +602,12 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for update app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	app.OpStatus = types.OpStatusUpdating
 
 	if err := r.db.UpdateApp(app); err != nil {
@@ -597,7 +626,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		onfailure = update.OnFailure
 	}
 
-	pending := app.Tasks
+	pending := tasks
 
 	go func() {
 		defer func() {
@@ -715,6 +744,12 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for rollback app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	app.OpStatus = types.OpStatusRollback
 
 	if err := r.db.UpdateApp(app); err != nil {
@@ -753,7 +788,8 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	tasks := app.Tasks.Reverse()
+	// TODO
+	types.TaskList(tasks).Reverse()
 
 	go func() {
 		defer func() {
@@ -855,8 +891,14 @@ func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for update weights. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	for n, weight := range weights {
-		for _, task := range app.Tasks {
+		for _, task := range tasks {
 			if task.Index() == n {
 				task.Weight = weight
 
@@ -875,13 +917,13 @@ func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
 func (r *Router) getTasks(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
-	app, err := r.db.GetApp(appId)
+	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, app.Tasks)
+	writeJSON(w, http.StatusOK, tasks)
 }
 
 func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
@@ -1059,7 +1101,11 @@ func (r *Router) deleteTasks(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks := app.Tasks
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for delete tasks. %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	for _, task := range tasks {
 		go func(task *types.Task, appId string) {
