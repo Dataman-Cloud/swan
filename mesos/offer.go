@@ -16,7 +16,6 @@ type Offer struct {
 	attrs      map[string]string
 	hostname   string
 	agentId    string
-	portPool   []uint64
 }
 
 type portRange struct {

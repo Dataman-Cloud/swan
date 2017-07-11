@@ -95,9 +95,7 @@ func (s *Agent) offer() *Offer {
 }
 
 func (s *Agent) addTask(t *Task) {
-	s.Lock()
 	s.tasks.push(t)
-	s.Unlock()
 }
 
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {

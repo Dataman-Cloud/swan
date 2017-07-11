@@ -20,6 +20,9 @@ func NewTasks() *Tasks {
 func (t *Tasks) Build(offer *Offer) {
 	port := offer.Ports()
 
+	t.RLock()
+	defer t.RUnlock()
+
 	for _, task := range t.tasks {
 		if p := port(); p != 0 {
 			task.cfg.Port = p
@@ -34,10 +37,16 @@ func (t *Tasks) Build(offer *Offer) {
 }
 
 func (t *Tasks) GetName() string {
+	t.RLock()
+	defer t.RUnlock()
+
 	return t.tasks[0].GetName()
 }
 
 func (t *Tasks) taskInfos() (tasks []*mesosproto.TaskInfo) {
+	t.RLock()
+	defer t.RUnlock()
+
 	for _, t := range t.tasks {
 		tasks = append(tasks, &t.TaskInfo)
 	}
@@ -50,10 +59,16 @@ func (t *Tasks) Push(task *Task) {
 }
 
 func (t *Tasks) push(task *Task) {
+	t.Lock()
+	defer t.Unlock()
+
 	t.tasks = append(t.tasks, task)
 }
 
 func (t *Tasks) Len() int {
+	t.RLock()
+	defer t.RUnlock()
+
 	return len(t.tasks)
 }
 

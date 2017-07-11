@@ -810,6 +810,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 	s.removeOffer(offer)
 
 	var (
+		l       sync.RWMutex
 		results = make(map[string]error)
 		wg      sync.WaitGroup
 	)
@@ -823,7 +824,10 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 				select {
 				case status := <-task.GetStatus():
 					if task.IsDone(status) {
+						l.Lock()
 						results[task.ID()] = task.DetectError(status)
+						l.Unlock()
+
 						s.removeTask(task.ID())
 						return
 					}
@@ -862,10 +866,10 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 	}
 
 	var (
-		wg sync.WaitGroup
+		wg      sync.WaitGroup
+		l       sync.RWMutex
+		results = make(map[string]error)
 	)
-
-	results := make(map[string]error)
 
 	for _, agent := range candidates {
 		if agent.tasks.Len() <= 0 {
@@ -888,7 +892,9 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 			}
 
 			for k, v := range rets {
+				l.Lock()
 				results[k] = v
+				l.Unlock()
 			}
 
 		}(agent)
