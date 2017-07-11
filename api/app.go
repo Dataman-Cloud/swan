@@ -750,6 +750,12 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	versions, err := r.db.ListVersions(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list versions got error for rollback app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	app.OpStatus = types.OpStatusRollback
 
 	if err := r.db.UpdateApp(app); err != nil {
@@ -771,19 +777,19 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if verId == "" {
-		if len(app.Versions) < 2 {
+		if len(versions) < 2 {
 			http.Error(w, fmt.Sprintf("no more versions to rollback"), http.StatusInternalServerError)
 			return
 		}
 
-		vers := app.Versions.Sort()
-		for idx, ver := range vers {
+		types.VersionList(versions).Sort()
+		for idx, ver := range versions {
 			if ver.ID == app.Version[0] {
 				if (idx - 1) < 0 {
 					http.Error(w, fmt.Sprintf("version error"), http.StatusInternalServerError)
 					return
 				}
-				desired = vers[idx-1]
+				desired = versions[idx-1]
 			}
 		}
 	}
@@ -982,8 +988,13 @@ func (r *Router) getVersions(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, app.Versions)
+	versions, err := r.db.ListVersions(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list versions got error for get versions. %v", err), http.StatusInternalServerError)
+		return
+	}
 
+	writeJSON(w, http.StatusOK, versions)
 }
 
 func (r *Router) getVersion(w http.ResponseWriter, req *http.Request) {
@@ -1257,6 +1268,12 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	versions, err := r.db.ListVersions(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list versions got error for rollback task. %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	app.OpStatus = types.OpStatusRollback
 
 	if err := r.db.UpdateApp(app); err != nil {
@@ -1285,19 +1302,20 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if verId == "" {
-		if len(app.Versions) < 2 {
+		if len(versions) < 2 {
 			http.Error(w, fmt.Sprintf("no more versions to rollback"), http.StatusInternalServerError)
 			return
 		}
 
-		vers := app.Versions.Sort()
-		for idx, ver := range vers {
+		// TODO
+		types.VersionList(versions).Sort()
+		for idx, ver := range versions {
 			if ver.ID == app.Version[0] {
 				if (idx - 1) < 0 {
 					http.Error(w, fmt.Sprintf("version error"), http.StatusInternalServerError)
 					return
 				}
-				desired = vers[idx-1]
+				desired = versions[idx-1]
 			}
 		}
 	}
