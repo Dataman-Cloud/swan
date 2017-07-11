@@ -9,7 +9,17 @@ import (
 	"github.com/Dataman-Cloud/swan/utils"
 )
 
-const MaxDeployStep = 100
+const (
+	// deploy onfailure action
+	DeployStop     = "stop"
+	DeployContinue = "continue"
+	DeployRollback = "rollback" // TODO(nmg)
+
+	// update onfailure action
+	UpdateStop     = "stop"
+	UpdateContinue = "continue"
+	UpdateRollback = "rollback" // TODO(nmg)
+)
 
 type Version struct {
 	ID           string            `json:"id"`
@@ -72,7 +82,7 @@ type KillPolicy struct {
 }
 
 type UpdatePolicy struct {
-	Step      int64   `json:"step"`
+	Step      int64   `json:"step"` // TODO(nmg)
 	Delay     float64 `json:"delay"`
 	OnFailure string  `json:"onFailure,omitempty"`
 }

@@ -156,18 +156,30 @@ func (r *Router) newCompose(w http.ResponseWriter, req *http.Request) {
 					name,
 				)
 
-				if err := r.driver.LaunchTask(t); err != nil {
+				tasks := mesos.NewTasks()
+				tasks.Push(t)
+
+				results, err := r.driver.LaunchTasks(tasks)
+				if err != nil {
 					log.Errorf("launch task %s got error: %v", id, err)
 
 					task.Status = "Failed"
 					task.ErrMsg = err.Error()
 
 					if err = r.db.UpdateTask(app.ID, task); err != nil {
-						log.Errorf("update task %s status got error: %v", id, err)
+						log.Errorf("update task %s got error: %v", id, err)
 					}
 
 					break
 				}
+
+				for taskId, err := range results {
+					if err != nil {
+						log.Errorf("launch task %s got error: %v", taskId, err)
+						break
+					}
+				}
+
 			}
 
 		}

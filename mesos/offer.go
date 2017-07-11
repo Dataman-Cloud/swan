@@ -1,4 +1,4 @@
-package offer
+package mesos
 
 import (
 	"encoding/json"
@@ -7,14 +7,15 @@ import (
 )
 
 type Offer struct {
-	id       string
-	cpus     float64
-	mem      float64
-	disk     float64
-	ports    []*portRange
-	attrs    map[string]string
-	hostname string
-	agentId  *mesosproto.AgentID
+	id         string
+	cpus       float64
+	mem        float64
+	disk       float64
+	ports      []uint64
+	portRanges []*portRange
+	attrs      map[string]string
+	hostname   string
+	agentId    string
 }
 
 type portRange struct {
@@ -26,16 +27,17 @@ func (r *portRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]uint64{r.begin, r.end})
 }
 
-func NewOffer(offer *mesosproto.Offer) *Offer {
+func newOffer(offer *mesosproto.Offer) *Offer {
 	f := &Offer{
 		id:       offer.GetId().GetValue(),
 		hostname: offer.GetHostname(),
-		agentId:  offer.GetAgentId(),
+		agentId:  offer.GetAgentId().GetValue(),
 	}
 
 	var (
 		cpus, mem, disk float64
-		ports           []*portRange
+		ports           []uint64
+		portRanges      []*portRange
 	)
 
 	for _, resource := range offer.Resources {
@@ -52,8 +54,16 @@ func NewOffer(offer *mesosproto.Offer) *Offer {
 		}
 
 		if *resource.Name == "ports" {
-			for _, rang := range resource.GetRanges().GetRange() {
-				ports = append(ports, &portRange{rang.GetBegin(), rang.GetEnd()})
+			for _, r := range resource.GetRanges().GetRange() {
+				var (
+					b = r.GetBegin()
+					e = r.GetEnd()
+				)
+
+				for i := b; i <= e; i++ {
+					ports = append(ports, i)
+				}
+				portRanges = append(portRanges, &portRange{b, e})
 			}
 		}
 
@@ -94,17 +104,11 @@ func (f *Offer) GetDisk() float64 {
 }
 
 func (f *Offer) GetPorts() (ports []uint64) {
-	for _, r := range f.ports {
-		for i := r.begin; i <= r.end; i++ {
-			ports = append(ports, i)
-		}
-	}
-
-	return
+	return f.ports
 }
 
 func (f *Offer) GetPortRange() (ranges []string) {
-	for _, r := range f.ports {
+	for _, r := range f.portRanges {
 		b, _ := json.Marshal(r)
 
 		ranges = append(ranges, string(b))
@@ -113,7 +117,7 @@ func (f *Offer) GetPortRange() (ranges []string) {
 	return
 }
 
-func (f *Offer) GetAgentId() *mesosproto.AgentID {
+func (f *Offer) GetAgentId() string {
 	return f.agentId
 }
 
@@ -131,10 +135,14 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 		"cpus":     f.cpus,
 		"mem":      f.mem,
 		"disk":     f.disk,
-		"ports":    f.ports,
+		"ports":    f.portRanges,
 		"hostname": f.hostname,
 		"attrs":    f.attrs,
 	}
 
 	return json.Marshal(m)
+}
+
+func (f *Offer) getPorts(n int) []uint64 {
+	return f.ports[0:n]
 }

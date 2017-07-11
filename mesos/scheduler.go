@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	//"io"
 	"io/ioutil"
 	"net/http"
 	"strings"
@@ -14,7 +13,6 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
@@ -80,11 +78,12 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	launch sync.Mutex
-
+	sem    chan struct{}
 	status string
 
 	connection *http.Response //TODO(nmg)
+
+	events chan *mesosproto.Event // status update events.
 }
 
 // NewScheduler...
@@ -101,6 +100,8 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
+		events:        make(chan *mesosproto.Event, 1024),
+		sem:           make(chan struct{}, 1),
 	}
 
 	if err := s.init(); err != nil {
@@ -218,6 +219,7 @@ func (s *Scheduler) Subscribe() error {
 	}
 
 	go s.watchEvents()
+	go s.handleUpdates()
 
 	return nil
 }
@@ -285,21 +287,43 @@ func (s *Scheduler) watchEvents() {
 }
 
 func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
+
 	var (
 		typ     = ev.GetType()
 		handler = s.handlers[typ]
 	)
+
 	if handler == nil {
 		log.Error("without any proper event handler for mesos event:", typ)
 		return
 	}
 
-	if typ != mesosproto.Event_SUBSCRIBED {
-		s.resetWatcher()
+	if typ == mesosproto.Event_UPDATE {
+		var (
+			status = ev.GetUpdate().GetStatus()
+			taskId = status.TaskId.GetValue()
+		)
+		// emit event status to ongoing task
+		if task := s.getTask(taskId); task != nil {
+			task.SendStatus(status)
+		}
+
+		s.events <- ev
+
+		return
 	}
 
-	// TODO panic protection on each event handling ?
-	handler(ev)
+	go handler(ev)
+}
+
+func (s *Scheduler) handleUpdates() {
+	for ev := range s.events {
+		var (
+			typ     = ev.GetType()
+			handler = s.handlers[typ]
+		)
+		handler(ev)
+	}
 }
 
 func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
@@ -308,16 +332,16 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	f := mesos.NewOffer(offer)
+	f := newOffer(offer)
 
-	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v",
-		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange())
+	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
+		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
 	a.addOffer(f)
 
 	offers := a.getOffers()
 	if len(offers) > 1 {
-		fs := make([]*mesos.Offer, 0)
+		fs := make([]*Offer, 0)
 		for _, f := range offers {
 			if s.removeOffer(f) {
 				fs = append(fs, f)
@@ -333,28 +357,28 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	time.AfterFunc(time.Second*5, func() { // release the offer later
 		if s.removeOffer(f) {
-			s.declineOffers([]*mesos.Offer{f})
+			s.declineOffers([]*Offer{f})
 		}
 	})
 }
 
-func (s *Scheduler) removeOffer(offer *mesos.Offer) bool {
+func (s *Scheduler) removeOffer(offer *Offer) bool {
 	log.Debugf("Removing offer %s", offer.GetId())
 
-	a := s.getAgent(offer.GetAgentId().GetValue())
+	a := s.getAgent(offer.GetAgentId())
 	if a == nil {
 		return false
 	}
 
 	found := a.removeOffer(offer.GetId())
 	if a.empty() {
-		s.removeAgent(offer.GetAgentId().GetValue())
+		s.removeAgent(offer.GetAgentId())
 	}
 
 	return found
 }
 
-func (s *Scheduler) declineOffers(offers []*mesos.Offer) error {
+func (s *Scheduler) declineOffers(offers []*Offer) error {
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_DECLINE.Enum(),
@@ -434,6 +458,18 @@ func (s *Scheduler) addTask(task *Task) {
 	s.tasks[task.TaskId.GetValue()] = task
 }
 
+func (s *Scheduler) getTask(taskId string) *Task {
+	s.RLock()
+	defer s.RUnlock()
+
+	task, ok := s.tasks[taskId]
+	if !ok {
+		return nil
+	}
+
+	return task
+}
+
 func (s *Scheduler) removeTask(taskID string) bool {
 	s.Lock()
 	defer s.Unlock()
@@ -443,127 +479,6 @@ func (s *Scheduler) removeTask(taskID string) bool {
 		delete(s.tasks, taskID)
 	}
 	return found
-}
-
-func (s *Scheduler) LaunchTask(t *Task) error {
-	s.launch.Lock()
-
-	s.addTask(t)
-	defer func() {
-		s.removeTask(t.TaskId.GetValue())
-	}()
-
-	filtered, err := s.applyFilters(t.cfg)
-	if err != nil {
-		s.launch.Unlock()
-
-		return err
-	}
-
-	candidates := s.strategy.RankAndSort(filtered)
-
-	chosen := candidates[0]
-
-	var offer *mesos.Offer
-	for _, ofr := range chosen.getOffers() {
-		offer = ofr
-	}
-
-	t.Build(offer)
-
-	appId := strings.SplitN(t.GetName(), ".", 2)[1]
-
-	task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
-	if err != nil {
-		s.launch.Unlock()
-		return fmt.Errorf("find task from zk got error: %v", err)
-	}
-
-	task.AgentId = t.AgentId.GetValue()
-	task.IP = t.cfg.IP
-
-	if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
-		task.IP = offer.GetHostname()
-	}
-
-	task.Port = t.cfg.Port
-
-	if err := s.db.UpdateTask(appId, task); err != nil {
-		s.launch.Unlock()
-		return fmt.Errorf("update task status error: %v", err)
-	}
-
-	call := &mesosproto.Call{
-		FrameworkId: s.FrameworkId(),
-		Type:        mesosproto.Call_ACCEPT.Enum(),
-		Accept: &mesosproto.Call_Accept{
-			OfferIds: []*mesosproto.OfferID{
-				{
-					Value: proto.String(offer.GetId()),
-				},
-			},
-			Operations: []*mesosproto.Offer_Operation{
-				&mesosproto.Offer_Operation{
-					Type: mesosproto.Offer_Operation_LAUNCH.Enum(),
-					Launch: &mesosproto.Offer_Operation_Launch{
-						TaskInfos: []*mesosproto.TaskInfo{&t.TaskInfo},
-					},
-				},
-			},
-			Filters: &mesosproto.Filters{RefuseSeconds: proto.Float64(1)},
-		},
-	}
-
-	log.Printf("launching task %s with offer %s", t.ID(), offer.GetId())
-
-	// send call
-	resp, err := s.Send(call)
-	if err != nil {
-		s.launch.Unlock()
-		return err
-	}
-
-	if code := resp.StatusCode; code != http.StatusAccepted {
-		s.launch.Unlock()
-		return fmt.Errorf("launch call send but the status code not 202 got %d", code)
-	}
-
-	if !s.removeOffer(offer) {
-		log.Errorf("Remove offer %s failed", offer.GetId())
-	}
-
-	s.launch.Unlock()
-
-	wait := time.NewTicker(creationTimeout)
-	defer wait.Stop()
-
-	first := true
-
-	// waitting for task's update events here until task finished or met error.
-	for {
-		select {
-		case status := <-t.GetStatus():
-			if t.IsDone(status) {
-				return t.DetectError(status)
-			}
-		case <-wait.C:
-			if first {
-				m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
-				m[t.TaskId] = t.AgentId
-
-				if err := s.reconcileTasks(m); err != nil {
-					log.Errorf("reconcile tasks got error: %v", err)
-					return errCreationTimeout
-				}
-
-				first = false
-
-				continue
-			}
-
-			return errCreationTimeout
-		}
-	}
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
@@ -600,35 +515,13 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		return fmt.Errorf("kill call send but the status code not 202 got %d", code)
 	}
 
-	timeout := time.NewTicker(deleteTimeout)
-	defer timeout.Stop()
-
-	first := true
-	// waitting for task's update events here until task finished or met error.
-	for {
-		select {
-		case status := <-t.GetStatus():
-			if t.IsTerminated(status) {
-				return nil
-			}
-		case <-timeout.C:
-			if first {
-				m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
-				m[&mesosproto.TaskID{Value: proto.String(taskId)}] = &mesosproto.AgentID{Value: proto.String(agentId)}
-
-				if err := s.reconcileTasks(m); err != nil {
-					log.Errorf("reconcile tasks got error: %v", err)
-					return errDeletingTimeout
-				}
-
-				first = false
-
-				continue
-			}
-
-			return errDeletingTimeout
+	for status := range t.GetStatus() {
+		if t.IsKilled(status) {
+			break
 		}
 	}
+
+	return nil
 }
 
 func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
@@ -851,4 +744,173 @@ func (s *Scheduler) Dump() interface{} {
 		"mesos_leader":  s.leader,
 		"ongoing_tasks": s.tasks,
 	}
+}
+
+func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error) {
+	tasks.Build(offer)
+
+	appId := strings.SplitN(tasks.GetName(), ".", 2)[1]
+
+	for _, t := range tasks.tasks {
+		s.addTask(t)
+
+		task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
+		if err != nil {
+			return nil, fmt.Errorf("find task from zk got error: %v", err)
+		}
+
+		task.AgentId = t.AgentId.GetValue()
+		task.IP = t.cfg.IP
+
+		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
+			task.IP = offer.GetHostname()
+		}
+
+		task.Port = t.cfg.Port
+
+		if err := s.db.UpdateTask(appId, task); err != nil {
+			return nil, fmt.Errorf("update task status error: %v", err)
+		}
+
+	}
+
+	call := &mesosproto.Call{
+		FrameworkId: s.FrameworkId(),
+		Type:        mesosproto.Call_ACCEPT.Enum(),
+		Accept: &mesosproto.Call_Accept{
+			OfferIds: []*mesosproto.OfferID{
+				{
+					Value: proto.String(offer.GetId()),
+				},
+			},
+			Operations: []*mesosproto.Offer_Operation{
+				&mesosproto.Offer_Operation{
+					Type: mesosproto.Offer_Operation_LAUNCH.Enum(),
+					Launch: &mesosproto.Offer_Operation_Launch{
+						TaskInfos: tasks.taskInfos(),
+					},
+				},
+			},
+			Filters: &mesosproto.Filters{RefuseSeconds: proto.Float64(1)},
+		},
+	}
+
+	log.Printf("launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
+
+	// send call
+	resp, err := s.Send(call)
+	if err != nil {
+		return nil, fmt.Errorf("send launch call got error: %v", err)
+	}
+
+	if code := resp.StatusCode; code != http.StatusAccepted {
+		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
+	}
+
+	s.removeOffer(offer)
+
+	var (
+		l       sync.RWMutex
+		results = make(map[string]error)
+		wg      sync.WaitGroup
+	)
+
+	for _, task := range tasks.tasks {
+		wg.Add(1)
+		go func(task *Task) {
+			defer wg.Done()
+
+			for {
+				select {
+				case status := <-task.GetStatus():
+					if task.IsDone(status) {
+						l.Lock()
+						results[task.ID()] = task.DetectError(status)
+						l.Unlock()
+
+						s.removeTask(task.ID())
+						return
+					}
+				}
+			}
+		}(task)
+	}
+
+	wg.Wait()
+
+	return results, nil
+}
+
+func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
+	s.lock()
+
+	filtered, err := s.applyFilters(tasks.tasks[0].cfg)
+	if err != nil {
+		s.unlock()
+
+		return nil, err
+	}
+
+	candidates := s.strategy.RankAndSort(filtered)
+
+	j := 0
+
+	for i := 0; i < tasks.Len(); i++ {
+		candidates[j].addTask(tasks.tasks[i])
+
+		j++
+
+		if j >= len(candidates)-1 {
+			j = 0
+		}
+	}
+
+	var (
+		wg      sync.WaitGroup
+		l       sync.RWMutex
+		results = make(map[string]error)
+	)
+
+	for _, agent := range candidates {
+		if agent.tasks.Len() <= 0 {
+			continue
+		}
+
+		wg.Add(1)
+		go func(agent *Agent) {
+			defer wg.Done()
+
+			var (
+				offer = agent.offer()
+				tasks = agent.tasks
+			)
+
+			rets, err := s.launch(offer, tasks)
+			if err != nil {
+				log.Errorf("[launch] %v", err)
+				return
+			}
+
+			for k, v := range rets {
+				l.Lock()
+				results[k] = v
+				l.Unlock()
+			}
+
+		}(agent)
+	}
+
+	s.unlock()
+
+	wg.Wait()
+
+	return results, nil
+}
+
+func (s *Scheduler) lock() {
+	s.sem <- struct{}{}
+}
+
+func (s *Scheduler) unlock() {
+	<-s.sem
 }

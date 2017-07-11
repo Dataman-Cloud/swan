@@ -1,6 +1,7 @@
 package zk
 
 import (
+	"fmt"
 	"path"
 	"strings"
 
@@ -76,6 +77,10 @@ func (zk *ZKStore) GetTask(aid, tid string) (*types.Task, error) {
 
 	data, _, err := zk.get(p)
 	if err != nil {
+		if err == errNotExists {
+			return nil, fmt.Errorf("task %s not exist", tid)
+		}
+
 		return nil, err
 	}
 
@@ -85,7 +90,6 @@ func (zk *ZKStore) GetTask(aid, tid string) (*types.Task, error) {
 	}
 
 	return &task, nil
-
 }
 
 func join(id string) string {

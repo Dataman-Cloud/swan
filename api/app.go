@@ -84,7 +84,17 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	go func() {
+	var (
+		step      = 5
+		onfailure = "stop"
+	)
+
+	if spec.DeployPolicy != nil {
+		step = int(spec.DeployPolicy.Step)
+		onfailure = spec.DeployPolicy.OnFailure
+	}
+
+	go func(appId string) {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
 			if err := r.db.UpdateApp(app); err != nil {
@@ -92,9 +102,15 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
+		var (
+			group   = make([]*mesos.Tasks, 0)
+			tasks   = mesos.NewTasks()
+			counter = 0
+		)
+
 		for i := 0; i < count; i++ {
 			var (
-				name = fmt.Sprintf("%d.%s", i, app.ID)
+				name = fmt.Sprintf("%d.%s", i, appId)
 				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
 			)
 
@@ -113,7 +129,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 				ID:      id,
 				Name:    name,
 				Weight:  100,
-				Status:  "creating",
+				Status:  "pending",
 				Healthy: types.TaskHealthyUnset,
 				Version: vid,
 				Created: time.Now(),
@@ -131,20 +147,55 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			if err := r.driver.LaunchTask(t); err != nil {
-				log.Errorf("launch task %s got error: %v", id, err)
+			counter++
 
-				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+			tasks.Push(t)
 
-				if err = r.db.UpdateTask(app.ID, task); err != nil {
-					log.Errorf("update task %s status got error: %v", id, err)
+			if tasks.Len() >= step || counter >= count {
+				group = append(group, tasks)
+				tasks = mesos.NewTasks()
+			}
+		}
+
+		for _, tasks := range group {
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
+				log.Errorf("launch tasks got error")
+
+				for _, t := range tasks.Tasks() {
+					task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
+					if err != nil {
+						log.Errorf("find task from zk got error: %v", err)
+						return
+					}
+
+					task.Status = "Failed"
+					task.ErrMsg = err.Error()
+
+					if err = r.db.UpdateTask(app.ID, task); err != nil {
+						log.Errorf("update task %s status got error: %v", id, err)
+					}
 				}
+
+				if onfailure == types.DeployStop {
+					return
+				}
+			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+
+					if onfailure == types.DeployStop {
+						return
+					}
+				}
+
 			}
 		}
 
 		return
-	}()
+	}(app.ID)
 
 	writeJSON(w, http.StatusCreated, map[string]string{"Id": app.ID})
 }
@@ -238,18 +289,25 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	app.OpStatus = types.OpStatusDeleting
+
+	if err := r.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("updating app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	go func(app *types.Application) {
 		var (
 			hasError    = false
 			wg          sync.WaitGroup
-			tokenBucket = make(chan struct{}, 50) // TODO(nmg): delete step, make it configurable
+			tokenBucket = make(chan struct{}, 10) // TODO(nmg): delete step, make it configurable
 		)
 
-		wg.Add(len(app.Tasks))
 		for _, task := range app.Tasks {
 			tokenBucket <- struct{}{}
 
 			go func(task *types.Task, appId string) {
+				wg.Add(1)
 				defer func() {
 					wg.Done()
 					<-tokenBucket
@@ -260,7 +318,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 					hasError = true
 
-					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+					task.ErrMsg = fmt.Sprintf("kill task error: %v", err)
 					if err = r.db.UpdateTask(appId, task); err != nil {
 						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
@@ -273,7 +331,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 					hasError = true
 
-					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+					task.ErrMsg = fmt.Sprintf("delete task error: %v", err)
 					if err = r.db.UpdateTask(appId, task); err != nil {
 						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
@@ -463,7 +521,11 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			if err := r.driver.LaunchTask(t); err != nil {
+			tasks := mesos.NewTasks()
+			tasks.Push(t)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
 				log.Errorf("launch task %s got error: %v", id, err)
 
 				task.Status = "Failed"
@@ -472,9 +534,14 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
 				}
-
-				return
 			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+				}
+			}
+
 		}
 	}()
 
@@ -495,42 +562,20 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	body := new(types.UpdateBody)
-	if err := decode(req.Body, body); err != nil {
-		http.Error(w, fmt.Sprintf("decode update body got error: %v", err), http.StatusInternalServerError)
+	newVer := new(types.Version)
+	if err := decode(req.Body, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("decode update version got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	versions := app.Versions.Reverse()
-	if len(versions) < 2 {
-		http.Error(w, fmt.Sprintf("no new version found for update"), http.StatusNotModified)
+	if err := newVer.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	var (
-		instances = body.Instances
-		canary    = body.Canary
-		newVer    = versions[0]
-		tasks     = app.Tasks.Sort()
-	)
-
-	if instances == 0 {
-		http.Error(w, fmt.Sprintf("no instance to be updated. instances: %d", instances), http.StatusNotModified)
-		return
-	}
-
-	new := 0
-	newTasks := make([]*types.Task, 0)
-	for _, task := range tasks {
-		if task.Version == newVer.ID {
-			new++
-
-			newTasks = append(newTasks, task)
-		}
-	}
-
-	if new >= len(tasks) {
-		writeJSON(w, http.StatusNotModified, "all tasks have been updated")
+	newVer.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	if err := r.db.CreateVersion(appId, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -541,32 +586,18 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if instances < 0 {
-		instances = -instances
+	var (
+		delay     = float64(5)
+		onfailure = "stop"
+	)
+
+	update := newVer.UpdatePolicy
+	if update != nil {
+		delay = update.Delay
+		onfailure = update.OnFailure
 	}
 
-	newWeight := float64(100)
-	if canary.Enabled {
-		newWeight = utils.ComputeWeight(float64(new+instances), float64(len(tasks)), canary.Value)
-
-		for _, task := range newTasks {
-			task.Weight = newWeight
-
-			if err = r.db.UpdateTask(appId, task); err != nil {
-				log.Errorf("update task %s got error: %v", task.ID, err)
-			}
-
-			// notify proxy
-		}
-	}
-
-	to := new + instances
-
-	if to >= len(tasks) {
-		to = len(tasks)
-	}
-
-	pending := tasks[new:to]
+	pending := app.Tasks
 
 	go func() {
 		defer func() {
@@ -577,8 +608,6 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for _, t := range pending {
-			// notify proxy
-
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
@@ -605,8 +634,8 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 			task := &types.Task{
 				ID:      id,
 				Name:    name,
-				Weight:  newWeight,
-				Status:  "updating",
+				Weight:  100,
+				Healthy: types.TaskHealthyUnset,
 				Version: newVer.ID,
 				Created: t.Created,
 				Updated: time.Now(),
@@ -617,24 +646,50 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			mtask := mesos.NewTask(cfg, task.ID, task.Name)
+			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			if err := r.driver.LaunchTask(mtask); err != nil {
-				log.Errorf("launch task %s got error: %v", task.ID, err)
+			tasks := mesos.NewTasks()
+			tasks.Push(m)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
+				log.Errorf("launch task %s got error: %v", id, err)
 
 				task.Status = "Failed"
-				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+				task.ErrMsg = err.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.ID, err)
+					log.Errorf("update task %s got error: %v", id, err)
 				}
 
-				return
+				if onfailure == types.UpdateStop {
+					return
+				}
+
+			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+				}
+
+				task, err := r.db.GetTask(appId, taskId)
+				if err == nil {
+					task.OpStatus = types.OpStatusNoop
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", id, err)
+					}
+				}
+
+				if onfailure == types.UpdateStop {
+					return
+				}
+
 			}
 
 			// notify proxy
 
-			time.Sleep(5 * time.Second)
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}()
 
@@ -747,9 +802,13 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			mtask := mesos.NewTask(cfg, task.ID, task.Name)
+			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			if err := r.driver.LaunchTask(mtask); err != nil {
+			tasks := mesos.NewTasks()
+			tasks.Push(m)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
 				log.Errorf("launch task %s got error: %v", task.ID, err)
 
 				task.Status = "Failed"
@@ -762,7 +821,15 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
-			time.Sleep(5 * time.Second)
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+					return
+				}
+
+			}
+
+			time.Sleep(2 * time.Second)
 
 		}
 	}()
@@ -1092,10 +1159,13 @@ func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+	m := mesos.NewTask(cfg, task.ID, task.Name)
+	tasks := mesos.NewTasks()
+	tasks.Push(m)
 
-	if err := r.driver.LaunchTask(mtask); err != nil {
-		log.Errorf("launch task %s got error: %v", t.ID, err)
+	results, err := r.driver.LaunchTasks(tasks)
+	if err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
 		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
@@ -1103,8 +1173,16 @@ func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
-
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for taskId, err := range results {
+		if err != nil {
+			log.Errorf("launch task %s got error: %v", taskId, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
@@ -1222,10 +1300,14 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	mtask := mesos.NewTask(cfg, task.ID, task.Name)
+	m := mesos.NewTask(cfg, task.ID, task.Name)
 
-	if err := r.driver.LaunchTask(mtask); err != nil {
-		log.Errorf("launch task %s got error: %v", t.ID, err)
+	tasks := mesos.NewTasks()
+	tasks.Push(m)
+
+	results, err := r.driver.LaunchTasks(tasks)
+	if err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
 		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
@@ -1233,8 +1315,16 @@ func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
-
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
+	}
+
+	for taskId, err := range results {
+		if err != nil {
+			log.Errorf("launch task %s got error: %v", taskId, err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")

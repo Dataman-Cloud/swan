@@ -82,16 +82,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		healthy = status.GetHealthy()
 	)
 
-	log.Debugf("Received status update %s for task %s", status.GetState(), taskId)
+	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
 	// ack firstly
 	if err := s.AckUpdateEvent(status); err != nil {
 		log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
-	}
-
-	// emit event status to ongoing task
-	if task, ok := s.tasks[taskId]; ok {
-		task.SendStatus(status)
 	}
 
 	var appId string
@@ -100,10 +95,26 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
+	// if TASK_FINISHED or TASK_UNKNOWN Event, we only broadcast unhealthy event and return
+	if state == mesosproto.TaskState_TASK_FINISHED ||
+		state == mesosproto.TaskState_TASK_UNKNOWN {
+		taskEv := &types.TaskEvent{
+			Type:   types.EventTypeTaskUnhealthy,
+			AppID:  appId,
+			TaskID: taskId,
+		}
+		if err := s.eventmgr.broadcast(taskEv); err != nil {
+			log.Errorln("broadcast task event got error:", err)
+		}
+		if err := s.broadcastEventRecords(taskEv); err != nil {
+			log.Errorln("broadcast to sync proxy & dns records error:", err)
+		}
+		return
+	}
+
 	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
-		log.Errorf("find task from zk got error: %v", err)
 		return
 	}
 
@@ -194,7 +205,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 func (s *Scheduler) heartbeatHandler(event *mesosproto.Event) {
 	log.Debugln("Receive heartbeat msg from mesos")
 
-	//s.resetWatcher()
+	s.resetWatcher()
 }
 
 func (s *Scheduler) errHandler(event *mesosproto.Event) {

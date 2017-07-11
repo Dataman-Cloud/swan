@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"errors"
 
-	mesos "github.com/Dataman-Cloud/swan/mesos/offer"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 )
@@ -34,12 +33,10 @@ func (t *Task) ID() string {
 	return t.TaskId.GetValue()
 }
 
-func (t *Task) Build(offer *mesos.Offer) {
-	t.AgentId = offer.GetAgentId()
-
-	t.Resources = t.cfg.BuildResources(offer)
+func (t *Task) Build() {
+	t.Resources = t.cfg.BuildResources()
 	t.Command = t.cfg.BuildCommand()
-	t.Container = t.cfg.BuildContainer(offer)
+	t.Container = t.cfg.BuildContainer()
 	if t.cfg.HealthCheck != nil {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
 	}
@@ -77,23 +74,17 @@ func (t *Task) IsDone(status *mesosproto.TaskStatus) bool {
 	return false
 }
 
-func (t *Task) IsTerminated(status *mesosproto.TaskStatus) bool {
+func (t *Task) IsKilled(status *mesosproto.TaskStatus) bool {
 	state := status.GetState()
 	switch state {
 	case mesosproto.TaskState_TASK_FINISHED,
-		mesosproto.TaskState_TASK_FAILED,
-		mesosproto.TaskState_TASK_KILLED,
-		mesosproto.TaskState_TASK_ERROR,
-		mesosproto.TaskState_TASK_LOST,
-		mesosproto.TaskState_TASK_DROPPED,
-		mesosproto.TaskState_TASK_GONE,
-		mesosproto.TaskState_TASK_UNKNOWN:
+		mesosproto.TaskState_TASK_UNKNOWN,
+		mesosproto.TaskState_TASK_UNREACHABLE:
 
 		return true
 	}
 
 	return false
-
 }
 
 func (t *Task) DetectError(status *mesosproto.TaskStatus) error {
