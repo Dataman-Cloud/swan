@@ -1,6 +1,7 @@
 package agent
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -35,8 +36,8 @@ func New(cfg *config.AgentConfig) *Agent {
 }
 
 func (agent *Agent) StartAndJoin() error {
-	// detect healhty master firstly
-	addr, err := agent.detectManagerAddr()
+	// detect healhty leader firstly
+	addr, err := agent.detectLeaderAddr()
 	if err != nil {
 		return err
 	}
@@ -110,8 +111,8 @@ func (agent *Agent) StartAndJoin() error {
 }
 
 func (agent *Agent) Join() error {
-	// detect healhty master
-	addr, err := agent.detectManagerAddr()
+	// detect healthy leader
+	addr, err := agent.detectLeaderAddr()
 	if err != nil {
 		return err
 	}
@@ -193,17 +194,25 @@ func (agent *Agent) dialBackend() (net.Conn, error) {
 	return net.Dial("unix", "/var/run/docker.sock")
 }
 
-func (agent *Agent) detectManagerAddr() (string, error) {
+func (agent *Agent) detectLeaderAddr() (string, error) {
 	for _, addr := range agent.config.JoinAddrs {
-		resp, err := http.Get("http://" + addr + "/ping")
+		resp, err := http.Get("http://" + addr + "/v1/leader")
 		if err != nil {
-			log.Warnf("detect swan manager %s error %v", addr, err)
+			log.Warnf("detect swan manager leader %s error %v", addr, err)
 			continue
 		}
-		resp.Body.Close() // prevent fd leak
+		defer resp.Body.Close() // prevent fd leak
 
-		log.Infof("detect swan manager %s succeed", addr)
-		return "http://" + addr, nil
+		var info struct {
+			Leader string `json:"leader"`
+		}
+		if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
+			log.Warnf("detect swan manager leader %s error %v", addr, err)
+			continue
+		}
+
+		log.Infof("detect swan manager leader %s succeed", info.Leader)
+		return "http://" + info.Leader, nil
 	}
 
 	return "", errors.New("all of swan manager unavailable")
