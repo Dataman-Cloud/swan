@@ -74,6 +74,9 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 			if err != nil {
 				return
 			}
+			reqProxy.Close = true
+			reqProxy.Header.Set("Connection", "close")
+			reqProxy.Host = agent.ID()
 			err = funcDoReq(reqProxy)
 			if err != nil {
 				return
@@ -83,6 +86,9 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 			if err != nil {
 				return
 			}
+			reqDNS.Close = true
+			reqDNS.Header.Set("Connection", "close")
+			reqDNS.Host = agent.ID()
 			err = funcDoReq(reqDNS)
 			if err != nil {
 				return
