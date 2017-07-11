@@ -10,11 +10,10 @@ Spec
 ```
 
 Parameters:
-+ *step*(int): The number of tasks to run one at a time.
++ *step*(int): The number of tasks to run at one time.
 + *onfailure*(string): The action for failure. Possible values include: 
 ```
 stop
 continue
-rollback
 ```
 
