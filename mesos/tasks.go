@@ -18,14 +18,17 @@ func NewTasks() *Tasks {
 }
 
 func (t *Tasks) Build(offer *Offer) {
-	port := offer.Ports()
 
-	t.RLock()
-	defer t.RUnlock()
+	t.Lock()
+	defer t.Unlock()
 
-	for _, task := range t.tasks {
-		if p := port(); p != 0 {
-			task.cfg.Port = p
+	ln := len(t.tasks)
+
+	ports := offer.getPorts(ln)
+
+	for i, task := range t.tasks {
+		if i < len(ports) {
+			task.cfg.Port = ports[i]
 		}
 
 		task.AgentId = &mesosproto.AgentID{

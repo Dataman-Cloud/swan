@@ -143,24 +143,6 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (f *Offer) Ports() func() uint64 {
-	ch := make(chan uint64, 1)
-	go func() {
-		for _, port := range f.ports {
-			ch <- port
-		}
-
-		close(ch)
-	}()
-
-	fn := func() uint64 {
-		port, ok := <-ch
-		if !ok {
-			return 0
-		}
-
-		return port
-	}
-
-	return fn
+func (f *Offer) getPorts(n int) []uint64 {
+	return f.ports[0:n]
 }
