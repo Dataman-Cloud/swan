@@ -18,8 +18,13 @@ func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
 	}
 
 	for _, app := range apps {
-		for _, task := range app.Tasks {
+		tasks, err := s.db.ListTasks(app.ID)
+		if err != nil {
+			logrus.Errorln("Scheduler.FullTaskEventsAndRecords() db ListTasks error:", err)
+			continue
+		}
 
+		for _, task := range tasks {
 			task, err := s.db.GetTask(app.ID, task.ID)
 			if err != nil {
 				logrus.Errorln("Shceduler.TaskEvents() db GetTask error:", err)

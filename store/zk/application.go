@@ -66,7 +66,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	app.Tasks = tasks
+	app.Tasks = len(tasks)
 	app.Status = zk.status(tasks)
 	app.Version = zk.version(tasks)
 	app.Health = zk.health(tasks)
