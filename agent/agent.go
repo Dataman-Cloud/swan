@@ -105,6 +105,9 @@ func (agent *Agent) StartAndJoin() error {
 		if err != nil {
 			log.Errorln("agent ServeApi() error:", err)
 		}
+
+		log.Warnln("agent Rejoin ...")
+		time.Sleep(time.Second)
 	}
 
 	return nil

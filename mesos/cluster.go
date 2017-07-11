@@ -35,42 +35,59 @@ func (br *broadcastRes) Error() string {
 
 // sync calling agent Api to update agent's proxy & dns records on task healthy events.
 func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
-	reqProxy, err := s.buildAgentProxyReq(ev)
-	if err != nil {
-		return err
-	}
-
-	reqDNS, err := s.buildAgentDNSReq(ev)
-	if err != nil {
-		return err
-	}
-
-	res := &broadcastRes{m: make([][2]string, 0, 0)}
+	var (
+		res = &broadcastRes{m: make([][2]string, 0, 0)}
+	)
 
 	var wg sync.WaitGroup
 	for _, agent := range s.ClusterAgents() {
 		wg.Add(1)
 		go func(agent *mole.ClusterAgent) {
-			defer wg.Done()
+			var err error
 
-			for _, req := range []*http.Request{reqProxy, reqDNS} {
-				resp, err := agent.Client().Do(req)
+			defer func() {
 				if err != nil {
 					res.Lock()
 					res.m = append(res.m, [2]string{agent.ID(), err.Error()})
 					res.Unlock()
-					continue
 				}
+
+				wg.Done()
+			}()
+
+			funcDoReq := func(req *http.Request) error {
+				resp, err := agent.Client().Do(req)
+				if err != nil {
+					return err
+				}
+				defer resp.Body.Close()
 
 				if code := resp.StatusCode; code >= 400 {
 					bs, _ := ioutil.ReadAll(resp.Body)
-					res.Lock()
-					res.m = append(res.m, [2]string{agent.ID(), fmt.Sprintf("%d - %s", code, string(bs))})
-					res.Unlock()
+					return fmt.Errorf("%d - %s", code, string(bs))
 				}
 
-				resp.Body.Close()
+				return nil
 			}
+
+			reqProxy, err := s.buildAgentProxyReq(ev)
+			if err != nil {
+				return
+			}
+			err = funcDoReq(reqProxy)
+			if err != nil {
+				return
+			}
+
+			reqDNS, err := s.buildAgentDNSReq(ev)
+			if err != nil {
+				return
+			}
+			err = funcDoReq(reqDNS)
+			if err != nil {
+				return
+			}
+
 		}(agent)
 	}
 
