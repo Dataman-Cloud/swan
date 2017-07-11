@@ -73,6 +73,7 @@ func newOffer(offer *mesosproto.Offer) *Offer {
 	f.mem = mem
 	f.disk = disk
 	f.ports = ports
+	f.portRanges = portRanges
 
 	attrs := make(map[string]string, 0)
 	for _, attr := range offer.Attributes {
