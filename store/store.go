@@ -1,6 +1,11 @@
 package store
 
 import (
+	"errors"
+	"net/url"
+
+	"github.com/Dataman-Cloud/swan/store/etcd"
+	"github.com/Dataman-Cloud/swan/store/zk"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -22,7 +27,7 @@ type Store interface {
 	ListVersions(string) ([]*types.Version, error)
 
 	UpdateFrameworkId(frameworkId string) error
-	GetFrameworkId() string
+	GetFrameworkId() (string, int64)
 
 	CreateCompose(ins *types.Compose) error
 	DeleteCompose(idOrName string) error
@@ -36,4 +41,15 @@ type Store interface {
 	UpdateAgent(agent *types.Agent) error
 	GetAgent(id string) (*types.Agent, error)
 	ListAgents() ([]*types.Agent, error)
+}
+
+func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {
+	switch typ {
+	case "zk":
+		return zk.NewZKStore(zkURL)
+	case "etcd":
+		return etcd.NewEtcdStore(etcdAddrs)
+	}
+
+	return nil, errors.New("unsuported db store type: " + typ)
 }

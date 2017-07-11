@@ -142,7 +142,13 @@ func (s *Scheduler) init() error {
 		mesosproto.Event_MESSAGE:    s.messageHandler,
 	}
 
-	if id := s.db.GetFrameworkId(); id != "" {
+	id, mtime := s.db.GetFrameworkId()
+	if id != "" {
+		if time.Now().Unix()-(mtime/1000) >= DefaultFrameworkFailoverTimeout {
+			log.Warnln("framework failover time exceed")
+			return nil
+
+		}
 		s.framework.Id = &mesosproto.FrameworkID{
 			Value: proto.String(id),
 		}

@@ -344,7 +344,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 				}
 
 				if err := r.db.DeleteTask(task.ID); err != nil {
-					log.Errorf("Kill task %s got error: %v", task.ID, err)
+					log.Errorf("Delete task %s got error: %v", task.ID, err)
 
 					hasError = true
 
@@ -369,7 +369,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if err := r.db.DeleteApp(app.ID); err != nil {
-			log.Error("Delete app %s got error: %v", app.ID, err)
+			log.Errorf("Delete app %s got error: %v", app.ID, err)
 		}
 
 	}(app)
