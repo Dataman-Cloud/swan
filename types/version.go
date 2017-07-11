@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/utils"
@@ -20,6 +22,25 @@ const (
 	UpdateContinue = "continue"
 	UpdateRollback = "rollback" // TODO(nmg)
 )
+
+type VersionList []*Version
+
+func (vl VersionList) Len() int      { return len(vl) }
+func (vl VersionList) Swap(i, j int) { vl[i], vl[j] = vl[j], vl[i] }
+func (vl VersionList) Less(i, j int) bool {
+	m, _ := strconv.Atoi(vl[i].ID)
+	n, _ := strconv.Atoi(vl[j].ID)
+
+	return m < n
+}
+
+func (vl VersionList) Sort() {
+	sort.Sort(vl)
+}
+
+func (vl VersionList) Reverse() {
+	sort.Sort(sort.Reverse(vl))
+}
 
 type Version struct {
 	ID           string            `json:"id"`

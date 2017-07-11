@@ -77,11 +77,12 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	app.Versions = versions
-
 	if len(app.Version) == 0 {
-		app.Version = append(app.Version, versions.Reverse()[0].ID)
+		types.VersionList(versions).Reverse()
+		app.Version = append(app.Version, versions[0].ID)
 	}
+
+	app.Versions = len(versions)
 
 	return &app, nil
 }
