@@ -13,6 +13,7 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 	)
 
 	mux := gin.Default()
+	gin.SetMode(gin.ReleaseMode)
 
 	mux.GET("/sysinfo", agent.sysinfo)
 
