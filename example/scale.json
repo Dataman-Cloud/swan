@@ -1,3 +1,6 @@
 {
-	"instances": 6
+    "instances": 100, 
+    "ips":[],
+    "step": 10,
+    "onfailure": "continue"
 }

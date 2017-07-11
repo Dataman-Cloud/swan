@@ -391,8 +391,8 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var body types.ScaleBody
-	if err := decode(req.Body, &body); err != nil {
+	var scale types.ScalePolicy
+	if err := decode(req.Body, &scale); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusBadRequest)
 		return
 	}
@@ -405,8 +405,8 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		current = len(tasks)
-		goal    = body.Instances
-		ips     = body.IPs // TODO(nmg): remove after automatic ipam
+		goal    = scale.Instances
+		ips     = scale.IPs // TODO(nmg): remove after automatic ipam
 	)
 
 	if goal < 0 {
@@ -497,6 +497,11 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	var (
+		step      = scale.Step
+		onfailure = scale.OnFailure
+	)
+
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -504,6 +509,13 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				log.Errorf("updating app status from scaling to noop got error: %v", err)
 			}
 		}()
+
+		var (
+			group   = make([]*mesos.Tasks, 0)
+			tasks   = mesos.NewTasks()
+			count   = goal - current
+			counter = 0
+		)
 
 		for i := current; i < goal; i++ {
 			var (
@@ -520,14 +532,14 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 					Value: ips[i],
 				})
 
-				cfg.IP = spec.IPs[i]
+				cfg.IP = ips[i]
 			}
 
 			task := &types.Task{
 				ID:      id,
 				Name:    name,
 				Weight:  100,
-				Status:  "creating",
+				Status:  "pending",
 				Version: ver,
 				Created: time.Now(),
 				Updated: time.Now(),
@@ -544,24 +556,46 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			tasks := mesos.NewTasks()
 			tasks.Push(t)
 
+			if tasks.Len() >= step || counter >= count {
+				group = append(group, tasks)
+				tasks = mesos.NewTasks()
+			}
+		}
+
+		for _, tasks := range group {
 			results, err := r.driver.LaunchTasks(tasks)
 			if err != nil {
-				log.Errorf("launch task %s got error: %v", id, err)
+				log.Errorf("launch tasks got error: %v", err)
 
-				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				for _, t := range tasks.Tasks() {
+					task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
+					if err != nil {
+						log.Errorf("find task from zk got error: %v", err)
+						return
+					}
 
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", id, err)
+					task.Status = "Failed"
+					task.ErrMsg = err.Error()
+
+					if err = r.db.UpdateTask(app.ID, task); err != nil {
+						log.Errorf("update task %s status got error: %v", task.ID, err)
+					}
+				}
+
+				if onfailure == types.ScaleFailureStop {
+					return
 				}
 			}
 
 			for taskId, err := range results {
 				if err != nil {
 					log.Errorf("launch task %s got error: %v", taskId, err)
+
+					if onfailure == types.ScaleFailureStop {
+						return
+					}
 				}
 			}
 
