@@ -6,6 +6,6 @@ import (
 	"github.com/Dataman-Cloud/swan/version"
 )
 
-func (r *Router) version(w http.ResponseWriter, req *http.Request) {
+func (r *Server) version(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, version.GetVersion())
 }

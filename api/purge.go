@@ -9,7 +9,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 )
 
-func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
+func (r *Server) purge(w http.ResponseWriter, req *http.Request) {
 	apps, err := r.db.ListApps()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

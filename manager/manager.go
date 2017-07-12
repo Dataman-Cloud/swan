@@ -88,9 +88,9 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		Listen:   cfg.Listen,
 		LogLevel: cfg.LogLevel,
 	}
-	srv := api.NewServer(&srvcfg, hl)
-	router := api.NewRouter(sched, db)
-	srv.InstallRouter(router)
+	srv := api.NewServer(&srvcfg, hl, sched, db)
+	// router := api.NewRouter(sched, db)
+	// srv.InstallRouter(router)
 
 	// final
 	return &Manager{
@@ -169,12 +169,12 @@ func (m *Manager) start() error {
 					m.errCh <- err
 				}
 
-				m.apiserver.Update(m.leader)
+				m.apiserver.UpdateLeader(m.leader)
 
 			case LeadershipFollower:
 				log.Warnln("became follower, closing all agents ...")
 				m.clusterMaster.CloseAllAgents()
-				m.apiserver.Update(m.leader)
+				m.apiserver.UpdateLeader(m.leader)
 			}
 
 		case err := <-m.errCh:
