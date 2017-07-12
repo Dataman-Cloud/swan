@@ -103,7 +103,6 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		var (
-			group   = make([]*mesos.Tasks, 0)
 			tasks   = mesos.NewTasks()
 			counter = 0
 		)
@@ -152,45 +151,42 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 			tasks.Push(t)
 
 			if tasks.Len() >= step || counter >= count {
-				group = append(group, tasks)
-				tasks = mesos.NewTasks()
-			}
-		}
-
-		for _, tasks := range group {
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch tasks got error")
-
-				for _, t := range tasks.Tasks() {
-					task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
-					if err != nil {
-						log.Errorf("find task from zk got error: %v", err)
-						return
-					}
-
-					task.Status = "Failed"
-					task.ErrMsg = err.Error()
-
-					if err = r.db.UpdateTask(app.ID, task); err != nil {
-						log.Errorf("update task %s status got error: %v", id, err)
-					}
-				}
-
-				if onfailure == types.DeployStop {
-					return
-				}
-			}
-
-			for taskId, err := range results {
+				results, err := r.driver.LaunchTasks(tasks)
 				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
+					log.Errorf("launch tasks got error")
+
+					for _, t := range tasks.Tasks() {
+						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
+						if err != nil {
+							log.Errorf("find task from zk got error: %v", err)
+							return
+						}
+
+						task.Status = "Failed"
+						task.ErrMsg = err.Error()
+
+						if err = r.db.UpdateTask(app.ID, task); err != nil {
+							log.Errorf("update task %s status got error: %v", id, err)
+						}
+					}
 
 					if onfailure == types.DeployStop {
 						return
 					}
 				}
 
+				for taskId, err := range results {
+					if err != nil {
+						log.Errorf("launch task %s got error: %v", taskId, err)
+
+						if onfailure == types.DeployStop {
+							return
+						}
+					}
+
+				}
+
+				tasks = mesos.NewTasks()
 			}
 		}
 
@@ -511,7 +507,6 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		var (
-			group   = make([]*mesos.Tasks, 0)
 			tasks   = mesos.NewTasks()
 			count   = goal - current
 			counter = 0
@@ -556,49 +551,47 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
+			counter++
+
 			tasks.Push(t)
 
 			if tasks.Len() >= step || counter >= count {
-				group = append(group, tasks)
-				tasks = mesos.NewTasks()
-			}
-		}
-
-		for _, tasks := range group {
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch tasks got error: %v", err)
-
-				for _, t := range tasks.Tasks() {
-					task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
-					if err != nil {
-						log.Errorf("find task from zk got error: %v", err)
-						return
-					}
-
-					task.Status = "Failed"
-					task.ErrMsg = err.Error()
-
-					if err = r.db.UpdateTask(app.ID, task); err != nil {
-						log.Errorf("update task %s status got error: %v", task.ID, err)
-					}
-				}
-
-				if onfailure == types.ScaleFailureStop {
-					return
-				}
-			}
-
-			for taskId, err := range results {
+				results, err := r.driver.LaunchTasks(tasks)
 				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
+					log.Errorf("launch tasks got error: %v", err)
+
+					for _, t := range tasks.Tasks() {
+						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
+						if err != nil {
+							log.Errorf("find task from zk got error: %v", err)
+							return
+						}
+
+						task.Status = "Failed"
+						task.ErrMsg = err.Error()
+
+						if err = r.db.UpdateTask(app.ID, task); err != nil {
+							log.Errorf("update task %s status got error: %v", task.ID, err)
+						}
+					}
 
 					if onfailure == types.ScaleFailureStop {
 						return
 					}
 				}
-			}
 
+				for taskId, err := range results {
+					if err != nil {
+						log.Errorf("launch task %s got error: %v", taskId, err)
+
+						if onfailure == types.ScaleFailureStop {
+							return
+						}
+					}
+				}
+
+				tasks = mesos.NewTasks()
+			}
 		}
 	}()
 
