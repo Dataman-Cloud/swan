@@ -327,6 +327,9 @@ func (s *Scheduler) handleUpdates() {
 }
 
 func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
+	s.Lock()
+	defer s.Unlock()
+
 	a, ok := s.agents[offer.AgentId.GetValue()]
 	if !ok {
 		return
@@ -341,7 +344,10 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	a.addOffer(f)
 
-	offers := a.getOffers()
+	var (
+		offers = a.getOffers()
+	)
+
 	if len(offers) > 1 {
 		fs := make([]*Offer, 0)
 		for _, f := range offers {
