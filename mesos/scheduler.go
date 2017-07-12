@@ -489,16 +489,14 @@ func (s *Scheduler) removeTask(taskID string) bool {
 	return found
 }
 
-func (s *Scheduler) KillTask(taskId, agentId string) error {
+func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	log.Debugln("Killing task ", taskId)
-
-	defer func() {
-		s.removeTask(taskId)
-	}()
 
 	t := NewTask(nil, taskId, taskId)
 
-	s.addTask(t)
+	if sync {
+		s.addTask(t)
+	}
 
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
@@ -523,9 +521,12 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		return fmt.Errorf("kill call send but the status code not 202 got %d", code)
 	}
 
-	for status := range t.GetStatus() {
-		if t.IsKilled(status) {
-			break
+	if sync {
+		for status := range t.GetStatus() {
+			if t.IsKilled(status) {
+				s.removeTask(taskId)
+				return nil
+			}
 		}
 	}
 

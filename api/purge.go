@@ -46,7 +46,7 @@ func (r *Router) purge(w http.ResponseWriter, req *http.Request) {
 						<-tokenBucket
 					}()
 
-					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+					if err := r.driver.KillTask(task.ID, task.AgentId, false); err != nil {
 						log.Errorf("Kill task %s got error: %v", task.ID, err)
 
 						hasError = true
