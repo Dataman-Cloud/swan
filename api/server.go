@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Dataman-Cloud/swan/store"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 )
@@ -25,38 +26,34 @@ type Server struct {
 	cfg      *Config
 	listener net.Listener // specified net listener
 	leader   string
-	router   *Router
 	server   *http.Server
+	driver   Driver
+	db       store.Store
+
 	sync.Mutex
 }
 
-func NewServer(cfg *Config, l net.Listener) *Server {
-	srv := &Server{
+func NewServer(cfg *Config, l net.Listener, driver Driver, db store.Store) *Server {
+	s := &Server{
 		cfg:      cfg,
 		listener: l,
+		leader:   "",
+		driver:   driver,
+		db:       db,
 	}
 
-	//srv.initMiddlewares()
+	s.server = &http.Server{
+		Handler: s.createMux(),
+	}
 
-	return srv
+	return s
 }
 
 // createMux initializes the main router the server uses.
 func (s *Server) createMux() *mux.Router {
 	m := mux.NewRouter()
 
-	log.Debug("Registering HTTP route")
-	for _, r := range s.router.Routes() {
-		f := s.makeHTTPHandler(r.Handler())
-
-		log.Debugf("Registering %v, %s", r.Methods(), r.Path())
-
-		if r.prefix {
-			m.PathPrefix(r.Path()).Methods(r.Methods()...).Handler(f)
-		} else {
-			m.Path(r.Path()).Methods(r.Methods()...).Handler(f)
-		}
-	}
+	s.setupRoutes(m)
 
 	if s.cfg.LogLevel == "debug" {
 		profilerSetup(m, "/debug/")
@@ -88,7 +85,7 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.enableCORS(w)
 
-		if s.cfg.Listen != s.getLeader() {
+		if s.cfg.Listen != s.GetLeader() {
 			if r.Method != "GET" {
 				s.forwardRequest(w, r)
 				return
@@ -101,18 +98,8 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 	}
 }
 
-func (s *Server) InstallRouter(r *Router) {
-	s.router = r
-}
-
 func (s *Server) Run() error {
-	srv := &http.Server{
-		Handler: s.createMux(),
-	}
-
-	s.server = srv
-
-	return srv.Serve(s.listener)
+	return s.server.Serve(s.listener)
 }
 
 // gracefully shutdown.
@@ -157,14 +144,14 @@ func (s *Server) Reload() error {
 
 }
 
-func (s *Server) Update(leader string) {
+func (s *Server) UpdateLeader(leader string) {
 	s.Lock()
 	defer s.Unlock()
 
 	s.leader = leader
 }
 
-func (s *Server) getLeader() string {
+func (s *Server) GetLeader() string {
 	s.Lock()
 	defer s.Unlock()
 

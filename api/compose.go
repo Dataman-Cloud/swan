@@ -13,7 +13,7 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-func (r *Router) newCompose(w http.ResponseWriter, req *http.Request) {
+func (r *Server) newCompose(w http.ResponseWriter, req *http.Request) {
 	if err := checkForJSON(req); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -188,7 +188,7 @@ func (r *Router) newCompose(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) parseYAML(w http.ResponseWriter, req *http.Request) {
+func (r *Server) parseYAML(w http.ResponseWriter, req *http.Request) {
 	var param struct {
 		YAML string `json:"yaml"`
 	}
@@ -223,7 +223,7 @@ func (r *Router) parseYAML(w http.ResponseWriter, req *http.Request) {
 	})
 }
 
-func (r *Router) listComposes(w http.ResponseWriter, req *http.Request) {
+func (r *Server) listComposes(w http.ResponseWriter, req *http.Request) {
 	cs, err := r.db.ListComposes()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -233,7 +233,7 @@ func (r *Router) listComposes(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, cs)
 }
 
-func (r *Router) getCompose(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getCompose(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -248,7 +248,7 @@ func (r *Router) getCompose(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, cps)
 }
 
-func (r *Router) deleteCompose(w http.ResponseWriter, req *http.Request) {
+func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

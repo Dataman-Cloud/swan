@@ -4,6 +4,6 @@ import (
 	"net/http"
 )
 
-func (r *Router) stats(w http.ResponseWriter, req *http.Request) {
+func (r *Server) stats(w http.ResponseWriter, req *http.Request) {
 
 }

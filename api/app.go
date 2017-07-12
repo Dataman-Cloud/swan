@@ -17,7 +17,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
+func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	if err := checkForJSON(req); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -196,7 +196,7 @@ func (r *Router) createApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusCreated, map[string]string{"Id": app.ID})
 }
 
-func (r *Router) listApps(w http.ResponseWriter, req *http.Request) {
+func (r *Server) listApps(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -253,7 +253,7 @@ func (r *Router) listApps(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, apps)
 }
 
-func (r *Router) getApp(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 	// TODO(nmg): mux.Vars should be wrapped in context.
 	id := mux.Vars(req)["app_id"]
 
@@ -271,7 +271,7 @@ func (r *Router) getApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, app)
 }
 
-func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
+func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(id)
@@ -340,7 +340,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 				}
 
 				if err := r.db.DeleteTask(task.ID); err != nil {
-					log.Errorf("Kill task %s got error: %v", task.ID, err)
+					log.Errorf("Delete task %s got error: %v", task.ID, err)
 
 					hasError = true
 
@@ -365,7 +365,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 		}
 
 		if err := r.db.DeleteApp(app.ID); err != nil {
-			log.Error("Delete app %s got error: %v", app.ID, err)
+			log.Errorf("Delete app %s got error: %v", app.ID, err)
 		}
 
 	}(app)
@@ -373,7 +373,7 @@ func (r *Router) deleteApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusNoContent, "")
 }
 
-func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
+func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(appId)
@@ -598,7 +598,7 @@ func (r *Router) scaleApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
+func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(appId)
@@ -752,7 +752,7 @@ func (r *Router) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
+func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -906,7 +906,7 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
+func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 	var body types.UpdateWeightsBody
 	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -947,7 +947,7 @@ func (r *Router) updateWeights(w http.ResponseWriter, req *http.Request) {
 
 }
 
-func (r *Router) getTasks(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getTasks(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	tasks, err := r.db.ListTasks(appId)
@@ -959,7 +959,7 @@ func (r *Router) getTasks(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, tasks)
 }
 
-func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getTask(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars   = mux.Vars(req)
 		appId  = vars["app_id"]
@@ -975,7 +975,7 @@ func (r *Router) getTask(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, task)
 }
 
-func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
+func (r *Server) updateWeight(w http.ResponseWriter, req *http.Request) {
 	var body types.UpdateWeightBody
 	if err := decode(req.Body, &body); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -1006,7 +1006,7 @@ func (r *Router) updateWeight(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) getVersions(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getVersions(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(appId)
@@ -1024,7 +1024,7 @@ func (r *Router) getVersions(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, versions)
 }
 
-func (r *Router) getVersion(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getVersion(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars  = mux.Vars(req)
 		appId = vars["app_id"]
@@ -1041,7 +1041,7 @@ func (r *Router) getVersion(w http.ResponseWriter, req *http.Request) {
 }
 
 // TODO(nmg): named version should be supported.
-func (r *Router) createVersion(w http.ResponseWriter, req *http.Request) {
+func (r *Server) createVersion(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars  = mux.Vars(req)
 		appId = vars["app_id"]
@@ -1096,7 +1096,7 @@ func filterByFieldsSelectors(fieldSelector fields.Selector, ver *types.Version) 
 	return fieldSelector.Matches(fields.Set(fieldMap))
 }
 
-func (r *Router) deleteTask(w http.ResponseWriter, req *http.Request) {
+func (r *Server) deleteTask(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars   = mux.Vars(req)
 		appId  = vars["app_id"]
@@ -1122,7 +1122,7 @@ func (r *Router) deleteTask(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusNoContent, "")
 }
 
-func (r *Router) deleteTasks(w http.ResponseWriter, req *http.Request) {
+func (r *Server) deleteTasks(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars  = mux.Vars(req)
 		appId = vars["app_id"]
@@ -1175,7 +1175,7 @@ func (r *Router) deleteTasks(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusNoContent, "")
 }
 
-func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
+func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars   = mux.Vars(req)
 		appId  = vars["app_id"]
@@ -1272,7 +1272,7 @@ func (r *Router) updateTask(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) rollbackTask(w http.ResponseWriter, req *http.Request) {
+func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	var (
 		vars   = mux.Vars(req)
 		appId  = vars["app_id"]

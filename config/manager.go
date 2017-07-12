@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/urfave/cli"
 )
@@ -12,9 +13,13 @@ type ManagerConfig struct {
 	Listen     string `json:"listenAddr"`
 	EnableCORS bool
 
-	MesosURL *url.URL `json:"mesosURL"`
-	ZKURL    *url.URL `json:"zkURL"`
-	Strategy string   `json:"strategy"`
+	MesosURL *url.URL `json:"mesosURL"` // mesos zk url
+
+	StoreType string   `json:"store_type"` // db store type
+	ZKURL     *url.URL `json:"zkURL"`      // zk store url (currently we always require this for HA)
+	EtcdAddrs []string `json:"etcd_addrs"` // etcd store addrs
+
+	Strategy string `json:"strategy"`
 
 	ReconciliationInterval  float64 `json:"reconciliationInterval"`
 	ReconciliationStep      int64   `json:"reconciliationStep"`
@@ -34,9 +39,17 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 		return cfg, err
 	}
 
+	if c.String("store-type") != "" {
+		cfg.StoreType = c.String("store-type")
+	}
+
 	cfg.ZKURL, err = url.Parse(c.String("zk"))
 	if err != nil {
 		return cfg, err
+	}
+
+	if c.String("etcd-addrs") != "" {
+		cfg.EtcdAddrs = strings.Split(c.String("etcd-addrs"), ",")
 	}
 
 	if c.String("listen") != "" {
@@ -71,14 +84,17 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 }
 
 func (c *ManagerConfig) validate() error {
+
+	if typ := c.StoreType; typ == "etcd" && len(c.EtcdAddrs) == 0 {
+		return fmt.Errorf("at least one of etcd cluster address required")
+	}
+
 	if c.ZKURL.Host == "" {
 		return fmt.Errorf("zk host can not be empty")
 	}
-
 	if c.ZKURL.Scheme != "zk" {
 		return fmt.Errorf("malformed scheme for zk url.")
 	}
-
 	if c.ZKURL.Path == "" {
 		return fmt.Errorf("zk url not corrected. path must be provied")
 	}

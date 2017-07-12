@@ -10,12 +10,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func (r *Router) listAgents(w http.ResponseWriter, req *http.Request) {
+func (r *Server) listAgents(w http.ResponseWriter, req *http.Request) {
 	ret := r.driver.ClusterAgents()
 	writeJSON(w, http.StatusOK, ret)
 }
 
-func (r *Router) getAgent(w http.ResponseWriter, req *http.Request) {
+func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]
 		agent = r.driver.ClusterAgent(id)
@@ -30,27 +30,27 @@ func (r *Router) getAgent(w http.ResponseWriter, req *http.Request) {
 	r.proxyAgentHandle(id, agentReq, w)
 }
 
-func (r *Router) fullEventsAndRecords(w http.ResponseWriter, req *http.Request) {
+func (r *Server) fullEventsAndRecords(w http.ResponseWriter, req *http.Request) {
 	ret := r.driver.FullTaskEventsAndRecords()
 	writeJSON(w, http.StatusOK, ret)
 }
 
-func (r *Router) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
+func (r *Server) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/docker/`) + 16
 	r.redirectAgent(n, w, req)
 }
 
-func (r *Router) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
+func (r *Server) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/`) + 16
 	r.redirectAgent(n, w, req)
 }
 
-func (r *Router) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
+func (r *Server) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/`) + 16
 	r.redirectAgent(n, w, req)
 }
 
-func (r *Router) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
+func (r *Server) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]
 		agent = r.driver.ClusterAgent(id)
@@ -70,7 +70,7 @@ func (r *Router) redirectAgent(stripN int, w http.ResponseWriter, req *http.Requ
 	r.proxyAgentHandle(id, req, w)
 }
 
-func (r *Router) proxyAgentHandle(id string, req *http.Request, w http.ResponseWriter) {
+func (r *Server) proxyAgentHandle(id string, req *http.Request, w http.ResponseWriter) {
 	resp, err := r.proxyAgent(id, req)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -82,7 +82,7 @@ func (r *Router) proxyAgentHandle(id string, req *http.Request, w http.ResponseW
 	io.Copy(w, resp.Body)
 }
 
-func (r *Router) proxyAgent(id string, req *http.Request) (*http.Response, error) {
+func (r *Server) proxyAgent(id string, req *http.Request) (*http.Response, error) {
 	agent := r.driver.ClusterAgent(id)
 	if agent == nil {
 		return nil, errors.New("no such agent: " + id)
