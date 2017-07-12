@@ -334,6 +334,8 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	f := newOffer(offer)
 
+	log.Printf("Received offer %s", f.GetId())
+
 	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
@@ -355,7 +357,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	time.AfterFunc(time.Second*5, func() { // release the offer later
+	time.AfterFunc(time.Second*10, func() { // release the offer later
 		if s.removeOffer(f) {
 			s.declineOffers([]*Offer{f})
 		}
@@ -482,7 +484,7 @@ func (s *Scheduler) removeTask(taskID string) bool {
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
-	log.Info("killing task ", taskId)
+	log.Debugln("Killing task ", taskId)
 
 	defer func() {
 		s.removeTask(taskId)
@@ -806,7 +808,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		},
 	}
 
-	log.Printf("launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
+	log.Printf("Launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
 
 	// send call
 	resp, err := s.Send(call)
