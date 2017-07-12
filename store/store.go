@@ -35,8 +35,6 @@ type Store interface {
 	GetCompose(idOrName string) (*types.Compose, error)
 	ListComposes() ([]*types.Compose, error)
 
-	GetLeader() (string, error)
-
 	CreateAgent(agent *types.Agent) error
 	UpdateAgent(agent *types.Agent) error
 	GetAgent(id string) (*types.Agent, error)
