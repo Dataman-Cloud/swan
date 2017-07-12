@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"fmt"
 	"path/filepath"
 	"sort"
 	"time"
@@ -24,10 +25,10 @@ var (
 	ZKDefaultACL = zk.WorldACL(zk.PermAll)
 )
 
-func connect(srvs []string) (*zk.Conn, error) {
-	conn, connChan, err := zk.Connect(srvs, 5*time.Second)
+func connect(addrs []string) (*zk.Conn, error) {
+	conn, connChan, err := zk.Connect(addrs, 5*time.Second)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("zk connection to [%v] error: %v", addrs, err)
 	}
 
 	for {

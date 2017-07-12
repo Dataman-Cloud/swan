@@ -39,7 +39,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	}
 
 	// db store initilizing
-	db, err := store.Setup("etcd", cfg.ZKURL, []string{"http://127.0.0.1:2379"})
+	db, err := store.Setup(cfg.StoreType, cfg.ZKURL, cfg.EtcdAddrs)
 	if err != nil {
 		log.Fatalln("db store setup", err)
 	}

@@ -147,8 +147,8 @@ func (s *Scheduler) init() error {
 		if time.Now().Unix()-(mtime/1000) >= DefaultFrameworkFailoverTimeout {
 			log.Warnln("framework failover time exceed")
 			return nil
-
 		}
+		// attach framework with given id to subscribe with mesos
 		s.framework.Id = &mesosproto.FrameworkID{
 			Value: proto.String(id),
 		}

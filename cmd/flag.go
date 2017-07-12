@@ -13,6 +13,23 @@ func FlagListenAddr() cli.Flag {
 	}
 }
 
+func FlagStoreType() cli.Flag {
+	return cli.StringFlag{
+		Name:   "store-type",
+		Usage:  "db store type [etcd|zk]",
+		EnvVar: "SWAN_STORE_TYPE",
+		Value:  "zk",
+	}
+}
+
+func FlagEtcdAddrs() cli.Flag {
+	return cli.StringFlag{
+		Name:   "etcd-addrs",
+		Usage:  "etcd cluster address",
+		EnvVar: "SWAN_ETCD_ADDRS",
+	}
+}
+
 func FlagStrategy() cli.Flag {
 	return cli.StringFlag{
 		Name:   "strategy",
