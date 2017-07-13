@@ -100,7 +100,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		events:        make(chan *mesosproto.Event, 1024),
+		events:        make(chan *mesosproto.Event, 4096),
 		sem:           make(chan struct{}, 1),
 	}
 
