@@ -24,6 +24,7 @@ type ManagerConfig struct {
 	ReconciliationInterval  float64 `json:"reconciliationInterval"`
 	ReconciliationStep      int64   `json:"reconciliationStep"`
 	ReconciliationStepDelay float64 `json:"reconciliationStepDelay"`
+	HeartbeatTimeout        float64 `json:"heartbeatTimeout"`
 }
 
 func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
@@ -74,6 +75,10 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 
 	if c.Float64("reconciliation-step-delay") != 0 {
 		cfg.ReconciliationStepDelay = c.Float64("reconciliation-step-delay")
+	}
+
+	if c.Float64("heartbeat-timeout") != 0 {
+		cfg.HeartbeatTimeout = c.Float64("heartbeat-timeout")
 	}
 
 	if err := cfg.validate(); err != nil {

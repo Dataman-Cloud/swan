@@ -43,6 +43,8 @@ type SchedulerConfig struct {
 	ReconciliationInterval  float64
 	ReconciliationStep      int64
 	ReconciliationStepDelay float64
+
+	HeartbeatTimeout float64
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
@@ -67,9 +69,8 @@ type Scheduler struct {
 
 	offerTimeout time.Duration
 
-	heartbeatTimeout time.Duration
-	watcher          *time.Timer
-	reconcileTimer   *time.Ticker
+	watcher        *time.Timer
+	reconcileTimer *time.Ticker
 
 	strategy Strategy
 	filters  []Filter
@@ -309,6 +310,14 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			status = ev.GetUpdate().GetStatus()
 			taskId = status.TaskId.GetValue()
 		)
+
+		// ack firstly
+		go func() {
+			if err := s.AckUpdateEvent(status); err != nil {
+				log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
+			}
+		}()
+
 		// emit event status to ongoing task
 		if task := s.getTask(taskId); task != nil {
 			task.SendStatus(status)
@@ -651,13 +660,12 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 // heartbeat timeout watcher
 func (s *Scheduler) startWatcher(interval float64) {
 	log.Debugln("Start heartbeat timeout watcher")
-	d := interval * 2
-	s.heartbeatTimeout = time.Duration(d) * time.Second
-	s.watcher = time.AfterFunc(s.heartbeatTimeout, s.stop)
+	d := time.Duration(s.cfg.HeartbeatTimeout) * time.Second
+	s.watcher = time.AfterFunc(d, s.stop)
 }
 
 func (s *Scheduler) resetWatcher() {
-	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.heartbeatTimeout.Seconds())
+	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.cfg.HeartbeatTimeout)
 	if s.watcher != nil {
 		if !s.watcher.Stop() {
 			select {
@@ -665,7 +673,7 @@ func (s *Scheduler) resetWatcher() {
 			default:
 			}
 		}
-		s.watcher.Reset(s.heartbeatTimeout)
+		s.watcher.Reset(time.Duration(s.cfg.HeartbeatTimeout) * time.Second)
 	}
 }
 

@@ -59,6 +59,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		ReconciliationInterval:  cfg.ReconciliationInterval,
 		ReconciliationStep:      cfg.ReconciliationStep,
 		ReconciliationStepDelay: cfg.ReconciliationStepDelay,
+		HeartbeatTimeout:        cfg.HeartbeatTimeout,
 	}
 
 	var s mesos.Strategy

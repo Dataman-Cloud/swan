@@ -84,11 +84,6 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
-	// ack firstly
-	if err := s.AckUpdateEvent(status); err != nil {
-		log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
-	}
-
 	var appId string
 	parts := strings.SplitN(taskId, ".", 3)
 	if len(parts) >= 3 {
