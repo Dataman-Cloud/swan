@@ -74,7 +74,7 @@ func profilerSetup(r *mux.Router, path string) {
 	m.HandleFunc("/pprof/cmdline", pprof.Cmdline)
 	m.HandleFunc("/pprof/profile", pprof.Profile)
 	m.HandleFunc("/pprof/symbol", pprof.Symbol)
-	m.HandleFunc("/debug/pprof/trace", pprof.Trace)
+	m.HandleFunc("/pprof/trace", pprof.Trace)
 	m.HandleFunc("/pprof/block", pprof.Handler("block").ServeHTTP)
 	m.HandleFunc("/pprof/heap", pprof.Handler("heap").ServeHTTP)
 	m.HandleFunc("/pprof/goroutine", pprof.Handler("goroutine").ServeHTTP)
