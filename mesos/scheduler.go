@@ -940,3 +940,13 @@ func (s *Scheduler) lock() {
 func (s *Scheduler) unlock() {
 	<-s.sem
 }
+
+func (s *Scheduler) Load() map[string]interface{} {
+	s.RLock()
+	defer s.RUnlock()
+
+	return map[string]interface{}{
+		"tasks":  len(s.tasks),
+		"events": len(s.events),
+	}
+}
