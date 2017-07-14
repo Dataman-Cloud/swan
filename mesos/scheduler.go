@@ -85,6 +85,7 @@ type Scheduler struct {
 	connection *http.Response //TODO(nmg)
 
 	events chan *mesosproto.Event // status update events.
+	offers chan *mesosproto.Event // offer events
 }
 
 // NewScheduler...
@@ -102,6 +103,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
 		events:        make(chan *mesosproto.Event, 4096),
+		offers:        make(chan *mesosproto.Event, 4096),
 		sem:           make(chan struct{}, 1),
 	}
 
@@ -227,6 +229,7 @@ func (s *Scheduler) Subscribe() error {
 
 	go s.watchEvents()
 	go s.handleUpdates()
+	go s.handleOffers()
 
 	return nil
 }
@@ -333,6 +336,11 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 		return
 	}
 
+	if typ == mesosproto.Event_OFFERS {
+		s.offers <- ev
+		return
+	}
+
 	go handler(ev)
 }
 
@@ -343,6 +351,21 @@ func (s *Scheduler) handleUpdates() {
 			handler = s.handlers[typ]
 		)
 		handler(ev)
+	}
+}
+
+func (s *Scheduler) handleOffers() {
+	sem := make(chan struct{}, 1)
+	defer close(sem)
+
+	for ev := range s.offers {
+		sem <- struct{}{}
+		var (
+			typ     = ev.GetType()
+			handler = s.handlers[typ]
+		)
+		handler(ev)
+		<-sem
 	}
 }
 
