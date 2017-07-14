@@ -370,11 +370,8 @@ func (s *Scheduler) handleOffers() {
 }
 
 func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
-	s.Lock()
-	defer s.Unlock()
-
-	a, ok := s.agents[offer.AgentId.GetValue()]
-	if !ok {
+	a := s.getAgent(offer.AgentId.GetValue())
+	if a == nil {
 		return
 	}
 
