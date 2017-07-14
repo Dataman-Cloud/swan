@@ -325,11 +325,9 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 		}()
 
 		// emit event status to ongoing task
-		sem <- struct{}{}
-		if task := s.tasks[taskId]; task != nil {
+		if task := s.getTask(taskId); task != nil {
 			task.SendStatus(status)
 		}
-		<-sem
 
 		s.events <- ev
 
@@ -504,6 +502,19 @@ func (s *Scheduler) addTask(task *Task) {
 	defer s.Unlock()
 
 	s.tasks[task.TaskId.GetValue()] = task
+}
+
+func (s *Scheduler) getTask(taskId string) *Task {
+	s.RLock()
+	defer s.RUnlock()
+
+	task, ok := s.tasks[taskId]
+	if !ok {
+		return nil
+	}
+
+	return task
+
 }
 
 func (s *Scheduler) removeTask(taskID string) bool {
