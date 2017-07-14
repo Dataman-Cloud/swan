@@ -277,6 +277,9 @@ func (s *Scheduler) watchEvents() {
 		err error
 	)
 
+	sem := make(chan struct{}, 1)
+	defer close(sem)
+
 	for {
 		if err = dec.Decode(&ev); err != nil {
 			log.Errorf("mesos events subscriber decode events error: %v", err)
@@ -289,16 +292,15 @@ func (s *Scheduler) watchEvents() {
 			return
 		}
 
-		s.handleEvent(ev)
+		s.handleEvent(ev, sem)
 	}
 }
 
-func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
+func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 
 	var (
 		typ     = ev.GetType()
 		handler = s.handlers[typ]
-		p       sync.RWMutex
 	)
 
 	if handler == nil {
@@ -320,11 +322,11 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		}()
 
 		// emit event status to ongoing task
-		p.RLock()
+		sem <- struct{}{}
 		if task := s.tasks[taskId]; task != nil {
 			task.SendStatus(status)
 		}
-		p.RUnlock()
+		<-sem
 
 		s.events <- ev
 
