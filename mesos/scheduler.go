@@ -298,6 +298,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 	var (
 		typ     = ev.GetType()
 		handler = s.handlers[typ]
+		p       sync.RWMutex
 	)
 
 	if handler == nil {
@@ -319,9 +320,11 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		}()
 
 		// emit event status to ongoing task
-		if task := s.getTask(taskId); task != nil {
+		p.RLock()
+		if task := s.tasks[taskId]; task != nil {
 			task.SendStatus(status)
 		}
+		p.RUnlock()
 
 		s.events <- ev
 
@@ -479,18 +482,6 @@ func (s *Scheduler) addTask(task *Task) {
 	defer s.Unlock()
 
 	s.tasks[task.TaskId.GetValue()] = task
-}
-
-func (s *Scheduler) getTask(taskId string) *Task {
-	s.RLock()
-	defer s.RUnlock()
-
-	task, ok := s.tasks[taskId]
-	if !ok {
-		return nil
-	}
-
-	return task
 }
 
 func (s *Scheduler) removeTask(taskID string) bool {
