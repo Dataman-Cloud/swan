@@ -969,5 +969,6 @@ func (s *Scheduler) Load() map[string]interface{} {
 	return map[string]interface{}{
 		"tasks":  len(s.tasks),
 		"events": len(s.events),
+		"offers": len(s.offers),
 	}
 }
