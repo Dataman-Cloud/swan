@@ -216,7 +216,7 @@ func (s *Scheduler) connect() error {
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
-	log.Infof("Subscribing to mesos leader: %s", s.leader)
+	log.Printf("Subscribing to mesos leader: %s", s.leader)
 
 	s.status = statusConnecting
 
@@ -377,8 +377,6 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 
 	f := newOffer(offer)
 
-	log.Printf("Received offer %s", f.GetId())
-
 	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
@@ -386,7 +384,7 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 }
 
 func (s *Scheduler) removeOffer(offer *Offer) bool {
-	log.Debugf("Removing offer %s", offer.GetId())
+	log.Debugln("Removing offer ", offer.GetId())
 
 	a := s.getAgent(offer.GetAgentId())
 	if a == nil {
@@ -827,8 +825,7 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 		},
 	}
 
-	//log.Printf("Launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
-	log.Printf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
+	log.Debugf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
 
 	// send call
 	resp, err := s.Send(call)

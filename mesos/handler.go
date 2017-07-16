@@ -138,7 +138,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	if err := s.db.UpdateTask(appId, task); err != nil {
-		log.Errorf("update task status error: %v", err)
+		log.Errorf("update task status error: %v, %s", err, state.String())
 		return
 	}
 
