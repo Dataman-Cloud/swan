@@ -7,6 +7,7 @@
 | POST          | /v1/apps/{app_id}/scale                     | Scale up/down                |
 | PUT           | /v1/apps/{app_id}                           | Rolling update a app         |
 | POST          | /v1/apps/{app_id}/rollback                  | Roll back a app              |
+| PUT           | /v1/apps/{app_id}/canary                    | Canary update a app          |
 | GET           | /v1/apps/{app_id}/tasks                     | List all tasks for a app     |
 | GET           | /v1/apps/{app_id}/tasks/{task_id}           | Inspect a task               |
 | GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
@@ -494,7 +495,111 @@ Content-Type: application/json
 ]
 ```
 
+#### Canary update a app
+```
+PUT /v1/apps/{app_id}/canary
+```
+
+Example request:
+```
+PUT /v1/apps/nginx0r1.default.xcm.dataman/canary
+Content-Type: application/json
+ 
+ {
+    "version": {
+        "name": "nginx002",
+        "cmd": null,
+        "args": null,
+        "cpus": 0.01,
+        "mem": 32,
+        "disk": 0,
+        "runAs": "xcm",
+        "priority": 100,
+        "instances": 10,
+        "constraints": [],
+        "container": {
+          "docker": {
+            "image": "nginx",
+            "network": "bridge",
+            "forcePullImage": false,
+            "privileged": true,
+            "parameters": [
+              {
+                  "key": "label",
+                  "value": "APP_ID=wordpress"
+              }
+            ],
+            "portMappings": [
+                    {
+                            "name": "web",
+                            "protocol": "tcp",
+                            "containerPort": 80,
+                            "hostPort": 80
+                    }
+            ]
+          },
+          "type": "DOCKER",
+          "volumes": [
+            {
+              "hostPath": "/home",
+              "containerPath": "/data",
+              "mode": "RW"
+            }
+        ]
+        },
+        "env": {
+          "WORDPRESS_DB_HOST": "192.168.1.210",
+          "WORDPRESS_DB_PASSWORD": "root"
+        },
+        "uris": [
+        ],
+        "label": {
+          "USER_ID": "1"
+        },
+        "healthCheck":
+          {
+            "protocol": "http",
+            "path": "/",
+            "delaySeconds": 2,
+            "gracePeriodSeconds": 5,
+            "intervalSeconds": 1,
+            "portName": "web",
+            "timeoutSeconds": 1,
+            "consecutiveFailures": 5
+          },
+        "proxy": {
+                  "enabled": false,
+                  "alias": ""
+        },
+        "update": {
+            "delay": 5,
+            "onfailure": "continue"
+        }
+    },
+    "Instances": 5,
+    "Value": 0.1,
+    "Delay": 5,
+    "OnFailure": "stop"
+}
+```
+Json Parameters:
+```
+Version: (types.Version) the new version to be updated to, can be empty(null).
+
+Instances: (int) the task count to be updated to new version.
+
+Delay: (float) the delay seconds between two updates.
+
+OnFailure:(string) the action when update failed.
+```
+Example response:
+```
+  HTTP/1.1 202 Accepted 
+```
+
+
 #### List all versions for a app
+
 ```
 GET /v1/apps/{app_id}/versions
 ```
