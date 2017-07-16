@@ -752,7 +752,200 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
+func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := r.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		return
+	}
+
+	canary := new(types.CanaryUpdateBody)
+	if err := decode(req.Body, canary); err != nil {
+		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		newVer    = canary.Version
+		value     = canary.Value
+		count     = canary.Instances
+		onfailure = canary.OnFailure
+		delay     = canary.Delay
+	)
+
+	if value == 0 {
+		http.Error(w, "canary value must between (0, 1)", http.StatusInternalServerError)
+		return
+	}
+
+	if count == 0 {
+		count = 1
+	}
+
+	if newVer == nil {
+		versions, err := r.db.ListVersions(app.ID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("list versions got error for canary update. %v", err), http.StatusInternalServerError)
+			return
+		}
+
+		if len(versions) < 2 {
+			http.Error(w, "canary version not specified and app has no new version", http.StatusInternalServerError)
+			return
+		}
+
+		types.VersionList(versions).Reverse() // TODO
+
+		newVer = versions[0]
+	}
+
+	if delay == 0 {
+		delay = types.DefaultCanaryUpdateDelay
+	}
+
+	tasks, err := r.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for canary update. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	app.OpStatus = types.OpStatusUpdating
+
+	if err := r.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
+		return
+	}
+
+	types.TaskList(tasks).Sort() // TODO
+
+	new := 0
+	newTasks := make([]*types.Task, 0)
+	for _, task := range tasks {
+		if task.Version == newVer.ID {
+			new++
+
+			newTasks = append(newTasks, task)
+		}
+	}
+
+	var (
+		total = app.Tasks
+		goal  = new + count
+	)
+
+	if goal > total {
+		goal = total
+	}
+
+	newWeight := utils.ComputeWeight(float64(goal), float64(app.Tasks), value)
+
+	pending := tasks[new:goal]
+
+	go func() {
+		defer func() {
+			app.OpStatus = types.OpStatusNoop
+			if err := r.db.UpdateApp(app); err != nil {
+				log.Errorf("updating app status from updating to noop got error: %v", err)
+			}
+		}()
+
+		for _, t := range pending {
+			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+				t.Status = "Failed"
+				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
+
+				if err = r.db.UpdateTask(app.ID, t); err != nil {
+					log.Errorf("update task %s got error: %v", t.ID, err)
+				}
+
+				return
+			}
+
+			if err := r.db.DeleteTask(t.ID); err != nil {
+				log.Errorf("delete task %s got error: %v", t.ID, err)
+				return
+			}
+
+			cfg := types.NewTaskConfig(newVer)
+
+			var (
+				name = t.Name
+				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+			)
+
+			task := &types.Task{
+				ID:      id,
+				Name:    name,
+				Weight:  newWeight,
+				Healthy: types.TaskHealthyUnset,
+				Version: newVer.ID,
+				Created: t.Created,
+				Updated: time.Now(),
+			}
+
+			if err := r.db.CreateTask(appId, task); err != nil {
+				log.Errorf("create task failed: %s", err)
+				return
+			}
+
+			m := mesos.NewTask(cfg, task.ID, task.Name)
+
+			tasks := mesos.NewTasks()
+			tasks.Push(m)
+
+			results, err := r.driver.LaunchTasks(tasks)
+			if err != nil {
+				log.Errorf("launch task %s got error: %v", id, err)
+
+				task.Status = "Failed"
+				task.ErrMsg = err.Error()
+
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", id, err)
+				}
+
+				if onfailure == types.CanaryUpdateOnFailureStop {
+					return
+				}
+
+			}
+
+			for taskId, err := range results {
+				if err != nil {
+					log.Errorf("launch task %s got error: %v", taskId, err)
+				}
+
+				task, err := r.db.GetTask(appId, taskId)
+				if err == nil {
+					task.OpStatus = types.OpStatusNoop
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", id, err)
+					}
+				}
+
+				if onfailure == types.CanaryUpdateOnFailureStop {
+					return
+				}
+
+			}
+
+			// notify proxy
+
+			time.Sleep(time.Duration(delay) * time.Second)
+		}
+	}()
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
+func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
