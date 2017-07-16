@@ -83,8 +83,9 @@ type Scheduler struct {
 
 	connection *http.Response //TODO(nmg)
 
-	events chan *mesosproto.Event // status update events.
-	offers chan *mesosproto.Event // offer events
+	events      chan *mesosproto.Event // status update events.
+	offers      chan *mesosproto.Event // offer events
+	failedTasks chan *Task             // hold on all failed tasks(TODO)
 }
 
 // NewScheduler...
@@ -102,6 +103,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		clusterMaster: clusterMaster,
 		events:        make(chan *mesosproto.Event, 4096),
 		offers:        make(chan *mesosproto.Event, 4096),
+		failedTasks:   make(chan *Task, 4096),
 		sem:           make(chan struct{}, 1),
 	}
 
@@ -228,6 +230,7 @@ func (s *Scheduler) Subscribe() error {
 	go s.watchEvents()
 	go s.handleUpdates()
 	go s.handleOffers()
+	go s.handleFailedTasks()
 
 	return nil
 }
@@ -314,6 +317,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 			status  = ev.GetUpdate().GetStatus()
 			taskId  = status.TaskId.GetValue()
 			agentId = status.AgentId.GetValue()
+			state   = status.GetState()
 		)
 
 		// ack firstly
@@ -322,6 +326,14 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 				log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
 			}
 		}()
+
+		if state == mesosproto.TaskState_TASK_FAILED {
+			if a := s.getAgent(agentId); a != nil {
+				if task := a.getTask(taskId); task != nil {
+					s.failedTasks <- task
+				}
+			}
+		}
 
 		// emit event status to ongoing task
 		a := s.getAgent(agentId)
@@ -351,6 +363,15 @@ func (s *Scheduler) handleUpdates() {
 			handler = s.handlers[typ]
 		)
 		handler(ev)
+	}
+}
+
+// TODO(nmg): consinder restart policy.
+func (s *Scheduler) handleFailedTasks() {
+	for task := range s.failedTasks {
+		log.Debugln("Rescheduling task ", task.ID())
+		s.LaunchTasks([]*Task{task})
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -964,5 +985,6 @@ func (s *Scheduler) Load() map[string]interface{} {
 		"tasks":  len(tasks),
 		"events": len(s.events),
 		"offers": len(s.offers),
+		"failed": len(s.failedTasks),
 	}
 }
