@@ -156,8 +156,7 @@ func (r *Server) newCompose(w http.ResponseWriter, req *http.Request) {
 					name,
 				)
 
-				tasks := mesos.NewTasks()
-				tasks.Push(t)
+				tasks := []*mesos.Task{t}
 
 				results, err := r.driver.LaunchTasks(tasks)
 				if err != nil {

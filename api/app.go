@@ -103,7 +103,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		var (
-			tasks   = mesos.NewTasks()
+			tasks   = []*mesos.Task{}
 			counter = 0
 		)
 
@@ -148,14 +148,14 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 
 			counter++
 
-			tasks.Push(t)
+			tasks = append(tasks, t)
 
-			if tasks.Len() >= step || counter >= count {
+			if len(tasks) >= step || counter >= count {
 				results, err := r.driver.LaunchTasks(tasks)
 				if err != nil {
 					log.Errorf("launch tasks got error")
 
-					for _, t := range tasks.Tasks() {
+					for _, t := range tasks {
 						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
 						if err != nil {
 							log.Errorf("find task from zk got error: %v", err)
@@ -186,7 +186,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 
 				}
 
-				tasks = mesos.NewTasks()
+				tasks = []*mesos.Task{}
 			}
 		}
 
@@ -507,7 +507,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		var (
-			tasks   = mesos.NewTasks()
+			tasks   = []*mesos.Task{}
 			count   = goal - current
 			counter = 0
 		)
@@ -553,14 +553,14 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 			counter++
 
-			tasks.Push(t)
+			tasks = append(tasks, t)
 
-			if tasks.Len() >= step || counter >= count {
+			if len(tasks) >= step || counter >= count {
 				results, err := r.driver.LaunchTasks(tasks)
 				if err != nil {
 					log.Errorf("launch tasks got error: %v", err)
 
-					for _, t := range tasks.Tasks() {
+					for _, t := range tasks {
 						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
 						if err != nil {
 							log.Errorf("find task from zk got error: %v", err)
@@ -590,7 +590,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 					}
 				}
 
-				tasks = mesos.NewTasks()
+				tasks = []*mesos.Task{}
 			}
 		}
 	}()
@@ -704,8 +704,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			tasks := mesos.NewTasks()
-			tasks.Push(m)
+			tasks := []*mesos.Task{m}
 
 			results, err := r.driver.LaunchTasks(tasks)
 			if err != nil {
@@ -897,8 +896,7 @@ func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			tasks := mesos.NewTasks()
-			tasks.Push(m)
+			tasks := []*mesos.Task{m}
 
 			results, err := r.driver.LaunchTasks(tasks)
 			if err != nil {
@@ -1066,8 +1064,7 @@ func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
 
 			m := mesos.NewTask(cfg, task.ID, task.Name)
 
-			tasks := mesos.NewTasks()
-			tasks.Push(m)
+			tasks := []*mesos.Task{m}
 
 			results, err := r.driver.LaunchTasks(tasks)
 			if err != nil {
@@ -1437,8 +1434,7 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	}
 
 	m := mesos.NewTask(cfg, task.ID, task.Name)
-	tasks := mesos.NewTasks()
-	tasks.Push(m)
+	tasks := []*mesos.Task{m}
 
 	results, err := r.driver.LaunchTasks(tasks)
 	if err != nil {
@@ -1586,8 +1582,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 
 	m := mesos.NewTask(cfg, task.ID, task.Name)
 
-	tasks := mesos.NewTasks()
-	tasks.Push(m)
+	tasks := []*mesos.Task{m}
 
 	results, err := r.driver.LaunchTasks(tasks)
 	if err != nil {

@@ -65,7 +65,6 @@ type Scheduler struct {
 
 	sync.RWMutex                   // protect followings two
 	agents       map[string]*Agent // holding offers (agents)
-	tasks        map[string]*Task  // ongoing tasks
 
 	offerTimeout time.Duration
 
@@ -95,7 +94,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		framework:     defaultFramework(),
 		quit:          make(chan struct{}),
 		agents:        make(map[string]*Agent),
-		tasks:         make(map[string]*Task),
 		offerTimeout:  time.Duration(10 * time.Second),
 		db:            db,
 		strategy:      strategy,
@@ -313,8 +311,9 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 
 	if typ == mesosproto.Event_UPDATE {
 		var (
-			status = ev.GetUpdate().GetStatus()
-			taskId = status.TaskId.GetValue()
+			status  = ev.GetUpdate().GetStatus()
+			taskId  = status.TaskId.GetValue()
+			agentId = status.AgentId.GetValue()
 		)
 
 		// ack firstly
@@ -325,8 +324,11 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 		}()
 
 		// emit event status to ongoing task
-		if task := s.getTask(taskId); task != nil {
-			task.SendStatus(status)
+		a := s.getAgent(agentId)
+		if a != nil {
+			if task := a.getTask(taskId); task != nil {
+				task.SendStatus(status)
+			}
 		}
 
 		s.events <- ev
@@ -381,31 +383,6 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
 	a.addOffer(f)
-
-	var (
-		offers = a.getOffers()
-	)
-
-	if len(offers) > 1 {
-		fs := make([]*Offer, 0)
-		for _, f := range offers {
-			if s.removeOffer(f) {
-				fs = append(fs, f)
-			}
-		}
-
-		if err := s.declineOffers(fs); err != nil {
-			log.Errorf("Decline offers got error: %v", err)
-		}
-
-		return
-	}
-
-	time.AfterFunc(time.Second*10, func() { // release the offer later
-		if s.removeOffer(f) {
-			s.declineOffers([]*Offer{f})
-		}
-	})
 }
 
 func (s *Scheduler) removeOffer(offer *Offer) bool {
@@ -497,44 +474,16 @@ func (s *Scheduler) getAgents() []*Agent {
 	return agents
 }
 
-func (s *Scheduler) addTask(task *Task) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.tasks[task.TaskId.GetValue()] = task
-}
-
-func (s *Scheduler) getTask(taskId string) *Task {
-	s.RLock()
-	defer s.RUnlock()
-
-	task, ok := s.tasks[taskId]
-	if !ok {
-		return nil
-	}
-
-	return task
-
-}
-
-func (s *Scheduler) removeTask(taskID string) bool {
-	s.Lock()
-	defer s.Unlock()
-	found := false
-	_, found = s.tasks[taskID]
-	if found {
-		delete(s.tasks, taskID)
-	}
-	return found
-}
-
 func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	log.Debugln("Killing task ", taskId)
 
 	t := NewTask(nil, taskId, taskId)
 
 	if sync {
-		s.addTask(t)
+		a := s.getAgent(agentId)
+		if a != nil {
+			a.addTask(t)
+		}
 	}
 
 	call := &mesosproto.Call{
@@ -563,7 +512,9 @@ func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	if sync {
 		for status := range t.GetStatus() {
 			if t.IsKilled(status) {
-				s.removeTask(taskId)
+				if a := s.getAgent(agentId); a != nil {
+					a.removeTask(taskId)
+				}
 				return nil
 			}
 		}
@@ -796,22 +747,34 @@ func (s *Scheduler) Dump() interface{} {
 	defer s.RUnlock()
 
 	return map[string]interface{}{
-		"agents":        s.agents,
-		"config":        s.cfg,
-		"cluster":       s.cluster,
-		"mesos_leader":  s.leader,
-		"ongoing_tasks": s.tasks,
+		"agents":       s.agents,
+		"config":       s.cfg,
+		"cluster":      s.cluster,
+		"mesos_leader": s.leader,
 	}
 }
 
-func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error) {
-	tasks.Build(offer)
+func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, error) {
+	ports := make([]uint64, 0)
+	for _, offer := range offers {
+		ports = append(ports, offer.GetPorts()...)
+	}
 
-	appId := strings.SplitN(tasks.GetName(), ".", 2)[1]
+	for i, task := range tasks {
+		if i < len(ports) {
+			task.cfg.Port = ports[i]
+		}
 
-	for _, t := range tasks.tasks {
-		s.addTask(t)
+		task.AgentId = &mesosproto.AgentID{
+			Value: proto.String(offers[0].GetAgentId()),
+		}
 
+		task.Build()
+	}
+
+	appId := strings.SplitN(tasks[0].GetName(), ".", 2)[1]
+
+	for _, t := range tasks {
 		task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
 		if err != nil {
 			return nil, fmt.Errorf("find task from zk got error: %v", err)
@@ -821,7 +784,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		task.IP = t.cfg.IP
 
 		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
-			task.IP = offer.GetHostname()
+			task.IP = offers[0].GetHostname()
 		}
 
 		task.Port = t.cfg.Port
@@ -832,20 +795,31 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 
 	}
 
+	var (
+		offerIds  = []*mesosproto.OfferID{}
+		taskInfos = []*mesosproto.TaskInfo{}
+	)
+
+	for _, offer := range offers {
+		offerIds = append(offerIds, &mesosproto.OfferID{
+			Value: proto.String(offer.GetId()),
+		})
+	}
+
+	for _, task := range tasks {
+		taskInfos = append(taskInfos, &task.TaskInfo)
+	}
+
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_ACCEPT.Enum(),
 		Accept: &mesosproto.Call_Accept{
-			OfferIds: []*mesosproto.OfferID{
-				{
-					Value: proto.String(offer.GetId()),
-				},
-			},
+			OfferIds: offerIds,
 			Operations: []*mesosproto.Offer_Operation{
 				&mesosproto.Offer_Operation{
 					Type: mesosproto.Offer_Operation_LAUNCH.Enum(),
 					Launch: &mesosproto.Offer_Operation_Launch{
-						TaskInfos: tasks.taskInfos(),
+						TaskInfos: taskInfos,
 					},
 				},
 			},
@@ -853,7 +827,8 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		},
 	}
 
-	log.Printf("Launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
+	//log.Printf("Launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
+	log.Printf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
 
 	// send call
 	resp, err := s.Send(call)
@@ -865,7 +840,9 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
-	s.removeOffer(offer)
+	for _, offer := range offers {
+		s.removeOffer(offer)
+	}
 
 	var (
 		l       sync.RWMutex
@@ -873,7 +850,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		wg      sync.WaitGroup
 	)
 
-	for _, task := range tasks.tasks {
+	for _, task := range tasks {
 		wg.Add(1)
 		go func(task *Task) {
 			defer wg.Done()
@@ -886,7 +863,9 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 						results[task.ID()] = task.DetectError(status)
 						l.Unlock()
 
-						s.removeTask(task.ID())
+						if a := s.getAgent(task.AgentId.GetValue()); a != nil {
+							a.removeTask(task.ID())
+						}
 						return
 					}
 				}
@@ -899,10 +878,10 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 	return results, nil
 }
 
-func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
+func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	s.lock()
 
-	filtered, err := s.applyFilters(tasks.tasks[0].cfg)
+	filtered, err := s.applyFilters(tasks[0].cfg)
 	if err != nil {
 		s.unlock()
 
@@ -913,8 +892,8 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 
 	j := 0
 
-	for i := 0; i < tasks.Len(); i++ {
-		candidates[j].addTask(tasks.tasks[i])
+	for i := 0; i < len(tasks); i++ {
+		candidates[j].addTask(tasks[i])
 
 		j++
 
@@ -930,20 +909,20 @@ func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
 	)
 
 	for _, agent := range candidates {
-		if agent.tasks.Len() <= 0 {
-			continue
-		}
-
 		wg.Add(1)
 		go func(agent *Agent) {
 			defer wg.Done()
 
 			var (
-				offer = agent.offer()
-				tasks = agent.tasks
+				offers = agent.getOffers()
+				tasks  = agent.getTasks()
 			)
 
-			rets, err := s.launch(offer, tasks)
+			if len(offers) <= 0 || len(tasks) <= 0 {
+				return
+			}
+
+			rets, err := s.launch(offers, tasks)
 			if err != nil {
 				log.Errorf("[launch] %v", err)
 				return
@@ -977,8 +956,15 @@ func (s *Scheduler) Load() map[string]interface{} {
 	s.RLock()
 	defer s.RUnlock()
 
+	tasks := make(map[string]*Task)
+	for _, agent := range s.agents {
+		for _, task := range agent.tasks {
+			tasks[task.ID()] = task
+		}
+	}
+
 	return map[string]interface{}{
-		"tasks":  len(s.tasks),
+		"tasks":  len(tasks),
 		"events": len(s.events),
 		"offers": len(s.offers),
 	}
