@@ -837,10 +837,6 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
-	for _, offer := range offers {
-		s.removeOffer(offer)
-	}
-
 	var (
 		l       sync.RWMutex
 		results = make(map[string]error)
@@ -917,6 +913,10 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 
 			if len(offers) <= 0 || len(tasks) <= 0 {
 				return
+			}
+
+			for _, offer := range offers {
+				s.removeOffer(offer)
 			}
 
 			rets, err := s.launch(offers, tasks)
