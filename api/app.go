@@ -835,7 +835,7 @@ func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		total = app.Tasks
+		total = app.TaskCount
 		goal  = new + count
 	)
 
@@ -843,7 +843,7 @@ func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		goal = total
 	}
 
-	newWeight := utils.ComputeWeight(float64(goal), float64(app.Tasks), value)
+	newWeight := utils.ComputeWeight(float64(goal), float64(total), value)
 
 	pending := tasks[new:goal]
 
