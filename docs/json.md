@@ -51,6 +51,10 @@
   "label": {
     "USER_ID": "1"
   },
+  "restart": {
+      "attempts": 3,
+      "delay": 1,
+  },
   "healthCheck":
     {
       "protocol": "http",
