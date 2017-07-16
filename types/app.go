@@ -24,6 +24,7 @@ type Application struct {
 	Priority     int       `json:"priority"`
 	Cluster      string    `json:"cluster"`
 	OpStatus     string    `json:"operationStatus"`
+	Progress     int       `json:"progress"`
 	TaskCount    int       `json:"task_count"`
 	Version      []string  `json:"currentVersion"`
 	VersionCount int       `json:"version_count"`

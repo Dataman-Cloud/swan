@@ -658,12 +658,21 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
+			app.Progress = 0
 			if err := r.db.UpdateApp(app); err != nil {
 				log.Errorf("updating app status from updating to noop got error: %v", err)
 			}
 		}()
 
+		progress := 0
+
 		for _, t := range pending {
+			progress++
+			app.Progress = progress
+			if err := r.db.UpdateApp(app); err != nil {
+				log.Errorf("updating app progress got error: %v", err)
+			}
+
 			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
