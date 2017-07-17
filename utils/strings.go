@@ -11,7 +11,7 @@ import (
 )
 
 // A domain name can only contain the letters A-Z, the digits 0-9 and hyphen (-).
-const legalDomainChars = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghigklmnopqrstuvwxyz0123456789-"
+const legalDomainChars = "ABCDEFGHIGKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-"
 
 func StripSpaces(str string) string {
 	return strings.Map(func(r rune) rune {
