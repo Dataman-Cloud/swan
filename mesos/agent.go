@@ -77,8 +77,8 @@ func (s *Agent) getOffer(offerId string) *Offer {
 }
 
 func (s *Agent) getOffers() []*Offer {
-	s.Lock()
-	defer s.Unlock()
+	s.RLock()
+	defer s.RUnlock()
 
 	offers := make([]*Offer, 0)
 	for _, offer := range s.offers {
@@ -131,8 +131,8 @@ func (s *Agent) removeTask(taskId string) {
 }
 
 func (s *Agent) getTasks() []*Task {
-	s.Lock()
-	defer s.Unlock()
+	s.RLock()
+	defer s.RUnlock()
 
 	tasks := make([]*Task, 0)
 	for _, task := range s.tasks {

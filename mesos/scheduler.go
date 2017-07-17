@@ -376,17 +376,12 @@ func (s *Scheduler) handleFailedTasks() {
 }
 
 func (s *Scheduler) handleOffers() {
-	sem := make(chan struct{}, 1)
-	defer close(sem)
-
 	for ev := range s.offers {
-		sem <- struct{}{}
 		var (
 			typ     = ev.GetType()
 			handler = s.handlers[typ]
 		)
 		handler(ev)
-		<-sem
 	}
 }
 
