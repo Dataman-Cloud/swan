@@ -68,6 +68,7 @@ type TaskConfig struct {
 	Parameters     []*Parameter      `json:"parameters"`
 	HealthCheck    *HealthCheck      `json:"healthCheck"`
 	KillPolicy     *KillPolicy       `json:"killPolicy"`
+	RestartPolicy  *RestartPolicy    `json:"restart"`
 	Labels         map[string]string `json:"labels"`
 	URIs           []string          `json:"uris"`
 	Env            map[string]string `json:"env"`
@@ -90,6 +91,7 @@ func NewTaskConfig(spec *Version) *TaskConfig {
 		Parameters:     spec.Container.Docker.Parameters,
 		HealthCheck:    spec.HealthCheck,
 		KillPolicy:     spec.KillPolicy,
+		RestartPolicy:  spec.RestartPolicy,
 		Labels:         spec.Labels,
 		URIs:           spec.URIs,
 		Env:            spec.Env,

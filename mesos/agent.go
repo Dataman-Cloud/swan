@@ -14,7 +14,7 @@ type Agent struct {
 
 	sync.RWMutex
 	offers map[string]*Offer
-	tasks  *Tasks
+	tasks  map[string]*Task
 }
 
 func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
@@ -23,7 +23,7 @@ func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 		hostname: hostname,
 		attrs:    attrs,
 		offers:   make(map[string]*Offer),
-		tasks:    new(Tasks),
+		tasks:    make(map[string]*Task),
 	}
 }
 
@@ -61,7 +61,7 @@ func (s *Agent) empty() bool {
 	s.RLock()
 	defer s.RUnlock()
 
-	return len(s.offers) == 0
+	return len(s.offers) == 0 && len(s.tasks) == 0
 }
 
 func (s *Agent) getOffer(offerId string) *Offer {
@@ -76,11 +76,16 @@ func (s *Agent) getOffer(offerId string) *Offer {
 	return offer
 }
 
-func (s *Agent) getOffers() map[string]*Offer {
+func (s *Agent) getOffers() []*Offer {
 	s.RLock()
 	defer s.RUnlock()
 
-	return s.offers
+	offers := make([]*Offer, 0)
+	for _, offer := range s.offers {
+		offers = append(offers, offer)
+	}
+
+	return offers
 }
 
 func (s *Agent) offer() *Offer {
@@ -95,7 +100,46 @@ func (s *Agent) offer() *Offer {
 }
 
 func (s *Agent) addTask(t *Task) {
-	s.tasks.push(t)
+	s.Lock()
+	defer s.Unlock()
+
+	s.tasks[t.TaskId.GetValue()] = t
+}
+
+func (s *Agent) getTask(taskId string) *Task {
+	s.RLock()
+	defer s.RUnlock()
+
+	task, ok := s.tasks[taskId]
+	if !ok {
+		return nil
+	}
+
+	return task
+}
+
+func (s *Agent) removeTask(taskId string) {
+	s.Lock()
+	defer s.Unlock()
+
+	_, ok := s.tasks[taskId]
+	if !ok {
+		return
+	}
+
+	delete(s.tasks, taskId)
+}
+
+func (s *Agent) getTasks() []*Task {
+	s.RLock()
+	defer s.RUnlock()
+
+	tasks := make([]*Task, 0)
+	for _, task := range s.tasks {
+		tasks = append(tasks, task)
+	}
+
+	return tasks
 }
 
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {

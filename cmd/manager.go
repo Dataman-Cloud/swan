@@ -28,6 +28,7 @@ func ManagerCmd() cli.Command {
 	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationInterval())
 	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationStep())
 	managerCmd.Flags = append(managerCmd.Flags, FlagReconciliationStepDelay())
+	managerCmd.Flags = append(managerCmd.Flags, FlagHeartbeatTimeout())
 
 	return managerCmd
 }

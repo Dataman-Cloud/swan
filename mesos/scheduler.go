@@ -43,6 +43,8 @@ type SchedulerConfig struct {
 	ReconciliationInterval  float64
 	ReconciliationStep      int64
 	ReconciliationStepDelay float64
+
+	HeartbeatTimeout float64
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
@@ -63,13 +65,11 @@ type Scheduler struct {
 
 	sync.RWMutex                   // protect followings two
 	agents       map[string]*Agent // holding offers (agents)
-	tasks        map[string]*Task  // ongoing tasks
 
 	offerTimeout time.Duration
 
-	heartbeatTimeout time.Duration
-	watcher          *time.Timer
-	reconcileTimer   *time.Ticker
+	watcher        *time.Timer
+	reconcileTimer *time.Ticker
 
 	strategy Strategy
 	filters  []Filter
@@ -83,7 +83,9 @@ type Scheduler struct {
 
 	connection *http.Response //TODO(nmg)
 
-	events chan *mesosproto.Event // status update events.
+	events      chan *mesosproto.Event // status update events.
+	offers      chan *mesosproto.Event // offer events
+	failedTasks chan *Task             // hold on all failed tasks(TODO)
 }
 
 // NewScheduler...
@@ -93,14 +95,15 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		framework:     defaultFramework(),
 		quit:          make(chan struct{}),
 		agents:        make(map[string]*Agent),
-		tasks:         make(map[string]*Task),
 		offerTimeout:  time.Duration(10 * time.Second),
 		db:            db,
 		strategy:      strategy,
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		events:        make(chan *mesosproto.Event, 1024),
+		events:        make(chan *mesosproto.Event, 4096),
+		offers:        make(chan *mesosproto.Event, 4096),
+		failedTasks:   make(chan *Task, 4096),
 		sem:           make(chan struct{}, 1),
 	}
 
@@ -215,7 +218,7 @@ func (s *Scheduler) connect() error {
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
-	log.Infof("Subscribing to mesos leader: %s", s.leader)
+	log.Printf("Subscribing to mesos leader: %s", s.leader)
 
 	s.status = statusConnecting
 
@@ -226,6 +229,8 @@ func (s *Scheduler) Subscribe() error {
 
 	go s.watchEvents()
 	go s.handleUpdates()
+	go s.handleOffers()
+	go s.handleFailedTasks()
 
 	return nil
 }
@@ -276,6 +281,9 @@ func (s *Scheduler) watchEvents() {
 		err error
 	)
 
+	sem := make(chan struct{}, 1)
+	defer close(sem)
+
 	for {
 		if err = dec.Decode(&ev); err != nil {
 			log.Errorf("mesos events subscriber decode events error: %v", err)
@@ -288,11 +296,11 @@ func (s *Scheduler) watchEvents() {
 			return
 		}
 
-		s.handleEvent(ev)
+		s.handleEvent(ev, sem)
 	}
 }
 
-func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
+func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
 
 	var (
 		typ     = ev.GetType()
@@ -306,16 +314,42 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 
 	if typ == mesosproto.Event_UPDATE {
 		var (
-			status = ev.GetUpdate().GetStatus()
-			taskId = status.TaskId.GetValue()
+			status  = ev.GetUpdate().GetStatus()
+			taskId  = status.TaskId.GetValue()
+			agentId = status.AgentId.GetValue()
+			state   = status.GetState()
 		)
+
+		// ack firstly
+		go func() {
+			if err := s.AckUpdateEvent(status); err != nil {
+				log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
+			}
+		}()
+
+		if state == mesosproto.TaskState_TASK_FAILED {
+			if a := s.getAgent(agentId); a != nil {
+				if task := a.getTask(taskId); task != nil {
+					s.failedTasks <- task
+				}
+			}
+		}
+
 		// emit event status to ongoing task
-		if task := s.getTask(taskId); task != nil {
-			task.SendStatus(status)
+		a := s.getAgent(agentId)
+		if a != nil {
+			if task := a.getTask(taskId); task != nil {
+				task.SendStatus(status)
+			}
 		}
 
 		s.events <- ev
 
+		return
+	}
+
+	if typ == mesosproto.Event_OFFERS {
+		s.offers <- ev
 		return
 	}
 
@@ -332,52 +366,41 @@ func (s *Scheduler) handleUpdates() {
 	}
 }
 
-func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
-	s.Lock()
-	defer s.Unlock()
+// TODO(nmg): consinder restart policy.
+func (s *Scheduler) handleFailedTasks() {
+	for task := range s.failedTasks {
+		log.Debugln("Rescheduling task ", task.ID())
+		s.LaunchTasks([]*Task{task})
+		time.Sleep(1 * time.Second)
+	}
+}
 
-	a, ok := s.agents[offer.AgentId.GetValue()]
-	if !ok {
+func (s *Scheduler) handleOffers() {
+	for ev := range s.offers {
+		var (
+			typ     = ev.GetType()
+			handler = s.handlers[typ]
+		)
+		handler(ev)
+	}
+}
+
+func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
+	a := s.getAgent(offer.AgentId.GetValue())
+	if a == nil {
 		return
 	}
 
 	f := newOffer(offer)
 
-	log.Printf("Received offer %s", f.GetId())
-
 	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
 	a.addOffer(f)
-
-	var (
-		offers = a.getOffers()
-	)
-
-	if len(offers) > 1 {
-		fs := make([]*Offer, 0)
-		for _, f := range offers {
-			if s.removeOffer(f) {
-				fs = append(fs, f)
-			}
-		}
-
-		if err := s.declineOffers(fs); err != nil {
-			log.Errorf("Decline offers got error: %v", err)
-		}
-
-		return
-	}
-
-	time.AfterFunc(time.Second*10, func() { // release the offer later
-		if s.removeOffer(f) {
-			s.declineOffers([]*Offer{f})
-		}
-	})
 }
 
 func (s *Scheduler) removeOffer(offer *Offer) bool {
-	log.Debugf("Removing offer %s", offer.GetId())
+	log.Debugln("Removing offer ", offer.GetId())
 
 	a := s.getAgent(offer.GetAgentId())
 	if a == nil {
@@ -465,43 +488,16 @@ func (s *Scheduler) getAgents() []*Agent {
 	return agents
 }
 
-func (s *Scheduler) addTask(task *Task) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.tasks[task.TaskId.GetValue()] = task
-}
-
-func (s *Scheduler) getTask(taskId string) *Task {
-	s.RLock()
-	defer s.RUnlock()
-
-	task, ok := s.tasks[taskId]
-	if !ok {
-		return nil
-	}
-
-	return task
-}
-
-func (s *Scheduler) removeTask(taskID string) bool {
-	s.Lock()
-	defer s.Unlock()
-	found := false
-	_, found = s.tasks[taskID]
-	if found {
-		delete(s.tasks, taskID)
-	}
-	return found
-}
-
 func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	log.Debugln("Killing task ", taskId)
 
 	t := NewTask(nil, taskId, taskId)
 
 	if sync {
-		s.addTask(t)
+		a := s.getAgent(agentId)
+		if a != nil {
+			a.addTask(t)
+		}
 	}
 
 	call := &mesosproto.Call{
@@ -530,7 +526,9 @@ func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	if sync {
 		for status := range t.GetStatus() {
 			if t.IsKilled(status) {
-				s.removeTask(taskId)
+				if a := s.getAgent(agentId); a != nil {
+					a.removeTask(taskId)
+				}
 				return nil
 			}
 		}
@@ -651,13 +649,12 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 // heartbeat timeout watcher
 func (s *Scheduler) startWatcher(interval float64) {
 	log.Debugln("Start heartbeat timeout watcher")
-	d := interval * 2
-	s.heartbeatTimeout = time.Duration(d) * time.Second
-	s.watcher = time.AfterFunc(s.heartbeatTimeout, s.stop)
+	d := time.Duration(s.cfg.HeartbeatTimeout) * time.Second
+	s.watcher = time.AfterFunc(d, s.stop)
 }
 
 func (s *Scheduler) resetWatcher() {
-	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.heartbeatTimeout.Seconds())
+	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.cfg.HeartbeatTimeout)
 	if s.watcher != nil {
 		if !s.watcher.Stop() {
 			select {
@@ -665,7 +662,7 @@ func (s *Scheduler) resetWatcher() {
 			default:
 			}
 		}
-		s.watcher.Reset(s.heartbeatTimeout)
+		s.watcher.Reset(time.Duration(s.cfg.HeartbeatTimeout) * time.Second)
 	}
 }
 
@@ -764,22 +761,34 @@ func (s *Scheduler) Dump() interface{} {
 	defer s.RUnlock()
 
 	return map[string]interface{}{
-		"agents":        s.agents,
-		"config":        s.cfg,
-		"cluster":       s.cluster,
-		"mesos_leader":  s.leader,
-		"ongoing_tasks": s.tasks,
+		"agents":       s.agents,
+		"config":       s.cfg,
+		"cluster":      s.cluster,
+		"mesos_leader": s.leader,
 	}
 }
 
-func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error) {
-	tasks.Build(offer)
+func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, error) {
+	ports := make([]uint64, 0)
+	for _, offer := range offers {
+		ports = append(ports, offer.GetPorts()...)
+	}
 
-	appId := strings.SplitN(tasks.GetName(), ".", 2)[1]
+	for i, task := range tasks {
+		if i < len(ports) {
+			task.cfg.Port = ports[i]
+		}
 
-	for _, t := range tasks.tasks {
-		s.addTask(t)
+		task.AgentId = &mesosproto.AgentID{
+			Value: proto.String(offers[0].GetAgentId()),
+		}
 
+		task.Build()
+	}
+
+	appId := strings.SplitN(tasks[0].GetName(), ".", 2)[1]
+
+	for _, t := range tasks {
 		task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
 		if err != nil {
 			return nil, fmt.Errorf("find task from zk got error: %v", err)
@@ -789,7 +798,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		task.IP = t.cfg.IP
 
 		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
-			task.IP = offer.GetHostname()
+			task.IP = offers[0].GetHostname()
 		}
 
 		task.Port = t.cfg.Port
@@ -800,20 +809,31 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 
 	}
 
+	var (
+		offerIds  = []*mesosproto.OfferID{}
+		taskInfos = []*mesosproto.TaskInfo{}
+	)
+
+	for _, offer := range offers {
+		offerIds = append(offerIds, &mesosproto.OfferID{
+			Value: proto.String(offer.GetId()),
+		})
+	}
+
+	for _, task := range tasks {
+		taskInfos = append(taskInfos, &task.TaskInfo)
+	}
+
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_ACCEPT.Enum(),
 		Accept: &mesosproto.Call_Accept{
-			OfferIds: []*mesosproto.OfferID{
-				{
-					Value: proto.String(offer.GetId()),
-				},
-			},
+			OfferIds: offerIds,
 			Operations: []*mesosproto.Offer_Operation{
 				&mesosproto.Offer_Operation{
 					Type: mesosproto.Offer_Operation_LAUNCH.Enum(),
 					Launch: &mesosproto.Offer_Operation_Launch{
-						TaskInfos: tasks.taskInfos(),
+						TaskInfos: taskInfos,
 					},
 				},
 			},
@@ -821,7 +841,7 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		},
 	}
 
-	log.Printf("Launching %d task(s) with offer %s on agent %s", tasks.Len(), offer.GetId(), offer.GetHostname())
+	log.Debugf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
 
 	// send call
 	resp, err := s.Send(call)
@@ -833,15 +853,13 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
-	s.removeOffer(offer)
-
 	var (
-		l       sync.RWMutex
-		results = make(map[string]error)
-		wg      sync.WaitGroup
+		l    sync.RWMutex
+		rets = make(map[string]error)
+		wg   sync.WaitGroup
 	)
 
-	for _, task := range tasks.tasks {
+	for _, task := range tasks {
 		wg.Add(1)
 		go func(task *Task) {
 			defer wg.Done()
@@ -851,10 +869,12 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 				case status := <-task.GetStatus():
 					if task.IsDone(status) {
 						l.Lock()
-						results[task.ID()] = task.DetectError(status)
+						rets[task.ID()] = task.DetectError(status)
 						l.Unlock()
 
-						s.removeTask(task.ID())
+						if a := s.getAgent(task.AgentId.GetValue()); a != nil {
+							a.removeTask(task.ID())
+						}
 						return
 					}
 				}
@@ -864,73 +884,56 @@ func (s *Scheduler) launch(offer *Offer, tasks *Tasks) (map[string]error, error)
 
 	wg.Wait()
 
-	return results, nil
+	return rets, nil
 }
 
-func (s *Scheduler) LaunchTasks(tasks *Tasks) (map[string]error, error) {
+func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	s.lock()
+	defer s.unlock()
 
-	filtered, err := s.applyFilters(tasks.tasks[0].cfg)
+	var (
+		agent  *Agent
+		offers []*Offer
+	)
+
+	for {
+		filtered, err := s.applyFilters(tasks[0].cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		candidates := s.strategy.RankAndSort(filtered)
+
+		for _, a := range candidates {
+			offers = a.getOffers()
+			if len(offers) > 0 {
+				agent = a
+				break
+			}
+		}
+
+		if agent != nil {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	for _, task := range tasks {
+		agent.addTask(task)
+	}
+
+	for _, offer := range offers {
+		s.removeOffer(offer)
+	}
+
+	rets, err := s.launch(offers, tasks)
 	if err != nil {
-		s.unlock()
-
+		log.Errorf("[launch] %v", err)
 		return nil, err
 	}
 
-	candidates := s.strategy.RankAndSort(filtered)
-
-	j := 0
-
-	for i := 0; i < tasks.Len(); i++ {
-		candidates[j].addTask(tasks.tasks[i])
-
-		j++
-
-		if j >= len(candidates)-1 {
-			j = 0
-		}
-	}
-
-	var (
-		wg      sync.WaitGroup
-		l       sync.RWMutex
-		results = make(map[string]error)
-	)
-
-	for _, agent := range candidates {
-		if agent.tasks.Len() <= 0 {
-			continue
-		}
-
-		wg.Add(1)
-		go func(agent *Agent) {
-			defer wg.Done()
-
-			var (
-				offer = agent.offer()
-				tasks = agent.tasks
-			)
-
-			rets, err := s.launch(offer, tasks)
-			if err != nil {
-				log.Errorf("[launch] %v", err)
-				return
-			}
-
-			for k, v := range rets {
-				l.Lock()
-				results[k] = v
-				l.Unlock()
-			}
-
-		}(agent)
-	}
-
-	s.unlock()
-
-	wg.Wait()
-
-	return results, nil
+	return rets, nil
 }
 
 func (s *Scheduler) lock() {
@@ -939,4 +942,23 @@ func (s *Scheduler) lock() {
 
 func (s *Scheduler) unlock() {
 	<-s.sem
+}
+
+func (s *Scheduler) Load() map[string]interface{} {
+	s.RLock()
+	defer s.RUnlock()
+
+	tasks := make(map[string]*Task)
+	for _, agent := range s.agents {
+		for _, task := range agent.tasks {
+			tasks[task.ID()] = task
+		}
+	}
+
+	return map[string]interface{}{
+		"tasks":  len(tasks),
+		"events": len(s.events),
+		"offers": len(s.offers),
+		"failed": len(s.failedTasks),
+	}
 }

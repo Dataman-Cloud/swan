@@ -43,26 +43,27 @@ func (vl VersionList) Reverse() {
 }
 
 type Version struct {
-	ID           string            `json:"id"`
-	Name         string            `json:"name"`
-	Command      string            `json:"cmd"`
-	CPUs         float64           `json:"cpus"`
-	Mem          float64           `json:"mem"`
-	Disk         float64           `json:"disk"`
-	Instances    int32             `json:"instances"`
-	RunAs        string            `json:"runAs"`
-	Priority     int32             `json:"priority"`
-	Container    *Container        `json:"container"`
-	Labels       map[string]string `json:"labels"`
-	HealthCheck  *HealthCheck      `json:"healthCheck"`
-	Env          map[string]string `json:"env"`
-	DeployPolicy *DeployPolicy     `json:"deploy"`
-	KillPolicy   *KillPolicy       `json:"kill"`
-	UpdatePolicy *UpdatePolicy     `json:"update"`
-	Constraints  []*Constraint     `json:"constraints"`
-	URIs         []string          `json:"uris"`
-	IPs          []string          `json:"ips"`
-	Proxy        *Proxy            `json:"proxy"`
+	ID            string            `json:"id"`
+	Name          string            `json:"name"`
+	Command       string            `json:"cmd"`
+	CPUs          float64           `json:"cpus"`
+	Mem           float64           `json:"mem"`
+	Disk          float64           `json:"disk"`
+	Instances     int32             `json:"instances"`
+	RunAs         string            `json:"runAs"`
+	Priority      int32             `json:"priority"`
+	Container     *Container        `json:"container"`
+	Labels        map[string]string `json:"labels"`
+	HealthCheck   *HealthCheck      `json:"healthCheck"`
+	Env           map[string]string `json:"env"`
+	DeployPolicy  *DeployPolicy     `json:"deploy"`
+	KillPolicy    *KillPolicy       `json:"kill"`
+	RestartPolicy *RestartPolicy    `json:"restart"`
+	UpdatePolicy  *UpdatePolicy     `json:"update"`
+	Constraints   []*Constraint     `json:"constraints"`
+	URIs          []string          `json:"uris"`
+	IPs           []string          `json:"ips"`
+	Proxy         *Proxy            `json:"proxy"`
 }
 
 type Container struct {

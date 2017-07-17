@@ -84,20 +84,16 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
-	// ack firstly
-	if err := s.AckUpdateEvent(status); err != nil {
-		log.Errorf("send status update %s for task %s error: %v", status.GetState(), taskId, err)
-	}
-
 	var appId string
 	parts := strings.SplitN(taskId, ".", 3)
 	if len(parts) >= 3 {
 		appId = parts[2]
 	}
 
-	// if TASK_FINISHED or TASK_UNKNOWN Event, we only broadcast unhealthy event and return
+	// only broadcast unhealthy event and return
 	if state == mesosproto.TaskState_TASK_FINISHED ||
-		state == mesosproto.TaskState_TASK_UNKNOWN {
+		state == mesosproto.TaskState_TASK_UNKNOWN ||
+		state == mesosproto.TaskState_TASK_KILLING {
 		taskEv := &types.TaskEvent{
 			Type:   types.EventTypeTaskUnhealthy,
 			AppID:  appId,
@@ -143,7 +139,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	if err := s.db.UpdateTask(appId, task); err != nil {
-		log.Errorf("update task status error: %v", err)
+		log.Errorf("update task status error: %v, %s", err, state.String())
 		return
 	}
 

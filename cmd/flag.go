@@ -74,6 +74,15 @@ func FlagReconciliationStepDelay() cli.Flag {
 	}
 }
 
+func FlagHeartbeatTimeout() cli.Flag {
+	return cli.Float64Flag{
+		Name:   "heartbeat-timeout",
+		Usage:  "The timeout, before to reconnect to mesos",
+		EnvVar: "SWAN_HEARTBEAT_TIMEOUT",
+		Value:  30,
+	}
+}
+
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",

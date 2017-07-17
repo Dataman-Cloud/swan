@@ -65,7 +65,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	app.Tasks = len(tasks)
+	app.TaskCount = len(tasks)
 	app.Status = zk.status(tasks)
 	app.Version = zk.version(tasks)
 	app.Health = zk.health(tasks)
@@ -81,7 +81,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		app.Version = append(app.Version, versions[0].ID)
 	}
 
-	app.Versions = len(versions)
+	app.VersionCount = len(versions)
 
 	return &app, nil
 }
@@ -97,7 +97,7 @@ func (zk *ZKStore) ListApps() ([]*types.Application, error) {
 	for _, node := range nodes {
 		app, err := zk.GetApp(node)
 		if err != nil {
-			log.Errorf("%v", err)
+			log.Errorf("get app error: %v", err)
 			continue
 		}
 		apps = append(apps, app)

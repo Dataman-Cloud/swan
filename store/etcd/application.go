@@ -78,7 +78,7 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	app.Tasks = len(tasks)
+	app.TaskCount = len(tasks)
 	app.Status = s.status(tasks)
 	app.Version = s.version(tasks)
 	app.Health = s.health(tasks)
@@ -89,7 +89,7 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	app.Versions = len(versions)
+	app.VersionCount = len(versions)
 
 	if len(app.Version) == 0 {
 		types.VersionList(versions).Reverse()
