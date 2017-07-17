@@ -1,6 +1,6 @@
 FROM alpine:3.5
 
-COPY bin/swan /swan
+COPY bin/swan /opt/swan
 WORKDIR /
 
-ENTRYPOINT ["/swan"]
+ENTRYPOINT ["/opt/swan"]
