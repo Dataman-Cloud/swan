@@ -11,7 +11,7 @@
 
 ## compose-API
 ### parse
-`POST` `/v_beta/compose/parse`
+`POST` `/v1/compose/parse`
 
 Request
 ```json
@@ -38,7 +38,7 @@ Response
 ```
 
 ### create
-`POST` `/v_beta/compose`
+`POST` `/v1/compose`
 
 Request:
 ```json
@@ -128,11 +128,11 @@ at least one of ServiceGroup or YamlRaw required
 ```
 
 ### list
-`GET` `/v_beta/compose`
+`GET` `/v1/compose`
 
 ### get
-`GET` `/v_beta/compose/b`  
-`GET` `/v_beta/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+`GET` `/v1/compose/b`  
+`GET` `/v1/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
 
 Response
 ```json
@@ -544,8 +544,8 @@ Response
 ```
 
 ### remove
-`DELETE` `/v_beta/compose/b`  
-`DELETE` `/v_beta/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+`DELETE` `/v1/compose/b`  
+`DELETE` `/v1/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
 
 Response:
 204
