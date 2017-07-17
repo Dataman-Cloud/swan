@@ -69,6 +69,14 @@
   "proxy": {
             "enabled": false,
             "alias": ""
+  },
+  "deploy": {
+    "step": 10,
+    "onfailure": "stop"
+  },
+  "update": {
+    "delay": 5,
+    "onfailure": "continue"
   }
 }
 ```

@@ -1,29 +1,50 @@
-| Method        | API                                         | Desc                         |
-| ------------- |:--------------------------------------------|------------------------------|
-| GET           | /v1/apps                                    | List all apps                |
-| POST          | /v1/apps                                    | Create a app                 |
-| GET           | /v1/apps/{app_id}                           | Inspect a app                |
-| DELETE        | /v1/apps/{app_id}                           | Delete a app                 |
-| POST          | /v1/apps/{app_id}/scale                     | Scale up/down                |
-| PUT           | /v1/apps/{app_id}                           | Rolling update a app         |
-| POST          | /v1/apps/{app_id}/rollback                  | Roll back a app              |
-| PUT           | /v1/apps/{app_id}/canary                    | Canary update a app          |
-| GET           | /v1/apps/{app_id}/tasks                     | List all tasks for a app     |
-| GET           | /v1/apps/{app_id}/tasks/{task_id}           | Inspect a task               |
-| GET           | /v1/apps/{app_id}/versions                  | List all versions for a app  |
-| GET           | /v1/apps/{app_id}/versions/{version_id}     | Inspect a version            |
-| POST          | /v1/apps/{app_id}/versions                  | Create a version for a app   |
-| PATCH         | /v1/apps/{app_id}/weights                   | Update tasks's weights       |
-| PATCH         | /v1/apps/{app_id}/tasks/{task_id}/weight    | Update task's weight         |
-| POST          | /v1/compose                                 | Create a compose             |
-| GET           | /v1/compose                                 | List all compose             |
-| GET           | /v1/compose/{compose_id}                    | Inspect a compose            |
-| DELETE        | /v1/compose/{compose_id}                    | Delete a compose             |
-| GET           | /ping                                       | Health check                 |
-| GET           | /version                                    | Version information          |
-| GET           | /v1/leader                                  | Inspect leader info          |
-| GET           | /v1/events                                  | Event Subscription           |
++ apps
+  - [GET  /v1/apps](#list-all-apps)  *List all apps*
+  - [POST /v1/apps](#create-a-app)   *Create a app*
+  - [GET /v1/apps/{app_id}](#inspect-a-app) *Inspect a app*
+  - [DELETE /v1/apps/{app_id}](#delete-a-app) *Delete a app*
+  - [POST /v1/apps/{app_id}/scale](#scale-up-down) *Scale up-down*
+  - [PUT /v1/apps/{app_id}](#rolling-update) *Rolling update a app*
+  - [POST /v1/apps/{app_id}/rollback](#roll-back) *Roll back a app*
+  - [PUT /v1/apps/{app_id}/canary](#canary-update-a-app) *Canary update a app*
+  - [PATCH /v1/apps/{app_id}/weights](#update-weights) *Update tasks's weights*
++ tasks
+  - [GET /v1/apps/{app_id}/tasks](#list-all-tasks-for-a-app) *List all tasks for a app*
+  - [ GET /v1/apps/{app_id}/tasks/{task_id}](#inspect-a-app) *Inspect a task*
+  - [PATCH /v1/apps/{app_id}/tasks/{task_id}/weight](#update-weight) *Update task's weight*
 
++ versions
+  - [GET /v1/apps/{app_id}/versions](#list-all-versions-for-a-app) *List all versions for a app*
+  - [GET /v1/apps/{app_id}/versions/{version_id}](#inspect-a-version) *Inpect a version*
+
++ compose
+  - [compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)
+
++ events
+  - [GET /v1/events](#) *Event Subscription*
+
++ health
+  - [GET /ping](#ping) *Health check*
+ 
++ leader
+  - [GET /v1/leader](#leader) *Inspect leader info*
+
++ version
+  - [GET /version](#version) *Version information*
+
++ debug
+  - [GET /v1/debug/dump](#dump)
+  - [GET /v1/debug/load](#load)
+
++ [deploy policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/deploy.md)
+
++ [constraints](https://github.com/Dataman-Cloud/swan/tree/master/docs/constraints.md)
+
++ [scale policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/scale.md)
+ 
++ [update policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/update.md)
+
++ [port mapping](https://github.com/Dataman-Cloud/swan/tree/master/docs/port-mapping.md)
 #### List all apps
 ```
 GET /v1/apps 
@@ -339,7 +360,7 @@ Example response:
 ```
 HTTP/1.1 204 No Content
 ```
-##### Scale up/down
+##### Scale up down
 ```
 POST /v1/apps/{app_id}/scale
 ```
@@ -362,7 +383,7 @@ Example response:
 HTTP/1.1 202 Accepted
 ```
 
-#### Update
+#### Rolling update 
 
 ```
 PUT /v1/apps/{app_id}
