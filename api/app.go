@@ -760,7 +760,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
+func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
 	app, err := r.db.GetApp(appId)
@@ -952,7 +952,7 @@ func (r *Router) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
-func (r *Router) rollback(w http.ResponseWriter, req *http.Request) {
+func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 	if err := req.ParseForm(); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
