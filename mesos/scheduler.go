@@ -859,9 +859,9 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 	}
 
 	var (
-		l       sync.RWMutex
-		results = make(map[string]error)
-		wg      sync.WaitGroup
+		l    sync.RWMutex
+		rets = make(map[string]error)
+		wg   sync.WaitGroup
 	)
 
 	for _, task := range tasks {
@@ -874,7 +874,7 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 				case status := <-task.GetStatus():
 					if task.IsDone(status) {
 						l.Lock()
-						results[task.ID()] = task.DetectError(status)
+						rets[task.ID()] = task.DetectError(status)
 						l.Unlock()
 
 						if a := s.getAgent(task.AgentId.GetValue()); a != nil {
@@ -889,77 +889,56 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 
 	wg.Wait()
 
-	return results, nil
+	return rets, nil
 }
 
 func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	s.lock()
+	defer s.unlock()
 
-	filtered, err := s.applyFilters(tasks[0].cfg)
+	var (
+		agent  *Agent
+		offers []*Offer
+	)
+
+	for {
+		filtered, err := s.applyFilters(tasks[0].cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		candidates := s.strategy.RankAndSort(filtered)
+
+		for _, a := range candidates {
+			offers = a.getOffers()
+			if len(offers) > 0 {
+				agent = a
+				break
+			}
+		}
+
+		if agent != nil {
+			break
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	for _, task := range tasks {
+		agent.addTask(task)
+	}
+
+	for _, offer := range offers {
+		s.removeOffer(offer)
+	}
+
+	rets, err := s.launch(offers, tasks)
 	if err != nil {
-		s.unlock()
-
+		log.Errorf("[launch] %v", err)
 		return nil, err
 	}
 
-	candidates := s.strategy.RankAndSort(filtered)
-
-	j := 0
-
-	for i := 0; i < len(tasks); i++ {
-		candidates[j].addTask(tasks[i])
-
-		j++
-
-		if j >= len(candidates)-1 {
-			j = 0
-		}
-	}
-
-	var (
-		wg      sync.WaitGroup
-		l       sync.RWMutex
-		results = make(map[string]error)
-	)
-
-	for _, agent := range candidates {
-		wg.Add(1)
-		go func(agent *Agent) {
-			defer wg.Done()
-
-			var (
-				offers = agent.getOffers()
-				tasks  = agent.getTasks()
-			)
-
-			if len(offers) <= 0 || len(tasks) <= 0 {
-				return
-			}
-
-			for _, offer := range offers {
-				s.removeOffer(offer)
-			}
-
-			rets, err := s.launch(offers, tasks)
-			if err != nil {
-				log.Errorf("[launch] %v", err)
-				return
-			}
-
-			for k, v := range rets {
-				l.Lock()
-				results[k] = v
-				l.Unlock()
-			}
-
-		}(agent)
-	}
-
-	s.unlock()
-
-	wg.Wait()
-
-	return results, nil
+	return rets, nil
 }
 
 func (s *Scheduler) lock() {
