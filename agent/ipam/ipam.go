@@ -101,8 +101,11 @@ func (m *IPAM) ReleasePool(req *ipam.ReleasePoolRequest) error {
 	bs, _ := json.Marshal(req)
 	log.Println("IPAM ReleasePool request payload:", string(bs))
 
-	// TODO
-	return nil
+	var (
+		subnetID = req.PoolID
+	)
+
+	return m.store.RemoveSubNet(subnetID)
 }
 
 // RequestAddress Called on `container start` and `network create --gateway`

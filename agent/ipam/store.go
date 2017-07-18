@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -22,9 +23,10 @@ var (
 )
 
 var (
-	errIPOutOfPool   = errors.New("ip address out of pool")
-	errIPAllocated   = errors.New("ip address already allocated")
-	errNoAvaliableIP = errors.New("no avaliable ips")
+	errIPOutOfPool    = errors.New("ip address out of pool")
+	errIPAllocated    = errors.New("ip address already allocated")
+	errNoAvaliableIP  = errors.New("no avaliable ips")
+	errIPRemoveDenied = errors.New("deny to remove assigned ip from pool")
 )
 
 func init() {
@@ -103,9 +105,61 @@ func (s *kvStore) GetSubNet(id string) (*SubNet, error) {
 	return subnet, nil
 }
 
+func (s *kvStore) RemoveSubNet(id string) error {
+	subnet, err := s.GetSubNet(id)
+	if err != nil {
+		if err == store.ErrKeyNotFound {
+			return nil
+		}
+		return err
+	}
+
+	infos, err := s.ListIPs(subnet.ID)
+	if err != nil {
+		return err
+	}
+
+	var (
+		n   int
+		ips = make([]string, len(infos))
+	)
+	for idx, info := range infos {
+		ips[idx] = info[0]
+		if assigned, _ := strconv.ParseBool(info[1]); assigned {
+			n++
+		}
+	}
+	if n > 0 {
+		return errIPRemoveDenied
+	}
+
+	if err = s.RemoveIPsFromPool(subnet.ID, ips); err != nil {
+		return err
+	}
+
+	return s.kv.DeleteTree(s.normalize(subnet.ID))
+}
+
 // Subnet IPs
 //
 //
+func (s *kvStore) ListIPs(subnetID string) ([][2]string, error) {
+	kvPairs, err := s.kv.List(s.normalize(subnetID, keyPool))
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([][2]string, len(kvPairs))
+	for idx, kvPair := range kvPairs {
+		var (
+			ipAddr   = filepath.Base(kvPair.Key)
+			assigned = strconv.FormatBool(kvPair.Value[0] == '1')
+		)
+		ret[idx] = [2]string{ipAddr, assigned}
+	}
+	return ret, nil
+}
+
 func (s *kvStore) RequestIP(subnetID, preferIP string) (string, error) {
 	subnet, err := s.GetSubNet(subnetID)
 	if err != nil {
@@ -181,6 +235,18 @@ func (s *kvStore) AddIPsToPool(subnetID string, ips []string) error {
 
 		if err := s.kv.Put(key, bs, nil); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *kvStore) RemoveIPsFromPool(subnetID string, ips []string) error {
+	for _, ip := range ips {
+		if err := s.kv.Delete(s.normalize(subnetID, keyPool, ip)); err != nil {
+			if err != store.ErrKeyNotFound {
+				return err
+			}
 		}
 	}
 
