@@ -4,7 +4,7 @@
 ```
 {
     attribute : "vcluster"
-    operator  : "="
+    operator  : "=="
     value     : "dataman"
 }
 ```
@@ -21,7 +21,7 @@
 ##### Examples
 + schedule all tasks on agent with attribute "vcluster:dataman".
 ```
-constraint: [
+constraints: [
     {
       attribute   : "vcluster"
       operator    : "=="
@@ -31,7 +31,7 @@ constraint: [
 ```
 + schedule all tasks on agent with attribute "disk:ssd".
 ```
-constraint: [
+constraints: [
     {
       attribute   : "disk"
       operator    : "=="
@@ -41,7 +41,7 @@ constraint: [
 ```
 + scheduler all tasks on agent with attribute "vcluster:dataman" and with attribute "kernel.os: centos".
 ```
-constraint: [
+constraints: [
     {
       attribute   : "vcluster"
       operator    : "=="
@@ -56,7 +56,7 @@ constraint: [
 ```
 + scheduler all tasks on linux box.
 ```
-constraint: [
+constraints: [
     {
       attribute : "kernel.name"
       operator  : "=="
@@ -66,7 +66,7 @@ constraint: [
 ```
 In the future, `operator` will be optional in some cases. eg.:
 ```
-constraint: [
+constraints: [
     {
       attribute   : "vcluster"
       value       : "dev"
@@ -74,7 +74,7 @@ constraint: [
 ]
 ```
 ```
-constraint: [
+constraints: [
     {
       attribute   : "kernel.name"
       value       : "linux"
