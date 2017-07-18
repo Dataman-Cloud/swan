@@ -7,6 +7,7 @@
 [![codecov](https://codecov.io/gh/Dataman-Cloud/swan/branch/master/graph/badge.svg)](https://codecov.io/gh/Dataman-Cloud/swan)
 [![Go Report Card](https://goreportcard.com/badge/github.com/Dataman-Cloud/swan)](https://goreportcard.com/report/github.com/Dataman-Cloud/swan)
 [![Join the chat at https://gitter.im/Dataman-Cloud/swan](https://badges.gitter.im/Dataman-Cloud/swan.svg)](https://gitter.im/Dataman-Cloud/swan?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Docker Pulls](https://img.shields.io/docker/pulls/datamanos/swan.svg)](https://store.docker.com/community/images/datamanos/swan)
 
 ## What is `Swan`?
 
@@ -20,12 +21,12 @@ With `Swan` you can deploy long running `application` on mesos cluster, control 
 
 ## Features
 
-+ Application Management 
++ Application Management
 + ScaleUp/ScaleDown
-+ Rolling update 
++ Rolling update
 + Rollback
-+ Mesos-based health checks 
-+ HA 
++ Mesos-based health checks
++ HA
 + Event Subscription
 + Compose
 + Calico-based IP-Per-Task
