@@ -247,8 +247,13 @@ func (v *Version) Validate() error {
 		}
 
 		if v.HealthCheck != nil {
-			protocol, portName := v.HealthCheck.Protocol, v.HealthCheck.PortName
-			if strings.ToLower(protocol) != "cmd" && !utils.SliceContains(portNames, portName) {
+			var (
+				protocol = strings.ToLower(v.HealthCheck.Protocol)
+				portName = v.HealthCheck.PortName
+				path     = strings.TrimSpace(v.HealthCheck.Path)
+				command  = strings.TrimSpace(v.HealthCheck.Command)
+			)
+			if protocol != "cmd" && !utils.SliceContains(portNames, portName) {
 				return fmt.Errorf("portname in healthCheck section should match that defined in portMappings")
 			}
 
@@ -256,15 +261,15 @@ func (v *Version) Validate() error {
 				return fmt.Errorf("doesn't recoginized protocol %s for health check", protocol)
 			}
 
-			if strings.ToLower(protocol) == "http" {
-				if len(v.HealthCheck.Path) == 0 {
+			if protocol == "http" {
+				if path == "" {
 					return fmt.Errorf("no path provided for health check with %s protocol", protocol)
 				}
 			}
 
-			if strings.ToLower(protocol) == "cmd" {
-				if len(v.HealthCheck.Command) == 0 {
-					return fmt.Errorf("no command provided for health check with %s protocol", protocol)
+			if protocol == "cmd" {
+				if command == "" {
+					return fmt.Errorf("no cmd provided for health check with %s protocol", protocol)
 				}
 			}
 		}
