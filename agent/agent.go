@@ -13,6 +13,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/gin-gonic/gin"
 
+	"github.com/Dataman-Cloud/swan/agent/ipam"
 	"github.com/Dataman-Cloud/swan/agent/janitor"
 	"github.com/Dataman-Cloud/swan/agent/resolver"
 	"github.com/Dataman-Cloud/swan/config"
@@ -23,6 +24,7 @@ type Agent struct {
 	config      *config.AgentConfig
 	resolver    *resolver.Resolver
 	janitor     *janitor.JanitorServer
+	ipam        *ipam.IPAM
 	clusterNode *mole.Agent
 }
 
@@ -31,11 +33,15 @@ func New(cfg *config.AgentConfig) *Agent {
 		config:   cfg,
 		resolver: resolver.NewResolver(cfg.DNS, cfg.Janitor.AdvertiseIP),
 		janitor:  janitor.NewJanitorServer(cfg.Janitor),
+		ipam:     ipam.New("swan", "etcd", []string{"127.0.0.1:2379"}, []string{}),
 	}
 	return agent
 }
 
 func (agent *Agent) StartAndJoin() error {
+	// for ipam debug ...
+	return agent.ipam.Serve()
+
 	// detect healhty leader firstly
 	addr, err := agent.detectLeaderAddr()
 	if err != nil {
@@ -67,6 +73,12 @@ func (agent *Agent) StartAndJoin() error {
 	go func() {
 		if err := agent.janitor.Start(); err != nil {
 			log.Fatalln("janitor occured fatal error:", err)
+		}
+	}()
+
+	go func() {
+		if err := agent.ipam.Serve(); err != nil {
+			log.Fatalln("ipam occured fatal error:", err)
 		}
 	}()
 
