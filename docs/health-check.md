@@ -34,7 +34,7 @@ TCP
 CMD
     {
       "protocol": "cmd",
-      "command": "",
+      "cmd": "",
       "delaySeconds": 2,
       "gracePeriodSeconds": 5,
       "intervalSeconds": 1,
