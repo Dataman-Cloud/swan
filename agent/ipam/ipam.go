@@ -82,13 +82,16 @@ func (m *IPAM) RequestPool(req *ipam.RequestPoolRequest) (*ipam.RequestPoolRespo
 	// create kv subnet
 	subnet, err := NewSubNet(req.Pool) // --subnet
 	if err != nil {
+		log.Errorln("IPAM RequestPool NewSubNet() error: ", req.Pool, err)
 		return nil, err
 	}
 
 	if err := m.store.CreateSubNet(subnet); err != nil {
+		log.Errorln("IPAM RequestPool CreateSubNet() error: ", subnet.ID, err)
 		return nil, err
 	}
 
+	log.Println("IPAM RequestPool succeed", req.Pool)
 	return &ipam.RequestPoolResponse{
 		PoolID: subnet.ID, // 192.168.200.0
 		Pool:   req.Pool,  // 192.168.200.1/24
@@ -105,7 +108,14 @@ func (m *IPAM) ReleasePool(req *ipam.ReleasePoolRequest) error {
 		subnetID = req.PoolID
 	)
 
-	return m.store.RemoveSubNet(subnetID)
+	err := m.store.RemoveSubNet(subnetID)
+	if err != nil {
+		log.Errorln("IPAM ReleasePool error: ", subnetID, err)
+		return err
+	}
+
+	log.Println("IPAM ReleasePool succeed", subnetID)
+	return nil
 }
 
 // RequestAddress Called on `container start` and `network create --gateway`
@@ -122,10 +132,11 @@ func (m *IPAM) RequestAddress(req *ipam.RequestAddressRequest) (*ipam.RequestAdd
 
 	respAddr, err = m.store.RequestIP(subnetID, preferAddr)
 	if err != nil {
+		log.Errorln("IPAM RequestAddress error:", subnetID, err)
 		return nil, err
 	}
 
-	log.Println("IPAM allocated ip address:", respAddr)
+	log.Println("IPAM Allocated IP Address:", respAddr)
 	return &ipam.RequestAddressResponse{
 		Address: respAddr,
 	}, nil
@@ -141,8 +152,10 @@ func (m *IPAM) ReleaseAddress(req *ipam.ReleaseAddressRequest) error {
 	)
 
 	if err := m.store.ReleaseIP(subnetID, ipAddr); err != nil {
+		log.Errorln("IPAM ReleaseAddress error: ", subnetID, ipAddr, err)
 		return err
 	}
 
+	log.Println("IPAM ReleaseAddress succeed", subnetID, ipAddr)
 	return nil
 }
