@@ -172,7 +172,7 @@ func (ca *ClusterAgent) Dial(network, addr string) (net.Conn, error) {
 	select {
 	case cw := <-sub:
 		return cw.(*clusterWorker).conn, nil
-	case <-time.After(time.Second * 10):
+	case <-time.After(time.Second * 30):
 		return nil, errors.New("agent Dial(): new worker conn timeout")
 	}
 
