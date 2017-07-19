@@ -33,3 +33,6 @@ func (m *IPAM) ListSubNets(c *gin.Context) {
 
 	c.JSON(200, ret)
 }
+
+func (m *IPAM) SetSubNetPool(c *gin.Context) {
+}

@@ -43,6 +43,7 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 	r = mux.Group("/ipam")
 	r.GET("", ipam.ListSubNets)
 	r.GET("subnets", ipam.ListSubNets)
+	r.PUT("subnets", ipam.SetSubNetPool)
 
 	mux.NoRoute(agent.serveProxy)
 	return mux

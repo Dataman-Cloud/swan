@@ -2,6 +2,8 @@ package ipam
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -9,6 +11,7 @@ import (
 	"github.com/Dataman-Cloud/swan/config"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/ipam"
+	"github.com/docker/libnetwork/netlabel"
 )
 
 type IPAM struct {
@@ -71,14 +74,21 @@ func (m *IPAM) RequestPool(req *ipam.RequestPoolRequest) (*ipam.RequestPoolRespo
 	bs, _ := json.Marshal(req)
 	log.Println("IPAM RequestPool request payload:", string(bs))
 
-	// create kv subnet
-	subnet, err := NewSubNet(req.Pool) // --subnet
+	// new subnet
+	subnet, err := NewSubNet(req.Pool) // --subnet=CIDR
 	if err != nil {
 		log.Errorln("IPAM RequestPool NewSubNet() error: ", req.Pool, err)
 		return nil, err
 	}
 
-	if err := m.store.CreateSubNet(subnet); err != nil {
+	// check if exists
+	if exists, _ := m.store.GetSubNet(subnet.ID); exists != nil {
+		log.Errorln("IPAM RequestPool Conflict on: ", subnet.ID)
+		return nil, errors.New("subnet already exists: " + subnet.ID)
+	}
+
+	// create kv subnet
+	if err = m.store.CreateSubNet(subnet); err != nil {
 		log.Errorln("IPAM RequestPool CreateSubNet() error: ", subnet.ID, err)
 		return nil, err
 	}
@@ -86,7 +96,7 @@ func (m *IPAM) RequestPool(req *ipam.RequestPoolRequest) (*ipam.RequestPoolRespo
 	log.Println("IPAM RequestPool succeed", req.Pool)
 	return &ipam.RequestPoolResponse{
 		PoolID: subnet.ID, // 192.168.200.0
-		Pool:   req.Pool,  // 192.168.200.1/24
+		Pool:   req.Pool,  // 192.168.200.1/24 --subnet=CIDR
 		Data:   nil,
 	}, nil
 }
@@ -122,12 +132,25 @@ func (m *IPAM) RequestAddress(req *ipam.RequestAddressRequest) (*ipam.RequestAdd
 		err        error
 	)
 
+	// requeset on gateway ipaddr
+	if val, ok := req.Options["RequestAddressType"]; ok && val == netlabel.Gateway {
+		subnet, err := m.store.GetSubNet(subnetID)
+		if err != nil {
+			return nil, err
+		}
+
+		respAddr = fmt.Sprintf("%s/%d", preferAddr, subnet.Mask)
+		goto END
+	}
+
+	// request on docker container start up
 	respAddr, err = m.store.RequestIP(subnetID, preferAddr)
 	if err != nil {
 		log.Errorln("IPAM RequestAddress error:", subnetID, err)
 		return nil, err
 	}
 
+END:
 	log.Println("IPAM Allocated IP Address:", respAddr)
 	return &ipam.RequestAddressResponse{
 		Address: respAddr,

@@ -110,7 +110,12 @@ func (s *kvStore) CreateSubNet(subnet *SubNet) error {
 		return err
 	}
 
-	return s.kv.Put(s.normalize(subnet.ID, keyConfig), bs, nil)
+	err = s.kv.Put(s.normalize(subnet.ID, keyConfig), bs, nil)
+	if err != nil {
+		return err
+	}
+
+	return s.kv.Put(s.normalize(subnet.ID, keyPool), nil, &store.WriteOptions{IsDir: true})
 }
 
 func (s *kvStore) GetSubNet(id string) (*SubNet, error) {
