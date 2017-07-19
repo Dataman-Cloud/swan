@@ -10,6 +10,7 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 	var (
 		janitor  = agent.janitor
 		resolver = agent.resolver
+		ipam     = agent.ipam
 	)
 
 	mux := gin.Default()
@@ -37,6 +38,11 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 	r.DELETE("/records", resolver.DelRecord)
 	r.GET("/configs", resolver.ShowConfigs)
 	r.GET("/stats", resolver.ShowStats)
+
+	// /ipam/**
+	r = mux.Group("/ipam")
+	r.GET("", ipam.ListSubNets)
+	r.GET("subnets", ipam.ListSubNets)
 
 	mux.NoRoute(agent.serveProxy)
 	return mux

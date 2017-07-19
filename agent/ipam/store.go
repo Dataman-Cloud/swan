@@ -82,6 +82,28 @@ func storeSetup(typ string, etcdAddrs []string, zkAddrs []string) (*kvStore, err
 // Subnet
 //
 //
+func (s *kvStore) ListSubNets() ([]*SubNet, error) {
+	kvPairs, err := s.kv.List(s.normalize(""))
+	if err != nil {
+		return nil, err
+	}
+
+	ret := make([]*SubNet, len(kvPairs))
+	for idx, kvPair := range kvPairs {
+		var (
+			subnetID = filepath.Base(kvPair.Key)
+		)
+
+		subnet, err := s.GetSubNet(subnetID)
+		if err != nil {
+			return nil, fmt.Errorf("subnet %s error: %v", subnetID, err)
+		}
+
+		ret[idx] = subnet
+	}
+	return ret, nil
+}
+
 func (s *kvStore) CreateSubNet(subnet *SubNet) error {
 	bs, err := s.encode(subnet)
 	if err != nil {
