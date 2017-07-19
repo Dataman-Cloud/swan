@@ -76,9 +76,7 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	sem    chan struct{}
-	status string
-
+	sem         chan struct{}
 	events      chan *mesosproto.Event // status update events.
 	offers      chan *mesosproto.Event // offer events
 	failedTasks chan *Task             // hold on all failed tasks(TODO)
@@ -214,15 +212,11 @@ func (s *Scheduler) connect() (*http.Response, error) {
 		return nil, fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
 	}
 
-	s.status = statusConnected
-
 	return resp, nil
 }
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
-	s.status = statusConnecting
-
 	resp, err := s.connect()
 	if err != nil {
 		return err
@@ -244,8 +238,6 @@ func (s *Scheduler) Unsubscribe() error {
 func (s *Scheduler) reconnect() {
 	// Empty Mesos-Stream-Id for new connect.
 	s.http.Reset()
-
-	s.status = statusConnecting
 
 	var (
 		err  error
@@ -273,9 +265,6 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 		err error
 	)
 
-	sem := make(chan struct{}, 1)
-	defer close(sem)
-
 	for {
 		if err = dec.Decode(&ev); err != nil {
 			log.Errorf("mesos events subscriber decode events error: %v", err)
@@ -284,11 +273,11 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 			return
 		}
 
-		s.handleEvent(ev, sem)
+		s.handleEvent(ev)
 	}
 }
 
-func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
+func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 
 	var (
 		typ     = ev.GetType()
