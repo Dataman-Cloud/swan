@@ -2,35 +2,28 @@ package ipam
 
 import (
 	"encoding/json"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
 
+	"github.com/Dataman-Cloud/swan/config"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/ipam"
 )
 
 type IPAM struct {
-	Name string
-
-	store     *kvStore
-	storeTyp  string
-	etcdAddrs []string
-	zkAddrs   []string
+	cfg   *config.IPAM
+	store *kvStore
 }
 
-func New(name string, storeTyp string, etcdAddrs, zkAddrs []string) *IPAM {
+func New(cfg *config.IPAM) *IPAM {
 	return &IPAM{
-		Name:      name,
-		storeTyp:  storeTyp,
-		etcdAddrs: etcdAddrs,
-		zkAddrs:   zkAddrs,
+		cfg: cfg,
 	}
 }
 
 func (m *IPAM) Serve() error {
-	store, err := storeSetup(m.storeTyp, m.etcdAddrs, m.zkAddrs)
+	store, err := storeSetup(m.cfg.StoreType, m.cfg.EtcdAddrs, m.cfg.ZKAddrs)
 	if err != nil {
 		return err
 	}
@@ -47,12 +40,11 @@ func (m *IPAM) Serve() error {
 	}()
 
 	h := ipam.NewHandler(m)
-	return h.ServeUnix(m.Name, 0)
+	return h.ServeUnix("swan", 0)
 }
 
 func (m *IPAM) cleanup() {
-	sockPath := fmt.Sprintf("/var/run/docker/plugins/%s.sock", m.Name)
-	os.Remove(sockPath)
+	os.Remove("/var/run/docker/plugins/swan.sock")
 }
 
 // GetCapabilities Called on `docker network create`

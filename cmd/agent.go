@@ -19,18 +19,23 @@ func AgentCmd() cli.Command {
 		Action:      JoinAndStartAgent,
 	}
 
-	agentCmd.Flags = append(agentCmd.Flags, FlagListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayAdvertiseIp())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSCertFile())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSKeyFile())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSTTL())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSResolvers())
-	agentCmd.Flags = append(agentCmd.Flags, FlagLogLevel())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDomain())
+	agentCmd.Flags = []cli.Flag{
+		FlagListenAddr(),
+		FlagJoinAddrs(),
+		FlagGatewayAdvertiseIp(),
+		FlagGatewayListenAddr(),
+		FlagGatewayTLSListenAddr(),
+		FlagGatewayTLSCertFile(),
+		FlagGatewayTLSKeyFile(),
+		FlagDNSListenAddr(),
+		FlagDNSTTL(),
+		FlagDNSResolvers(),
+		FlagLogLevel(),
+		FlagDomain(),
+		FlagIPAMStoreType(),
+		FlagIPAMEtcdAddrs(),
+		FlagIPAMZKAddrs(),
+	}
 
 	return agentCmd
 }

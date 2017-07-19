@@ -16,6 +16,7 @@ type AgentConfig struct {
 	JoinAddrs []string `json:"joinAddrs"`
 	DNS       *DNS     `json:"dns"`
 	Janitor   *Janitor `json:"janitor"`
+	IPAM      *IPAM    `json:"ipam"`
 }
 
 type DNS struct {
@@ -43,6 +44,12 @@ type Janitor struct {
 	AdvertiseIP   string `json:"advertiseIP"`
 }
 
+type IPAM struct {
+	StoreType string   `json:"store_type"`
+	EtcdAddrs []string `json:"etcd_addrs"`
+	ZKAddrs   []string `json:"zk_addrs"`
+}
+
 func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 	cfg := &AgentConfig{
 		Listen:    "0.0.0.0:9999",
@@ -59,6 +66,11 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 		Janitor: &Janitor{
 			ListenAddr: "0.0.0.0:80",
 			Domain:     "swan.com",
+		},
+		IPAM: &IPAM{
+			StoreType: "etcd",
+			EtcdAddrs: []string{"127.0.0.1:2379"},
+			ZKAddrs:   []string{},
 		},
 	}
 
@@ -112,6 +124,18 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 
 	if ttl := c.Int("dns-ttl"); ttl > 0 {
 		cfg.DNS.TTL = ttl
+	}
+
+	if typ := c.String("ipam-store-type"); typ != "" {
+		cfg.IPAM.StoreType = typ
+	}
+
+	if addrs := c.String("ipam-etcd-addrs"); addrs != "" {
+		cfg.IPAM.EtcdAddrs = strings.Split(addrs, ",")
+	}
+
+	if addrs := c.String("ipam-zk-addrs"); addrs != "" {
+		cfg.IPAM.ZKAddrs = strings.Split(addrs, ",")
 	}
 
 	if err := cfg.validate(); err != nil {

@@ -33,7 +33,7 @@ func New(cfg *config.AgentConfig) *Agent {
 		config:   cfg,
 		resolver: resolver.NewResolver(cfg.DNS, cfg.Janitor.AdvertiseIP),
 		janitor:  janitor.NewJanitorServer(cfg.Janitor),
-		ipam:     ipam.New("swan", "etcd", []string{"127.0.0.1:2379"}, []string{}),
+		ipam:     ipam.New(cfg.IPAM),
 	}
 	return agent
 }

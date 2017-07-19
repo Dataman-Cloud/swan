@@ -197,3 +197,29 @@ func FlagDomain() cli.Flag {
 		Value:  "swan.com",
 	}
 }
+
+// Agent IPAM
+//
+func FlagIPAMStoreType() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-store-type",
+		Usage:  "ipam store type [etcd|zk]",
+		EnvVar: "SWAN_IPAM_STORE_TYPE",
+	}
+}
+
+func FlagIPAMEtcdAddrs() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-etcd-addrs",
+		Usage:  "ipam etcd cluster address",
+		EnvVar: "SWAN_IPAM_ETCD_ADDRS",
+	}
+}
+
+func FlagIPAMZKAddrs() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-zk-addrs",
+		Usage:  "ipam zk cluster address",
+		EnvVar: "SWAN_IPAM_ZK_ADDRS",
+	}
+}
