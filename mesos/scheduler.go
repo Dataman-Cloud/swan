@@ -257,13 +257,12 @@ func (s *Scheduler) reconnect() {
 }
 
 func (s *Scheduler) watchEvents(resp *http.Response) {
-	r := NewReader(resp.Body)
-	dec := json.NewDecoder(r)
-
 	var (
 		ev  *mesosproto.Event
 		err error
 	)
+
+	dec := json.NewDecoder(NewReader(resp.Body))
 
 	for {
 		if err = dec.Decode(&ev); err != nil {
