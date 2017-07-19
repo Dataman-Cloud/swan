@@ -55,8 +55,7 @@ type Scheduler struct {
 
 	quit chan struct{}
 
-	//endPoint string // eg: http://master/api/v1/scheduler
-	leader  string // mesos leader address
+	leader  string
 	cluster string // name of mesos cluster
 
 	db store.Store
@@ -68,7 +67,6 @@ type Scheduler struct {
 
 	offerTimeout time.Duration
 
-	watcher        *time.Timer
 	reconcileTimer *time.Ticker
 
 	strategy Strategy
@@ -78,11 +76,7 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	sem    chan struct{}
-	status string
-
-	connection *http.Response //TODO(nmg)
-
+	sem         chan struct{}
 	events      chan *mesosproto.Event // status update events.
 	offers      chan *mesosproto.Event // offer events
 	failedTasks chan *Task             // hold on all failed tasks(TODO)
@@ -116,24 +110,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 
 // init setup mesos sched api endpoint & cluster name
 func (s *Scheduler) init() error {
-	state, err := s.MesosState()
-	if err != nil {
-		return err
-	}
-
-	l := state.Leader
-	if l == "" {
-		return fmt.Errorf("no mesos leader found.")
-	}
-
-	s.http = NewHTTPClient(l)
-	s.leader = state.Leader
-
-	s.cluster = state.Cluster
-	if s.cluster == "" {
-		s.cluster = "unnamed" // set default cluster name
-	}
-
 	s.handlers = map[mesosproto.Event_Type]eventHandler{
 		mesosproto.Event_SUBSCRIBED: s.subscribedHandler,
 		mesosproto.Event_OFFERS:     s.offersHandler,
@@ -160,6 +136,15 @@ func (s *Scheduler) init() error {
 	return nil
 }
 
+func (s *Scheduler) detectMesosState() (string, string, error) {
+	state, err := s.MesosState()
+	if err != nil {
+		return "", "", err
+	}
+
+	return state.Leader, state.Cluster, nil
+}
+
 func (s *Scheduler) InitFilters(filters []Filter) {
 	s.filters = filters
 }
@@ -184,7 +169,24 @@ func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
 	return s.http.send(payload)
 }
 
-func (s *Scheduler) connect() error {
+func (s *Scheduler) connect() (*http.Response, error) {
+	l, c, err := s.detectMesosState()
+	if err != nil {
+		return nil, err
+	}
+
+	if l == "" {
+		return nil, fmt.Errorf("no mesos leader found.")
+	}
+	s.leader = l
+
+	if c == "" {
+		c = "unnamed"
+	}
+	s.cluster = c
+
+	s.http = NewHTTPClient(l)
+
 	call := &mesosproto.Call{
 		Type: mesosproto.Call_SUBSCRIBE.Enum(),
 		Subscribe: &mesosproto.Call_Subscribe{
@@ -198,36 +200,29 @@ func (s *Scheduler) connect() error {
 		}
 	}
 
+	log.Printf("Subscribing to mesos leader %s", l)
 	resp, err := s.Send(call)
 	if err != nil {
-		return fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
+		return nil, fmt.Errorf("subscribe to mesos leader [%s] error [%v]", l, err)
 	}
 
 	if code := resp.StatusCode; code != 200 {
 		bs, _ := ioutil.ReadAll(resp.Body)
 		resp.Body.Close()
-		return fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
+		return nil, fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
 	}
 
-	s.status = statusConnected
-
-	s.connection = resp
-
-	return nil
+	return resp, nil
 }
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
-	log.Printf("Subscribing to mesos leader: %s", s.leader)
-
-	s.status = statusConnecting
-
-	err := s.connect()
+	resp, err := s.connect()
 	if err != nil {
 		return err
 	}
 
-	go s.watchEvents()
+	go s.watchEvents(resp)
 	go s.handleUpdates()
 	go s.handleOffers()
 	go s.handleFailedTasks()
@@ -236,8 +231,7 @@ func (s *Scheduler) Subscribe() error {
 }
 
 func (s *Scheduler) Unsubscribe() error {
-	log.Println("Unscribing from mesos leader:", s.leader)
-	s.stop()
+	log.Println("Unscribing from mesos leader %s", s.leader)
 	return nil
 }
 
@@ -245,18 +239,15 @@ func (s *Scheduler) reconnect() {
 	// Empty Mesos-Stream-Id for new connect.
 	s.http.Reset()
 
-	s.status = statusConnecting
-
 	var (
-		err error
+		err  error
+		resp *http.Response
 	)
 
 	for {
-		log.Printf("Reconnecting to mesos leader: %s", s.leader)
-
-		err = s.connect()
+		resp, err = s.connect()
 		if err == nil {
-			go s.watchEvents()
+			go s.watchEvents(resp)
 
 			return
 		}
@@ -265,42 +256,27 @@ func (s *Scheduler) reconnect() {
 	}
 }
 
-func (s *Scheduler) stop() {
-	log.Debugln("Close connection with mesos leader.")
-	s.connection.Body.Close()
-}
-
-func (s *Scheduler) watchEvents() {
-	defer s.stopWatcher()
-
-	r := NewReader(s.connection.Body)
-	dec := json.NewDecoder(r)
-
+func (s *Scheduler) watchEvents(resp *http.Response) {
 	var (
 		ev  *mesosproto.Event
 		err error
 	)
 
-	sem := make(chan struct{}, 1)
-	defer close(sem)
+	dec := json.NewDecoder(NewReader(resp.Body))
 
 	for {
 		if err = dec.Decode(&ev); err != nil {
 			log.Errorf("mesos events subscriber decode events error: %v", err)
-			if !strings.Contains(err.Error(), "use of closed network connection") {
-				s.stop()
-			}
-
+			resp.Body.Close()
 			go s.reconnect()
-
 			return
 		}
 
-		s.handleEvent(ev, sem)
+		s.handleEvent(ev)
 	}
 }
 
-func (s *Scheduler) handleEvent(ev *mesosproto.Event, sem chan struct{}) {
+func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 
 	var (
 		typ     = ev.GetType()
@@ -644,31 +620,6 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 	s.eventmgr.wait(remote)
 
 	return nil
-}
-
-// heartbeat timeout watcher
-func (s *Scheduler) startWatcher(interval float64) {
-	log.Debugln("Start heartbeat timeout watcher")
-	d := time.Duration(s.cfg.HeartbeatTimeout) * time.Second
-	s.watcher = time.AfterFunc(d, s.stop)
-}
-
-func (s *Scheduler) resetWatcher() {
-	log.Debugf("Reset heartbeat timeout to %.f seconds.", s.cfg.HeartbeatTimeout)
-	if s.watcher != nil {
-		if !s.watcher.Stop() {
-			select {
-			case <-s.watcher.C: //try to drain from the channel
-			default:
-			}
-		}
-		s.watcher.Reset(time.Duration(s.cfg.HeartbeatTimeout) * time.Second)
-	}
-}
-
-func (s *Scheduler) stopWatcher() {
-	log.Debugln("Stop heartbeat timeout watcher.")
-	s.watcher.Stop()
 }
 
 func (s *Scheduler) reconcile() {
