@@ -55,8 +55,7 @@ type Scheduler struct {
 
 	quit chan struct{}
 
-	//endPoint string // eg: http://master/api/v1/scheduler
-	leader  string // mesos leader address
+	leader  string
 	cluster string // name of mesos cluster
 
 	db store.Store
@@ -116,24 +115,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 
 // init setup mesos sched api endpoint & cluster name
 func (s *Scheduler) init() error {
-	state, err := s.MesosState()
-	if err != nil {
-		return err
-	}
-
-	l := state.Leader
-	if l == "" {
-		return fmt.Errorf("no mesos leader found.")
-	}
-
-	s.http = NewHTTPClient(l)
-	s.leader = state.Leader
-
-	s.cluster = state.Cluster
-	if s.cluster == "" {
-		s.cluster = "unnamed" // set default cluster name
-	}
-
 	s.handlers = map[mesosproto.Event_Type]eventHandler{
 		mesosproto.Event_SUBSCRIBED: s.subscribedHandler,
 		mesosproto.Event_OFFERS:     s.offersHandler,
@@ -158,6 +139,15 @@ func (s *Scheduler) init() error {
 	}
 
 	return nil
+}
+
+func (s *Scheduler) detectMesosState() (string, string, error) {
+	state, err := s.MesosState()
+	if err != nil {
+		return "", "", err
+	}
+
+	return state.Leader, state.Cluster, nil
 }
 
 func (s *Scheduler) InitFilters(filters []Filter) {
@@ -185,6 +175,23 @@ func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
 }
 
 func (s *Scheduler) connect() error {
+	l, c, err := s.detectMesosState()
+	if err != nil {
+		return err
+	}
+
+	if l == "" {
+		return fmt.Errorf("no mesos leader found.")
+	}
+	s.leader = l
+
+	if c == "" {
+		c = "unnamed"
+	}
+	s.cluster = c
+
+	s.http = NewHTTPClient(l)
+
 	call := &mesosproto.Call{
 		Type: mesosproto.Call_SUBSCRIBE.Enum(),
 		Subscribe: &mesosproto.Call_Subscribe{
@@ -198,9 +205,10 @@ func (s *Scheduler) connect() error {
 		}
 	}
 
+	log.Printf("Subscribing to mesos leader %s", l)
 	resp, err := s.Send(call)
 	if err != nil {
-		return fmt.Errorf("subscribe to mesos leader [%s] error [%v]", s.leader, err)
+		return fmt.Errorf("subscribe to mesos leader [%s] error [%v]", l, err)
 	}
 
 	if code := resp.StatusCode; code != 200 {
@@ -218,8 +226,6 @@ func (s *Scheduler) connect() error {
 
 // Subscribe ...
 func (s *Scheduler) Subscribe() error {
-	log.Printf("Subscribing to mesos leader: %s", s.leader)
-
 	s.status = statusConnecting
 
 	err := s.connect()
@@ -236,7 +242,7 @@ func (s *Scheduler) Subscribe() error {
 }
 
 func (s *Scheduler) Unsubscribe() error {
-	log.Println("Unscribing from mesos leader:", s.leader)
+	log.Println("Unscribing from mesos leader %s", s.leader)
 	s.stop()
 	return nil
 }
@@ -252,8 +258,6 @@ func (s *Scheduler) reconnect() {
 	)
 
 	for {
-		log.Printf("Reconnecting to mesos leader: %s", s.leader)
-
 		err = s.connect()
 		if err == nil {
 			go s.watchEvents()
