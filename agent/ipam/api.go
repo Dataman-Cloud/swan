@@ -35,4 +35,21 @@ func (m *IPAM) ListSubNets(c *gin.Context) {
 }
 
 func (m *IPAM) SetSubNetPool(c *gin.Context) {
+	var req *IPPoolRange
+	if err := c.BindJSON(&req); err != nil {
+		http.Error(c.Writer, err.Error(), 400)
+		return
+	}
+
+	if err := req.Valid(); err != nil {
+		http.Error(c.Writer, err.Error(), 400)
+		return
+	}
+
+	subnetID, _ := req.SubNetID()
+
+	if err := m.store.AddIPsToPool(subnetID, req.IPList()); err != nil {
+		http.Error(c.Writer, err.Error(), 500)
+		return
+	}
 }

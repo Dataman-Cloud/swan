@@ -54,6 +54,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/proxy", s.redirectAgentProxy),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/dns", s.redirectAgentDNS),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/docker", s.redirectAgentDocker),
+		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/ipam", s.redirectAgentIPAM),
 	}
 
 	log.Debug("Registering HTTP route")

@@ -39,9 +39,6 @@ func New(cfg *config.AgentConfig) *Agent {
 }
 
 func (agent *Agent) StartAndJoin() error {
-	// for ipam debug ...
-	return agent.ipam.Serve()
-
 	// detect healhty leader firstly
 	addr, err := agent.detectLeaderAddr()
 	if err != nil {

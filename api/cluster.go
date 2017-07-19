@@ -50,6 +50,11 @@ func (r *Server) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
 	r.redirectAgent(n, w, req)
 }
 
+func (r *Server) redirectAgentIPAM(w http.ResponseWriter, req *http.Request) {
+	n := len(`/v1/agents/`) + 16
+	r.redirectAgent(n, w, req)
+}
+
 func (r *Server) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]

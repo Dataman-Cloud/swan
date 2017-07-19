@@ -6,6 +6,8 @@ import (
 	"net"
 )
 
+// SubNet
+//
 type SubNet struct {
 	ID      string `json:"id"`
 	CIDR    string `json:"cidr"`
@@ -35,20 +37,76 @@ func NewSubNet(cidr string) (*SubNet, error) {
 	}, nil
 }
 
-func networkIPRangeList(start, end net.IP) ([]net.IP, error) {
+// IPPoolRange
+//
+type IPPoolRange struct {
+	IPStart string `json:"ip_start"` // CIDR
+	IPEnd   string `jsoN:"ip_end"`   // CIDR
+}
+
+func (r *IPPoolRange) SubNetID() (string, error) {
+	subnet, err := NewSubNet(r.IPStart)
+	if err != nil {
+		return "", err
+	}
+
+	return subnet.ID, nil
+}
+
+func (r *IPPoolRange) IPList() []string {
+	var (
+		start, _, _ = net.ParseCIDR(r.IPStart)
+		end, _, _   = net.ParseCIDR(r.IPEnd)
+	)
+
+	ret := make([]string, 0, 0)
+	for _, ip := range networkIPRangeList(start, end) {
+		ret = append(ret, ip.To4().String())
+	}
+	return ret
+}
+
+func (r *IPPoolRange) Valid() error {
+	ipStart, ipNetStart, err := net.ParseCIDR(r.IPStart)
+	if err != nil {
+		return err
+	}
+
+	ipEnd, ipNetEnd, err := net.ParseCIDR(r.IPEnd)
+	if err != nil {
+		return err
+	}
+
+	if !ipNetStart.Contains(ipEnd) ||
+		!ipNetEnd.Contains(ipStart) ||
+		ipNetStart.Mask.String() != ipNetEnd.Mask.String() {
+		return fmt.Errorf("ip-start & ip-end are not in the same subnet", ipStart, ipEnd)
+	}
+
+	var (
+		intStart = binary.BigEndian.Uint32(ipStart.To4())
+		intEnd   = binary.BigEndian.Uint32(ipEnd.To4())
+	)
+	if intStart > intEnd {
+		return fmt.Errorf("ip-start must be less than ip-end")
+	}
+
+	return nil
+}
+
+func networkIPRangeList(start, end net.IP) []net.IP {
 	if start == nil {
-		return nil, nil
+		return nil
 	}
 
 	if end == nil {
-		return []net.IP{start}, nil
+		return []net.IP{start}
 	}
 
-	intStart := binary.BigEndian.Uint32(start.To4())
-	intEnd := binary.BigEndian.Uint32(end.To4())
-	if intStart > intEnd {
-		return nil, fmt.Errorf("ip-start must be less than ip-end")
-	}
+	var (
+		intStart = binary.BigEndian.Uint32(start.To4())
+		intEnd   = binary.BigEndian.Uint32(end.To4())
+	)
 
 	var ret []net.IP
 	for i := intStart; i <= intEnd; i++ {
@@ -56,7 +114,7 @@ func networkIPRangeList(start, end net.IP) ([]net.IP, error) {
 		binary.BigEndian.PutUint32(ip, i)
 		ret = append(ret, net.IP(ip))
 	}
-	return ret, nil
+	return ret
 }
 
 func networkIPRange(ipnet *net.IPNet) (net.IP, net.IP) {
