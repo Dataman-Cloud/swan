@@ -36,16 +36,14 @@ func (agent *Agent) syncFull(addr string) error {
 		)
 
 		if err := agent.resolver.Upsert(dns); err != nil {
-			log.Errorln("upsert dns record error:", err)
-			return err
+			log.Errorln("full syncing, upsert dns record error:", err)
 		}
 
 		if err := agent.janitor.UpsertBackend(proxy); err != nil {
-			log.Errorln("upsert proxy record error:", err)
-			return err
+			log.Errorln("full syncing, upsert proxy record error:", err)
 		}
 	}
 
-	log.Println("full sync dns & proxy records succeed")
+	log.Println("full synced dns & proxy records succeed")
 	return nil
 }
