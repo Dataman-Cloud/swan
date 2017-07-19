@@ -26,12 +26,10 @@ var (
 )
 
 const (
-	keyApp = "/apps" // single app
-	//keyTask        = "/tasks"
-	//keyVersion     = "/versions"
-	keyCompose     = "/composes"  // compose instance (group apps)
-	keyAgent       = "/agents"    // swan agent
-	keyFrameworkID = "/framework" // framework id
+	keyApp         = "/apps"        // single app
+	keyCompose     = "/composes"    // compose instance (group apps)
+	keyAgent       = "/agents"      // swan agent
+	keyFrameworkID = "/frameworkId" // framework id
 )
 
 type ZKStore struct {
@@ -55,7 +53,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyAgent} {
+	for _, node := range []string{keyApp, keyCompose, keyAgent, keyFrameworkID} {
 		if err := zs.createAll(node, nil); err != nil {
 			return nil, err
 		}
