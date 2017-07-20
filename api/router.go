@@ -46,6 +46,9 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/debug/load", s.load),
 		NewRoute("GET", "/v1/fullsync", s.fullEventsAndRecords),
 
+		NewRoute("PUT", "/v1/debug", s.enableDebug),
+		NewRoute("DELETE", "/v1/debug", s.disableDebug),
+
 		NewRoute("GET", "/v1/agents", s.listAgents),
 		NewRoute("GET", "/v1/agents/{agent_id}", s.getAgent),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/proxy", s.redirectAgentProxy),
