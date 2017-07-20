@@ -62,7 +62,7 @@ func (agent *Agent) IPAMSetIPPool(start, end string) error {
 		return err
 	}
 
-	os.Stdout.Write([]byte(`OK`))
+	os.Stdout.Write([]byte("OK\r\n"))
 	return nil
 }
 

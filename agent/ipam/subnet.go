@@ -42,7 +42,7 @@ func NewSubNet(cidr string) (*SubNet, error) {
 //
 type IPPoolRange struct {
 	IPStart string `json:"ip_start"` // CIDR
-	IPEnd   string `jsoN:"ip_end"`   // CIDR
+	IPEnd   string `json:"ip_end"`   // CIDR
 }
 
 func (r *IPPoolRange) SubNetID() (string, error) {

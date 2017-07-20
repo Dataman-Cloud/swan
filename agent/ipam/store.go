@@ -249,6 +249,11 @@ func (s *kvStore) ReleaseIP(subnetID, ipAddr string) error {
 }
 
 func (s *kvStore) AddIPsToPool(subnetID string, ips []string) error {
+	_, err := s.GetSubNet(subnetID)
+	if err != nil {
+		return fmt.Errorf("subnet %s error: %v", subnetID, err)
+	}
+
 	for _, ip := range ips {
 
 		var (
@@ -257,6 +262,7 @@ func (s *kvStore) AddIPsToPool(subnetID string, ips []string) error {
 		)
 
 		if exists, _ := s.kv.Exists(key); exists {
+			log.Warnf("ip %s already in the pool of subnet %s", ip, subnetID)
 			continue
 		}
 
