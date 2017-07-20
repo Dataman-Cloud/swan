@@ -253,7 +253,7 @@ func (r *Resolver) handleForward(w dns.ResponseWriter, req *dns.Msg) {
 
 func (r *Resolver) Forward(req *dns.Msg) (reply *dns.Msg, err error) {
 	if len(r.forwardAddrs) == 0 {
-		err = errors.New("no avaliable forwarders")
+		err = errors.New("no available forwarders")
 		return
 	}
 

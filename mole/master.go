@@ -69,7 +69,7 @@ func (m *Master) handle(conn net.Conn) {
 		})
 		m.FreshAgent(cmd.AgentID)
 
-	case cmdLeave: // FIXME better within controll conn instead of here
+	case cmdLeave: // FIXME better within control conn instead of here
 		log.Println("agent leaved", cmd.AgentID)
 		m.CloseAgent(cmd.AgentID)
 

@@ -212,7 +212,7 @@ func (r *Server) parseYAML(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(srvs) == 0 {
-		http.Error(w, "at least one of docker service defination required", http.StatusBadRequest)
+		http.Error(w, "at least one of docker service definition required", http.StatusBadRequest)
 		return
 	}
 

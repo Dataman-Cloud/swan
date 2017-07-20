@@ -54,19 +54,19 @@ func (agent *Agent) StartAndJoin() error {
 		})
 
 		if err := http.ListenAndServe(agent.config.Listen, nil); err != nil {
-			log.Fatalln("httpd pong occured fatal error:", err)
+			log.Fatalln("httpd pong occurred fatal error:", err)
 		}
 	}()
 
 	go func() {
 		if err := agent.resolver.Start(); err != nil {
-			log.Fatalln("resolver occured fatal error:", err)
+			log.Fatalln("resolver occurred fatal error:", err)
 		}
 	}()
 
 	go func() {
 		if err := agent.janitor.Start(); err != nil {
-			log.Fatalln("janitor occured fatal error:", err)
+			log.Fatalln("janitor occurred fatal error:", err)
 		}
 	}()
 

@@ -21,7 +21,7 @@ func (r *Server) events(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// notify new client all of current tasks' stats throught sse firstly
+	// notify new client all of current tasks' stats by sse firstly
 	if catchUp := req.Form.Get("catchUp"); strings.ToLower(catchUp) == "true" {
 		for _, cmbEv := range r.driver.FullTaskEventsAndRecords() {
 			if _, err := w.Write(cmbEv.Event.Format()); err != nil {

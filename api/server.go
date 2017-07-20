@@ -128,7 +128,7 @@ func (s *Server) Reload() error {
 		return fmt.Errorf("Shutdown api server error: %v", err.Error())
 	}
 	// NOTE(nmg): Sometimes the api server can't be closed immediately.
-	// In this situation the `bind: address already in use` error will be occured.
+	// In this situation the `bind: address already in use` error will be occurred.
 	// So we use a `for loop` to aviod this.
 	// TODO(nmg): Fix this more elegant.
 	for {
