@@ -223,3 +223,19 @@ func FlagIPAMZKAddrs() cli.Flag {
 		EnvVar: "SWAN_IPAM_ZK_ADDRS",
 	}
 }
+
+// Agent IPAM IPPool
+//
+func FlagIPAMIPStart() cli.Flag {
+	return cli.StringFlag{
+		Name:  "ip-start",
+		Usage: "ip pool start, mus be CIDR format",
+	}
+}
+
+func FlagIPAMIPEnd() cli.Flag {
+	return cli.StringFlag{
+		Name:  "ip-end",
+		Usage: "ip pool end, must be CIDR format",
+	}
+}

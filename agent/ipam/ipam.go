@@ -26,11 +26,9 @@ func New(cfg *config.IPAM) *IPAM {
 }
 
 func (m *IPAM) Serve() error {
-	store, err := storeSetup(m.cfg.StoreType, m.cfg.EtcdAddrs, m.cfg.ZKAddrs)
-	if err != nil {
+	if err := m.StoreSetup(); err != nil {
 		return err
 	}
-	m.store = store
 	defer m.cleanup()
 
 	go func() {
@@ -48,6 +46,11 @@ func (m *IPAM) Serve() error {
 
 func (m *IPAM) cleanup() {
 	os.Remove("/var/run/docker/plugins/swan.sock")
+}
+
+func (m *IPAM) SetIPPool(pool *IPPoolRange) error {
+	subnetID, _ := pool.SubNetID()
+	return m.store.AddIPsToPool(subnetID, pool.IPList())
 }
 
 // GetCapabilities Called on `docker network create`

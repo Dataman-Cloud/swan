@@ -2,6 +2,7 @@ package ipam
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -80,7 +81,7 @@ func (r *IPPoolRange) Valid() error {
 	if !ipNetStart.Contains(ipEnd) ||
 		!ipNetEnd.Contains(ipStart) ||
 		ipNetStart.Mask.String() != ipNetEnd.Mask.String() {
-		return fmt.Errorf("ip-start & ip-end are not in the same subnet", ipStart, ipEnd)
+		return errors.New("ip-start & ip-end are not in the same subnet")
 	}
 
 	var (
@@ -88,7 +89,7 @@ func (r *IPPoolRange) Valid() error {
 		intEnd   = binary.BigEndian.Uint32(ipEnd.To4())
 	)
 	if intStart > intEnd {
-		return fmt.Errorf("ip-start must be less than ip-end")
+		return errors.New("ip-start must be less than ip-end")
 	}
 
 	return nil

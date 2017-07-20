@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -36,6 +37,33 @@ func New(cfg *config.AgentConfig) *Agent {
 		ipam:     ipam.New(cfg.IPAM),
 	}
 	return agent
+}
+
+// IPAMSetIPPool called via CLI
+func (agent *Agent) IPAMSetIPPool(start, end string) error {
+	if agent.ipam == nil {
+		return errors.New("ipam not initilized yet")
+	}
+
+	if err := agent.ipam.StoreSetup(); err != nil {
+		return err
+	}
+
+	pool := &ipam.IPPoolRange{
+		IPStart: start,
+		IPEnd:   end,
+	}
+
+	if err := pool.Valid(); err != nil {
+		return err
+	}
+
+	if err := agent.ipam.SetIPPool(pool); err != nil {
+		return err
+	}
+
+	os.Stdout.Write([]byte(`OK`))
+	return nil
 }
 
 func (agent *Agent) StartAndJoin() error {

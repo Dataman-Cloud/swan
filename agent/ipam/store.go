@@ -17,7 +17,7 @@ import (
 )
 
 var (
-	keyNetwork = "swan/network" // note: no leading '/' to make fit with zk store
+	keyNetwork = "swan/network" // baseKey, note: no leading '/' to make fit with zk store
 	keyPool    = "pool"         // subnet sub key name
 	keyConfig  = "config"       // subnet sub key name
 )
@@ -38,8 +38,12 @@ type kvStore struct {
 	kv store.Store
 }
 
-func storeSetup(typ string, etcdAddrs []string, zkAddrs []string) (*kvStore, error) {
+func (m *IPAM) StoreSetup() error {
 	var (
+		typ       = m.cfg.StoreType
+		etcdAddrs = m.cfg.EtcdAddrs
+		zkAddrs   = m.cfg.ZKAddrs
+
 		kv  store.Store
 		err error
 	)
@@ -61,22 +65,18 @@ func storeSetup(typ string, etcdAddrs []string, zkAddrs []string) (*kvStore, err
 			})
 	}
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	s := &kvStore{kv: kv}
-
-	for _, key := range []string{keyNetwork} {
-		if ok, _ := s.kv.Exists(key); ok {
-			continue
-		}
-		err := s.kv.Put(key, nil, &store.WriteOptions{IsDir: true})
+	if ok, _ := kv.Exists(keyNetwork); !ok {
+		err := kv.Put(keyNetwork, nil, &store.WriteOptions{IsDir: true})
 		if err != nil {
-			log.Warnf("ensure base directory %s error: %v", key, err)
+			log.Warnf("ensure base directory %s error: %v", keyNetwork, err)
 		}
 	}
 
-	return s, nil
+	m.store = &kvStore{kv: kv}
+	return nil
 }
 
 // Subnet
