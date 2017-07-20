@@ -719,7 +719,42 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
-func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, error) {
+func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
+	s.lock()
+
+	var (
+		offers []*Offer
+	)
+
+	for {
+		filtered, err := s.applyFilters(tasks[0].cfg)
+		if err != nil {
+			return nil, err
+		}
+
+		candidates := s.strategy.RankAndSort(filtered)
+
+		var (
+			agent = candidates[0]
+		)
+
+		offers = agent.getOffers()
+		if len(offers) > 0 {
+			for _, task := range tasks {
+				agent.addTask(task)
+			}
+
+			for _, offer := range offers {
+				s.removeOffer(offer)
+			}
+
+			break
+		}
+
+		log.Debugln("No enough resources to run tasks, waiting...")
+		time.Sleep(100 * time.Millisecond)
+	}
+
 	ports := make([]uint64, 0)
 	for _, offer := range offers {
 		ports = append(ports, offer.GetPorts()...)
@@ -742,7 +777,8 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 	for _, t := range tasks {
 		task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
 		if err != nil {
-			return nil, fmt.Errorf("find task from zk got error: %v", err)
+			log.Errorln("get task got error: %v", err)
+			continue
 		}
 
 		task.AgentId = t.AgentId.GetValue()
@@ -755,9 +791,9 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 		task.Port = t.cfg.Port
 
 		if err := s.db.UpdateTask(appId, task); err != nil {
-			return nil, fmt.Errorf("update task status error: %v", err)
+			log.Errorln("update task got error: %v", err)
+			continue
 		}
-
 	}
 
 	var (
@@ -797,12 +833,16 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 	// send call
 	resp, err := s.Send(call)
 	if err != nil {
+		s.unlock()
 		return nil, fmt.Errorf("send launch call got error: %v", err)
 	}
 
 	if code := resp.StatusCode; code != http.StatusAccepted {
+		s.unlock()
 		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
+
+	s.unlock()
 
 	var (
 		l    sync.RWMutex
@@ -834,55 +874,6 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) (map[string]error, er
 	}
 
 	wg.Wait()
-
-	return rets, nil
-}
-
-func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
-	s.lock()
-	defer s.unlock()
-
-	var (
-		agent  *Agent
-		offers []*Offer
-	)
-
-	for {
-		filtered, err := s.applyFilters(tasks[0].cfg)
-		if err != nil {
-			return nil, err
-		}
-
-		candidates := s.strategy.RankAndSort(filtered)
-
-		for _, a := range candidates {
-			offers = a.getOffers()
-			if len(offers) > 0 {
-				agent = a
-				break
-			}
-		}
-
-		if agent != nil {
-			break
-		}
-
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	for _, task := range tasks {
-		agent.addTask(task)
-	}
-
-	for _, offer := range offers {
-		s.removeOffer(offer)
-	}
-
-	rets, err := s.launch(offers, tasks)
-	if err != nil {
-		log.Errorf("[launch] %v", err)
-		return nil, err
-	}
 
 	return rets, nil
 }
