@@ -85,8 +85,8 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		step      = 5
-		onfailure = "stop"
+		step      = 1
+		onfailure = "continue"
 	)
 
 	if spec.DeployPolicy != nil {
