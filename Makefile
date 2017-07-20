@@ -38,6 +38,10 @@ docker-build:
 		golang:1.8.1-alpine \
 		sh -c 'go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go'
 
+# compitable for legacy docker version
+docker-image:
+	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm -f ./Dockerfile.legacy .
+
 clean:
 	rm -rfv bin/*
 
