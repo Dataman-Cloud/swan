@@ -37,6 +37,12 @@ func (s *EtcdStore) GetVersion(aid, vid string) (*types.Version, error) {
 
 }
 
+func (s *EtcdStore) DeleteVersion(aid, vid string) error {
+	p := path.Join(keyApp, aid, keyVersions, vid)
+
+	return s.del(p, false)
+}
+
 func (s *EtcdStore) ListVersions(aid string) ([]*types.Version, error) {
 	p := path.Join(keyApp, aid, keyVersions)
 

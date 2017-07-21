@@ -464,6 +464,90 @@ func (s *Scheduler) getAgents() []*Agent {
 	return agents
 }
 
+func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
+	var (
+		wg   sync.WaitGroup
+		p    sync.Mutex
+		errs = map[string]error{}
+	)
+
+	for _, task := range tasks {
+
+		wg.Add(1)
+		go func(task *types.Task, errs map[string]error) {
+			defer wg.Done()
+
+			var (
+				taskId  = task.ID
+				agentId = task.AgentId
+			)
+
+			if agentId == "" {
+				log.Debugf("agentId of task %s is empty, ignore", taskId)
+				p.Lock()
+				errs[taskId] = nil
+				p.Unlock()
+				return
+			}
+
+			log.Debugf("Killing task %s with agentId %s", taskId, agentId)
+
+			t := NewTask(nil, taskId, taskId)
+
+			a := s.getAgent(agentId)
+			if a != nil {
+				a.addTask(t)
+				defer a.removeTask(taskId)
+			}
+
+			call := &mesosproto.Call{
+				FrameworkId: s.FrameworkId(),
+				Type:        mesosproto.Call_KILL.Enum(),
+				Kill: &mesosproto.Call_Kill{
+					TaskId: &mesosproto.TaskID{
+						Value: proto.String(taskId),
+					},
+					AgentId: &mesosproto.AgentID{
+						Value: proto.String(agentId),
+					},
+				},
+			}
+
+			// send call
+			resp, err := s.Send(call)
+			if err != nil {
+				p.Lock()
+				errs[taskId] = err
+				p.Unlock()
+				return
+			}
+
+			if code := resp.StatusCode; code != http.StatusAccepted {
+				p.Lock()
+				errs[taskId] = fmt.Errorf("kill call send but the status code not 202 got %d", code)
+				p.Unlock()
+				return
+			}
+
+			log.Debugf("Waiting for task %s to be killed by mesos", taskId)
+			for status := range t.GetStatus() {
+				if t.IsKilled(status) {
+					log.Debugf("Task %s killed", taskId)
+					p.Lock()
+					errs[taskId] = nil
+					p.Unlock()
+					return
+				}
+			}
+		}(task, errs)
+	}
+
+	wg.Wait()
+
+	return errs
+
+}
+
 func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 	log.Debugln("Killing task ", taskId)
 
