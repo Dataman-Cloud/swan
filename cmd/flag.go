@@ -92,6 +92,17 @@ func FlagJoinAddrs() cli.Flag {
 	}
 }
 
+// Gateway
+//
+func FlagGatewayEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gateway-enabled",
+		Usage:  "proxy gateway enable or not",
+		EnvVar: "SWAN_GATEWAY_ENABLED",
+		Value:  "true",
+	}
+}
+
 func FlagGatewayAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
 		Name:   "gateway-advertise-ip",
@@ -134,6 +145,17 @@ func FlagGatewayTLSKeyFile() cli.Flag {
 		Usage:  "gateway tls key file",
 		Value:  "",
 		EnvVar: "SWAN_GATEWAY_TLS_KEY_FILE",
+	}
+}
+
+// Dns
+//
+func FlagDNSEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "dns-enabled",
+		Usage:  "dns enable or not",
+		EnvVar: "SWAN_DNS_ENABLED",
+		Value:  "true",
 	}
 }
 
@@ -195,5 +217,56 @@ func FlagDomain() cli.Flag {
 		Usage:  "domain which resolve to gateway. eg. swan.com, which make any task can be access from path likes 0.appname.username.cluster.gateway.swan.com",
 		EnvVar: "SWAN_DOMAIN",
 		Value:  "swan.com",
+	}
+}
+
+// Agent IPAM
+//
+func FlagIPAMEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-enabled",
+		Usage:  "ipam enable or not",
+		EnvVar: "SWAN_IPAM_ENABLED",
+		Value:  "false",
+	}
+}
+
+func FlagIPAMStoreType() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-store-type",
+		Usage:  "ipam store type [etcd|zk]",
+		EnvVar: "SWAN_IPAM_STORE_TYPE",
+	}
+}
+
+func FlagIPAMEtcdAddrs() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-etcd-addrs",
+		Usage:  "ipam etcd cluster address",
+		EnvVar: "SWAN_IPAM_ETCD_ADDRS",
+	}
+}
+
+func FlagIPAMZKAddrs() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-zk-addrs",
+		Usage:  "ipam zk cluster address",
+		EnvVar: "SWAN_IPAM_ZK_ADDRS",
+	}
+}
+
+// Agent IPAM IPPool
+//
+func FlagIPAMIPStart() cli.Flag {
+	return cli.StringFlag{
+		Name:  "ip-start",
+		Usage: "ip pool start, mus be CIDR format",
+	}
+}
+
+func FlagIPAMIPEnd() cli.Flag {
+	return cli.StringFlag{
+		Name:  "ip-end",
+		Usage: "ip pool end, must be CIDR format",
 	}
 }

@@ -30,6 +30,21 @@ func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
 	r.proxyAgentHandle(id, agentReq, w)
 }
 
+func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
+	var (
+		id    = mux.Vars(req)["agent_id"]
+		agent = r.driver.ClusterAgent(id)
+	)
+
+	if agent == nil {
+		http.Error(w, "no such agent: "+id, http.StatusNotFound)
+		return
+	}
+
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/configs", id), nil)
+	r.proxyAgentHandle(id, agentReq, w)
+}
+
 func (r *Server) fullEventsAndRecords(w http.ResponseWriter, req *http.Request) {
 	ret := r.driver.FullTaskEventsAndRecords()
 	writeJSON(w, http.StatusOK, ret)
@@ -46,6 +61,11 @@ func (r *Server) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
+	n := len(`/v1/agents/`) + 16
+	r.redirectAgent(n, w, req)
+}
+
+func (r *Server) redirectAgentIPAM(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/`) + 16
 	r.redirectAgent(n, w, req)
 }
