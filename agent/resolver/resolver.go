@@ -22,13 +22,14 @@ var (
 )
 
 type Resolver struct {
-	config       *config.DNS
-	base         string               // base domain suffix
-	gwbase       string               // gateway base domain suffix
-	m            map[string][]*Record // records store:  parents -> []records
-	sync.RWMutex                      // protect m
-	dnsClient    *dns.Client          // for forwarders
-	forwardAddrs []string             // for forwarders
+	config           *config.DNS
+	base             string               // base domain suffix
+	gwbase           string               // gateway base domain suffix
+	m                map[string][]*Record // records store:  parents -> []records
+	sync.RWMutex                          // protect m
+	dnsClient        *dns.Client          // for forwarders
+	forwardAddrs     []string             // for forwarders
+	proxyAdvertiseIP string               // for gateway.{base.domain} resolve request
 }
 
 func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
@@ -48,18 +49,8 @@ func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 			ReadTimeout:  cfg.ExchangeTimeout,
 			WriteTimeout: cfg.ExchangeTimeout,
 		},
+		proxyAdvertiseIP: AdvertiseIP,
 	}
-
-	// init with local proxy dns record
-	rr := &Record{
-		ID:          "local_proxy",
-		Parent:      "PROXY",
-		IP:          AdvertiseIP, // we've verified before
-		Port:        "80",
-		Weight:      0,
-		ProxyRecord: true,
-	}
-	resolver.Upsert(rr)
 
 	resolver.forwardAddrs = make([]string, len(cfg.Resolvers))
 	for i, addr := range cfg.Resolvers {
@@ -72,6 +63,103 @@ func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 	}
 
 	return resolver
+}
+
+func (r *Resolver) Start() error {
+	log.Println("agent resolver in serving ...")
+
+	// init with local proxy dns record
+	rr := &Record{
+		ID:          "local_proxy",
+		Parent:      "PROXY",
+		IP:          r.proxyAdvertiseIP, // we've verified before
+		Port:        "80",
+		Weight:      0,
+		ProxyRecord: true,
+	}
+	r.Upsert(rr)
+
+	// serving
+	dns.HandleFunc(r.base, r.handleLocal)
+	dns.HandleFunc(".", r.handleForward)
+
+	server := &dns.Server{
+		Addr: r.config.ListenAddr,
+		Net:  "udp",
+	}
+
+	return server.ListenAndServe()
+}
+
+func (r *Resolver) handleLocal(w dns.ResponseWriter, req *dns.Msg) {
+	msg := &dns.Msg{
+		MsgHdr: dns.MsgHdr{
+			Authoritative:      true,
+			RecursionAvailable: r.config.RecurseOn,
+		}}
+	msg.SetReply(req)
+
+	var (
+		name = strings.ToLower(req.Question[0].Name)
+		ttl  = r.config.TTL
+	)
+
+	switch typ := req.Question[0].Qtype; typ {
+
+	case dns.TypeA:
+		for _, record := range r.search(name) {
+			a := record.buildA(name, ttl)
+			msg.Answer = append(msg.Answer, a)
+		}
+
+	case dns.TypeSRV:
+		for _, record := range r.search(name) {
+			srv, ext := record.buildSRV(name, ttl)
+			msg.Answer = append(msg.Answer, srv)
+			msg.Extra = append(msg.Extra, ext)
+		}
+	}
+
+	if len(msg.Answer) == 0 {
+		log.Warnf("resolve [%s] got non of matched records", name)
+	} else {
+		log.Debugf("resolve [%s] -> [%s]", name, msg.Answer)
+	}
+
+	// write reply whatever...
+	if err := w.WriteMsg(msg); err != nil {
+		log.Errorln("resolve [%s] error on dns reply: %v", name, err)
+	}
+}
+
+func (r *Resolver) handleForward(w dns.ResponseWriter, req *dns.Msg) {
+	m, err := r.Forward(req)
+	if err != nil {
+		log.Errorln("forwarder:", err)
+		m = new(dns.Msg).SetRcode(req, dns.RcodeServerFailure)
+	} else if len(m.Answer) == 0 {
+		log.Debugf("forwarder: no answer found")
+	}
+
+	if err := w.WriteMsg(m); err != nil {
+		log.Errorln(err)
+	}
+}
+
+func (r *Resolver) Forward(req *dns.Msg) (reply *dns.Msg, err error) {
+	if len(r.forwardAddrs) == 0 {
+		err = errors.New("no avaliable forwarders")
+		return
+	}
+
+	for _, addr := range r.forwardAddrs {
+		reply, _, err = r.dnsClient.Exchange(req, addr)
+		if err == nil {
+			break
+		}
+	}
+
+	return reply, err
 }
 
 func (r *Resolver) allRecords() map[string][]*Record {
@@ -182,87 +270,4 @@ func (r *Resolver) search(name string) []*Record {
 		}
 	}
 	return nil
-}
-
-func (r *Resolver) Start() error {
-	dns.HandleFunc(r.base, r.handleLocal)
-	dns.HandleFunc(".", r.handleForward)
-
-	server := &dns.Server{
-		Addr: r.config.ListenAddr,
-		Net:  "udp",
-	}
-
-	return server.ListenAndServe()
-}
-
-func (r *Resolver) handleLocal(w dns.ResponseWriter, req *dns.Msg) {
-	msg := &dns.Msg{
-		MsgHdr: dns.MsgHdr{
-			Authoritative:      true,
-			RecursionAvailable: r.config.RecurseOn,
-		}}
-	msg.SetReply(req)
-
-	var (
-		name = strings.ToLower(req.Question[0].Name)
-		ttl  = r.config.TTL
-	)
-
-	switch typ := req.Question[0].Qtype; typ {
-
-	case dns.TypeA:
-		for _, record := range r.search(name) {
-			a := record.buildA(name, ttl)
-			msg.Answer = append(msg.Answer, a)
-		}
-
-	case dns.TypeSRV:
-		for _, record := range r.search(name) {
-			srv, ext := record.buildSRV(name, ttl)
-			msg.Answer = append(msg.Answer, srv)
-			msg.Extra = append(msg.Extra, ext)
-		}
-	}
-
-	if len(msg.Answer) == 0 {
-		log.Warnf("resolve [%s] got non of matched records", name)
-	} else {
-		log.Debugf("resolve [%s] -> [%s]", name, msg.Answer)
-	}
-
-	// write reply whatever...
-	if err := w.WriteMsg(msg); err != nil {
-		log.Errorln("resolve [%s] error on dns reply: %v", name, err)
-	}
-}
-
-func (r *Resolver) handleForward(w dns.ResponseWriter, req *dns.Msg) {
-	m, err := r.Forward(req)
-	if err != nil {
-		log.Errorln("forwarder:", err)
-		m = new(dns.Msg).SetRcode(req, dns.RcodeServerFailure)
-	} else if len(m.Answer) == 0 {
-		log.Debugf("forwarder: no answer found")
-	}
-
-	if err := w.WriteMsg(m); err != nil {
-		log.Errorln(err)
-	}
-}
-
-func (r *Resolver) Forward(req *dns.Msg) (reply *dns.Msg, err error) {
-	if len(r.forwardAddrs) == 0 {
-		err = errors.New("no available forwarders")
-		return
-	}
-
-	for _, addr := range r.forwardAddrs {
-		reply, _, err = r.dnsClient.Exchange(req, addr)
-		if err == nil {
-			break
-		}
-	}
-
-	return reply, err
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,9 +17,11 @@ type AgentConfig struct {
 	JoinAddrs []string `json:"joinAddrs"`
 	DNS       *DNS     `json:"dns"`
 	Janitor   *Janitor `json:"janitor"`
+	IPAM      *IPAM    `json:"ipam"`
 }
 
 type DNS struct {
+	Enabled         bool          `json:"enabled"`
 	Domain          string        `json:"domain"`
 	RecurseOn       bool          `json:"recurseOn"`
 	ListenAddr      string        `json:"listenAddr"`
@@ -35,6 +38,7 @@ type DNS struct {
 }
 
 type Janitor struct {
+	Enabled       bool   `json:"enabled"`
 	ListenAddr    string `json:"listenAddr"`
 	TLSListenAddr string `json:"tlsListenAddr"`
 	TLSCertFile   string `json:"tlsCertFile"`
@@ -43,12 +47,20 @@ type Janitor struct {
 	AdvertiseIP   string `json:"advertiseIP"`
 }
 
+type IPAM struct {
+	Enabled   bool     `json:"enabled"`
+	StoreType string   `json:"store_type"`
+	EtcdAddrs []string `json:"etcd_addrs"`
+	ZKAddrs   []string `json:"zk_addrs"`
+}
+
 func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 	cfg := &AgentConfig{
 		Listen:    "0.0.0.0:9999",
 		LogLevel:  "info",
 		JoinAddrs: []string{"0.0.0.0:9999"},
 		DNS: &DNS{
+			Enabled:         true,
 			Domain:          "swan.com",
 			ListenAddr:      "0.0.0.0:53",
 			RecurseOn:       true,
@@ -57,8 +69,15 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 			ExchangeTimeout: time.Second * 3,
 		},
 		Janitor: &Janitor{
+			Enabled:    true,
 			ListenAddr: "0.0.0.0:80",
 			Domain:     "swan.com",
+		},
+		IPAM: &IPAM{
+			Enabled:   true,
+			StoreType: "etcd",
+			EtcdAddrs: []string{"127.0.0.1:2379"},
+			ZKAddrs:   []string{},
 		},
 	}
 
@@ -74,9 +93,15 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 		cfg.JoinAddrs = strings.Split(c.String("join-addrs"), ",")
 	}
 
+	// both gateway & dns
 	if c.String("domain") != "" {
 		cfg.DNS.Domain = c.String("domain")
 		cfg.Janitor.Domain = c.String("domain")
+	}
+
+	// gateway
+	if v := c.String("gateway-enabled"); v != "" {
+		cfg.Janitor.Enabled, _ = strconv.ParseBool(v)
 	}
 
 	if c.String("gateway-advertise-ip") != "" {
@@ -102,6 +127,11 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 		cfg.Janitor.TLSKeyFile = c.String("gateway-tls-key-file")
 	}
 
+	// dns
+	if v := c.String("dns-enabled"); v != "" {
+		cfg.DNS.Enabled, _ = strconv.ParseBool(v)
+	}
+
 	if c.String("dns-listen-addr") != "" {
 		cfg.DNS.ListenAddr = c.String("dns-listen-addr")
 	}
@@ -112,6 +142,23 @@ func NewAgentConfig(c *cli.Context) (*AgentConfig, error) {
 
 	if ttl := c.Int("dns-ttl"); ttl > 0 {
 		cfg.DNS.TTL = ttl
+	}
+
+	// ipam
+	if v := c.String("ipam-enabled"); v != "" {
+		cfg.IPAM.Enabled, _ = strconv.ParseBool(v)
+	}
+
+	if typ := c.String("ipam-store-type"); typ != "" {
+		cfg.IPAM.StoreType = typ
+	}
+
+	if addrs := c.String("ipam-etcd-addrs"); addrs != "" {
+		cfg.IPAM.EtcdAddrs = strings.Split(addrs, ",")
+	}
+
+	if addrs := c.String("ipam-zk-addrs"); addrs != "" {
+		cfg.IPAM.ZKAddrs = strings.Split(addrs, ",")
 	}
 
 	if err := cfg.validate(); err != nil {

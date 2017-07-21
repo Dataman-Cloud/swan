@@ -51,6 +51,8 @@ func NewJanitorServer(cfg *config.Janitor) *JanitorServer {
 }
 
 func (s *JanitorServer) Start() error {
+	log.Println("agent proxy in serving ...")
+
 	errCh := make(chan error, 2)
 
 	go func() {

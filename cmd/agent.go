@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/urfave/cli"
@@ -15,24 +16,47 @@ func AgentCmd() cli.Command {
 		Usage:       "start agent listen for events from leader manager",
 		Description: "run swan agent command",
 		Flags:       []cli.Flag{},
-		Subcommands: []cli.Command{},
-		Action:      JoinAndStartAgent,
+		Subcommands: []cli.Command{
+			AgentIPAMIPPoolCmd(),
+		},
+		Action: JoinAndStartAgent,
 	}
 
-	agentCmd.Flags = append(agentCmd.Flags, FlagListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagJoinAddrs())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayAdvertiseIp())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSCertFile())
-	agentCmd.Flags = append(agentCmd.Flags, FlagGatewayTLSKeyFile())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSListenAddr())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSTTL())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDNSResolvers())
-	agentCmd.Flags = append(agentCmd.Flags, FlagLogLevel())
-	agentCmd.Flags = append(agentCmd.Flags, FlagDomain())
+	agentCmd.Flags = []cli.Flag{
+		FlagListenAddr(),
+		FlagJoinAddrs(),
+		FlagGatewayEnabled(),
+		FlagGatewayAdvertiseIp(),
+		FlagGatewayListenAddr(),
+		FlagGatewayTLSListenAddr(),
+		FlagGatewayTLSCertFile(),
+		FlagGatewayTLSKeyFile(),
+		FlagDNSEnabled(),
+		FlagDNSListenAddr(),
+		FlagDNSTTL(),
+		FlagDNSResolvers(),
+		FlagLogLevel(),
+		FlagDomain(),
+		FlagIPAMEnabled(),
+		FlagIPAMStoreType(),
+		FlagIPAMEtcdAddrs(),
+		FlagIPAMZKAddrs(),
+	}
 
 	return agentCmd
+}
+
+func AgentIPAMIPPoolCmd() cli.Command {
+	return cli.Command{
+		Name:        "ipam",
+		Usage:       "docker IPAM ip pool management",
+		Description: "docker IPAM ip pool management",
+		Flags: []cli.Flag{
+			FlagIPAMIPStart(),
+			FlagIPAMIPEnd(),
+		},
+		Action: IPAMSetIPPool,
+	}
 }
 
 func JoinAndStartAgent(c *cli.Context) error {
@@ -45,4 +69,23 @@ func JoinAndStartAgent(c *cli.Context) error {
 
 	agent := agent.New(conf)
 	return agent.StartAndJoin()
+}
+
+func IPAMSetIPPool(c *cli.Context) error {
+	var (
+		ipstart = c.String("ip-start")
+		ipend   = c.String("ip-end")
+	)
+
+	if ipstart == "" || ipend == "" {
+		return errors.New("parameter [ip-start] & [ip-end] required")
+	}
+
+	conf, err := config.NewAgentConfig(c)
+	if err != nil {
+		return fmt.Errorf("parse config error: %v", err)
+	}
+
+	agent := agent.New(conf)
+	return agent.IPAMSetIPPool(ipstart, ipend)
 }
