@@ -89,7 +89,7 @@ func (agent *Agent) StartAndJoin() error {
 		})
 
 		if err := http.ListenAndServe(agent.config.Listen, nil); err != nil {
-			log.Fatalln("httpd pong occured fatal error:", err)
+			log.Fatalln("httpd pong occurred fatal error:", err)
 		}
 	}()
 

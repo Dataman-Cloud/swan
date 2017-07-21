@@ -68,7 +68,7 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 		ret      = make(map[string]*DockerService)
 		services = cfg.Services
 		networks = cfg.Networks
-		volumes  = cfg.Volumes // named volume definations
+		volumes  = cfg.Volumes // named volume definitions
 	)
 	for _, srv := range services {
 		name := srv.Name
@@ -76,7 +76,7 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 		// extra
 		ext, _ := c.YAMLExtra[name]
 		if ext == nil {
-			return nil, errors.New("extra settings requried for service: " + name)
+			return nil, errors.New("extra settings required for service: " + name)
 		}
 
 		// service, with extra labels

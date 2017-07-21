@@ -31,7 +31,7 @@ type Selector interface {
 
 	// Requirements coverts this interface into Requirement to expose
 	// more detail information
-	// If there are querying parameters, it will return coverted requirements and selectable=true
+	// If there are querying parameters, it will return converted requirements and selectable=true
 	// If this selector doesn't want to select anything, it will selectable=false
 	Requirements() (requirements Requirements, selectable bool)
 }

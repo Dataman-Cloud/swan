@@ -43,7 +43,7 @@ func connect(addrs []string) (*zk.Conn, error) {
 				log.Info("lost connection from zookeeper")
 				return nil, nil
 			}
-			// TOOD(nmg) currently not work.
+			// TODO(nmg) currently not work.
 		case _ = <-time.After(time.Second * 5):
 			conn.Close()
 			return nil, nil
