@@ -41,6 +41,10 @@ func New(cfg *config.AgentConfig) *Agent {
 
 // IPAMSetIPPool called via CLI
 func (agent *Agent) IPAMSetIPPool(start, end string) error {
+	if !agent.config.IPAM.Enabled {
+		return errors.New("agent ipam disabled")
+	}
+
 	if agent.ipam == nil {
 		return errors.New("ipam not initilized yet")
 	}
@@ -89,23 +93,29 @@ func (agent *Agent) StartAndJoin() error {
 		}
 	}()
 
-	go func() {
-		if err := agent.resolver.Start(); err != nil {
-			log.Fatalln("resolver occured fatal error:", err)
-		}
-	}()
+	if agent.config.DNS.Enabled {
+		go func() {
+			if err := agent.resolver.Start(); err != nil {
+				log.Fatalln("resolver occured fatal error:", err)
+			}
+		}()
+	}
 
-	go func() {
-		if err := agent.janitor.Start(); err != nil {
-			log.Fatalln("janitor occured fatal error:", err)
-		}
-	}()
+	if agent.config.Janitor.Enabled {
+		go func() {
+			if err := agent.janitor.Start(); err != nil {
+				log.Fatalln("janitor occured fatal error:", err)
+			}
+		}()
+	}
 
-	go func() {
-		if err := agent.ipam.Serve(); err != nil {
-			log.Fatalln("ipam occured fatal error:", err)
-		}
-	}()
+	if agent.config.IPAM.Enabled {
+		go func() {
+			if err := agent.ipam.Serve(); err != nil {
+				log.Fatalln("ipam occured fatal error:", err)
+			}
+		}()
+	}
 
 	// serving protocol & Api with underlying mole
 	var (
@@ -185,16 +195,6 @@ func (agent *Agent) ServeApi(l net.Listener) error {
 		Handler: agent.NewHTTPMux(),
 	}
 	return httpd.Serve(l)
-}
-
-func (agent *Agent) sysinfo(ctx *gin.Context) {
-	info, err := Gather()
-	if err != nil {
-		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	ctx.JSON(200, info)
 }
 
 func (agent *Agent) serveProxy(ctx *gin.Context) {

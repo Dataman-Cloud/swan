@@ -26,6 +26,8 @@ func New(cfg *config.IPAM) *IPAM {
 }
 
 func (m *IPAM) Serve() error {
+	log.Println("agent ipam in serving ...")
+
 	if err := m.StoreSetup(); err != nil {
 		return err
 	}

@@ -51,6 +51,8 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 
 		NewRoute("GET", "/v1/agents", s.listAgents),
 		NewRoute("GET", "/v1/agents/{agent_id}", s.getAgent),
+		NewRoute("GET", "/v1/agents/{agent_id}/sysinfo", s.getAgent),
+		NewRoute("GET", "/v1/agents/{agent_id}/configs", s.getAgentConfigs),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/proxy", s.redirectAgentProxy),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/dns", s.redirectAgentDNS),
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/docker", s.redirectAgentDocker),

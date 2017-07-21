@@ -92,6 +92,17 @@ func FlagJoinAddrs() cli.Flag {
 	}
 }
 
+// Gateway
+//
+func FlagGatewayEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "gateway-enabled",
+		Usage:  "proxy gateway enable or not",
+		EnvVar: "SWAN_GATEWAY_ENABLED",
+		Value:  "true",
+	}
+}
+
 func FlagGatewayAdvertiseIp() cli.Flag {
 	return cli.StringFlag{
 		Name:   "gateway-advertise-ip",
@@ -134,6 +145,17 @@ func FlagGatewayTLSKeyFile() cli.Flag {
 		Usage:  "gateway tls key file",
 		Value:  "",
 		EnvVar: "SWAN_GATEWAY_TLS_KEY_FILE",
+	}
+}
+
+// Dns
+//
+func FlagDNSEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "dns-enabled",
+		Usage:  "dns enable or not",
+		EnvVar: "SWAN_DNS_ENABLED",
+		Value:  "true",
 	}
 }
 
@@ -200,6 +222,15 @@ func FlagDomain() cli.Flag {
 
 // Agent IPAM
 //
+func FlagIPAMEnabled() cli.Flag {
+	return cli.StringFlag{
+		Name:   "ipam-enabled",
+		Usage:  "ipam enable or not",
+		EnvVar: "SWAN_IPAM_ENABLED",
+		Value:  "false",
+	}
+}
+
 func FlagIPAMStoreType() cli.Flag {
 	return cli.StringFlag{
 		Name:   "ipam-store-type",

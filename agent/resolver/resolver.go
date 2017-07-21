@@ -66,6 +66,8 @@ func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 }
 
 func (r *Resolver) Start() error {
+	log.Println("agent resolver in serving ...")
+
 	// init with local proxy dns record
 	rr := &Record{
 		ID:          "local_proxy",
