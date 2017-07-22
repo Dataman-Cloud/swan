@@ -121,16 +121,6 @@ func (zk *ZKStore) DeleteApp(id string) error {
 		return err
 	}
 
-	//if err := zk.delTasks(p, id); err != nil {
-	//	log.Errorf("delete app %s tasks got error: %v", id, err)
-	//	return err
-	//}
-
-	//if err := zk.delVersions(p, id); err != nil {
-	//	log.Errorf("delete app %s versions got error: %v", id, err)
-	//	return err
-	//}
-
 	return zk.del(p)
 }
 
