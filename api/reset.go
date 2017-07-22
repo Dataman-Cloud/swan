@@ -24,12 +24,20 @@ func (r *Server) resetStatus(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusNoop
+	var (
+		current = app.OpStatus
+		desired = types.OpStatusNoop
+	)
+
+	app.OpStatus = desired
 	if err := r.db.UpdateApp(app); err != nil {
 		log.Errorf("reset app's op-status to noop got error: %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"opStatus": "noop"})
+	writeJSON(w, http.StatusOK, map[string]string{
+		"previous": current,
+		"current":  desired,
+	})
 }
