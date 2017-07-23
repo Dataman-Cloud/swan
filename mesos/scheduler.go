@@ -314,7 +314,9 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		// emit event status to ongoing task
 		a := s.getAgent(agentId)
 		if a != nil {
+			log.Debugln("Finding task to send status", "taskId:", taskId, "agentId:", agentId)
 			if task := a.getTask(taskId); task != nil {
+				log.Debugln("Sending task tatus ", "task:", taskId, "status:", state.String())
 				task.SendStatus(status)
 			}
 		}
@@ -496,6 +498,7 @@ func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
 
 			a := s.getAgent(agentId)
 			if a != nil {
+				log.Debugf("Adding task %s to agent %s", taskId, agentId)
 				a.addTask(t)
 				defer a.removeTask(taskId)
 			}
@@ -531,6 +534,7 @@ func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
 
 			log.Debugf("Waiting for task %s to be killed by mesos", taskId)
 			for status := range t.GetStatus() {
+				log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
 				if t.IsKilled(status) {
 					log.Debugf("Task %s killed", taskId)
 					p.Lock()
