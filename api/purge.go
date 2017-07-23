@@ -3,9 +3,7 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"sync"
 
-	"github.com/Dataman-Cloud/swan/types"
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -16,82 +14,67 @@ func (r *Server) purge(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tokenBucket := make(chan struct{}, 10) // TODO(nmg): delete step, make it configurable
-
 	go func() {
-		var all sync.WaitGroup
-
 		for _, app := range apps {
-			var (
-				hasError = false
-				wg       sync.WaitGroup
-			)
+			go func(appId string) {
+				tasks, err := r.db.ListTasks(appId)
+				if err != nil {
+					log.Errorf("list app tasks got error for purge: %v", err)
+					return
+				}
 
-			tasks, err := r.db.ListTasks(app.ID)
-			if err != nil {
-				log.Errorf("list app tasks got error for purge: %v", err)
-				continue
-			}
+				var (
+					count   = len(tasks)
+					succeed = 0
+				)
 
-			wg.Add(len(tasks))
-			for _, task := range tasks {
-				tokenBucket <- struct{}{}
-
-				go func(task *types.Task, appId string) {
-					all.Add(1)
-
-					defer func() {
-						wg.Done()
-						all.Done()
-						<-tokenBucket
-					}()
-
-					if err := r.driver.KillTask(task.ID, task.AgentId, false); err != nil {
+				for _, task := range tasks {
+					if err := r.driver.KillTask(task.ID, task.AgentId, true); err != nil {
 						log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-						hasError = true
 
 						task.OpStatus = fmt.Sprintf("kill task error: %v", err)
 						if err = r.db.UpdateTask(appId, task); err != nil {
 							log.Errorf("update task %s got error: %v", task.Name, err)
 						}
 
-						return
+						continue
 					}
 
 					if err := r.db.DeleteTask(task.ID); err != nil {
 						log.Errorf("Delete task %s got error: %v", task.ID, err)
-
-						hasError = true
 
 						task.OpStatus = fmt.Sprintf("delete task error: %v", err)
 						if err = r.db.UpdateTask(appId, task); err != nil {
 							log.Errorf("update task %s got error: %v", task.Name, err)
 						}
 
+						continue
+					}
+
+					succeed++
+				}
+
+				if succeed == count {
+					versions, err := r.db.ListVersions(app.ID)
+					if err != nil {
+						log.Errorf("list versions error for delete app. %v", err)
 						return
 					}
 
-				}(task, app.ID)
-			}
+					for _, version := range versions {
+						if err := r.db.DeleteVersion(appId, version.ID); err != nil {
+							log.Errorf("Delete version %s for app %s got error: %v", version.ID, appId, err)
+							return
+						}
+					}
 
-			wg.Wait()
+					if err := r.db.DeleteApp(app.ID); err != nil {
+						log.Errorf("Delete app %s got error: %v", appId, err)
+					}
+				}
 
-			if hasError {
-				log.Errorf("Delete some tasks of app %s got error.", app.ID)
-				return
-			}
-
-			if err := r.db.DeleteApp(app.ID); err != nil {
-				log.Error("Delete app %s got error: %v", app.ID, err)
-				return
-			}
-
+			}(app.ID)
 		}
-
-		all.Wait()
-
-		close(tokenBucket)
 	}()
 
 	writeJSON(w, http.StatusNoContent, "")
