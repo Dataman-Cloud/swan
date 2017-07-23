@@ -2,6 +2,7 @@ package mole
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -153,12 +154,8 @@ func (ca *ClusterAgent) ID() string {
 func (ca *ClusterAgent) Dial(network, addr string) (net.Conn, error) {
 	wid := randNumber(10)
 
-	// notify the agent to create a new worker connection
-	command := newCmd(cmdNewWorker, ca.id, wid)
-	_, err := ca.conn.Write(command)
-	if err != nil {
-		return nil, err
-	}
+	// NOTE: should run subscriber firstly to avoid the situation that new worker is faster than broadcaster
+	// and then Dial() will wait for an broadcast-ed event until timeout.
 
 	// subcribe waitting for the worker id connection
 	sub := pub.Subcribe(func(v interface{}) bool {
@@ -169,11 +166,18 @@ func (ca *ClusterAgent) Dial(network, addr string) (net.Conn, error) {
 	})
 	defer pub.Evict(sub) // evict the subcriber before exit
 
+	// notify the agent to create a new worker connection
+	command := newCmd(cmdNewWorker, ca.id, wid)
+	_, err := ca.conn.Write(command)
+	if err != nil {
+		return nil, err
+	}
+
 	select {
 	case cw := <-sub:
 		return cw.(*clusterWorker).conn, nil
 	case <-time.After(time.Second * 30):
-		return nil, errors.New("agent Dial(): new worker conn timeout")
+		return nil, fmt.Errorf("agent Dial(): new worker conn %s timeout", wid)
 	}
 
 	return nil, errors.New("never be here")
