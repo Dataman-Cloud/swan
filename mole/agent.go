@@ -105,7 +105,7 @@ func (a *Agent) ServeProtocol() error {
 		switch cmd.Cmd {
 
 		case cmdNewWorker: // launch a new tcp connection as the worker connection
-			log.Debugln("agent launch a new tcp worker connection ...")
+			log.Debugln("agent launch a new tcp worker connection ...", cmd.WorkerID)
 
 			connWorker, err := net.DialTimeout("tcp", a.master.Host, time.Second*10)
 			if err != nil {
