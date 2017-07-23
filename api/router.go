@@ -16,6 +16,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("PUT", "/v1/apps/{app_id}/canary", s.canaryUpdate),
 		NewRoute("POST", "/v1/apps/{app_id}/rollback", s.rollback),
 		NewRoute("PATCH", "/v1/apps/{app_id}/weights", s.updateWeights),
+		NewRoute("POST", "/v1/apps/{app_id}/reset", s.resetStatus),
 
 		NewRoute("GET", "/v1/apps/{app_id}/tasks", s.getTasks),
 		NewRoute("GET", "/v1/apps/{app_id}/tasks/{task_id}", s.getTask),

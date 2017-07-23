@@ -36,6 +36,9 @@
   - [GET /v1/debug/dump](#dump)
   - [GET /v1/debug/load](#load)
 
++ reset 
+  - [POST /v1/apps/{app_id}/reset](#reset)
+
 + [deploy policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/deploy.md)
 
 + [constraints](https://github.com/Dataman-Cloud/swan/tree/master/docs/constraints.md)
@@ -957,4 +960,22 @@ Example response:
     "leader": "192.168.1.92:5016"
 }
 ```
+
+#### Reset
+`Reset` is used for manually update app's op-status to noop in some situation so that you can continue.
+```
+POST /v1/apps/{app_id}/reset
+```
+
+Example request:
+```
+POST /v1/apps/nginx004.default.testuser.dataman/reset
+```
+
+Example response:
+```
+{
+    "previous": "scaling",
+    "current": "noop"
+}
 

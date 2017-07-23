@@ -25,6 +25,7 @@ type Store interface {
 	CreateVersion(string, *types.Version) error
 	GetVersion(string, string) (*types.Version, error)
 	ListVersions(string) ([]*types.Version, error)
+	DeleteVersion(string, string) error
 
 	UpdateFrameworkId(frameworkId string) error
 	GetFrameworkId() (string, int64)

@@ -38,6 +38,12 @@ func (zk *ZKStore) GetVersion(aid, vid string) (*types.Version, error) {
 
 }
 
+func (zk *ZKStore) DeleteVersion(aid, vid string) error {
+	p := path.Join(keyApp, aid, "versions", vid)
+
+	return zk.del(p)
+}
+
 func (zk *ZKStore) ListVersions(aid string) ([]*types.Version, error) {
 	p := path.Join(keyApp, aid, "versions")
 

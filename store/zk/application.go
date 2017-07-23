@@ -77,8 +77,10 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	}
 
 	if len(app.Version) == 0 {
-		types.VersionList(versions).Reverse()
-		app.Version = append(app.Version, versions[0].ID)
+		if len(versions) > 0 {
+			types.VersionList(versions).Reverse()
+			app.Version = append(app.Version, versions[0].ID)
+		}
 	}
 
 	app.VersionCount = len(versions)
@@ -109,13 +111,13 @@ func (zk *ZKStore) ListApps() ([]*types.Application, error) {
 func (zk *ZKStore) DeleteApp(id string) error {
 	p := path.Join(keyApp, id)
 
-	if err := zk.delTasks(p, id); err != nil {
-		log.Errorf("delete app %s tasks got error: %v", id, err)
+	if err := zk.del(path.Join(keyApp, id, "tasks")); err != nil {
+		log.Errorf("delete app %s tasks key got error: %v", id, err)
 		return err
 	}
 
-	if err := zk.delVersions(p, id); err != nil {
-		log.Errorf("delete app %s versions got error: %v", id, err)
+	if err := zk.del(path.Join(keyApp, id, "versions")); err != nil {
+		log.Errorf("delete app %s versions key got error: %v", id, err)
 		return err
 	}
 
