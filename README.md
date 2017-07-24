@@ -42,6 +42,12 @@ With `Swan` you can deploy long running `application` on mesos cluster, control 
 If you want to contribute to swan, make a PR or report a issue.
 The goal of swan is to become the default and best scheduler for mesos, so let's do it!
 
+## Contact
+  - [pwzgorilla](mailto:mgniu@dataman-inc.com)  
+  - [bbklab](mailto:gzzhang@dataman-inc.com)
+  
+WeChat: xiaoshu062
+
 ## Licensing
 Swan is licensed under the Apache License, Version 2.0. See
 [LICENSE](https://github.com/Dataman-Cloud/swan/blob/master/LICENSE) for the full
