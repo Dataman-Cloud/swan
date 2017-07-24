@@ -78,7 +78,6 @@ type Scheduler struct {
 	clusterMaster *mole.Master
 
 	sem         chan struct{}
-	events      chan *mesosproto.Event // status update events.
 	offers      chan *mesosproto.Event // offer events
 	failedTasks chan *Task             // hold on all failed tasks(TODO)
 }
@@ -97,7 +96,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		events:        make(chan *mesosproto.Event, 4096),
 		offers:        make(chan *mesosproto.Event, 4096),
 		failedTasks:   make(chan *Task, 4096),
 		sem:           make(chan struct{}, 1),
@@ -225,7 +223,6 @@ func (s *Scheduler) Subscribe() error {
 	}
 
 	go s.watchEvents(resp)
-	go s.handleUpdates()
 	go s.handleOffers()
 	go s.handleFailedTasks()
 
@@ -317,8 +314,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			task.SendStatus(status)
 		}
 
-		log.Debugf("Put update events %s for task %s in the event queue", state.String(), taskId)
-		s.events <- ev
+		handler(ev)
 
 		return
 	}
@@ -329,20 +325,6 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 	}
 
 	go handler(ev)
-}
-
-func (s *Scheduler) handleUpdates() {
-	for ev := range s.events {
-		var (
-			typ     = ev.GetType()
-			handler = s.handlers[typ]
-			status  = ev.GetUpdate().GetStatus()
-			state   = status.GetState()
-			taskId  = status.TaskId.GetValue()
-		)
-		log.Debugf("Consume update event %s for task %s", state.String(), taskId)
-		handler(ev)
-	}
 }
 
 // TODO(nmg): consinder restart policy.
@@ -1014,7 +996,6 @@ func (s *Scheduler) Load() map[string]interface{} {
 
 	return map[string]interface{}{
 		"tasks":  tasks,
-		"events": len(s.events),
 		"offers": len(s.offers),
 		"failed": len(s.failedTasks),
 	}
