@@ -78,8 +78,7 @@ type Scheduler struct {
 	clusterMaster *mole.Master
 
 	sem         chan struct{}
-	offers      chan *mesosproto.Event // offer events
-	failedTasks chan *Task             // hold on all failed tasks(TODO)
+	failedTasks chan *Task // hold on all failed tasks(TODO)
 }
 
 // NewScheduler...
@@ -96,7 +95,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		offers:        make(chan *mesosproto.Event, 4096),
 		failedTasks:   make(chan *Task, 4096),
 		sem:           make(chan struct{}, 1),
 	}
@@ -223,7 +221,6 @@ func (s *Scheduler) Subscribe() error {
 	}
 
 	go s.watchEvents(resp)
-	go s.handleOffers()
 	go s.handleFailedTasks()
 
 	return nil
@@ -319,11 +316,6 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 		return
 	}
 
-	if typ == mesosproto.Event_OFFERS {
-		s.offers <- ev
-		return
-	}
-
 	go handler(ev)
 }
 
@@ -333,16 +325,6 @@ func (s *Scheduler) handleFailedTasks() {
 		log.Debugln("Rescheduling task ", task.ID())
 		s.LaunchTasks([]*Task{task})
 		time.Sleep(1 * time.Second)
-	}
-}
-
-func (s *Scheduler) handleOffers() {
-	for ev := range s.offers {
-		var (
-			typ     = ev.GetType()
-			handler = s.handlers[typ]
-		)
-		handler(ev)
 	}
 }
 
@@ -996,7 +978,6 @@ func (s *Scheduler) Load() map[string]interface{} {
 
 	return map[string]interface{}{
 		"tasks":  tasks,
-		"offers": len(s.offers),
 		"failed": len(s.failedTasks),
 	}
 }
