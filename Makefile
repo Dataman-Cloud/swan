@@ -1,7 +1,7 @@
 
 .PHONY: build image docker docker-centos clean
 
-PACKAGES = $(shell go list ./... | grep -v vendor)
+PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
