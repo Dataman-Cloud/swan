@@ -42,6 +42,16 @@ docker-build:
 docker-image:
 	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm -f ./Dockerfile.legacy .
 
+integration-prepare:
+
+integration-test: integration-prepare
+	docker run --rm \
+		-w /go/src/github.com/Dataman-Cloud/swan/integration-test \
+		-e SWAN_HOST=${SWAN_HOST} \
+		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
+		golang:1.8.1-alpine \
+		sh -c 'go test -check.v github.com/Dataman-Cloud/swan/integration-test'
+
 clean:
 	rm -rfv bin/*
 
