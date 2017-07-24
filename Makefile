@@ -1,7 +1,7 @@
 
 .PHONY: build image docker docker-centos clean
 
-PACKAGES = $(shell go list ./... | grep -v vendor)
+PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
@@ -41,6 +41,16 @@ docker-build:
 # compitable for legacy docker version
 docker-image:
 	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm -f ./Dockerfile.legacy .
+
+integration-prepare:
+
+integration-test: integration-prepare
+	docker run --rm \
+		-w /go/src/github.com/Dataman-Cloud/swan/integration-test \
+		-e SWAN_HOST=${SWAN_HOST} \
+		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
+		golang:1.8.1-alpine \
+		sh -c 'go test -check.v github.com/Dataman-Cloud/swan/integration-test'
 
 clean:
 	rm -rfv bin/*
