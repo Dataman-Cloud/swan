@@ -317,6 +317,7 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			task.SendStatus(status)
 		}
 
+		log.Debugf("Put update events %s for task %s in the event queue", state.String(), taskId)
 		s.events <- ev
 
 		return
@@ -335,7 +336,11 @@ func (s *Scheduler) handleUpdates() {
 		var (
 			typ     = ev.GetType()
 			handler = s.handlers[typ]
+			status  = ev.GetUpdate().GetStatus()
+			state   = status.GetState()
+			taskId  = status.TaskId.GetValue()
 		)
+		log.Debugf("Consume update event %s for task %s", state.String(), taskId)
 		handler(ev)
 	}
 }
@@ -523,7 +528,7 @@ func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
 
 			t := NewTask(nil, taskId, taskId)
 
-			log.Debugf("Adding task %s to agent %s", taskId, agentId)
+			log.Debugf("Adding task %s", taskId)
 			s.addTask(t)
 			defer s.removeTask(taskId)
 
@@ -968,9 +973,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 		go func(task *Task) {
 			defer wg.Done()
 
+			log.Debugf("Waiting for task %s to be running", task.ID())
 			for {
 				select {
 				case status := <-task.GetStatus():
+					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if task.IsDone(status) {
 						l.Lock()
 						rets[task.ID()] = task.DetectError(status)
@@ -1000,8 +1007,13 @@ func (s *Scheduler) Load() map[string]interface{} {
 	s.RLock()
 	defer s.RUnlock()
 
+	tasks := []string{}
+	for _, task := range s.tasks {
+		tasks = append(tasks, task.ID())
+	}
+
 	return map[string]interface{}{
-		"tasks":  len(s.tasks),
+		"tasks":  tasks,
 		"events": len(s.events),
 		"offers": len(s.offers),
 		"failed": len(s.failedTasks),
