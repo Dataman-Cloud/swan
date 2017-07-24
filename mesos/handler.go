@@ -122,13 +122,12 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	var (
 		previousHealthy = task.Healthy // save previous
 	)
-	if ver.HealthCheck != nil {
+
+	if task.Healthy != types.TaskHealthyUnset {
 		task.Healthy = types.TaskUnHealthy
 		if healthy {
 			task.Healthy = types.TaskHealthy
 		}
-	} else {
-		task.Healthy = types.TaskHealthyUnset
 	}
 
 	if state != mesosproto.TaskState_TASK_RUNNING {

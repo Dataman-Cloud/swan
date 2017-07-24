@@ -46,10 +46,11 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		spec  = &version
-		id    = fmt.Sprintf("%s.%s.%s.%s", spec.Name, compose, spec.RunAs, r.driver.ClusterName())
-		vid   = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
-		count = int(spec.Instances)
+		spec      = &version
+		id        = fmt.Sprintf("%s.%s.%s.%s", spec.Name, compose, spec.RunAs, r.driver.ClusterName())
+		vid       = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+		count     = int(spec.Instances)
+		healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 	)
 
 	var alias string
@@ -133,6 +134,10 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				Version: vid,
 				Created: time.Now(),
 				Updated: time.Now(),
+			}
+
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err := r.db.CreateTask(app.ID, task); err != nil {
