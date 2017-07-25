@@ -126,6 +126,18 @@ type HealthCheck struct {
 	DelaySeconds        float64 `json:"delaySeconds,omitempty"`
 }
 
+func (h *HealthCheck) IsEmpty() bool {
+	return h.Protocol == "" &&
+		h.PortName == "" &&
+		h.Path == "" &&
+		h.Command == "" &&
+		h.ConsecutiveFailures == 0 &&
+		h.GracePeriodSeconds == 0 &&
+		h.IntervalSeconds == 0 &&
+		h.TimeoutSeconds == 0 &&
+		h.DelaySeconds == 0
+}
+
 type Proxy struct {
 	Enabled bool   `json:"enabled"`
 	Alias   string `json:"alias"`
@@ -246,7 +258,7 @@ func (v *Version) Validate() error {
 			return errors.New("each port mapping should have a uniquely identified name")
 		}
 
-		if v.HealthCheck != nil {
+		if v.HealthCheck != nil && !v.HealthCheck.IsEmpty() {
 			var (
 				protocol = strings.ToLower(v.HealthCheck.Protocol)
 				portName = v.HealthCheck.PortName

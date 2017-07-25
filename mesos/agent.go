@@ -99,49 +99,6 @@ func (s *Agent) offer() *Offer {
 	return nil
 }
 
-func (s *Agent) addTask(t *Task) {
-	s.Lock()
-	defer s.Unlock()
-
-	s.tasks[t.TaskId.GetValue()] = t
-}
-
-func (s *Agent) getTask(taskId string) *Task {
-	s.RLock()
-	defer s.RUnlock()
-
-	task, ok := s.tasks[taskId]
-	if !ok {
-		return nil
-	}
-
-	return task
-}
-
-func (s *Agent) removeTask(taskId string) {
-	s.Lock()
-	defer s.Unlock()
-
-	_, ok := s.tasks[taskId]
-	if !ok {
-		return
-	}
-
-	delete(s.tasks, taskId)
-}
-
-func (s *Agent) getTasks() []*Task {
-	s.RLock()
-	defer s.RUnlock()
-
-	tasks := make([]*Task, 0)
-	for _, task := range s.tasks {
-		tasks = append(tasks, task)
-	}
-
-	return tasks
-}
-
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
 	for _, offer := range s.getOffers() {
 		cpus += offer.GetCpus()

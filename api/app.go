@@ -46,10 +46,11 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		spec  = &version
-		id    = fmt.Sprintf("%s.%s.%s.%s", spec.Name, compose, spec.RunAs, r.driver.ClusterName())
-		vid   = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
-		count = int(spec.Instances)
+		spec      = &version
+		id        = fmt.Sprintf("%s.%s.%s.%s", spec.Name, compose, spec.RunAs, r.driver.ClusterName())
+		vid       = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+		count     = int(spec.Instances)
+		healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 	)
 
 	var alias string
@@ -133,6 +134,10 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				Version: vid,
 				Created: time.Now(),
 				Updated: time.Now(),
+			}
+
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err := r.db.CreateTask(app.ID, task); err != nil {
@@ -537,9 +542,10 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		var (
-			tasks   = []*mesos.Task{}
-			count   = goal - current
-			counter = 0
+			tasks     = []*mesos.Task{}
+			count     = goal - current
+			counter   = 0
+			healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 		)
 
 		for i := current; i < goal; i++ {
@@ -565,9 +571,14 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				Name:    name,
 				Weight:  100,
 				Status:  "pending",
+				Healthy: types.TaskHealthyUnset,
 				Version: ver,
 				Created: time.Now(),
 				Updated: time.Now(),
+			}
+
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err := r.db.CreateTask(appId, task); err != nil {
@@ -694,7 +705,10 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
-		progress := 0
+		var (
+			progress  = 0
+			healthSet = newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
+		)
 
 		for _, t := range pending {
 			progress++
@@ -734,6 +748,10 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				Version: newVer.ID,
 				Created: t.Created,
 				Updated: time.Now(),
+			}
+
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err := r.db.CreateTask(appId, task); err != nil {
@@ -894,6 +912,8 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
+		healthSet := newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
+
 		for _, t := range pending {
 			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
 				t.Status = "Failed"
@@ -926,6 +946,10 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				Version: newVer.ID,
 				Created: t.Created,
 				Updated: time.Now(),
+			}
+
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err := r.db.CreateTask(appId, task); err != nil {
