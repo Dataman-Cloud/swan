@@ -85,16 +85,6 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var (
-		step      = 1
-		onfailure = "continue"
-	)
-
-	if spec.DeployPolicy != nil {
-		step = int(spec.DeployPolicy.Step)
-		onfailure = spec.DeployPolicy.OnFailure
-	}
-
 	go func(appId string) {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -103,10 +93,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}()
 
-		var (
-			tasks   = []*mesos.Task{}
-			counter = 0
-		)
+		tasks := []*mesos.Task{}
 
 		for i := 0; i < count; i++ {
 			var (
@@ -151,47 +138,42 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			counter++
-
 			tasks = append(tasks, t)
+		}
 
-			if len(tasks) >= step || counter >= count {
-				results, err := r.driver.LaunchTasks(tasks)
+		results, err := r.driver.LaunchTasks(tasks)
+		if err != nil {
+			log.Errorf("launch tasks got error")
+
+			for _, t := range tasks {
+				task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
 				if err != nil {
-					log.Errorf("launch tasks got error")
-
-					for _, t := range tasks {
-						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
-						if err != nil {
-							log.Errorf("find task from zk got error: %v", err)
-							return
-						}
-
-						task.Status = "Failed"
-						task.ErrMsg = err.Error()
-
-						if err = r.db.UpdateTask(app.ID, task); err != nil {
-							log.Errorf("update task %s status got error: %v", id, err)
-						}
-					}
-
-					if onfailure == types.DeployStop {
-						return
-					}
+					log.Errorf("find task from zk got error: %v", err)
+					return
 				}
 
-				for taskId, err := range results {
-					if err != nil {
-						log.Errorf("launch task %s got error: %v", taskId, err)
+				task.Status = "Failed"
+				task.ErrMsg = err.Error()
 
-						if onfailure == types.DeployStop {
-							return
-						}
-					}
-
+				if err = r.db.UpdateTask(app.ID, task); err != nil {
+					log.Errorf("update task %s status got error: %v", id, err)
 				}
+			}
+		}
 
-				tasks = []*mesos.Task{}
+		for taskId, err := range results {
+			log.Errorf("launch task %s got error: %v", taskId, err)
+			task, err := r.db.GetTask(appId, taskId)
+			if err != nil {
+				log.Errorf("find task from zk got error: %v", err)
+				return
+			}
+
+			task.Status = "Failed"
+			task.ErrMsg = err.Error()
+
+			if err = r.db.UpdateTask(app.ID, task); err != nil {
+				log.Errorf("update task %s status got error: %v", id, err)
 			}
 		}
 
