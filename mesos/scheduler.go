@@ -45,6 +45,7 @@ type SchedulerConfig struct {
 	ReconciliationStepDelay float64
 
 	HeartbeatTimeout float64
+	MaxTasksPerOffer int
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
@@ -77,8 +78,7 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	sem         chan struct{}
-	failedTasks chan *Task // hold on all failed tasks(TODO)
+	sem chan struct{}
 }
 
 // NewScheduler...
@@ -95,7 +95,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		failedTasks:   make(chan *Task, 4096),
 		sem:           make(chan struct{}, 1),
 	}
 
@@ -221,7 +220,6 @@ func (s *Scheduler) Subscribe() error {
 	}
 
 	go s.watchEvents(resp)
-	go s.handleFailedTasks()
 
 	return nil
 }
@@ -298,12 +296,6 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			}
 		}()
 
-		if state == mesosproto.TaskState_TASK_FAILED {
-			if task := s.getTask(taskId); task != nil {
-				s.failedTasks <- task
-			}
-		}
-
 		// emit event status to ongoing task
 		log.Debugf("Finding task %s to send status %s", taskId, state.String())
 		if task := s.getTask(taskId); task != nil {
@@ -319,15 +311,6 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 	go handler(ev)
 }
 
-// TODO(nmg): consinder restart policy.
-func (s *Scheduler) handleFailedTasks() {
-	for task := range s.failedTasks {
-		log.Debugln("Rescheduling task ", task.ID())
-		s.LaunchTasks([]*Task{task})
-		time.Sleep(1 * time.Second)
-	}
-}
-
 func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 	a := s.getAgent(offer.AgentId.GetValue())
 	if a == nil {
@@ -340,6 +323,11 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
 	a.addOffer(f)
+	time.AfterFunc(time.Second*5, func() { // release the offer later
+		if s.removeOffer(f) {
+			s.declineOffers([]*Offer{f})
+		}
+	})
 }
 
 func (s *Scheduler) removeOffer(offer *Offer) bool {
@@ -796,32 +784,51 @@ func (s *Scheduler) Dump() interface{} {
 }
 
 func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
-	s.lock()
-
 	var (
-		offers []*Offer
+		wg   sync.WaitGroup
+		l    sync.RWMutex
+		rets = map[string]error{}
 	)
 
-	for {
-		filtered, err := s.applyFilters(tasks[0].cfg)
-		if err != nil {
-			return nil, err
+	var (
+		groups = [][]*Task{}
+		count  = len(tasks)
+		step   = s.cfg.MaxTasksPerOffer
+	)
+
+	for i := 0; i < count; i = i + step {
+		m := i + step
+		if m > count {
+			m = count
 		}
+		groups = append(groups, tasks[i:m])
+	}
 
-		candidates := s.strategy.RankAndSort(filtered)
-
-		var (
-			agent = candidates[0]
-		)
-
-		offers = agent.getOffers()
-		if len(offers) > 0 {
-			for _, task := range tasks {
-				s.addTask(task)
+	for _, group := range groups {
+		for {
+			candidates := s.strategy.RankAndSort(s.getAgents())
+			if len(candidates) <= 0 {
+				log.Debugln("No enough agent to run tasks, waiting...")
+				time.Sleep(10 * time.Millisecond)
+				continue
 			}
 
+			var (
+				agent  = candidates[0]
+				offers = agent.getOffers()
+			)
+
+			if len(offers) <= 0 {
+				log.Debugln("No enough resource to run tasks, waiting...")
+				time.Sleep(10 * time.Millisecond)
+				continue
+			}
+
+			for _, task := range group {
+				s.addTask(task)
+			}
 			defer func() {
-				for _, task := range tasks {
+				for _, task := range group {
 					s.removeTask(task.ID())
 				}
 			}()
@@ -830,13 +837,34 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 				s.removeOffer(offer)
 			}
 
+			s.launch(offers, group)
+
+			for _, task := range group {
+				wg.Add(1)
+				go func(task *Task) {
+					defer wg.Done()
+					log.Debugf("Waiting for task %s to be running", task.ID())
+					for status := range task.GetStatus() {
+						log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
+						if task.IsDone(status) {
+							l.Lock()
+							rets[task.ID()] = task.DetectError(status)
+							l.Unlock()
+
+							return
+						}
+					}
+				}(task)
+			}
+
 			break
 		}
-
-		log.Debugln("No enough resources to run tasks, waiting...")
-		time.Sleep(100 * time.Millisecond)
 	}
 
+	return rets, nil
+}
+
+func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 	ports := make([]uint64, 0)
 	for _, offer := range offers {
 		ports = append(ports, offer.GetPorts()...)
@@ -915,48 +943,14 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	// send call
 	resp, err := s.Send(call)
 	if err != nil {
-		s.unlock()
-		return nil, fmt.Errorf("send launch call got error: %v", err)
+		return fmt.Errorf("send launch call got error: %v", err)
 	}
 
 	if code := resp.StatusCode; code != http.StatusAccepted {
-		s.unlock()
-		return nil, fmt.Errorf("launch call send but the status code not 202 got %d", code)
+		return fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
-	s.unlock()
-
-	var (
-		l    sync.RWMutex
-		rets = make(map[string]error)
-		wg   sync.WaitGroup
-	)
-
-	for _, task := range tasks {
-		wg.Add(1)
-		go func(task *Task) {
-			defer wg.Done()
-
-			log.Debugf("Waiting for task %s to be running", task.ID())
-			for {
-				select {
-				case status := <-task.GetStatus():
-					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
-					if task.IsDone(status) {
-						l.Lock()
-						rets[task.ID()] = task.DetectError(status)
-						l.Unlock()
-
-						return
-					}
-				}
-			}
-		}(task)
-	}
-
-	wg.Wait()
-
-	return rets, nil
+	return nil
 }
 
 func (s *Scheduler) lock() {
@@ -977,7 +971,6 @@ func (s *Scheduler) Load() map[string]interface{} {
 	}
 
 	return map[string]interface{}{
-		"tasks":  tasks,
-		"failed": len(s.failedTasks),
+		"tasks": tasks,
 	}
 }
