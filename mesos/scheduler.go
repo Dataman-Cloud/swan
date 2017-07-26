@@ -458,7 +458,6 @@ func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
 	)
 
 	for _, task := range tasks {
-
 		wg.Add(1)
 		go func(task *types.Task, errs map[string]error) {
 			defer wg.Done()
@@ -805,20 +804,22 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	}
 
 	for _, group := range groups {
+		offers := []*Offer{}
 		for {
+			s.lock()
 			candidates := s.strategy.RankAndSort(s.getAgents())
 			if len(candidates) <= 0 {
+				s.unlock()
 				log.Debugln("No enough agent to run tasks, waiting...")
 				time.Sleep(10 * time.Millisecond)
 				continue
 			}
 
-			var (
-				agent  = candidates[0]
-				offers = agent.getOffers()
-			)
+			agent := candidates[0]
+			offers = agent.getOffers()
 
-			if len(offers) <= 0 {
+			if len(offers) <= 0 { //?
+				s.unlock()
 				log.Debugln("No enough resource to run tasks, waiting...")
 				time.Sleep(10 * time.Millisecond)
 				continue
@@ -827,37 +828,37 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 			for _, task := range group {
 				s.addTask(task)
 			}
-			defer func() {
-				for _, task := range group {
-					s.removeTask(task.ID())
-				}
-			}()
 
 			for _, offer := range offers {
 				s.removeOffer(offer)
 			}
-
-			s.launch(offers, group)
-
-			for _, task := range group {
-				wg.Add(1)
-				go func(task *Task) {
-					defer wg.Done()
-					log.Debugf("Waiting for task %s to be running", task.ID())
-					for status := range task.GetStatus() {
-						log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
-						if task.IsDone(status) {
-							l.Lock()
-							rets[task.ID()] = task.DetectError(status)
-							l.Unlock()
-
-							return
-						}
-					}
-				}(task)
-			}
-
+			s.unlock()
 			break
+		}
+
+		if err := s.launch(offers, group); err != nil {
+			// TODO:handler error
+		}
+
+		for _, task := range group {
+			wg.Add(1)
+			go func(task *Task) {
+				defer wg.Done()
+				log.Debugf("Waiting for task %s to be running", task.ID())
+				for status := range task.GetStatus() {
+					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
+					if task.IsDone(status) {
+						l.Lock()
+						if err := task.DetectError(status); err != nil {
+							rets[task.ID()] = err
+						}
+						l.Unlock()
+						s.removeTask(task.ID())
+
+						return
+					}
+				}
+			}(task)
 		}
 	}
 
