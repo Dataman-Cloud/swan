@@ -20,7 +20,7 @@ type Task struct {
 func NewTask(cfg *types.TaskConfig, id, name string) *Task {
 	task := &Task{
 		cfg:     cfg,
-		updates: make(chan *mesosproto.TaskStatus),
+		updates: make(chan *mesosproto.TaskStatus, 1024),
 	}
 
 	task.Name = &name
@@ -46,7 +46,10 @@ func (t *Task) Build() {
 
 // SendStatus method writes the task status in the updates channel
 func (t *Task) SendStatus(status *mesosproto.TaskStatus) {
-	t.updates <- status
+	select {
+	case t.updates <- status:
+	default:
+	}
 }
 
 // GetStatus method reads the task status on the updates channel
