@@ -53,15 +53,9 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 	)
 
-	var alias string
-	if spec.Proxy != nil {
-		alias = spec.Proxy.Alias
-	}
-
 	app := &types.Application{
 		ID:        id,
 		Name:      spec.Name,
-		Alias:     alias,
 		RunAs:     spec.RunAs,
 		Cluster:   r.driver.ClusterName(),
 		OpStatus:  types.OpStatusCreating,

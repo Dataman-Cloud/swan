@@ -19,9 +19,7 @@ const (
 type Application struct {
 	ID           string    `json:"id"`
 	Name         string    `json:"name"`
-	Alias        string    `json:"alias"`
 	RunAs        string    `json:"runAs"`
-	Priority     int       `json:"priority"`
 	Cluster      string    `json:"cluster"`
 	OpStatus     string    `json:"operationStatus"`
 	Progress     int       `json:"progress"`

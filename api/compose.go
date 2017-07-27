@@ -91,7 +91,6 @@ func (r *Server) newCompose(w http.ResponseWriter, req *http.Request) {
 			app := &types.Application{
 				ID:        id,
 				Name:      ver.Name,
-				Alias:     ver.Proxy.Alias,
 				RunAs:     ver.RunAs,
 				Cluster:   r.driver.ClusterName(),
 				Status:    "creating",
