@@ -12,11 +12,6 @@ import (
 )
 
 const (
-	// deploy onfailure action
-	DeployStop     = "stop"
-	DeployContinue = "continue"
-	DeployRollback = "rollback" // TODO(nmg)
-
 	// update onfailure action
 	UpdateStop     = "stop"
 	UpdateContinue = "continue"
@@ -56,7 +51,6 @@ type Version struct {
 	Labels        map[string]string `json:"labels"`
 	HealthCheck   *HealthCheck      `json:"healthCheck"`
 	Env           map[string]string `json:"env"`
-	DeployPolicy  *DeployPolicy     `json:"deploy"`
 	KillPolicy    *KillPolicy       `json:"kill"`
 	RestartPolicy *RestartPolicy    `json:"restart"`
 	UpdatePolicy  *UpdatePolicy     `json:"update"`
@@ -107,11 +101,6 @@ type UpdatePolicy struct {
 	Step      int64   `json:"step"` // TODO(nmg)
 	Delay     float64 `json:"delay"`
 	OnFailure string  `json:"onFailure,omitempty"`
-}
-
-type DeployPolicy struct {
-	Step      int64  `json:"step"`
-	OnFailure string `json:"onfailure"`
 }
 
 type HealthCheck struct {

@@ -30,6 +30,7 @@ func ManagerCmd() cli.Command {
 		FlagReconciliationStep(),
 		FlagReconciliationStepDelay(),
 		FlagHeartbeatTimeout(),
+		FlagMaxTasksPerOffer(),
 	}
 
 	return cmd

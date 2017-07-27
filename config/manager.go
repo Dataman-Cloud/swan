@@ -25,6 +25,7 @@ type ManagerConfig struct {
 	ReconciliationStep      int64   `json:"reconciliationStep"`
 	ReconciliationStepDelay float64 `json:"reconciliationStepDelay"`
 	HeartbeatTimeout        float64 `json:"heartbeatTimeout"`
+	MaxTasksPerOffer        int     `json:"maxTasksPerOffer"`
 }
 
 func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
@@ -79,6 +80,10 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 
 	if c.Float64("heartbeat-timeout") != 0 {
 		cfg.HeartbeatTimeout = c.Float64("heartbeat-timeout")
+	}
+
+	if max := c.Int("max-tasks-per-offer"); max != 0 {
+		cfg.MaxTasksPerOffer = max
 	}
 
 	if err := cfg.validate(); err != nil {

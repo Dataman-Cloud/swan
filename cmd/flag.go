@@ -83,6 +83,15 @@ func FlagHeartbeatTimeout() cli.Flag {
 	}
 }
 
+func FlagMaxTasksPerOffer() cli.Flag {
+	return cli.IntFlag{
+		Name:   "max-tasks-per-offer",
+		Usage:  "Launch at most this number of tasks per offer",
+		EnvVar: "SWAN_MAX_TASKS_PER_OFFER",
+		Value:  5,
+	}
+}
+
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",

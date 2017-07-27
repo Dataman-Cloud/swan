@@ -1,19 +1,3 @@
 #### DeployPolicy
 
-Spec 
-
-```
-"deploy": {
-    "step": 10,
-    "onfailure": "stop"
-}
-```
-
-Parameters:
-+ *step*(int): The number of tasks to run at one time.
-+ *onfailure*(string): The action for failure. Possible values include: 
-```
-stop
-continue
-```
-
+You can increase `--max-tasks-per-offer` on swan manage startup to speed up launching tasks. Default is 5.
