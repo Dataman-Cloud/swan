@@ -155,7 +155,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		for taskId, err := range results {
+		for taskId, taskErr := range results {
 			log.Errorf("launch task %s got error: %v", taskId, err)
 			task, err := r.db.GetTask(appId, taskId)
 			if err != nil {
@@ -164,7 +164,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			}
 
 			task.Status = "Failed"
-			task.ErrMsg = err.Error()
+			task.ErrMsg = taskErr.Error()
 
 			if err = r.db.UpdateTask(app.ID, task); err != nil {
 				log.Errorf("update task %s status got error: %v", id, err)
