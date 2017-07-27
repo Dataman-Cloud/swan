@@ -3,7 +3,7 @@ package main
 import (
 	"net/http"
 
-	"gopkg.in/check.v1"
+	check "gopkg.in/check.v1"
 
 	"github.com/Dataman-Cloud/swan/version"
 )
