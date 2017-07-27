@@ -136,9 +136,9 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			tasks = append(tasks, t)
 		}
 
-		results, err := r.driver.LaunchTasks(tasks)
-		if err != nil {
-			log.Errorf("launch tasks got error")
+		results, gerr := r.driver.LaunchTasks(tasks)
+		if gerr != nil {
+			log.Errorf("launch tasks got error: %v", gerr)
 
 			for _, t := range tasks {
 				task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
@@ -148,7 +148,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				}
 
 				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				task.ErrMsg = gerr.Error()
 
 				if err = r.db.UpdateTask(app.ID, task); err != nil {
 					log.Errorf("update task %s status got error: %v", id, err)
@@ -375,7 +375,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks, err := r.db.ListTasks(app.ID)
+	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for scale app. %v", err), http.StatusInternalServerError)
 		return
@@ -454,7 +454,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// scale up
-	spec, err := r.db.GetVersion(app.ID, app.Version[0])
+	spec, err := r.db.GetVersion(appId, app.Version[0])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -468,11 +468,6 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	var (
-		step      = scale.Step
-		onfailure = scale.OnFailure
-	)
-
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -483,8 +478,6 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 		var (
 			tasks     = []*mesos.Task{}
-			count     = goal - current
-			counter   = 0
 			healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 		)
 
@@ -532,48 +525,45 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			counter++
-
 			tasks = append(tasks, t)
+		}
 
-			if len(tasks) >= step || counter >= count {
-				results, err := r.driver.LaunchTasks(tasks)
+		results, gerr := r.driver.LaunchTasks(tasks)
+		if gerr != nil {
+			log.Errorf("launch tasks got error: %v", gerr)
+
+			for _, t := range tasks {
+				task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
 				if err != nil {
-					log.Errorf("launch tasks got error: %v", err)
-
-					for _, t := range tasks {
-						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
-						if err != nil {
-							log.Errorf("find task from zk got error: %v", err)
-							return
-						}
-
-						task.Status = "Failed"
-						task.ErrMsg = err.Error()
-
-						if err = r.db.UpdateTask(app.ID, task); err != nil {
-							log.Errorf("update task %s status got error: %v", task.ID, err)
-						}
-					}
-
-					if onfailure == types.ScaleFailureStop {
-						return
-					}
+					log.Errorf("find task from zk got error: %v", err)
+					continue
 				}
 
-				for taskId, err := range results {
-					if err != nil {
-						log.Errorf("launch task %s got error: %v", taskId, err)
+				task.Status = "Failed"
+				task.ErrMsg = gerr.Error()
 
-						if onfailure == types.ScaleFailureStop {
-							return
-						}
-					}
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s status got error: %v", task.ID, err)
 				}
-
-				tasks = []*mesos.Task{}
 			}
 		}
+
+		for taskId, lerr := range results {
+			log.Errorf("launch task %s got error: %v", taskId, lerr)
+			task, err := r.db.GetTask(appId, taskId)
+			if err != nil {
+				log.Errorf("find task from zk got error: %v", err)
+				continue
+			}
+
+			task.Status = "Failed"
+			task.ErrMsg = lerr.Error()
+
+			if err = r.db.UpdateTask(appId, task); err != nil {
+				log.Errorf("update task %s status got error: %v", task.ID, err)
+			}
+		}
+
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
