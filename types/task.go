@@ -105,9 +105,8 @@ func (c *TaskConfig) BuildCommand() *mesosproto.CommandInfo {
 		return &mesosproto.CommandInfo{
 			Uris:        c.uris(),
 			Environment: c.envs(),
-			Shell:       proto.Bool(false),
-			Value:       proto.String(string(cmd[0])),
-			Arguments:   strings.Split(cmd[1:], " "),
+			Shell:       proto.Bool(true), // sh -c "cmd"
+			Value:       proto.String(cmd),
 		}
 	}
 
