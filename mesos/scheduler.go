@@ -532,15 +532,18 @@ func (s *Scheduler) KillTasks(tasks []*types.Task) map[string]error {
 
 }
 
-func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
-	log.Debugln("Killing task ", taskId)
+func (s *Scheduler) KillTask(taskId, agentId string) error {
+	if agentId == "" {
+		log.Debugf("agentId of task %s is empty, ignore", taskId)
+		return nil
+	}
+
+	log.Debugf("Killing task %s with agentId %s", taskId, agentId)
 
 	t := NewTask(nil, taskId, taskId)
 
-	if sync {
-		s.addTask(t)
-		defer s.removeTask(taskId)
-	}
+	log.Debugf("Adding task %s", taskId)
+	s.addTask(t)
 
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
@@ -565,11 +568,13 @@ func (s *Scheduler) KillTask(taskId, agentId string, sync bool) error {
 		return fmt.Errorf("kill call send but the status code not 202 got %d", code)
 	}
 
-	if sync {
-		for status := range t.GetStatus() {
-			if t.IsKilled(status) {
-				return nil
-			}
+	log.Debugf("Waiting for task %s to be killed by mesos", taskId)
+	for status := range t.GetStatus() {
+		log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
+		if t.IsKilled(status) {
+			log.Debugf("Task %s killed", taskId)
+			s.removeTask(taskId)
+			break
 		}
 	}
 

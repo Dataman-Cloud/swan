@@ -37,7 +37,7 @@ func (r *Server) purge(w http.ResponseWriter, req *http.Request) {
 					go func(task *types.Task) {
 						defer wg.Done()
 
-						if err := r.driver.KillTask(task.ID, task.AgentId, true); err != nil {
+						if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
 							log.Errorf("Kill task %s got error: %v", task.ID, err)
 
 							task.OpStatus = fmt.Sprintf("kill task error: %v", err)

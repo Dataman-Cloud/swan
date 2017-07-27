@@ -9,8 +9,7 @@ import (
 )
 
 type Driver interface {
-	KillTask(string, string, bool) error
-	KillTasks([]*types.Task) map[string]error
+	KillTask(string, string) error
 	LaunchTasks([]*mesos.Task) (map[string]error, error)
 
 	ClusterName() string
