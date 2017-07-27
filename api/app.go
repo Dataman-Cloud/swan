@@ -156,7 +156,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		}
 
 		for taskId, taskErr := range results {
-			log.Errorf("launch task %s got error: %v", taskId, err)
+			log.Errorf("launch task %s got error: %v", taskId, taskErr)
 			task, err := r.db.GetTask(appId, taskId)
 			if err != nil {
 				log.Errorf("find task from zk got error: %v", err)
