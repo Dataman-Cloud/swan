@@ -3,8 +3,9 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -253,36 +254,13 @@ func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
-	id := mux.Vars(req)["app_id"]
-
-	if err := req.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	s := req.Form.Get("step")
-
 	var (
-		step int
-		err  error
+		appId = mux.Vars(req)["app_id"]
 	)
-
-	if s != "" {
-		step, err = strconv.Atoi(s)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if s == "" {
-		step = 5
-	}
-
-	app, err := r.db.GetApp(id)
+	app, err := r.db.GetApp(appId)
 	if err != nil {
 		if strings.Contains(err.Error(), "node does not exist") {
-			http.Error(w, fmt.Sprintf("app %s not exists", id), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
 			return
 		}
 
@@ -290,21 +268,21 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks, err := r.db.ListTasks(app.ID)
+	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for delete app. %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("app %s has %d tasks", app.ID, len(tasks))
+	log.Debugf("app %s has %d tasks", appId, len(tasks))
 
-	versions, err := r.db.ListVersions(app.ID)
+	versions, err := r.db.ListVersions(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks versions error for delete app. %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("app %s has %d versions", app.ID, len(versions))
+	log.Debugf("app %s has %d versions", appId, len(versions))
 
 	app.OpStatus = types.OpStatusDeleting
 
@@ -315,71 +293,64 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	go func(appId string) {
 		var (
-			deleting = []*types.Task{}
-			counter  = 0
-			count    = len(tasks)
-			succeed  = 0
+			count         = len(tasks)
+			succeed int64 = 0
+			wg      sync.WaitGroup
 		)
 
 		for _, task := range tasks {
-			counter++
-			deleting = append(deleting, task)
+			wg.Add(1)
+			go func(task *types.Task) {
+				defer wg.Done()
 
-			if len(deleting) >= step || counter >= count {
-				log.Debugf("Deleting %d tasks for app %s", len(deleting), appId)
-				errs := r.driver.KillTasks(deleting)
-				for taskId, err := range errs {
-					if err != nil {
-						log.Errorf("Kill task %s got error: %v", taskId, err)
+				if err := r.driver.KillTask(task.ID, task.AgentId, true); err != nil {
+					log.Errorf("Kill task %s got error: %v", task.ID, err)
 
-						for _, t := range deleting {
-							if t.ID == taskId {
-								t.ErrMsg = fmt.Sprintf("kill task error: %v", err)
-								if err = r.db.UpdateTask(appId, t); err != nil {
-									log.Errorf("update task %s got error: %v", t.Name, err)
-								}
-							}
-						}
-						continue
+					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
 
-					if err := r.db.DeleteTask(taskId); err != nil {
-						log.Errorf("Delete task %s got error: %v", taskId, err)
-
-						for _, t := range deleting {
-							if t.ID == taskId {
-								t.ErrMsg = fmt.Sprintf("delete task error: %v", err)
-								if err = r.db.UpdateTask(appId, t); err != nil {
-									log.Errorf("update task %s got error: %v", t.Name, err)
-								}
-							}
-						}
-						continue
-					}
-					log.Debugf("task %s deleted succeed", taskId)
-					succeed++
+					return
 				}
-				deleting = []*types.Task{}
-			}
 
+				if err := r.db.DeleteTask(task.ID); err != nil {
+					log.Errorf("Delete task %s got error: %v", task.ID, err)
+
+					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
+					}
+
+					return
+				}
+
+				atomic.AddInt64(&succeed, 1)
+			}(task)
 		}
 
-		if succeed == count {
+		wg.Wait()
+
+		if int(succeed) == count {
+			versions, err := r.db.ListVersions(appId)
+			if err != nil {
+				log.Errorf("list versions error for delete app. %v", err)
+				return
+			}
+
 			for _, version := range versions {
-				if err := r.db.DeleteVersion(app.ID, version.ID); err != nil {
-					http.Error(w,
-						fmt.Sprintf("Delete version %s for app %s got error: %v", version.ID, app.ID, err),
-						http.StatusInternalServerError)
+				if err := r.db.DeleteVersion(appId, version.ID); err != nil {
+					log.Errorf("Delete version %s for app %s got error: %v", version.ID, appId, err)
 					return
 				}
 			}
 
-			if err := r.db.DeleteApp(app.ID); err != nil {
-				log.Errorf("Delete app %s got error: %v", app.ID, err)
+			if err := r.db.DeleteApp(appId); err != nil {
+				log.Errorf("Delete app %s got error: %v", appId, err)
 			}
 		}
 
-	}(app.ID)
+	}(appId)
 
 	writeJSON(w, http.StatusNoContent, "")
 }
