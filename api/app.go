@@ -3,8 +3,9 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -135,9 +136,9 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			tasks = append(tasks, t)
 		}
 
-		results, err := r.driver.LaunchTasks(tasks)
-		if err != nil {
-			log.Errorf("launch tasks got error")
+		results, gerr := r.driver.LaunchTasks(tasks)
+		if gerr != nil {
+			log.Errorf("launch tasks got error: %v", gerr)
 
 			for _, t := range tasks {
 				task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
@@ -147,7 +148,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				}
 
 				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				task.ErrMsg = gerr.Error()
 
 				if err = r.db.UpdateTask(app.ID, task); err != nil {
 					log.Errorf("update task %s status got error: %v", id, err)
@@ -156,7 +157,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		}
 
 		for taskId, taskErr := range results {
-			log.Errorf("launch task %s got error: %v", taskId, err)
+			log.Errorf("launch task %s got error: %v", taskId, taskErr)
 			task, err := r.db.GetTask(appId, taskId)
 			if err != nil {
 				log.Errorf("find task from zk got error: %v", err)
@@ -253,36 +254,13 @@ func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
-	id := mux.Vars(req)["app_id"]
-
-	if err := req.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	s := req.Form.Get("step")
-
 	var (
-		step int
-		err  error
+		appId = mux.Vars(req)["app_id"]
 	)
-
-	if s != "" {
-		step, err = strconv.Atoi(s)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	if s == "" {
-		step = 5
-	}
-
-	app, err := r.db.GetApp(id)
+	app, err := r.db.GetApp(appId)
 	if err != nil {
 		if strings.Contains(err.Error(), "node does not exist") {
-			http.Error(w, fmt.Sprintf("app %s not exists", id), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
 			return
 		}
 
@@ -290,21 +268,21 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tasks, err := r.db.ListTasks(app.ID)
+	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for delete app. %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("app %s has %d tasks", app.ID, len(tasks))
+	log.Debugf("app %s has %d tasks", appId, len(tasks))
 
-	versions, err := r.db.ListVersions(app.ID)
+	versions, err := r.db.ListVersions(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks versions error for delete app. %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	log.Debugf("app %s has %d versions", app.ID, len(versions))
+	log.Debugf("app %s has %d versions", appId, len(versions))
 
 	app.OpStatus = types.OpStatusDeleting
 
@@ -315,71 +293,64 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	go func(appId string) {
 		var (
-			deleting = []*types.Task{}
-			counter  = 0
-			count    = len(tasks)
-			succeed  = 0
+			count         = len(tasks)
+			succeed int64 = 0
+			wg      sync.WaitGroup
 		)
 
 		for _, task := range tasks {
-			counter++
-			deleting = append(deleting, task)
+			wg.Add(1)
+			go func(task *types.Task) {
+				defer wg.Done()
 
-			if len(deleting) >= step || counter >= count {
-				log.Debugf("Deleting %d tasks for app %s", len(deleting), appId)
-				errs := r.driver.KillTasks(deleting)
-				for taskId, err := range errs {
-					if err != nil {
-						log.Errorf("Kill task %s got error: %v", taskId, err)
+				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+					log.Errorf("Kill task %s got error: %v", task.ID, err)
 
-						for _, t := range deleting {
-							if t.ID == taskId {
-								t.ErrMsg = fmt.Sprintf("kill task error: %v", err)
-								if err = r.db.UpdateTask(appId, t); err != nil {
-									log.Errorf("update task %s got error: %v", t.Name, err)
-								}
-							}
-						}
-						continue
+					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
 					}
 
-					if err := r.db.DeleteTask(taskId); err != nil {
-						log.Errorf("Delete task %s got error: %v", taskId, err)
-
-						for _, t := range deleting {
-							if t.ID == taskId {
-								t.ErrMsg = fmt.Sprintf("delete task error: %v", err)
-								if err = r.db.UpdateTask(appId, t); err != nil {
-									log.Errorf("update task %s got error: %v", t.Name, err)
-								}
-							}
-						}
-						continue
-					}
-					log.Debugf("task %s deleted succeed", taskId)
-					succeed++
+					return
 				}
-				deleting = []*types.Task{}
-			}
 
+				if err := r.db.DeleteTask(task.ID); err != nil {
+					log.Errorf("Delete task %s got error: %v", task.ID, err)
+
+					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+					if err = r.db.UpdateTask(appId, task); err != nil {
+						log.Errorf("update task %s got error: %v", task.Name, err)
+					}
+
+					return
+				}
+
+				atomic.AddInt64(&succeed, 1)
+			}(task)
 		}
 
-		if succeed == count {
+		wg.Wait()
+
+		if int(succeed) == count {
+			versions, err := r.db.ListVersions(appId)
+			if err != nil {
+				log.Errorf("list versions error for delete app. %v", err)
+				return
+			}
+
 			for _, version := range versions {
-				if err := r.db.DeleteVersion(app.ID, version.ID); err != nil {
-					http.Error(w,
-						fmt.Sprintf("Delete version %s for app %s got error: %v", version.ID, app.ID, err),
-						http.StatusInternalServerError)
+				if err := r.db.DeleteVersion(appId, version.ID); err != nil {
+					log.Errorf("Delete version %s for app %s got error: %v", version.ID, appId, err)
 					return
 				}
 			}
 
-			if err := r.db.DeleteApp(app.ID); err != nil {
-				log.Errorf("Delete app %s got error: %v", app.ID, err)
+			if err := r.db.DeleteApp(appId); err != nil {
+				log.Errorf("Delete app %s got error: %v", appId, err)
 			}
 		}
 
-	}(app.ID)
+	}(appId)
 
 	writeJSON(w, http.StatusNoContent, "")
 }
@@ -398,13 +369,13 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var scale types.ScalePolicy
+	var scale types.Scale
 	if err := decode(req.Body, &scale); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	tasks, err := r.db.ListTasks(app.ID)
+	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for scale app. %v", err), http.StatusInternalServerError)
 		return
@@ -442,47 +413,40 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				}
 			}()
 
-			for i := 1; i <= current-goal; i++ {
+			types.TaskList(tasks).Reverse() // TODO
+			var (
+				killing = tasks[0 : current-goal]
+				wg      sync.WaitGroup
+			)
+			for _, task := range killing {
+				wg.Add(1)
 
-				var (
-					tname = fmt.Sprintf("%d.%s", current-i, appId)
-					tid   string
-				)
+				go func(task *types.Task) {
+					defer wg.Done()
 
-				for _, task := range tasks {
-					if task.Name == tname {
-						tid = task.ID
-						break
-					}
-				}
+					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+						log.Errorf("Kill task %s got error: %v", task.ID, err)
 
-				if tid == "" {
-					log.Errorln("no such task name:", tname)
-					break
-				}
+						task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+						if err = r.db.UpdateTask(appId, task); err != nil {
+							log.Errorf("update task %s got error: %v", task.Name, err)
+						}
 
-				t, err := r.db.GetTask(appId, tid)
-				if err != nil {
-					log.Errorln("get db task error:", err)
-					break
-				}
-
-				if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
-					t.Status = "delete failed"
-					t.ErrMsg = err.Error()
-
-					if err = r.db.UpdateTask(appId, t); err != nil {
-						log.Errorf("update task %s got error: %v", t.Name, err)
+						return
 					}
 
-					break
-				}
+					if err := r.db.DeleteTask(task.ID); err != nil {
+						log.Errorf("Delete task %s got error: %v", task.ID, err)
 
-				if err := r.db.DeleteTask(t.ID); err != nil {
-					log.Errorf("delete task %s got error: %v", t.Name, err)
-					break
-				}
+						task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+						if err = r.db.UpdateTask(appId, task); err != nil {
+							log.Errorf("update task %s got error: %v", task.Name, err)
+						}
+					}
+				}(task)
 			}
+
+			wg.Wait()
 		}()
 
 		writeJSON(w, http.StatusAccepted, "accepted")
@@ -490,7 +454,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// scale up
-	spec, err := r.db.GetVersion(app.ID, app.Version[0])
+	spec, err := r.db.GetVersion(appId, app.Version[0])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -504,11 +468,6 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	var (
-		step      = scale.Step
-		onfailure = scale.OnFailure
-	)
-
 	go func() {
 		defer func() {
 			app.OpStatus = types.OpStatusNoop
@@ -519,8 +478,6 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 		var (
 			tasks     = []*mesos.Task{}
-			count     = goal - current
-			counter   = 0
 			healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 		)
 
@@ -568,48 +525,45 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				name,
 			)
 
-			counter++
-
 			tasks = append(tasks, t)
+		}
 
-			if len(tasks) >= step || counter >= count {
-				results, err := r.driver.LaunchTasks(tasks)
+		results, gerr := r.driver.LaunchTasks(tasks)
+		if gerr != nil {
+			log.Errorf("launch tasks got error: %v", gerr)
+
+			for _, t := range tasks {
+				task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
 				if err != nil {
-					log.Errorf("launch tasks got error: %v", err)
-
-					for _, t := range tasks {
-						task, err := r.db.GetTask(appId, t.GetTaskId().GetValue())
-						if err != nil {
-							log.Errorf("find task from zk got error: %v", err)
-							return
-						}
-
-						task.Status = "Failed"
-						task.ErrMsg = err.Error()
-
-						if err = r.db.UpdateTask(app.ID, task); err != nil {
-							log.Errorf("update task %s status got error: %v", task.ID, err)
-						}
-					}
-
-					if onfailure == types.ScaleFailureStop {
-						return
-					}
+					log.Errorf("find task from zk got error: %v", err)
+					continue
 				}
 
-				for taskId, err := range results {
-					if err != nil {
-						log.Errorf("launch task %s got error: %v", taskId, err)
+				task.Status = "Failed"
+				task.ErrMsg = gerr.Error()
 
-						if onfailure == types.ScaleFailureStop {
-							return
-						}
-					}
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s status got error: %v", task.ID, err)
 				}
-
-				tasks = []*mesos.Task{}
 			}
 		}
+
+		for taskId, lerr := range results {
+			log.Errorf("launch task %s got error: %v", taskId, lerr)
+			task, err := r.db.GetTask(appId, taskId)
+			if err != nil {
+				log.Errorf("find task from zk got error: %v", err)
+				continue
+			}
+
+			task.Status = "Failed"
+			task.ErrMsg = lerr.Error()
+
+			if err = r.db.UpdateTask(appId, task); err != nil {
+				log.Errorf("update task %s status got error: %v", task.ID, err)
+			}
+		}
+
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
@@ -670,6 +624,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 		onfailure = update.OnFailure
 	}
 
+	types.TaskList(tasks).Sort()
 	pending := tasks
 
 	go func() {
@@ -693,7 +648,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				log.Errorf("updating app progress got error: %v", err)
 			}
 
-			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
 
@@ -739,12 +694,12 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 			tasks := []*mesos.Task{m}
 
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch task %s got error: %v", id, err)
+			results, gerr := r.driver.LaunchTasks(tasks)
+			if gerr != nil {
+				log.Errorf("launch task %s got error: %v", id, gerr)
 
 				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				task.ErrMsg = gerr.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
@@ -753,26 +708,21 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				if onfailure == types.UpdateStop {
 					return
 				}
-
 			}
 
-			for taskId, err := range results {
-				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
-				}
+			for taskId, lerr := range results {
+				log.Errorf("launch task %s got error: %v", taskId, lerr)
 
-				task, err := r.db.GetTask(appId, taskId)
-				if err == nil {
-					task.OpStatus = types.OpStatusNoop
-					if err = r.db.UpdateTask(appId, task); err != nil {
-						log.Errorf("update task %s got error: %v", id, err)
-					}
+				task.Status = "Failed"
+				task.ErrMsg = lerr.Error()
+
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", id, err)
 				}
 
 				if onfailure == types.UpdateStop {
 					return
 				}
-
 			}
 
 			// notify proxy
@@ -891,7 +841,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		healthSet := newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
 
 		for _, t := range pending {
-			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
 
@@ -1063,7 +1013,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for _, t := range tasks {
-			if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
 				t.ErrMsg = fmt.Sprintf("kill task for rollback :%v", err)
 
@@ -1338,7 +1288,7 @@ func (r *Server) deleteTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(task.ID, task.AgentId, false); err != nil {
+	if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1376,7 +1326,7 @@ func (r *Server) deleteTasks(w http.ResponseWriter, req *http.Request) {
 
 	for _, task := range tasks {
 		go func(task *types.Task, appId string) {
-			if err := r.driver.KillTask(task.ID, task.AgentId, false); err != nil {
+			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
 				log.Errorf("Kill task %s got error: %v", task.ID, err)
 
 				task.OpStatus = fmt.Sprintf("kill task error: %v", err)
@@ -1434,7 +1384,7 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 		t.Status = "Failed"
 		t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
 
@@ -1581,7 +1531,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(t.ID, t.AgentId, true); err != nil {
+	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 		t.Status = "Failed"
 		t.ErrMsg = fmt.Sprintf("kill task for rollback :%v", err)
 

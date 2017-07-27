@@ -43,7 +43,7 @@
 
 + [constraints](https://github.com/Dataman-Cloud/swan/tree/master/docs/constraints.md)
 
-+ [scale policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/scale.md)
++ [scale](https://github.com/Dataman-Cloud/swan/tree/master/docs/scale.md)
  
 + [update policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/update.md)
 
