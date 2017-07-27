@@ -80,6 +80,7 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 
 	app.TaskCount = len(tasks)
 	app.Status = s.status(tasks)
+	app.TasksStatus = s.tasksStatus(tasks)
 	app.Version = s.version(tasks)
 	app.Health = s.health(tasks)
 
@@ -188,6 +189,14 @@ func (s *EtcdStore) status(tasks types.TaskList) string {
 	}
 
 	return "unavailable"
+}
+
+func (s *EtcdStore) tasksStatus(tasks types.TaskList) map[string]int {
+	ret := make(map[string]int)
+	for _, task := range tasks {
+		ret[task.Status]++
+	}
+	return ret
 }
 
 func (s *EtcdStore) health(tasks types.TaskList) *types.Health {
