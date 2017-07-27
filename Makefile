@@ -41,6 +41,17 @@ docker-build:
 # compitable for legacy docker version
 docker-image:
 	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm -f ./Dockerfile.legacy .
+	docker tag swan:$(shell git rev-parse --short HEAD) swan:latest
+
+local-cluster: docker-build docker-image
+	rm -rf /tmp/mesos-slave-data || true
+	mkdir -p /tmp/mesos-slave-data || true
+	docker-compose up -d
+	docker-compose ps
+
+rm-local-cluster:
+	docker-compose stop
+	docker-compose rm -f
 
 integration-prepare:
 

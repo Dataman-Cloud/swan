@@ -1,0 +1,90 @@
+version: "3"
+
+services:
+  zookeeper:
+    image: "mesoscloud/zookeeper:latest"
+    restart: "unless-stopped"
+    network_mode: "bridge"
+    environment:
+      - MYID=1
+    ports:
+      - 2181:2181
+
+  mesos-master:
+    image: "mesosphere/mesos-master:1.2.1"
+    restart: "unless-stopped"
+    network_mode: "bridge"
+    environment:
+      - MESOS_ZK=zk://zookeeper:2181/mesos
+      - MESOS_QUORUM=1
+      - MESOS_PORT=5050
+      - MESOS_LOGGING_LEVEL=WARNING
+      - MESOS_CLUSTER=DemoMesos 
+    depends_on:
+      - zookeeper
+    links:
+      - zookeeper
+    ports:
+      - 5050:5050
+
+  mesos-slave:
+    image: "mesosphere/mesos-slave:1.2.1"
+    restart: "unless-stopped"
+    network_mode: "service:mesos-master" # share with mesos-master to make use of 127.0.0.1
+    environment:
+      - MESOS_MASTER=zk://zookeeper:2181/mesos
+      - MESOS_LOGGING_LEVEL=WARNING
+      - MESOS_PORT=5051
+      - MESOS_CONTAINERIZERS=docker,mesos
+      - MESOS_DOCKER_REMOVE_DELAY=5mins
+      - MESOS_ISOLATION=cgroups/cpu,cgroups/mem
+      - MESOS_ATTRIBUTES=vcluster:demo
+      - MESOS_SYSTEMD_ENABLE_SUPPORT=false
+      - MESOS_WORK_DIR=/data/mesos
+      - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+    volumes:
+      - /var/lib/docker:/data/docker:rw
+      - /sys/fs/cgroup:/sys/fs/cgroup:rw
+      - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /tmp/mesos-slave-data:/data/mesos:rw
+    depends_on:
+      - zookeeper
+      - mesos-master
+
+  swan-master:
+    image: "swan:latest"
+    command: "manager"
+    network_mode: "bridge"
+    restart: "unless-stopped"
+    privileged: true
+    pid: "host"
+    environment:
+      - SWAN_LISTEN_ADDR=0.0.0.0:9999
+      - SWAN_STORE_TYPE=zk
+      - SWAN_MESOS_URL=zk://zookeeper:2181/mesos
+      - SWAN_ZK_URL=zk://zookeeper:2181/swan
+      - SWAN_LOG_LEVEL=debug
+    healthcheck:
+      test: ["CMD", "wget", "-s", "-q", "http://127.0.0.1:9999/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    depends_on:
+      - zookeeper
+      - mesos-master
+    links:
+      - zookeeper
+    ports:
+      - 9999:9999
+
+  swan-agent:
+    image: "swan:latest"
+    command: "agent"
+    network_mode: "service:swan-master" # share with swan-master to make use of 127.0.0.1
+    restart: "unless-stopped"
+    environment:
+      - SWAN_LISTEN_ADDR=0.0.0.0:10000
+      - SWAN_JOIN_ADDRS=127.0.0.1:9999
+      - SWAN_LOG_LEVEL=debug
+    depends_on:
+      - swan-master
