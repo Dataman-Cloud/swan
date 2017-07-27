@@ -369,7 +369,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var scale types.ScalePolicy
+	var scale types.Scale
 	if err := decode(req.Body, &scale); err != nil {
 		http.Error(w, fmt.Sprintf("decode scale param error: %v", err), http.StatusBadRequest)
 		return
@@ -624,6 +624,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 		onfailure = update.OnFailure
 	}
 
+	types.TaskList(tasks).Sort()
 	pending := tasks
 
 	go func() {
@@ -693,12 +694,12 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 			tasks := []*mesos.Task{m}
 
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch task %s got error: %v", id, err)
+			results, gerr := r.driver.LaunchTasks(tasks)
+			if gerr != nil {
+				log.Errorf("launch task %s got error: %v", id, gerr)
 
 				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				task.ErrMsg = gerr.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
@@ -707,26 +708,21 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				if onfailure == types.UpdateStop {
 					return
 				}
-
 			}
 
-			for taskId, err := range results {
-				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
-				}
+			for taskId, lerr := range results {
+				log.Errorf("launch task %s got error: %v", taskId, lerr)
 
-				task, err := r.db.GetTask(appId, taskId)
-				if err == nil {
-					task.OpStatus = types.OpStatusNoop
-					if err = r.db.UpdateTask(appId, task); err != nil {
-						log.Errorf("update task %s got error: %v", id, err)
-					}
+				task.Status = "Failed"
+				task.ErrMsg = lerr.Error()
+
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", id, err)
 				}
 
 				if onfailure == types.UpdateStop {
 					return
 				}
-
 			}
 
 			// notify proxy
