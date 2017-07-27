@@ -46,7 +46,6 @@ type Version struct {
 	Disk          float64           `json:"disk"`
 	Instances     int32             `json:"instances"`
 	RunAs         string            `json:"runAs"`
-	Priority      int32             `json:"priority"`
 	Container     *Container        `json:"container"`
 	Labels        map[string]string `json:"labels"`
 	HealthCheck   *HealthCheck      `json:"healthCheck"`
@@ -185,13 +184,6 @@ func (v *Version) Validate() error {
 
 	if v.Instances <= 0 {
 		return errors.New("invalid instances: instances must be specified and should greater than 0")
-	}
-
-	if v.CPUs < 0.01 {
-		return errors.New("cpu should >= 0.01")
-	}
-	if v.Mem < 5 {
-		return errors.New("mem should >= 5m")
 	}
 
 	// FIXME(nmg)

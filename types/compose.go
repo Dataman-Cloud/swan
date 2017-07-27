@@ -119,7 +119,6 @@ type Resource struct {
 }
 
 type YamlExtra struct {
-	Priority    uint              `json:"priority"`
 	WaitDelay   uint              `json:"wait_delay"` // by second
 	PullAlways  bool              `json:"pull_always"`
 	Resource    *Resource         `json:"resource"`
@@ -204,7 +203,6 @@ func (s *DockerService) Valid() error {
 func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 	ver := &Version{
 		Name:         s.Name, // svr name
-		Priority:     0,      // no use
 		Env:          s.Service.Environment,
 		Constraints:  s.Extra.Constraints,
 		RunAs:        s.Extra.RunAs,
