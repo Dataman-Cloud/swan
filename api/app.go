@@ -413,47 +413,40 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				}
 			}()
 
-			for i := 1; i <= current-goal; i++ {
+			types.TaskList(tasks).Reverse() // TODO
+			var (
+				killing = tasks[0 : current-goal]
+				wg      sync.WaitGroup
+			)
+			for _, task := range killing {
+				wg.Add(1)
 
-				var (
-					tname = fmt.Sprintf("%d.%s", current-i, appId)
-					tid   string
-				)
+				go func(task *types.Task) {
+					defer wg.Done()
 
-				for _, task := range tasks {
-					if task.Name == tname {
-						tid = task.ID
-						break
-					}
-				}
+					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+						log.Errorf("Kill task %s got error: %v", task.ID, err)
 
-				if tid == "" {
-					log.Errorln("no such task name:", tname)
-					break
-				}
+						task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+						if err = r.db.UpdateTask(appId, task); err != nil {
+							log.Errorf("update task %s got error: %v", task.Name, err)
+						}
 
-				t, err := r.db.GetTask(appId, tid)
-				if err != nil {
-					log.Errorln("get db task error:", err)
-					break
-				}
-
-				if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-					t.Status = "delete failed"
-					t.ErrMsg = err.Error()
-
-					if err = r.db.UpdateTask(appId, t); err != nil {
-						log.Errorf("update task %s got error: %v", t.Name, err)
+						return
 					}
 
-					break
-				}
+					if err := r.db.DeleteTask(task.ID); err != nil {
+						log.Errorf("Delete task %s got error: %v", task.ID, err)
 
-				if err := r.db.DeleteTask(t.ID); err != nil {
-					log.Errorf("delete task %s got error: %v", t.Name, err)
-					break
-				}
+						task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+						if err = r.db.UpdateTask(appId, task); err != nil {
+							log.Errorf("update task %s got error: %v", task.Name, err)
+						}
+					}
+				}(task)
 			}
+
+			wg.Wait()
 		}()
 
 		writeJSON(w, http.StatusAccepted, "accepted")
