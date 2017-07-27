@@ -34,7 +34,6 @@ func defaultFramework() *mesosproto.FrameworkInfo {
 		Hostname:        proto.String(hostName),
 		Capabilities: []*mesosproto.FrameworkInfo_Capability{
 			{Type: mesosproto.FrameworkInfo_Capability_PARTITION_AWARE.Enum()},
-			{Type: mesosproto.FrameworkInfo_Capability_TASK_KILLING_STATE.Enum()},
 		},
 	}
 }
