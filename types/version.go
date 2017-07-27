@@ -160,6 +160,7 @@ func (v *Version) EmptyLabels() *Version {
 }
 
 // validate version
+// TODO fix these mess
 // TODO(nmg): use json schema validation replace latter.
 func (v *Version) Validate() error {
 	if v.Container == nil {

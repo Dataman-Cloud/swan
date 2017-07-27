@@ -67,6 +67,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 
 	app.TaskCount = len(tasks)
 	app.Status = zk.status(tasks)
+	app.TasksStatus = zk.tasksStatus(tasks)
 	app.Version = zk.version(tasks)
 	app.Health = zk.health(tasks)
 
@@ -198,6 +199,14 @@ func (zk *ZKStore) status(tasks types.TaskList) string {
 	}
 
 	return "unavailable"
+}
+
+func (zk *ZKStore) tasksStatus(tasks types.TaskList) map[string]int {
+	ret := make(map[string]int)
+	for _, task := range tasks {
+		ret[task.Status]++
+	}
+	return ret
 }
 
 func (zk *ZKStore) health(tasks types.TaskList) *types.Health {

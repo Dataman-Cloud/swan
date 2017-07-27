@@ -17,19 +17,20 @@ const (
 )
 
 type Application struct {
-	ID           string    `json:"id"`
-	Name         string    `json:"name"`
-	RunAs        string    `json:"runAs"`
-	Cluster      string    `json:"cluster"`
-	OpStatus     string    `json:"operationStatus"`
-	Progress     int       `json:"progress"`
-	TaskCount    int       `json:"task_count"`
-	Version      []string  `json:"currentVersion"`
-	VersionCount int       `json:"version_count"`
-	Status       string    `json:"status"`
-	Health       *Health   `json:"health"`
-	CreatedAt    time.Time `json:"created"`
-	UpdatedAt    time.Time `json:"updated"`
+	ID           string         `json:"id"`
+	Name         string         `json:"name"`
+	RunAs        string         `json:"runAs"`
+	Cluster      string         `json:"cluster"`
+	OpStatus     string         `json:"operationStatus"`
+	Progress     int            `json:"progress"`
+	TaskCount    int            `json:"task_count"`
+	Version      []string       `json:"currentVersion"`
+	VersionCount int            `json:"version_count"`
+	Status       string         `json:"status"`
+	TasksStatus  map[string]int `json:"tasks_status"`
+	Health       *Health        `json:"health"`
+	CreatedAt    time.Time      `json:"created"`
+	UpdatedAt    time.Time      `json:"updated"`
 }
 
 type AppFilterOptions struct {
