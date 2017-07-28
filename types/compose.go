@@ -259,9 +259,12 @@ func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 	}
 
 	// proxy
-	ver.Proxy = &Proxy{
-		Enabled: s.Extra.Proxy.Enabled,
-		Alias:   s.Extra.Proxy.Alias,
+	var proxy = s.Extra.Proxy
+	if proxy != nil && proxy.valid() {
+		ver.Proxy = &Proxy{
+			Enabled: proxy.Enabled,
+			Alias:   proxy.Alias,
+		}
 	}
 
 	if err := ver.Validate(); err != nil {
