@@ -46,8 +46,9 @@ type SchedulerConfig struct {
 	ReconciliationStep      int64
 	ReconciliationStepDelay float64
 
-	HeartbeatTimeout float64
-	MaxTasksPerOffer int
+	HeartbeatTimeout        float64
+	MaxTasksPerOffer        int
+	EnableCapabilityKilling bool
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf
@@ -87,7 +88,6 @@ type Scheduler struct {
 func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clusterMaster *mole.Master) (*Scheduler, error) {
 	s := &Scheduler{
 		cfg:           cfg,
-		framework:     defaultFramework(),
 		quit:          make(chan struct{}),
 		agents:        make(map[string]*Agent),
 		pendingTasks:  make(map[string]*Task),
@@ -119,6 +119,8 @@ func (s *Scheduler) init() error {
 		mesosproto.Event_FAILURE:    s.failureHandler,
 		mesosproto.Event_MESSAGE:    s.messageHandler,
 	}
+
+	s.framework = s.buildFramework()
 
 	id, mtime := s.db.GetFrameworkId()
 	if id != "" {

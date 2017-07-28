@@ -92,6 +92,15 @@ func FlagMaxTasksPerOffer() cli.Flag {
 	}
 }
 
+func FlagEnableCapabilityKilling() cli.Flag {
+	return cli.StringFlag{
+		Name:   "enable-capability-killing",
+		Usage:  "To enable TASK_KILLING state in Mesos (0.28 or later)",
+		EnvVar: "SWAN_ENABLE_CAPABILITY_KILLING",
+		Value:  "false",
+	}
+}
+
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",

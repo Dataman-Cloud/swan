@@ -61,6 +61,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		ReconciliationStepDelay: cfg.ReconciliationStepDelay,
 		HeartbeatTimeout:        cfg.HeartbeatTimeout,
 		MaxTasksPerOffer:        cfg.MaxTasksPerOffer,
+		EnableCapabilityKilling: cfg.EnableCapabilityKilling,
 	}
 
 	var s mesos.Strategy
