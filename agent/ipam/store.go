@@ -313,19 +313,35 @@ func (s *kvStore) getRandomIP(subnetID string) (string, error) {
 }
 
 func (s *kvStore) markIPAssigned(subnetID, ip string) error {
-	return s.updateIP(subnetID, ip, true)
+	previous, err := s.kv.Get(s.normalize(subnetID, keyPool, ip))
+	if err != nil {
+		return fmt.Errorf("Get ip's current kv property failed: [%v]", err)
+	}
+
+	return s.updateIP(subnetID, ip, previous, true)
 }
 
 func (s *kvStore) markIPFree(subnetID, ip string) error {
-	return s.updateIP(subnetID, ip, false)
+	previous, err := s.kv.Get(s.normalize(subnetID, keyPool, ip))
+	if err != nil {
+		return fmt.Errorf("Get ip's current kv property failed: [%v]", err)
+	}
+
+	return s.updateIP(subnetID, ip, previous, false)
 }
 
-func (s *kvStore) updateIP(subnetID, ip string, assigned bool) error {
+func (s *kvStore) updateIP(subnetID, ip string, previous *store.KVPair, assigned bool) error {
 	key := s.normalize(subnetID, keyPool, ip)
+
 	if assigned {
-		return s.kv.Put(key, []byte{'1'}, nil)
+		previous.Value = []byte{'0'}
+		_, _, err := s.kv.AtomicPut(key, []byte{'1'}, previous, nil)
+		return err
 	}
-	return s.kv.Put(key, []byte{'0'}, nil)
+
+	previous.Value = []byte{'1'}
+	_, _, err := s.kv.AtomicPut(key, []byte{'0'}, previous, nil)
+	return err
 }
 
 func (s *kvStore) normalize(keys ...string) string {
