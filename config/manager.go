@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net/url"
+	"strconv"
 	"strings"
 
 	"github.com/urfave/cli"
@@ -26,6 +27,7 @@ type ManagerConfig struct {
 	ReconciliationStepDelay float64 `json:"reconciliationStepDelay"`
 	HeartbeatTimeout        float64 `json:"heartbeatTimeout"`
 	MaxTasksPerOffer        int     `json:"maxTasksPerOffer"`
+	EnableCapabilityKilling bool    `json:"enableCapabilityKilling"`
 }
 
 func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
@@ -84,6 +86,10 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 
 	if max := c.Int("max-tasks-per-offer"); max != 0 {
 		cfg.MaxTasksPerOffer = max
+	}
+
+	if killing := c.String("enable-capability-killing"); killing != "" {
+		cfg.EnableCapabilityKilling, _ = strconv.ParseBool(killing)
 	}
 
 	if err := cfg.validate(); err != nil {
