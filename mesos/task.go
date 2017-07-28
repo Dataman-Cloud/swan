@@ -61,7 +61,10 @@ func (t *Task) IsDone(status *mesosproto.TaskStatus) bool {
 		mesosproto.TaskState_TASK_ERROR,
 		mesosproto.TaskState_TASK_LOST,
 		mesosproto.TaskState_TASK_DROPPED,
-		mesosproto.TaskState_TASK_GONE:
+		mesosproto.TaskState_TASK_UNREACHABLE,
+		mesosproto.TaskState_TASK_GONE,
+		mesosproto.TaskState_TASK_GONE_BY_OPERATOR,
+		mesosproto.TaskState_TASK_UNKNOWN:
 
 		return true
 	}
