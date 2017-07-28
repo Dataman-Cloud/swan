@@ -44,14 +44,6 @@ func (t *Task) Build() {
 	t.Labels = t.cfg.BuildLabels(t.GetName())
 }
 
-// SendStatus method writes the task status in the updates channel
-func (t *Task) SendStatus(status *mesosproto.TaskStatus) {
-	select {
-	case t.updates <- status:
-	default:
-	}
-}
-
 // GetStatus method reads the task status on the updates channel
 func (t *Task) GetStatus() chan *mesosproto.TaskStatus {
 	return t.updates
