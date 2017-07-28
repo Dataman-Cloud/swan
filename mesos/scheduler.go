@@ -21,7 +21,8 @@ import (
 
 const (
 	reconnectDuration = time.Duration(20 * time.Second)
-	resourceTimeout   = time.Duration(360000 * time.Second)
+	resourceTimeout   = time.Duration(5 * time.Second)
+	filterTimeout     = time.Duration(5 * time.Second)
 	creationTimeout   = time.Duration(360000 * time.Second)
 	deleteTimeout     = time.Duration(360000 * time.Second)
 	reconcileInterval = time.Duration(24 * time.Hour)
@@ -34,6 +35,7 @@ var (
 	errResourceNotEnough = errors.New("resource not enough")
 	errCreationTimeout   = errors.New("task create timeout")
 	errDeletingTimeout   = errors.New("task delete timeout")
+	errNoSatisfiedAgent  = errors.New("no satisfied agent")
 )
 
 type SchedulerConfig struct {
@@ -501,16 +503,17 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
 	filtered := make([]*Agent, 0)
 
-	timeout := time.After(resourceTimeout)
+	timeout := time.After(filterTimeout)
 	for {
 		select {
 		case <-timeout:
-			return nil, errResourceNotEnough
+			return nil, errNoSatisfiedAgent
 		default:
 			filtered = ApplyFilters(s.filters, config, s.getAgents())
 			if len(filtered) > 0 {
 				return filtered, nil
 			}
+			log.Debugln("No satisfied node to run tasks. waiting...")
 			time.Sleep(1 * time.Second)
 		}
 	}
@@ -715,6 +718,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
+		filter = tasks[0].cfg
 	)
 
 	for i := 0; i < count; i = i + step {
@@ -729,7 +733,16 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 		offers := []*Offer{}
 		for {
 			s.lock()
-			candidates := s.strategy.RankAndSort(s.getAgents())
+			log.Debugln("Finding suitable agent to run tasks")
+			filtered, err := s.applyFilters(filter)
+			if err != nil {
+				s.unlock()
+				return nil, err
+			}
+			log.Debugln("Find", len(filtered), "agent(s) satisfied the constraints")
+
+			log.Debugln("Weighting resource to find the richest agent")
+			candidates := s.strategy.RankAndSort(filtered)
 			if len(candidates) <= 0 {
 				s.unlock()
 				log.Debugln("No enough agent to run tasks, waiting...")

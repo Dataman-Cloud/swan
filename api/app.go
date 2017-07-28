@@ -90,6 +90,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 
 		tasks := []*mesos.Task{}
 
+		log.Debugf("Preparing to launch %d tasks", len(tasks))
 		for i := 0; i < count; i++ {
 			var (
 				name = fmt.Sprintf("%d.%s", i, appId)
@@ -122,6 +123,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				task.Healthy = types.TaskUnHealthy
 			}
 
+			log.Debugf("Create task %s in db", task.ID)
 			if err := r.db.CreateTask(app.ID, task); err != nil {
 				log.Errorf("create task failed: %s", err)
 				break
@@ -136,6 +138,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			tasks = append(tasks, t)
 		}
 
+		log.Debugf("Launching %d tasks on mesos", len(tasks))
 		results, gerr := r.driver.LaunchTasks(tasks)
 		if gerr != nil {
 			log.Errorf("launch tasks got error: %v", gerr)
