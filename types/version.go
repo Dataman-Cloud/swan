@@ -133,6 +133,23 @@ type Proxy struct {
 	Sticky  bool   `json:"sticky"`
 }
 
+func (p *Proxy) valid() bool {
+	if p.Enabled {
+		var (
+			alias  = strings.TrimSpace(p.Alias)
+			listen = strings.TrimSpace(p.Listen)
+		)
+
+		if alias == "" && listen == "" {
+			return false
+		}
+
+		return true
+	}
+
+	return true
+}
+
 type Gateway struct {
 	Enabled bool    `json:"enabled"`
 	Weight  float64 `json:"weight,omitempty"`

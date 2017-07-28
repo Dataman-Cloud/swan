@@ -65,6 +65,12 @@ Request:
         "cpu": 0.01,
         "mem": 50,
         "disk": 100
+      },
+      "proxy": {
+          "enabled": true,
+          "alias": "g.cn",
+	  "listen": ":99",
+	  "sticky": false
       }
     },
     "cache": {
