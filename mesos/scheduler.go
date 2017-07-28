@@ -67,7 +67,7 @@ type Scheduler struct {
 
 	sync.RWMutex                   // protect followings two
 	agents       map[string]*Agent // holding offers (agents)
-	tasks        map[string]*Task
+	pendingTasks map[string]*Task
 
 	offerTimeout time.Duration
 
@@ -90,7 +90,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		framework:     defaultFramework(),
 		quit:          make(chan struct{}),
 		agents:        make(map[string]*Agent),
-		tasks:         make(map[string]*Task),
+		pendingTasks:  make(map[string]*Task),
 		offerTimeout:  time.Duration(10 * time.Second),
 		db:            db,
 		strategy:      strategy,
@@ -297,15 +297,11 @@ func (s *Scheduler) handleEvent(ev *mesosproto.Event) {
 			}
 		}()
 
-		// emit event status to ongoing task
+		// emit event status to pending task
 		log.Debugf("Finding task %s to send status %s", taskId, state.String())
-		if task := s.getTask(taskId); task != nil {
-			log.Debugf("Sending status %s to task %s", state.String(), taskId)
-			task.SendStatus(status)
-		}
+		s.sendTaskStatus(taskId, status)
 
 		handler(ev)
-
 		return
 	}
 
@@ -420,18 +416,20 @@ func (s *Scheduler) getAgents() []*Agent {
 	return agents
 }
 
-func (s *Scheduler) addTask(t *Task) {
+func (s *Scheduler) addPendingTask(t *Task) {
+	log.Debugf("Add pending task %s", t.TaskId.GetValue())
+
 	s.Lock()
 	defer s.Unlock()
 
-	s.tasks[t.TaskId.GetValue()] = t
+	s.pendingTasks[t.TaskId.GetValue()] = t
 }
 
-func (s *Scheduler) getTask(taskId string) *Task {
+func (s *Scheduler) getPendingTask(taskId string) *Task {
 	s.RLock()
 	defer s.RUnlock()
 
-	task, ok := s.tasks[taskId]
+	task, ok := s.pendingTasks[taskId]
 	if !ok {
 		return nil
 	}
@@ -439,16 +437,33 @@ func (s *Scheduler) getTask(taskId string) *Task {
 	return task
 }
 
-func (s *Scheduler) removeTask(taskId string) {
+func (s *Scheduler) removePendingTask(taskId string) {
+	log.Debugf("Remove pending task %s", taskId)
+
 	s.Lock()
 	defer s.Unlock()
 
-	_, ok := s.tasks[taskId]
+	t, ok := s.pendingTasks[taskId]
 	if !ok {
 		return
 	}
 
-	delete(s.tasks, taskId)
+	close(t.updates)
+
+	delete(s.pendingTasks, taskId)
+}
+
+// send update event to pending task's buffered channel
+func (s *Scheduler) sendTaskStatus(taskID string, status *mesosproto.TaskStatus) {
+	s.RLock()
+	defer s.RUnlock()
+
+	t, ok := s.pendingTasks[taskID]
+	if !ok {
+		return
+	}
+
+	t.updates <- status
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
@@ -461,8 +476,8 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 
 	t := NewTask(nil, taskId, taskId)
 
-	log.Debugf("Adding task %s", taskId)
-	s.addTask(t)
+	s.addPendingTask(t)
+	defer s.removePendingTask(taskId) // prevent leak
 
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
@@ -492,7 +507,6 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
 		if t.IsDone(status) {
 			log.Debugf("Task %s killed", taskId)
-			s.removeTask(taskId)
 			break
 		}
 	}
@@ -760,13 +774,15 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 				continue
 			}
 
+			// got proper offers
 			for _, task := range group {
-				s.addTask(task)
+				s.addPendingTask(task) // TODO prevent leaks
 			}
 
 			for _, offer := range offers {
 				s.removeOffer(offer)
 			}
+
 			s.unlock()
 			break
 		}
@@ -775,6 +791,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 			// TODO:handler error
 		}
 
+		// wait grouped-tasks status in background
 		for _, task := range group {
 			wg.Add(1)
 			go func(task *Task) {
@@ -783,12 +800,13 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if task.IsDone(status) {
-						l.Lock()
-						if err := task.DetectError(status); err != nil {
+						err := task.DetectError(status)
+						if err != nil {
+							l.Lock()
 							rets[task.ID()] = err
+							l.Unlock()
 						}
-						l.Unlock()
-						s.removeTask(task.ID())
+						s.removePendingTask(task.ID())
 
 						return
 					}
@@ -797,6 +815,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 		}
 	}
 
+	wg.Wait()
 	return rets, nil
 }
 
@@ -902,7 +921,7 @@ func (s *Scheduler) Load() map[string]interface{} {
 	defer s.RUnlock()
 
 	tasks := []string{}
-	for _, task := range s.tasks {
+	for _, task := range s.pendingTasks {
 		tasks = append(tasks, task.ID())
 	}
 
