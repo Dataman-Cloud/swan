@@ -678,6 +678,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				ID:      id,
 				Name:    name,
 				Weight:  100,
+				Status:  "pending",
 				Healthy: types.TaskHealthyUnset,
 				Version: newVer.ID,
 				Created: t.Created,
