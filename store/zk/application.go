@@ -3,6 +3,7 @@ package zk
 import (
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -239,28 +240,23 @@ func (zk *ZKStore) health(tasks types.TaskList) *types.Health {
 }
 
 func (zk *ZKStore) version(tasks types.TaskList) []string {
-	vers := make([]string, 0)
-
-	for _, task := range tasks {
-		if verExist(vers, task.Version) {
-			continue
-		}
-
-		vers = append(vers, task.Version)
+	vers := make([]string, len(tasks))
+	for idx, task := range tasks {
+		vers[idx] = task.Version
 	}
 
-	// TODO(nmg): should be sort.
+	// remove duplicated (reuse original slice)
+	m := make(map[string]bool)
+	for _, ver := range vers {
+		if _, seen := m[ver]; !seen {
+			vers[len(m)] = ver
+			m[ver] = true
+		}
+	}
+
+	vers = vers[:len(m)]
+	sort.Strings(vers)
 	return vers
-}
-
-func verExist(vers []string, ver string) bool {
-	for _, v := range vers {
-		if v == ver {
-			return true
-		}
-	}
-
-	return false
 }
 
 func (zk *ZKStore) delTasks(p, id string) error {
