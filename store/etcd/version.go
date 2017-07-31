@@ -70,5 +70,6 @@ func (s *EtcdStore) ListVersions(aid string) ([]*types.Version, error) {
 		versions = append(versions, ver)
 	}
 
+	types.VersionList(versions).Reverse()
 	return versions, nil
 }
