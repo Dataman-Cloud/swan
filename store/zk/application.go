@@ -3,6 +3,7 @@ package zk
 import (
 	"fmt"
 	"path"
+	"sort"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -249,7 +250,7 @@ func (zk *ZKStore) version(tasks types.TaskList) []string {
 		vers = append(vers, task.Version)
 	}
 
-	// TODO(nmg): should be sort.
+	sort.Strings(vers)
 	return vers
 }
 
