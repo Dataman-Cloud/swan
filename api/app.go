@@ -20,23 +20,23 @@ import (
 
 func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	if err := checkForJSON(req); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := req.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var version types.Version
 	if err := decode(req.Body, &version); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := version.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -368,7 +368,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
 		return
 	}
 
@@ -582,18 +582,18 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
 		return
 	}
 
 	newVer := new(types.Version)
 	if err := decode(req.Body, newVer); err != nil {
-		http.Error(w, fmt.Sprintf("decode update version got error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("decode update version got error: %v", err), http.StatusBadRequest)
 		return
 	}
 
 	if err := newVer.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -748,13 +748,13 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
 		return
 	}
 
 	canary := new(types.CanaryUpdateBody)
 	if err := decode(req.Body, canary); err != nil {
-		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusBadRequest)
 		return
 	}
 
@@ -951,7 +951,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
 		return
 	}
 
@@ -1092,7 +1092,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 	var body types.UpdateWeightsBody
 	if err := decode(req.Body, &body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -1161,7 +1161,7 @@ func (r *Server) getTask(w http.ResponseWriter, req *http.Request) {
 func (r *Server) updateWeight(w http.ResponseWriter, req *http.Request) {
 	var body types.UpdateWeightBody
 	if err := decode(req.Body, &body); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -1231,23 +1231,23 @@ func (r *Server) createVersion(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if err := checkForJSON(req); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := req.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	var version types.Version
 	if err := decode(req.Body, &version); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := version.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
@@ -1367,12 +1367,12 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 
 	var version types.Version
 	if err := decode(req.Body, &version); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
 	if err := version.Validate(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -1473,7 +1473,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusMethodNotAllowed)
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
 		return
 	}
 
