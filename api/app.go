@@ -617,7 +617,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		delay     = float64(5)
+		delay     = float64(1)
 		onfailure = "stop"
 	)
 
