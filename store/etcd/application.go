@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"path"
+	"sort"
 
 	log "github.com/Sirupsen/logrus"
 
@@ -239,7 +240,7 @@ func (s *EtcdStore) version(tasks types.TaskList) []string {
 		vers = append(vers, task.Version)
 	}
 
-	// TODO(nmg): should be sort.
+	sort.Strings(vers)
 	return vers
 }
 
