@@ -9,11 +9,15 @@ import (
 
 // WriteJSON write response as json format.
 func writeJSON(w http.ResponseWriter, code int, v interface{}) {
+	bs, err := json.Marshal(v)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
-	enc := json.NewEncoder(w)
-	enc.SetEscapeHTML(false)
-	enc.Encode(v)
+	w.Write(bs)
 }
 
 // CheckForJSON makes sure that the request's Content-Type is application/json.
