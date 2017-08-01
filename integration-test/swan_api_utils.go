@@ -50,15 +50,19 @@ func (s *ApiSuite) updateApp(id string, newVer *types.Version, c *check.C) {
 }
 
 func (s *ApiSuite) rollbackApp(id string, versionID string, c *check.C) {
-	uri := fmt.Sprintf("/v1/apps/%s/rollback?version=%s", id, versionID)
-	code, body, err := s.sendRequest("POST", uri, nil)
+	code, body, err := s.rawRollBackApp(id, versionID)
 	c.Assert(err, check.IsNil)
 	c.Log(string(body))
 	c.Assert(code, check.Equals, http.StatusAccepted)
 }
 
+func (s *ApiSuite) rawRollBackApp(id string, versionID string) (int, []byte, error) {
+	uri := fmt.Sprintf("/v1/apps/%s/rollback?version=%s", id, versionID)
+	return s.sendRequest("POST", uri, nil)
+}
+
 func (s *ApiSuite) createApp(ver *types.Version, c *check.C) string {
-	code, body, err := s.sendRequest("POST", "/v1/apps", ver)
+	code, body, err := s.rawCreateApp(ver)
 	c.Assert(err, check.IsNil)
 	c.Log(string(body))
 	c.Assert(code, check.Equals, http.StatusCreated)
@@ -72,6 +76,10 @@ func (s *ApiSuite) createApp(ver *types.Version, c *check.C) string {
 	c.Assert(resp.Id, check.Matches, ver.Name+".*")
 
 	return resp.Id
+}
+
+func (s *ApiSuite) rawCreateApp(ver *types.Version) (int, []byte, error) {
+	return s.sendRequest("POST", "/v1/apps", ver)
 }
 
 func (s *ApiSuite) listApps(c *check.C) []*types.Application {
@@ -187,19 +195,17 @@ func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
 }
 
 func (s *ApiSuite) sendRequest(method, uri string, data interface{}) (code int, body []byte, err error) {
-	buf := bytes.NewBuffer(nil)
-	if data != nil {
-		if err := json.NewEncoder(buf).Encode(data); err != nil {
-			return -1, nil, err
-		}
-	}
-
-	req, err := http.NewRequest(method, "http://"+s.SwanHost+uri, buf)
+	req, err := s.newRawReq(method, uri, data)
 	if err != nil {
 		return -1, nil, err
 	}
+
 	req.Header.Set("Content-Type", "application/json")
 
+	return s.sendRawRequest(req)
+}
+
+func (s *ApiSuite) sendRawRequest(req *http.Request) (code int, body []byte, err error) {
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return -1, nil, err
@@ -212,6 +218,17 @@ func (s *ApiSuite) sendRequest(method, uri string, data interface{}) (code int, 
 	}
 
 	return resp.StatusCode, bs, nil
+}
+
+func (s *ApiSuite) newRawReq(method, uri string, data interface{}) (*http.Request, error) {
+	buf := bytes.NewBuffer(nil)
+	if data != nil {
+		if err := json.NewEncoder(buf).Encode(data); err != nil {
+			return nil, err
+		}
+	}
+
+	return http.NewRequest(method, "http://"+s.SwanHost+uri, buf)
 }
 
 func (s *ApiSuite) bind(data []byte, val interface{}) error {
@@ -238,6 +255,11 @@ func (b *verBuilder) setName(name string) *verBuilder {
 	return b
 }
 
+func (b *verBuilder) setRunAs(runas string) *verBuilder {
+	b.RunAs = runas
+	return b
+}
+
 func (b *verBuilder) setCount(n int) *verBuilder {
 	b.Instances = int32(n)
 	return b
@@ -260,7 +282,7 @@ func (b *verBuilder) setImage(image string) *verBuilder {
 
 func demoVersion() *verBuilder {
 	return &verBuilder{
-		Name:        "",
+		Name:        "demo",
 		Instances:   int32(1),
 		Command:     "",
 		CPUs:        0.01,
