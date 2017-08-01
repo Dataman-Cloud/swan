@@ -31,15 +31,10 @@ type Store interface {
 	GetFrameworkId() (string, int64)
 
 	CreateCompose(ins *types.Compose) error
-	DeleteCompose(idOrName string) error
+	DeleteCompose(id string) error
 	UpdateCompose(ins *types.Compose) error // status, errmsg, updateAt
-	GetCompose(idOrName string) (*types.Compose, error)
+	GetCompose(id string) (*types.Compose, error)
 	ListComposes() ([]*types.Compose, error)
-
-	CreateAgent(agent *types.Agent) error
-	UpdateAgent(agent *types.Agent) error
-	GetAgent(id string) (*types.Agent, error)
-	ListAgents() ([]*types.Agent, error)
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

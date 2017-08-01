@@ -21,14 +21,12 @@ var (
 	errAppAlreadyExists     = errors.New("app already exists")
 	errVersionAlreadyExists = errors.New("version already exists")
 	errInstanceNotFound     = errors.New("instance not found")
-	errAgentNotFound        = errors.New("agent not found")
 	errNotExists            = zk.ErrNoNode
 )
 
 const (
 	keyApp         = "/apps"        // single app
 	keyCompose     = "/composes"    // compose instance (group apps)
-	keyAgent       = "/agents"      // swan agent
 	keyFrameworkID = "/frameworkId" // framework id
 )
 
@@ -53,7 +51,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyAgent, keyFrameworkID} {
+	for _, node := range []string{keyApp, keyCompose} {
 		if err := zs.createAll(node, nil); err != nil {
 			return nil, err
 		}
