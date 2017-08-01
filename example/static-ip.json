@@ -1,0 +1,31 @@
+{
+  "name": "demo",
+  "cmd": "sleep 100d",
+  "cpus": 0.001,
+  "gpus": 0,
+  "mem": 10,
+  "disk": 0,
+  "runAs": "bbk",
+  "priority": 0,
+  "instances": 2,
+  "constraints": [],
+  "container": {
+    "type": "DOCKER",
+    "docker": {
+      "image": "busybox",
+      "network": "swan",
+      "forcePullImage": false,
+      "privileged": false,
+    },
+    "volumes": []
+  },
+  "env": {},
+  "uris": [],
+  "label": {},
+  "healthCheck": {},
+  "proxy": {},
+  "ips": [
+    "192.168.1.199",
+    "192.168.1.200"
+  ]
+}
