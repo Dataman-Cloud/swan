@@ -34,6 +34,7 @@ func (s *Scheduler) buildFramework() *mesosproto.FrameworkInfo {
 		Hostname:        proto.String(hostName),
 		Capabilities: []*mesosproto.FrameworkInfo_Capability{
 			{Type: mesosproto.FrameworkInfo_Capability_PARTITION_AWARE.Enum()},
+			{Type: mesosproto.FrameworkInfo_Capability_GPU_RESOURCES.Enum()},
 		},
 	}
 

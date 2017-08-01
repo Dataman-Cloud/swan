@@ -54,6 +54,7 @@ func (tl TaskList) Sort() {
 
 type TaskConfig struct {
 	CPUs           float64           `json:"cpus"`
+	GPUs           float64           `json:"gpus"`
 	Mem            float64           `json:"mem"`
 	Disk           float64           `json:"disk"`
 	IP             string            `json:"ip"`
@@ -79,6 +80,7 @@ type TaskConfig struct {
 func NewTaskConfig(spec *Version) *TaskConfig {
 	return &TaskConfig{
 		CPUs:           spec.CPUs,
+		GPUs:           spec.GPUs,
 		Mem:            spec.Mem,
 		Disk:           spec.Disk,
 		Image:          spec.Container.Docker.Image,
@@ -241,6 +243,7 @@ func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 	var (
 		rs   = make([]*mesosproto.Resource, 0, 0)
 		cpus = c.CPUs
+		gpus = c.GPUs
 		mem  = c.Mem
 		disk = c.Disk
 	)
@@ -251,6 +254,16 @@ func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 			Type: mesosproto.Value_SCALAR.Enum(),
 			Scalar: &mesosproto.Value_Scalar{
 				Value: proto.Float64(cpus),
+			},
+		})
+	}
+
+	if gpus > 0 {
+		rs = append(rs, &mesosproto.Resource{
+			Name: proto.String("gpus"),
+			Type: mesosproto.Value_SCALAR.Enum(),
+			Scalar: &mesosproto.Value_Scalar{
+				Value: proto.Float64(gpus),
 			},
 		})
 	}
