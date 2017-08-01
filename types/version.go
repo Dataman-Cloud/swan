@@ -42,6 +42,7 @@ type Version struct {
 	Name          string            `json:"name"`
 	Command       string            `json:"cmd"`
 	CPUs          float64           `json:"cpus"`
+	GPUs          float64           `json:"gpus"`
 	Mem           float64           `json:"mem"`
 	Disk          float64           `json:"disk"`
 	Instances     int32             `json:"instances"`
