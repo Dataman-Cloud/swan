@@ -178,7 +178,10 @@ func (c *TaskConfig) network() *mesosproto.ContainerInfo_DockerInfo_Network {
 		return mesosproto.ContainerInfo_DockerInfo_BRIDGE.Enum()
 	}
 
-	return mesosproto.ContainerInfo_DockerInfo_USER.Enum()
+	// mesosproto.ContainerInfo_DockerInfo_USER always lead to error complains:
+	// Failed to run docker container: No network info dound in container info
+	// we process user-defined network within parameters().
+	return mesosproto.ContainerInfo_DockerInfo_NONE.Enum()
 }
 
 func (c *TaskConfig) portMappings() []*mesosproto.ContainerInfo_DockerInfo_PortMapping {
@@ -212,6 +215,27 @@ func (c *TaskConfig) parameters() []*mesosproto.Parameter {
 			Key:   proto.String(p.Key),
 			Value: proto.String(p.Value),
 		})
+	}
+
+	// attach with user defined network parameters
+	var (
+		network = c.Network
+		ip      = c.IP
+	)
+	switch network {
+	case "none", "bridge", "host":
+	default:
+		mps = append(mps, &mesosproto.Parameter{
+			Key:   proto.String("network"),
+			Value: proto.String(network), // user defined network name
+		})
+
+		if ip != "" {
+			mps = append(mps, &mesosproto.Parameter{
+				Key:   proto.String("ip"),
+				Value: proto.String(ip), // user defined ip address
+			})
+		}
 	}
 
 	return mps
