@@ -179,7 +179,7 @@ func (c *TaskConfig) network() *mesosproto.ContainerInfo_DockerInfo_Network {
 	}
 
 	// mesosproto.ContainerInfo_DockerInfo_USER always lead to error complains:
-	// Failed to run docker container: No network info dound in container info
+	// Failed to run docker container: No network info found in container info
 	// we process user-defined network within parameters().
 	return mesosproto.ContainerInfo_DockerInfo_NONE.Enum()
 }
