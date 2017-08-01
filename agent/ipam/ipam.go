@@ -2,7 +2,6 @@ package ipam
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -88,8 +87,12 @@ func (m *IPAM) RequestPool(req *ipam.RequestPoolRequest) (*ipam.RequestPoolRespo
 
 	// check if exists
 	if exists, _ := m.store.GetSubNet(subnet.ID); exists != nil {
-		log.Errorln("IPAM RequestPool Conflict on: ", subnet.ID)
-		return nil, errors.New("subnet already exists: " + subnet.ID)
+		log.Println("IPAM RequestPool on the existing subnet: ", subnet.ID)
+		return &ipam.RequestPoolResponse{
+			PoolID: exists.ID,
+			Pool:   exists.CIDR,
+			Data:   nil,
+		}, nil
 	}
 
 	// create kv subnet
