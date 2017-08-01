@@ -13,6 +13,10 @@ func (s *ApiSuite) TestGetVersion(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(code, check.Equals, http.StatusOK)
 
-	err = s.bind(body, new(version.Version))
+	var gitVersion = new(version.Version)
+	err = s.bind(body, gitVersion)
 	c.Assert(err, check.IsNil)
+	c.Assert(gitVersion.GitCommit, check.Not(check.Equals), "")
+	c.Assert(gitVersion.BuildTime, check.Not(check.Equals), "")
+	c.Assert(gitVersion.GoVersion, check.Not(check.Equals), "")
 }

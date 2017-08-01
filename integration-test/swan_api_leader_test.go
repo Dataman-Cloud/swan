@@ -13,6 +13,8 @@ func (s *ApiSuite) TestGetLeader(c *check.C) {
 	c.Assert(err, check.IsNil)
 	c.Assert(code, check.Equals, http.StatusOK)
 
-	err = s.bind(body, new(types.Leader))
+	var leader = new(types.Leader)
+	err = s.bind(body, leader)
 	c.Assert(err, check.IsNil)
+	c.Assert(leader.Leader, check.Not(check.Equals), "")
 }
