@@ -18,19 +18,21 @@ const (
 )
 
 type Task struct {
-	ID       string    `json:"id"`
-	Name     string    `json:"name"`
-	IP       string    `json:"ip"`
-	Port     uint64    `json:"port"`
-	Healthy  string    `json:"healthy"`
-	Weight   float64   `json:"weight"`
-	AgentId  string    `json:"agentId"`
-	Version  string    `json:"version"`
-	Status   string    `json:"status"`
-	ErrMsg   string    `json:"errmsg"`
-	OpStatus string    `json:"opstatus"`
-	Created  time.Time `json:"created"`
-	Updated  time.Time `json:"updated"`
+	ID            string    `json:"id"`
+	Name          string    `json:"name"`
+	IP            string    `json:"ip"`
+	Port          uint64    `json:"port"`
+	Healthy       string    `json:"healthy"`
+	Weight        float64   `json:"weight"`
+	AgentId       string    `json:"agentId"`
+	Version       string    `json:"version"`
+	Status        string    `json:"status"`
+	ErrMsg        string    `json:"errmsg"`
+	OpStatus      string    `json:"opstatus"`
+	ContainerID   string    `json:"container_id"`
+	ContainerName string    `json:"container_name"`
+	Created       time.Time `json:"created"`
+	Updated       time.Time `json:"updated"`
 }
 
 type TaskList []*Task
