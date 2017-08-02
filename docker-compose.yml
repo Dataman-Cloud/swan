@@ -19,7 +19,8 @@ services:
       - MESOS_QUORUM=1
       - MESOS_PORT=5050
       - MESOS_LOGGING_LEVEL=WARNING
-      - MESOS_CLUSTER=DemoMesos 
+      - MESOS_CLUSTER=local
+      - MESOS_HOSTNAME=localhost
     depends_on:
       - zookeeper
     links:
@@ -30,7 +31,9 @@ services:
   mesos-slave:
     image: "mesosphere/mesos-slave:1.2.1"
     restart: "unless-stopped"
-    network_mode: "service:mesos-master" # share with mesos-master to make use of 127.0.0.1
+    network_mode: "bridge"
+    pid: "host"
+    privileged: true
     environment:
       - MESOS_MASTER=zk://zookeeper:2181/mesos
       - MESOS_LOGGING_LEVEL=WARNING
@@ -42,6 +45,7 @@ services:
       - MESOS_SYSTEMD_ENABLE_SUPPORT=false
       - MESOS_WORK_DIR=/data/mesos
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+      - MESOS_HOSTNAME=localhost
     volumes:
       - /var/lib/docker:/data/docker:rw
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
@@ -50,6 +54,11 @@ services:
     depends_on:
       - zookeeper
       - mesos-master
+    links:
+      - mesos-master
+      - zookeeper
+    ports:
+      - 5051:5051
 
   swan-master:
     image: "swan:latest"
