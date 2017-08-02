@@ -11,6 +11,7 @@ import (
 func main() {
 	app := cli.NewApp()
 	app.Name = "swan"
+	app.Usage = "A Distributed, Highly Available Mesos Scheduler"
 	app.Description = "A Distributed, Highly Available Mesos Scheduler, Inspired by the design of Google Borg."
 	app.Version = version.GetVersion().Version
 
