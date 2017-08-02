@@ -10,6 +10,7 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
 	log "github.com/Sirupsen/logrus"
+	"github.com/gorilla/mux"
 	uuid "github.com/satori/go.uuid"
 )
 
@@ -237,7 +238,8 @@ func (r *Server) getCompose(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cps, err := r.db.GetCompose(req.Form.Get("compose_id"))
+	composeId := mux.Vars(req)["compose_id"]
+	cps, err := r.db.GetCompose(composeId)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -252,7 +254,8 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.db.DeleteCompose(req.Form.Get("compose_id")); err != nil {
+	composeId := mux.Vars(req)["compose_id"]
+	if err := r.db.DeleteCompose(composeId); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

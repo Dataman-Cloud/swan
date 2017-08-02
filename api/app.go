@@ -244,7 +244,7 @@ func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 
 	app, err := r.db.GetApp(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exists") {
+		if strings.Contains(err.Error(), "node does not exist") {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}

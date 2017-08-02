@@ -51,8 +51,8 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose} {
-		if err := zs.createAll(node, nil); err != nil {
+	for _, node := range []string{keyApp, keyCompose, keyFrameworkID} {
+		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}
 	}
@@ -77,6 +77,13 @@ func (zs *ZKStore) initConnection() error {
 
 	zs.conn = conn
 	return nil
+}
+
+func (zs *ZKStore) ensure(path string) error {
+	if exists, _ := zs.exist(path); exists {
+		return nil
+	}
+	return zs.createAll(path, nil)
 }
 
 // with the prefix `s.url.Path` and clean the path

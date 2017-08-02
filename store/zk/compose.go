@@ -1,7 +1,8 @@
 package zk
 
 import (
-	"errors"
+	"fmt"
+	"path"
 
 	"github.com/Dataman-Cloud/swan/types"
 
@@ -14,7 +15,7 @@ func (zk *ZKStore) CreateCompose(cps *types.Compose) error {
 		return err
 	}
 
-	path := keyCompose + "/" + cps.ID
+	path := path.Join(keyCompose, cps.ID)
 	return zk.createAll(path, bs)
 }
 
@@ -28,34 +29,25 @@ func (zk *ZKStore) UpdateCompose(cps *types.Compose) error {
 		return err
 	}
 
-	path := keyCompose + "/" + cps.ID
-	return zk.create(path, bs)
+	path := path.Join(keyCompose, cps.ID)
+	return zk.set(path, bs)
 }
 
-func (zk *ZKStore) GetCompose(idOrName string) (*types.Compose, error) {
-	// by id
-	bs, _, err := zk.get(keyCompose + "/" + idOrName)
-	if err == nil {
-		cps := new(types.Compose)
-		if err := decode(bs, &cps); err != nil {
-			log.Errorln("zk GetCompose.decode error:", err)
-			return nil, err
-		}
-		return cps, nil
+func (zk *ZKStore) GetCompose(id string) (*types.Compose, error) {
+	p := path.Join(keyCompose, id)
+
+	bs, _, err := zk.get(p)
+	if err != nil {
+		log.Errorf("find compose %s got error: %v", id, err)
+		return nil, fmt.Errorf("find compose %s got error: %v", id, err)
 	}
 
-	// by name
-	cpss, err := zk.ListComposes()
-	if err != nil {
+	var cps = new(types.Compose)
+	if err := decode(bs, &cps); err != nil {
 		return nil, err
 	}
-	for _, cps := range cpss {
-		if cps.Name == idOrName {
-			return cps, nil
-		}
-	}
 
-	return nil, errors.New("no such compose")
+	return cps, nil
 }
 
 func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {
@@ -68,7 +60,7 @@ func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {
 	}
 
 	for _, node := range nodes {
-		bs, _, err := zk.get(keyCompose + "/" + node)
+		bs, _, err := zk.get(path.Join(keyCompose, node))
 		if err != nil {
 			log.Errorln("zk ListCompose.getnode error:", err)
 			continue
@@ -86,11 +78,11 @@ func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {
 	return ret, nil
 }
 
-func (zk *ZKStore) DeleteCompose(idOrName string) error {
-	cps, err := zk.GetCompose(idOrName)
+func (zk *ZKStore) DeleteCompose(id string) error {
+	cps, err := zk.GetCompose(id)
 	if err != nil {
 		return err
 	}
 
-	return zk.del(keyCompose + "/" + cps.ID)
+	return zk.del(path.Join(keyCompose, cps.ID))
 }

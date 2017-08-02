@@ -163,7 +163,7 @@ func (s *ApiSuite) existsApp(id string, c *check.C) bool {
 	c.Log(string(body))
 	c.Assert(err, check.IsNil)
 
-	matched, err := regexp.Match(".*not exists.*", body)
+	matched, err := regexp.Match(".*node does not exist.*", body)
 	return !(code == http.StatusNotFound && matched)
 }
 

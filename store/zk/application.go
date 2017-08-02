@@ -52,7 +52,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	data, _, err := zk.get(p)
 	if err != nil {
 		log.Errorf("find app %s got error: %v", id, err)
-		return nil, fmt.Errorf("app %s not exists", id)
+		return nil, fmt.Errorf("find app %s got error: %v", id, err)
 	}
 
 	var app types.Application
