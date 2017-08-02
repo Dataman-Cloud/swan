@@ -30,10 +30,11 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", s.getVersion),
 		NewRoute("POST", "/v1/apps/{app_id}/versions", s.createVersion),
 
-		NewRoute("POST", "/v1/compose", s.newCompose),
+		NewRoute("POST", "/v1/compose", s.runCompose),
 		NewRoute("POST", "/v1/compose/parse", s.parseYAML),
 		NewRoute("GET", "/v1/compose", s.listComposes),
 		NewRoute("GET", "/v1/compose/{compose_id}", s.getCompose),
+		NewRoute("GET", "/v1/compose/{compose_id}/dependency", s.getComposeDependency),
 		NewRoute("DELETE", "/v1/compose/{compose_id}", s.deleteCompose),
 
 		NewRoute("GET", "/ping", s.ping),

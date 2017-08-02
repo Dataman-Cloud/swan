@@ -62,10 +62,17 @@ Request:
       "uris": null,
       "ips": null,
       "resource": {
-        "cpu": 0.01,
+        "cpus": 0.01,
+        "gpus": 0,
         "mem": 50,
         "disk": 100
-      }
+      },
+	  "proxy": {
+		"enabled": true,
+		"alias": "g.cn",
+		"listen": ":99",
+		"sticky": false
+	  }
     },
     "cache": {
       "priority": 3,
@@ -76,10 +83,14 @@ Request:
       "uris": null,
       "ips": null,
       "resource": {
-        "cpu": 0.02,
+        "cpus": 0.02,
+        "gpus": 0,
         "mem": 100,
         "disk": 33
-      }
+      },
+	  "proxy": {
+		"enabled": false,
+	  }
     },
     "dbmaster": {
       "priority": 2,
@@ -90,9 +101,13 @@ Request:
       "uris": null,
       "ips": null,
       "resource": {
-        "cpu": 0.03,
+        "cpus": 0.03,
+        "gpus": 0,
         "mem": 100
-      }
+      },
+	  "proxy": {
+		"enabled": false,
+	  }
     },
     "dbslave": {
       "priority": 1,
@@ -103,9 +118,13 @@ Request:
       "uris": null,
       "ips": null,
       "resource": {
-        "cpu": 0.03,
+        "cpus": 0.03,
+        "gpus": 0,
         "mem": 100
-      }
+      },
+	  "proxy": {
+		"enabled": false,
+	  }
     }
   }
 }
@@ -364,7 +383,7 @@ Response
           }
         },
         "labels": {
-          "DM_INSTANCE_NAME": "b",
+          "DM_COMPOSE_NAME": "b",
           "description": "bbklab desc",
           "name": "bbklab"
         },
@@ -384,7 +403,7 @@ Response
         }
       },
       "labels": {
-        "DM_INSTANCE_NAME": "b",
+        "DM_COMPOSE_NAME": "b",
         "description": "bbklab desc",
         "name": "bbklab"
       },
@@ -434,11 +453,11 @@ Response
           }
         },
         "labels": {
-          "DM_INSTANCE_NAME": "b"
+          "DM_COMPOSE_NAME": "b"
         }
       },
       "labels": {
-        "DM_INSTANCE_NAME": "b"
+        "DM_COMPOSE_NAME": "b"
       }
     },
     {
@@ -483,11 +502,11 @@ Response
           }
         },
         "labels": {
-          "DM_INSTANCE_NAME": "b"
+          "DM_COMPOSE_NAME": "b"
         }
       },
       "labels": {
-        "DM_INSTANCE_NAME": "b"
+        "DM_COMPOSE_NAME": "b"
       }
     },
     {
@@ -532,11 +551,11 @@ Response
           }
         },
         "labels": {
-          "DM_INSTANCE_NAME": "b"
+          "DM_COMPOSE_NAME": "b"
         }
       },
       "labels": {
-        "DM_INSTANCE_NAME": "b"
+        "DM_COMPOSE_NAME": "b"
       }
     }
   ]

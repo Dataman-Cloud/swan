@@ -1,7 +1,7 @@
 package zk
 
 import (
-	"fmt"
+	"errors"
 	"path"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -34,20 +34,32 @@ func (zk *ZKStore) UpdateCompose(cps *types.Compose) error {
 }
 
 func (zk *ZKStore) GetCompose(id string) (*types.Compose, error) {
+	// try id
 	p := path.Join(keyCompose, id)
 
 	bs, _, err := zk.get(p)
-	if err != nil {
-		log.Errorf("find compose %s got error: %v", id, err)
-		return nil, fmt.Errorf("find compose %s got error: %v", id, err)
+	if err == nil {
+		var cps = new(types.Compose)
+		if err := decode(bs, &cps); err != nil {
+			log.Errorf("zk GetCompose.decode() got error: %v", id, err)
+			return nil, err
+		}
+		return cps, nil
 	}
 
-	var cps = new(types.Compose)
-	if err := decode(bs, &cps); err != nil {
+	// try name
+	cpss, err := zk.ListComposes()
+	if err != nil {
+		log.Errorf("zk GetCompose.list() got error: %v", id, err)
 		return nil, err
 	}
+	for _, cps := range cpss {
+		if cps.Name == id {
+			return cps, nil
+		}
+	}
 
-	return cps, nil
+	return nil, errors.New("no such compose")
 }
 
 func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {

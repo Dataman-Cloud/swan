@@ -29,6 +29,7 @@ type Application struct {
 	Status       string         `json:"status"`
 	TasksStatus  map[string]int `json:"tasks_status"`
 	Health       *Health        `json:"health"`
+	ErrMsg       string         `json:"errmsg"`
 	CreatedAt    time.Time      `json:"created"`
 	UpdatedAt    time.Time      `json:"updated"`
 }
