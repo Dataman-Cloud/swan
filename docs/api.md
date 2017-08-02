@@ -513,6 +513,8 @@ Content-Type: application/json
     "version": "1498029948754163146",
     "status": "TASK_RUNNING",
     "errmsg": "",
+    "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
+    "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
     "created": "2017-06-21T15:25:48.78944685+08:00",
     "updated": "2017-06-21T15:25:48.78944688+08:00"
   }
@@ -715,6 +717,8 @@ Content-Type: application/json
   "version": "1498029948754163146",
   "status": "TASK_RUNNING",
   "errmsg": "",
+  "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
+  "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
   "created": "2017-06-21T15:25:48.78944685+08:00",
   "updated": "2017-06-21T15:25:48.78944688+08:00"
 }

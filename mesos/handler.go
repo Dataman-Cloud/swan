@@ -1,6 +1,7 @@
 package mesos
 
 import (
+	"encoding/json"
 	"strings"
 	"time"
 
@@ -77,15 +78,24 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		state   = status.GetState()
 		taskId  = status.TaskId.GetValue()
 		healthy = status.GetHealthy()
+		data    = status.GetData()
 	)
 
 	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
 	var appId string
+	// get appId
 	parts := strings.SplitN(taskId, ".", 3)
 	if len(parts) >= 3 {
 		appId = parts[2]
 	}
+
+	// get container id & name
+	var cinfos []struct {
+		ID   string `json:"Id"`
+		Name string `json:"Name"`
+	}
+	json.Unmarshal(data, &cinfos)
 
 	// only broadcast unhealthy event and return
 	if state == mesosproto.TaskState_TASK_FINISHED ||
@@ -112,6 +122,14 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	task.Status = state.String()
+	if len(cinfos) > 0 {
+		if cid := cinfos[0].ID; cid != "" {
+			task.ContainerID = cid
+		}
+		if cname := cinfos[0].Name; cname != "" {
+			task.ContainerName = cname
+		}
+	}
 
 	ver, err := s.db.GetVersion(appId, task.Version) // task corresponding version
 	if err != nil {
