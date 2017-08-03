@@ -129,7 +129,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
 				)
 
-				cfg := types.NewTaskConfig(ver)
+				cfg := types.NewTaskConfig(ver, i)
 
 				if cfg.Network != "host" && cfg.Network != "bridge" {
 					cfg.Parameters = append(cfg.Parameters, &types.Parameter{
