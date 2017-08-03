@@ -4,14 +4,13 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/utils"
 	"github.com/Dataman-Cloud/swan/utils/dfs"
-	"github.com/aanand/compose-file/types"
+	ctypes "github.com/aanand/compose-file/types"
 	"github.com/docker/go-connections/nat"
 )
 
@@ -24,40 +23,52 @@ func init() {
 	}
 }
 
-// save to -> keyCompose
+// Compose
+//
 type Compose struct {
 	ID          string    `json:"id"`
 	Name        string    `json:"name"`
 	DisplayName string    `json:"display_name"`
 	Desc        string    `json:"desc"`
-	Status      string    `json:"status"` // op status
+	OpStatus    string    `json:"op_status"` // op status
 	ErrMsg      string    `json:"errmsg"`
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
 	// request settings
-	ServiceGroup ServiceGroup          `json:"service_group"`
-	YAMLRaw      string                `json:"yaml_raw"`
-	YAMLEnv      map[string]string     `json:"yaml_env"`
-	YAMLExtra    map[string]*YamlExtra `json:"yaml_extra"`
+	YAMLRaw   string                `json:"yaml_raw"`
+	YAMLEnv   map[string]string     `json:"yaml_env"`
+	YAMLExtra map[string]*YamlExtra `json:"yaml_extra"`
+
+	// held temporary struct convert from YAML and will be converted to App Version
+	ServiceGroup ServiceGroup `json:"service_group"`
+}
+
+func (c *Compose) Valid() error {
+	if err := utils.LegalDomain(c.Name); err != nil {
+		return err
+	}
+	if c.Name == "default" {
+		return errors.New("compose name `default` is reserved")
+	}
+
+	return c.ServiceGroup.Valid()
 }
 
 func (c *Compose) RequireConvert() bool {
 	return len(c.ServiceGroup) == 0 && c.YAMLRaw != ""
 }
 
-func (c *Compose) Valid() error {
-	reg := regexp.MustCompile(`^[a-zA-Z0-9]{1,32}$`)
-	if !reg.MatchString(c.Name) {
-		return errors.New("instance name should be regexp matched by: " + reg.String())
+func (c *Compose) RunAs() string {
+	for _, ext := range c.YAMLExtra {
+		if ext != nil && ext.RunAs != "" {
+			return ext.RunAs
+		}
 	}
-	if c.Name == "default" {
-		return errors.New("instance name reserved")
-	}
-
-	return c.ServiceGroup.Valid()
+	return ""
 }
 
+// conver raw yaml to docker service group
 func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 	cfg, err := utils.YamlServices([]byte(c.YAMLRaw), c.YAMLEnv)
 	if err != nil {
@@ -71,15 +82,21 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 		volumes  = cfg.Volumes // named volume definitions
 	)
 	for _, srv := range services {
-		name := srv.Name
+		var (
+			name = srv.Name
+			ds   = &DockerService{
+				Name: name,
+			}
+		)
 
 		// extra
 		ext, _ := c.YAMLExtra[name]
 		if ext == nil {
 			return nil, errors.New("extra settings required for service: " + name)
 		}
+		ds.Extra = ext
 
-		// service, with extra labels
+		// put extra labels into service, overwrite existings
 		nsrv := srv
 		if nsrv.Labels == nil {
 			nsrv.Labels = make(map[string]string)
@@ -87,11 +104,7 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 		for k, v := range ext.Labels {
 			nsrv.Labels[k] = v
 		}
-		ds := &DockerService{
-			Name:    name,
-			Service: &nsrv,
-			Extra:   ext,
-		}
+		ds.Service = &nsrv
 
 		// network
 		if v, ok := networks[name]; ok {
@@ -111,13 +124,8 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 	return ret, nil
 }
 
-type Resource struct {
-	CPU   float64  `json:"cpu"`
-	Mem   float64  `json:"mem"`
-	Disk  float64  `json:"disk"`
-	Ports []uint64 `json:"ports"`
-}
-
+// YamlExtra
+//
 type YamlExtra struct {
 	WaitDelay   uint              `json:"wait_delay"` // by second
 	PullAlways  bool              `json:"pull_always"`
@@ -130,6 +138,17 @@ type YamlExtra struct {
 	Proxy       *Proxy            `json:"proxy"`
 }
 
+type Resource struct {
+	CPUs  float64  `json:"cpus"`
+	GPUs  float64  `json:"gpus"`
+	Mem   float64  `json:"mem"`
+	Disk  float64  `json:"disk"`
+	Ports []uint64 `json:"ports"`
+}
+
+// ServiceGroup  (-> map[name]App Version)
+//
+//
 type ServiceGroup map[string]*DockerService
 
 func (sg ServiceGroup) Valid() error {
@@ -140,8 +159,8 @@ func (sg ServiceGroup) Valid() error {
 		if name == "" {
 			return errors.New("service name required")
 		}
-		if strings.ContainsRune(name, '-') {
-			return errors.New(`char '-' not allowed for service name`)
+		if err := utils.LegalDomain(name); err != nil {
+			return err
 		}
 		if name != srv.Name {
 			return errors.New("service name mismatched")
@@ -153,17 +172,8 @@ func (sg ServiceGroup) Valid() error {
 	return sg.circled()
 }
 
-func (sg ServiceGroup) PrioritySort() ([]string, error) {
-	m, err := sg.dependMap()
-	if err != nil {
-		return nil, err
-	}
-	o := dfs.NewDfsOrder(m)
-	return o.PostOrder(), nil
-}
-
 func (sg ServiceGroup) circled() error {
-	m, err := sg.dependMap()
+	m, err := sg.DependMap()
 	if err != nil {
 		return err
 	}
@@ -174,7 +184,16 @@ func (sg ServiceGroup) circled() error {
 	return nil
 }
 
-func (sg ServiceGroup) dependMap() (map[string][]string, error) {
+func (sg ServiceGroup) PrioritySort() ([]string, error) {
+	m, err := sg.DependMap()
+	if err != nil {
+		return nil, err
+	}
+	o := dfs.NewDfsOrder(m)
+	return o.PostOrder(), nil
+}
+
+func (sg ServiceGroup) DependMap() (map[string][]string, error) {
 	ret := make(map[string][]string)
 	for name, svr := range sg {
 		// ensure exists
@@ -188,20 +207,28 @@ func (sg ServiceGroup) dependMap() (map[string][]string, error) {
 	return ret, nil
 }
 
+// DockerService (-> App Version)
+//
+//
 type DockerService struct {
-	Name    string               `json:"name"`
-	Service *types.ServiceConfig `json:"service"`
-	Network *types.NetworkConfig `json:"network"`
-	Volume  *types.VolumeConfig  `json:"volume"`
-	Extra   *YamlExtra           `json:"extra"`
+	Name    string                `json:"name"`
+	Service *ctypes.ServiceConfig `json:"service"`
+	Network *ctypes.NetworkConfig `json:"network"`
+	Volume  *ctypes.VolumeConfig  `json:"volume"`
+	Extra   *YamlExtra            `json:"extra"`
 }
 
 func (s *DockerService) Valid() error {
+	if err := utils.LegalDomain(s.Name); err != nil {
+		return err
+	}
 	return nil
 }
 
+// convert Docker service to App Version
 func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 	ver := &Version{
+		ID:           fmt.Sprintf("%d", time.Now().UTC().UnixNano()),
 		Name:         s.Name, // svr name
 		Env:          s.Service.Environment,
 		Constraints:  s.Extra.Constraints,
@@ -209,7 +236,7 @@ func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 		URIs:         s.Extra.URIs,
 		IPs:          s.Extra.IPs,
 		HealthCheck:  s.healthCheck(),
-		UpdatePolicy: nil, // no use
+		UpdatePolicy: nil, // TODO
 	}
 
 	dnsSearch := fmt.Sprintf("%s.%s.%s.%s", cName, ver.RunAs, cluster, swanDomain)
@@ -226,12 +253,12 @@ func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 	for k, v := range s.Service.Labels {
 		lbs[k] = v
 	}
-	lbs["DM_INSTANCE_NAME"] = cName
+	lbs["DM_COMPOSE_NAME"] = cName
 	ver.Labels = lbs
 
 	// resouces
 	if res := s.Extra.Resource; res != nil {
-		ver.CPUs, ver.Mem, ver.Disk = res.CPU, res.Mem, res.Disk
+		ver.CPUs, ver.GPUs, ver.Mem, ver.Disk = res.CPUs, res.GPUs, res.Mem, res.Disk
 	}
 
 	// command
@@ -258,16 +285,13 @@ func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 		}
 	}
 
-	// proxy
-	ver.Proxy = &Proxy{
-		Enabled: s.Extra.Proxy.Enabled,
-		Alias:   s.Extra.Proxy.Alias,
-	}
+	// proxy, just by pass
+	ver.Proxy = s.Extra.Proxy
 
+	// validate
 	if err := ver.Validate(); err != nil {
 		return nil, err
 	}
-
 	return ver, nil
 }
 
@@ -287,7 +311,6 @@ func (s *DockerService) healthCheck() *HealthCheck {
 		}
 		ret.Command = strings.Join(t, " ")
 	}
-	// Value:    strings.Join(hc.Test, " "),
 	if t, err := time.ParseDuration(hc.Timeout); err == nil {
 		ret.TimeoutSeconds = t.Seconds()
 	}
@@ -309,6 +332,7 @@ func (s *DockerService) container(dnsSearch, cName string) (*Container, error) {
 		privileged = s.Service.Privileged
 		parameters = s.parameters(dnsSearch, cName)
 	)
+
 	portMap, err := s.portMappings()
 	if err != nil {
 		return nil, err
@@ -328,6 +352,8 @@ func (s *DockerService) container(dnsSearch, cName string) (*Container, error) {
 	}, nil
 }
 
+// mesos's default supportting for docker container options is so lazy tricky,
+// so we have to convert docker container configs to CLI key-value parameter pairs.
 func (s *DockerService) parameters(dnsSearch, cName string) []*Parameter {
 	var (
 		m1 = make(map[string]string)   // key-value  params
@@ -438,7 +464,7 @@ func (s *DockerService) parameters(dnsSearch, cName string) []*Parameter {
 		fset("tmpfs", v)
 	}
 	// labels
-	lbs := []string{"DM_INSTANCE_NAME=" + cName}
+	lbs := []string{"DM_COMPOSE_NAME=" + cName}
 	for key, val := range s.Service.Labels {
 		lbs = append(lbs, fmt.Sprintf("%s=%s", key, val))
 	}

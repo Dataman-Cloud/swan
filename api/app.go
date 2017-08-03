@@ -39,6 +39,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+	version.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
 
 	compose := req.Form.Get("compose")
 
@@ -49,7 +50,6 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	var (
 		spec      = &version
 		id        = fmt.Sprintf("%s.%s.%s.%s", spec.Name, compose, spec.RunAs, r.driver.ClusterName())
-		vid       = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
 		count     = int(spec.Instances)
 		healthSet = spec.HealthCheck != nil && !spec.HealthCheck.IsEmpty()
 	)
@@ -72,8 +72,6 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		http.Error(w, fmt.Sprintf("create app error: %v", err), http.StatusInternalServerError)
 		return
 	}
-
-	version.ID = vid
 
 	if err := r.db.CreateVersion(id, &version); err != nil {
 		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
@@ -114,7 +112,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				Weight:  100,
 				Status:  "pending",
 				Healthy: types.TaskHealthyUnset,
-				Version: vid,
+				Version: spec.ID,
 				Created: time.Now(),
 				Updated: time.Now(),
 			}
@@ -244,7 +242,7 @@ func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 
 	app, err := r.db.GetApp(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "not exists") {
+		if strings.Contains(err.Error(), "node does not exist") {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
@@ -260,6 +258,8 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	var (
 		appId = mux.Vars(req)["app_id"]
 	)
+
+	// get app
 	app, err := r.db.GetApp(appId)
 	if err != nil {
 		if strings.Contains(err.Error(), "node does not exist") {
@@ -271,6 +271,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// get app tasks
 	tasks, err := r.db.ListTasks(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for delete app. %v", err), http.StatusInternalServerError)
@@ -279,6 +280,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	log.Debugf("app %s has %d tasks", appId, len(tasks))
 
+	// get app versions
 	versions, err := r.db.ListVersions(appId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks versions error for delete app. %v", err), http.StatusInternalServerError)
@@ -287,73 +289,29 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	log.Debugf("app %s has %d versions", appId, len(versions))
 
+	// mark app op status
 	app.OpStatus = types.OpStatusDeleting
-
 	if err := r.db.UpdateApp(app); err != nil {
 		http.Error(w, fmt.Sprintf("updating app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	go func(appId string) {
-		var (
-			count         = len(tasks)
-			succeed int64 = 0
-			wg      sync.WaitGroup
-		)
+	go func() {
+		var err error
 
-		for _, task := range tasks {
-			wg.Add(1)
-			go func(task *types.Task) {
-				defer wg.Done()
-
-				if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-					log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-					task.OpStatus = fmt.Sprintf("kill task error: %v", err)
-					if err = r.db.UpdateTask(appId, task); err != nil {
-						log.Errorf("update task %s got error: %v", task.Name, err)
-					}
-
-					return
-				}
-
-				if err := r.db.DeleteTask(task.ID); err != nil {
-					log.Errorf("Delete task %s got error: %v", task.ID, err)
-
-					task.OpStatus = fmt.Sprintf("delete task error: %v", err)
-					if err = r.db.UpdateTask(appId, task); err != nil {
-						log.Errorf("update task %s got error: %v", task.Name, err)
-					}
-
-					return
-				}
-
-				atomic.AddInt64(&succeed, 1)
-			}(task)
-		}
-
-		wg.Wait()
-
-		if int(succeed) == count {
-			versions, err := r.db.ListVersions(appId)
+		defer func() {
+			app.OpStatus = types.OpStatusNoop
+			app.UpdatedAt = time.Now()
 			if err != nil {
-				log.Errorf("list versions error for delete app. %v", err)
-				return
+				app.ErrMsg = fmt.Sprintf("delete App got error: %v", err.Error())
 			}
-
-			for _, version := range versions {
-				if err := r.db.DeleteVersion(appId, version.ID); err != nil {
-					log.Errorf("Delete version %s for app %s got error: %v", version.ID, appId, err)
-					return
-				}
+			if err := r.db.UpdateApp(app); err != nil {
+				log.Errorf("updating app status from deleting to noop got error: %v", err)
 			}
+		}()
 
-			if err := r.db.DeleteApp(appId); err != nil {
-				log.Errorf("Delete app %s got error: %v", appId, err)
-			}
-		}
-
-	}(appId)
+		err = r.delApp(appId, tasks, versions)
+	}()
 
 	writeJSON(w, http.StatusNoContent, "")
 }
@@ -1600,4 +1558,64 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
+// delApp actually remove App related runtime tasks & db objects
+func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Version) error {
+	var (
+		count   = len(tasks)
+		succeed = int64(0)
+		wg      sync.WaitGroup
+	)
+
+	// remove runtime tasks & db tasks firstly
+	for _, task := range tasks {
+		wg.Add(1)
+		go func(task *types.Task) {
+			defer wg.Done()
+
+			// kill runtime task
+			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
+				log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+				task.ErrMsg = fmt.Sprintf("kill task error: %v", err)
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", task.Name, err)
+				}
+
+				return
+			}
+
+			// remove db task
+			if err := r.db.DeleteTask(task.ID); err != nil {
+				log.Errorf("Delete task %s got error: %v", task.ID, err)
+
+				task.ErrMsg = fmt.Sprintf("delete task error: %v", err)
+				if err = r.db.UpdateTask(appId, task); err != nil {
+					log.Errorf("update task %s got error: %v", task.Name, err)
+				}
+			}
+
+			atomic.AddInt64(&succeed, 1)
+		}(task)
+	}
+	wg.Wait()
+
+	if int(succeed) != count {
+		return fmt.Errorf("%d tasks kill / removed failed", count-int(succeed))
+	}
+
+	// remove db versions
+	for _, version := range versions {
+		if err := r.db.DeleteVersion(appId, version.ID); err != nil {
+			return fmt.Errorf("Delete version %s for app %s got error: %v", version.ID, appId, err)
+		}
+	}
+
+	// remove db app
+	if err := r.db.DeleteApp(appId); err != nil {
+		log.Errorf("Delete app %s got error: %v", appId, err)
+	}
+
+	return nil
 }

@@ -2,6 +2,7 @@ package zk
 
 import (
 	"errors"
+	"path"
 
 	"github.com/Dataman-Cloud/swan/types"
 
@@ -14,7 +15,7 @@ func (zk *ZKStore) CreateCompose(cps *types.Compose) error {
 		return err
 	}
 
-	path := keyCompose + "/" + cps.ID
+	path := path.Join(keyCompose, cps.ID)
 	return zk.createAll(path, bs)
 }
 
@@ -28,29 +29,32 @@ func (zk *ZKStore) UpdateCompose(cps *types.Compose) error {
 		return err
 	}
 
-	path := keyCompose + "/" + cps.ID
-	return zk.create(path, bs)
+	path := path.Join(keyCompose, cps.ID)
+	return zk.set(path, bs)
 }
 
-func (zk *ZKStore) GetCompose(idOrName string) (*types.Compose, error) {
-	// by id
-	bs, _, err := zk.get(keyCompose + "/" + idOrName)
+func (zk *ZKStore) GetCompose(id string) (*types.Compose, error) {
+	// try id
+	p := path.Join(keyCompose, id)
+
+	bs, _, err := zk.get(p)
 	if err == nil {
-		cps := new(types.Compose)
+		var cps = new(types.Compose)
 		if err := decode(bs, &cps); err != nil {
-			log.Errorln("zk GetCompose.decode error:", err)
+			log.Errorf("zk GetCompose.decode() got error: %v", id, err)
 			return nil, err
 		}
 		return cps, nil
 	}
 
-	// by name
+	// try name
 	cpss, err := zk.ListComposes()
 	if err != nil {
+		log.Errorf("zk GetCompose.list() got error: %v", id, err)
 		return nil, err
 	}
 	for _, cps := range cpss {
-		if cps.Name == idOrName {
+		if cps.Name == id {
 			return cps, nil
 		}
 	}
@@ -68,7 +72,7 @@ func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {
 	}
 
 	for _, node := range nodes {
-		bs, _, err := zk.get(keyCompose + "/" + node)
+		bs, _, err := zk.get(path.Join(keyCompose, node))
 		if err != nil {
 			log.Errorln("zk ListCompose.getnode error:", err)
 			continue
@@ -86,11 +90,11 @@ func (zk *ZKStore) ListComposes() ([]*types.Compose, error) {
 	return ret, nil
 }
 
-func (zk *ZKStore) DeleteCompose(idOrName string) error {
-	cps, err := zk.GetCompose(idOrName)
+func (zk *ZKStore) DeleteCompose(id string) error {
+	cps, err := zk.GetCompose(id)
 	if err != nil {
 		return err
 	}
 
-	return zk.del(keyCompose + "/" + cps.ID)
+	return zk.del(path.Join(keyCompose, cps.ID))
 }

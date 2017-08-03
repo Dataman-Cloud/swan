@@ -17,13 +17,10 @@ import (
 const (
 	keyApp         = "/apps"      // single app
 	keyCompose     = "/composes"  // compose instance (group apps)
-	keyAgent       = "/agents"    // swan agent
 	keyFrameworkID = "/framework" // framework id
 
 	keyTasks    = "tasks"    // sub key of keyApp
 	keyVersions = "versions" // sub key of keyApp
-
-	keyLeaderElection = "/leader-election"
 )
 
 var (
@@ -31,7 +28,6 @@ var (
 	errAppAlreadyExists     = errors.New("app already exists")
 	errVersionAlreadyExists = errors.New("version already exists")
 	errInstanceNotFound     = errors.New("instance not found")
-	errAgentNotFound        = errors.New("agent not found")
 
 	errInvalidGet  = errors.New("Get() on directory node make no sense")
 	errInvalidList = errors.New("can't List() on key Node")
@@ -62,7 +58,7 @@ func NewEtcdStore(addrs []string) (*EtcdStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyAgent} {
+	for _, node := range []string{keyApp, keyCompose} {
 		store.ensureDir(node)
 	}
 
