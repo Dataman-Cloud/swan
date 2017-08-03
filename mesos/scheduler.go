@@ -696,14 +696,9 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
-func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
+func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 	var (
-		wg   sync.WaitGroup
-		l    sync.RWMutex
-		rets = map[string]error{}
-	)
-
-	var (
+		wg     sync.WaitGroup
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
@@ -726,7 +721,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 			filtered, err := s.applyFilters(filter)
 			if err != nil {
 				s.unlock()
-				return nil, err
+				return err
 			}
 			log.Debugln("Find", len(filtered), "agent(s) satisfied the constraints")
 
@@ -775,14 +770,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if task.IsDone(status) {
-						err := task.DetectError(status)
-						if err != nil {
-							l.Lock()
-							rets[task.ID()] = err
-							l.Unlock()
-						}
 						s.removePendingTask(task.ID())
-
 						return
 					}
 				}
@@ -791,7 +779,8 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	}
 
 	wg.Wait()
-	return rets, nil
+
+	return nil
 }
 
 func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
@@ -956,27 +945,16 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 
 	m := NewTask(cfg, dbtask.ID, dbtask.Name)
 
-	results, err := s.LaunchTasks([]*Task{m})
-	if err != nil {
-		log.Errorf("launch task %s got error: %v", dbtask.ID, err)
+	if launchErr := s.LaunchTasks([]*Task{m}); launchErr != nil {
+		log.Errorf("launch task %s got error: %v", dbtask.ID, launchErr)
 
 		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
 
 		if err = s.db.UpdateTask(appId, dbtask); err != nil {
 			log.Errorf("update task %s got error: %v", dbtask.ID, err)
 		}
+
 		return
-	}
-
-	for taskId, err := range results {
-		log.Errorf("launch task %s got error: %v", taskId, err)
-
-		task.Status = "Failed"
-		task.ErrMsg = err.Error()
-
-		if err = s.db.UpdateTask(appId, dbtask); err != nil {
-			log.Errorf("update task %s status got error: %v", taskId, err)
-		}
 	}
 }

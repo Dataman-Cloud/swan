@@ -164,15 +164,9 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					results map[string]error
 				)
 
-				results, err = r.driver.LaunchTasks(tasks)
+				err = r.driver.LaunchTasks(tasks)
 				if err != nil {
 					err = fmt.Errorf("launch compose tasks %s error: %v", taskName, err)
-					return
-				}
-
-				if n := len(results); n > 0 {
-					err = fmt.Errorf("launch %d compose tasks of App %s error: %v", n, appId, results)
-					// TODO memo errmsg within errored App.ErrMsg
 					return
 				}
 			}
