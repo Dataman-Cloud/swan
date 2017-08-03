@@ -914,7 +914,13 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		name      = taskName
 		id        = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
 		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
+		restart   = ver.RestartPolicy
+		retries   = 3
 	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
 
 	dbtask := &types.Task{
 		ID:         id,
@@ -923,7 +929,7 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		Status:     "retrying",
 		Version:    verId,
 		Healthy:    types.TaskHealthyUnset,
-		MaxRetries: ver.RestartPolicy.Attempts,
+		MaxRetries: retries,
 		Created:    time.Now(),
 		Updated:    time.Now(),
 	}

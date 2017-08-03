@@ -52,7 +52,13 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		id        = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
 		count     = int(version.Instances)
 		healthSet = version.HealthCheck != nil && !version.HealthCheck.IsEmpty()
+		restart   = version.RestartPolicy
+		retries   = 3
 	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
 
 	app := &types.Application{
 		ID:        id,
@@ -115,7 +121,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				Status:     "pending",
 				Healthy:    types.TaskHealthyUnset,
 				Version:    vid,
-				MaxRetries: spec.RestartPolicy.Attempts,
+				MaxRetries: retries,
 				Created:    time.Now(),
 				Updated:    time.Now(),
 			}
@@ -417,9 +423,15 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		// prepare for all of runtime tasks & db tasks
 		for i := current; i < goal; i++ {
 			var (
-				name = fmt.Sprintf("%d.%s", i, appId)
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = fmt.Sprintf("%d.%s", i, appId)
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = version.RestartPolicy
+				retries = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			// runtime tasks
 			cfg := types.NewTaskConfig(version, i)
@@ -434,10 +446,11 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				Status:     "pending",
 				Healthy:    types.TaskHealthyUnset,
 				Version:    ver,
-				MaxRetries: spec.RestartPolicy.Attempts,
+				MaxRetries: retries,
 				Created:    time.Now(),
 				Updated:    time.Now(),
 			}
+
 			if healthSet {
 				task.Healthy = types.TaskUnHealthy
 			}
@@ -547,9 +560,15 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(newVer, i)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = newVer.RestartPolicy
+				retries = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			task := &types.Task{
 				ID:         id,
@@ -558,7 +577,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				Status:     "pending",
 				Healthy:    types.TaskHealthyUnset,
 				Version:    newVer.ID,
-				MaxRetries: newVer.RestartPolicy.Attempts,
+				MaxRetries: retries,
 				Created:    t.Created,
 				Updated:    time.Now(),
 			}
@@ -721,9 +740,15 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(newVer, i+new)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = newVer.RestartPolicy
+				retries = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			task := &types.Task{
 				ID:         id,
@@ -731,7 +756,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				Weight:     newWeight,
 				Healthy:    types.TaskHealthyUnset,
 				Version:    newVer.ID,
-				MaxRetries: newVer.RestartPolicy.Attempts,
+				MaxRetries: retries,
 				Created:    t.Created,
 				Updated:    time.Now(),
 			}
@@ -869,9 +894,15 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(desired, i)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = desired.RestartPolicy
+				retries = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			task := &types.Task{
 				ID:         id,
@@ -879,7 +910,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 				Weight:     100,
 				Status:     "updating",
 				Version:    desired.ID,
-				MaxRetries: desired.RestartPolicy.Attempts,
+				MaxRetries: retries,
 				Created:    t.Created,
 				Updated:    time.Now(),
 			}
@@ -1234,9 +1265,15 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	cfg := types.NewTaskConfig(&version, idx)
 
 	var (
-		name = t.Name
-		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		name    = t.Name
+		id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		restart = version.RestartPolicy
+		retries = 3
 	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
 
 	task := &types.Task{
 		ID:         id,
@@ -1244,7 +1281,7 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 		Weight:     100,
 		Status:     "updating",
 		Version:    version.ID,
-		MaxRetries: version.RestartPolicy.Attempts,
+		MaxRetries: retries,
 		Created:    t.Created,
 		Updated:    time.Now(),
 	}
@@ -1370,9 +1407,15 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	cfg := types.NewTaskConfig(desired, idx)
 
 	var (
-		name = t.Name
-		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		name    = t.Name
+		id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		restart = desired.RestartPolicy
+		retries = 3
 	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
 
 	task := &types.Task{
 		ID:         id,
@@ -1380,7 +1423,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		Weight:     100,
 		Status:     "updating",
 		Version:    desired.ID,
-		MaxRetries: desired.RestartPolicy.Attempts,
+		MaxRetries: retries,
 		Created:    t.Created,
 		Updated:    time.Now(),
 	}
