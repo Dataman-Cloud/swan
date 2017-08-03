@@ -290,8 +290,6 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Errorf("delete app %s error: %v", appId, err)
 				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("delete app error: %v", err), 0)
-			} else {
-				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 			}
 		}()
 

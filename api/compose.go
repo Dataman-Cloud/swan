@@ -80,14 +80,11 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 
 		// defer mark compose op status
 		defer func() {
-			cmp.OpStatus = types.OpStatusNoop
-			cmp.UpdatedAt = time.Now()
 			if err != nil {
-				cmp.ErrMsg = err.Error()
 				log.Errorf("launch compose %s error: %v", cmp.Name, err)
-			}
-			if err := r.db.UpdateCompose(&cmp); err != nil {
-				log.Errorf("update db compose %s error: %v", cmp.Name, err)
+				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, err.Error())
+			} else {
+				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, "")
 			}
 		}()
 
@@ -97,11 +94,11 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				service = cmp.ServiceGroup[name]
 				ver, _  = service.ToVersion(cmp.Name, r.driver.ClusterName())
 				cluster = r.driver.ClusterName()
-				id      = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
+				appId   = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
 			)
 
 			app := &types.Application{
-				ID:        id,
+				ID:        appId,
 				Name:      ver.Name,
 				RunAs:     ver.RunAs,
 				Cluster:   cluster,
@@ -111,22 +108,22 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 			}
 
 			if err = r.db.CreateApp(app); err != nil {
-				err = fmt.Errorf("create App %s db App error: %v", name, err)
+				err = fmt.Errorf("create App %s db App error: %v", appId, err)
 				return
 			}
 
-			if err = r.db.CreateVersion(id, ver); err != nil {
-				err = fmt.Errorf("create App %s db Version error: %v", name, err)
+			if err = r.db.CreateVersion(appId, ver); err != nil {
+				err = fmt.Errorf("create App %s db Version error: %v", appId, err)
 				return
 			}
 
 			count := int(ver.Instances)
-			log.Debugf("Preparing to launch %d App %s tasks", count, name)
+			log.Debugf("Preparing to launch %d App %s tasks", count, appId)
 
 			for i := 0; i < count; i++ {
 				var (
-					name = fmt.Sprintf("%d.%s", i, app.ID)
-					id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+					taskName = fmt.Sprintf("%d.%s", i, appId)
+					taskId   = fmt.Sprintf("%s.%s", utils.RandomString(12), taskName)
 				)
 
 				cfg := types.NewTaskConfig(ver, i)
@@ -141,8 +138,8 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				}
 
 				task := &types.Task{
-					ID:      id,
-					Name:    name,
+					ID:      taskId,
+					Name:    taskName,
 					Weight:  100,
 					Status:  "pending",
 					Healthy: types.TaskHealthyUnset,
@@ -156,42 +153,38 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					task.Healthy = types.TaskUnHealthy
 				}
 
-				log.Debugf("Create task %s in db", task.ID)
-				if err = r.db.CreateTask(app.ID, task); err != nil {
+				log.Debugf("Create task %s in db", taskId)
+				if err = r.db.CreateTask(appId, task); err != nil {
 					err = fmt.Errorf("create db task failed: %s", err)
 					return
 				}
 
-				t := mesos.NewTask(
-					cfg,
-					id,
-					name,
-				)
-
 				var (
+					t       = mesos.NewTask(cfg, taskId, taskName)
 					tasks   = []*mesos.Task{t}
 					results map[string]error
 				)
 
 				results, err = r.driver.LaunchTasks(tasks)
 				if err != nil {
-					err = fmt.Errorf("launch compose App %s tasks error: %v", name, err)
+					err = fmt.Errorf("launch compose tasks %s error: %v", taskName, err)
 					return
 				}
 
 				if n := len(results); n > 0 {
-					err = fmt.Errorf("launch %d compose tasks of App %s error: %v", n, name, results)
+					err = fmt.Errorf("launch %d compose tasks of App %s error: %v", n, appId, results)
 					// TODO memo errmsg within errored App.ErrMsg
 					return
 				}
 			}
 
-			// mark app status
-			app.OpStatus = types.OpStatusNoop
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("update app op-status got error: %v", err)
+			// max wait for 5 seconds to confirm the preivous app get normal
+			if err = r.ensureAppReady(appId, time.Second*5); err != nil {
+				return
 			}
 
+			// mark app status
+			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 		}
 	}()
 
@@ -275,9 +268,9 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// mark db status
-	cmp.OpStatus = types.OpStatusDeleting
-	if err := r.db.UpdateCompose(cmp); err != nil {
-		log.Errorf("update db compose %s error: %v", cmp.ID, err)
+	if err := r.memoComposeStatus(cmp.ID, types.OpStatusDeleting, ""); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	go func() {
@@ -287,12 +280,7 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err != nil {
 				log.Errorf("remove compose %s error: %v", cmp.Name, err)
-				cmp.OpStatus = types.OpStatusNoop
-				cmp.UpdatedAt = time.Now()
-				cmp.ErrMsg = err.Error()
-				if err := r.db.UpdateCompose(cmp); err != nil {
-					log.Errorf("update db compose %s error: %v", cmp.ID, err)
-				}
+				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, err.Error())
 			}
 		}()
 
@@ -330,4 +318,58 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 	}()
 
 	writeJSON(w, http.StatusNoContent, "")
+}
+
+// short hands to memo update Compose.OpStatus & Compose.ErrMsg
+// it's the caller responsibility to process the db error.
+func (r *Server) memoComposeStatus(cmpId, op, errmsg string) error {
+	cmp, err := r.db.GetCompose(cmpId)
+	if err != nil {
+		log.Errorf("memoComposeStatus() get db compose %s error: %v", cmpId, err)
+		return err
+	}
+
+	var (
+		prevOp = cmp.OpStatus
+	)
+
+	cmp.OpStatus = op
+	cmp.ErrMsg = errmsg
+	cmp.UpdatedAt = time.Now()
+
+	if err := r.db.UpdateCompose(cmp); err != nil {
+		log.Errorf("memoComposeStatus() update app compose status from %s -> %s error: %v",
+			prevOp, op, err)
+		return err
+	}
+
+	return nil
+}
+
+// sometimes mesos executor emit consecutive events TASKRUNNING and TASKFAILED if without healthy check,
+// which will cause the scheduler treats the task launching as succeed, actually it does NOT.
+// we use this to make sure the previous app is ready within compose launching
+func (r *Server) ensureAppReady(appId string, maxWait time.Duration) error {
+	var (
+		app *types.Application
+		err error
+	)
+
+	for goesby := int64(0); goesby <= int64(maxWait); goesby += int64(time.Second) {
+		time.Sleep(time.Second)
+		if app, err = r.db.GetApp(appId); err != nil {
+			continue
+		}
+
+		if app.TasksStatus["TASK_RUNNING"] == app.TaskCount {
+			return nil
+		}
+	}
+
+	if err != nil {
+		return err
+	}
+
+	return fmt.Errorf("app %s not ready, only %d/%d tasks running",
+		appId, app.TasksStatus["TASK_RUNNING"], app.TaskCount)
 }
