@@ -434,7 +434,7 @@ func (s *DockerService) parameters(dnsSearch, cName string) []*Parameter {
 	if v := s.Service.Dns; len(v) > 0 {
 		fset("dns", v)
 	}
-	fset("dns-search", []string{dnsSearch})
+	fset("dns-search", append([]string{dnsSearch}, s.Service.DnsSearch...))
 
 	// env
 	if v := s.Service.Environment; len(v) > 0 {
