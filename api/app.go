@@ -83,14 +83,11 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 
 		// defer to mark op status
 		defer func() {
-			app.UpdatedAt = time.Now()
-			app.OpStatus = types.OpStatusNoop
 			if err != nil {
-				log.Errorf("launch app %s error: %v", id, err)
-				app.ErrMsg = fmt.Sprintf("launch app error: %v", err)
-			}
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("update app status from creating to noop got error: %v", err)
+				log.Errorf("launch app %s error: %v", appId, err)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err), 0)
+			} else {
+				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 			}
 		}()
 
@@ -250,7 +247,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	)
 
 	// get app
-	app, err := r.db.GetApp(appId)
+	_, err := r.db.GetApp(appId)
 	if err != nil {
 		if strings.Contains(err.Error(), "node does not exist") {
 			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
@@ -280,9 +277,8 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	log.Debugf("app %s has %d versions", appId, len(versions))
 
 	// mark app op status
-	app.OpStatus = types.OpStatusDeleting
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusDeleting, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -291,14 +287,11 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 		// defer to mark op status
 		defer func() {
-			app.UpdatedAt = time.Now()
-			app.OpStatus = types.OpStatusNoop
 			if err != nil {
 				log.Errorf("delete app %s error: %v", appId, err)
-				app.ErrMsg = fmt.Sprintf("delete app error: %v", err)
-			}
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("update app status from deleting to noop got error: %v", err)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("delete app error: %v", err), 0)
+			} else {
+				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 			}
 		}()
 
@@ -350,10 +343,8 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusScaling
-
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusScaling, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -362,14 +353,11 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 			var err error
 
 			defer func() {
-				app.UpdatedAt = time.Now()
-				app.OpStatus = types.OpStatusNoop
 				if err != nil {
 					log.Errorf("scale down app %s error: %v", appId, err)
-					app.ErrMsg = fmt.Sprintf("scale down app error: %v", err)
-				}
-				if err := r.db.UpdateApp(app); err != nil {
-					log.Errorf("update app status from scaling(down) to noop got error: %v", err)
+					r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale down app error: %v", err), 0)
+				} else {
+					r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 				}
 			}()
 
@@ -441,14 +429,11 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 		// defer to mark op status
 		defer func() {
-			app.UpdatedAt = time.Now()
-			app.OpStatus = types.OpStatusNoop
 			if err != nil {
-				log.Errorf("scale up app %s err: %v", appId, err)
-				app.ErrMsg = fmt.Sprintf("scale up app error: %v", err)
-			}
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("update app status from scaling(up) to noop got error: %v", err)
+				log.Errorf("scale up app %s error: %v", appId, err)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale up app error: %v", err), 0)
+			} else {
+				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 			}
 		}()
 
@@ -560,10 +545,8 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusUpdating
-
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusUpdating, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to rolling-update got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -583,11 +566,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 	go func() {
 		defer func() {
-			app.OpStatus = types.OpStatusNoop
-			app.Progress = 0
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("updating app status from updating to noop got error: %v", err)
-			}
+			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 		}()
 
 		var (
@@ -597,10 +576,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 		for i, t := range pending {
 			progress++
-			app.Progress = progress
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("updating app progress got error: %v", err)
-			}
+			r.memoAppStatus(appId, types.OpStatusUpdating, "", progress) // TODO should quit if error occured here.
 
 			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
 				t.Status = "Failed"
@@ -753,10 +729,8 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusUpdating
-
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusUpdating, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to rolling-update got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -787,10 +761,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 	go func() {
 		defer func() {
-			app.OpStatus = types.OpStatusNoop
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("updating app status from updating to noop got error: %v", err)
-			}
+			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 		}()
 
 		healthSet := newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
@@ -918,10 +889,8 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusRollback
-
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusRollback, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -961,10 +930,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 
 	go func() {
 		defer func() {
-			app.OpStatus = types.OpStatusNoop
-			if err := r.db.UpdateApp(app); err != nil {
-				log.Errorf("updating app status from rollback to noop got error: %v", err)
-			}
+			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 		}()
 
 		for i, t := range tasks {
@@ -1436,18 +1402,13 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	app.OpStatus = types.OpStatusRollback
-
-	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error), http.StatusInternalServerError)
+	if err := r.memoAppStatus(appId, types.OpStatusRollback, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	defer func() {
-		app.OpStatus = types.OpStatusNoop
-		if err := r.db.UpdateApp(app); err != nil {
-			log.Errorf("updating app status from rollback to noop got error: %v", err)
-		}
+		r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
 	}()
 
 	verId := req.Form.Get("version")
@@ -1613,6 +1574,34 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	// remove db app
 	if err := r.db.DeleteApp(appId); err != nil {
 		log.Errorf("Delete app %s got error: %v", appId, err)
+	}
+
+	return nil
+}
+
+// short hands to memo update App.OpStatus & App.ErrMsg & App.Progress
+// it's the caller responsibility to process the db error.
+func (r *Server) memoAppStatus(appId, op, errmsg string, progress int) error {
+	app, err := r.db.GetApp(appId)
+	if err != nil {
+		log.Errorf("memoAppStatus() get db app %s error: %v", appId, err)
+		return err
+	}
+
+	var (
+		prevOp  = app.OpStatus
+		prevPrg = app.Progress
+	)
+
+	app.OpStatus = op
+	app.Progress = progress
+	app.ErrMsg = errmsg
+	app.UpdatedAt = time.Now()
+
+	if err := r.db.UpdateApp(app); err != nil {
+		log.Errorf("memoAppStatus() update app db status from %s(%d) -> %s(%d) error: %v",
+			prevOp, prevPrg, op, progress, err)
+		return err
 	}
 
 	return nil
