@@ -79,8 +79,8 @@ type TaskConfig struct {
 	Proxy          *Proxy            `json:"proxy"`
 }
 
-func NewTaskConfig(spec *Version) *TaskConfig {
-	return &TaskConfig{
+func NewTaskConfig(spec *Version, idx int) *TaskConfig {
+	cfg := &TaskConfig{
 		CPUs:           spec.CPUs,
 		GPUs:           spec.GPUs,
 		Mem:            spec.Mem,
@@ -102,6 +102,17 @@ func NewTaskConfig(spec *Version) *TaskConfig {
 		Constraints:    spec.Constraints,
 		Proxy:          spec.Proxy,
 	}
+
+	// with user specified ip address
+	if cfg.Network != "host" && cfg.Network != "bridge" {
+		cfg.Parameters = append(cfg.Parameters, &Parameter{
+			Key:   "ip",
+			Value: spec.IPs[idx],
+		})
+		cfg.IP = spec.IPs[idx]
+	}
+
+	return cfg
 }
 
 func (c *TaskConfig) BuildCommand() *mesosproto.CommandInfo {

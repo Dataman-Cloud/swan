@@ -563,34 +563,6 @@ func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.Agen
 	return nil
 }
 
-func (s *Scheduler) DetectError(status *mesosproto.TaskStatus) error {
-	var (
-		state = status.GetState()
-		//data  = status.GetData() // docker container inspect result
-	)
-
-	switch state {
-	case mesosproto.TaskState_TASK_FAILED,
-		mesosproto.TaskState_TASK_ERROR,
-		mesosproto.TaskState_TASK_LOST,
-		mesosproto.TaskState_TASK_DROPPED,
-		mesosproto.TaskState_TASK_UNREACHABLE,
-		mesosproto.TaskState_TASK_GONE,
-		mesosproto.TaskState_TASK_GONE_BY_OPERATOR,
-		mesosproto.TaskState_TASK_UNKNOWN:
-		bs, _ := json.Marshal(map[string]interface{}{
-			"state":   state.String(),
-			"message": status.GetMessage(),
-			"source":  status.GetSource().String(),
-			"reason":  status.GetReason().String(),
-			"healthy": status.GetHealthy(),
-		})
-		return errors.New(string(bs))
-	}
-
-	return nil
-}
-
 func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 	if status.GetUuid() != nil {
 		call := &mesosproto.Call{
