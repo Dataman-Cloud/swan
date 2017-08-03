@@ -10,7 +10,6 @@ import (
 	"github.com/Dataman-Cloud/swan/utils"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
-	uuid "github.com/satori/go.uuid"
 )
 
 func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
@@ -59,7 +58,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 	var runAs = cmp.RunAs()
 
 	// db save
-	cmp.ID = uuid.NewV4().String()
+	cmp.ID = utils.RandomString(16)
 	cmp.DisplayName = fmt.Sprintf("%s.%s.%s", cmp.Name, runAs, r.driver.ClusterName())
 	cmp.OpStatus = types.OpStatusCreating
 	cmp.CreatedAt = time.Now()
