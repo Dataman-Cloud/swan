@@ -109,14 +109,16 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			// save db tasks
 			// TODO move db task creation to each runtime task logic
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: version.ID,
-				Created: time.Now(),
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    vid,
+				Retries:    0,
+				MaxRetries: spec.RestartPolicy.Attempts,
+				Created:    time.Now(),
+				Updated:    time.Now(),
 			}
 			if healthSet {
 				task.Healthy = types.TaskUnHealthy
@@ -454,14 +456,16 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 			// db tasks
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: version.ID,
-				Created: time.Now(),
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    ver,
+				Retries:    0,
+				MaxRetries: spec.RestartPolicy.Attempts,
+				Created:    time.Now(),
+				Updated:    time.Now(),
 			}
 			if healthSet {
 				task.Healthy = types.TaskUnHealthy
@@ -600,14 +604,16 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			)
 
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: newVer.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    newVer.ID,
+				Retries:    0,
+				MaxRetries: newVer.RestartPolicy.Attempts,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if healthSet {
@@ -789,13 +795,15 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 			)
 
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  newWeight,
-				Healthy: types.TaskHealthyUnset,
-				Version: newVer.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     newWeight,
+				Healthy:    types.TaskHealthyUnset,
+				Version:    newVer.ID,
+				Retries:    0,
+				MaxRetries: newVer.RestartPolicy.Attempts,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if healthSet {
@@ -956,13 +964,15 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 			)
 
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "updating",
-				Version: desired.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "updating",
+				Version:    desired.ID,
+				Retries:    0,
+				MaxRetries: desired.RestartPolicy.Attempts,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if err := r.db.CreateTask(appId, task); err != nil {
@@ -1329,13 +1339,15 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	)
 
 	task := &types.Task{
-		ID:      id,
-		Name:    name,
-		Weight:  100,
-		Status:  "updating",
-		Version: version.ID,
-		Created: t.Created,
-		Updated: time.Now(),
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "updating",
+		Version:    version.ID,
+		Retries:    0,
+		MaxRetries: version.RestartPolicy.Attempts,
+		Created:    t.Created,
+		Updated:    time.Now(),
 	}
 
 	if err := r.db.CreateTask(appId, task); err != nil {
@@ -1473,13 +1485,15 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	)
 
 	task := &types.Task{
-		ID:      id,
-		Name:    name,
-		Weight:  100,
-		Status:  "updating",
-		Version: desired.ID,
-		Created: t.Created,
-		Updated: time.Now(),
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "updating",
+		Version:    desired.ID,
+		Retries:    0,
+		MaxRetries: desired.RestartPolicy.Attempts,
+		Created:    t.Created,
+		Updated:    time.Now(),
 	}
 
 	if err := r.db.CreateTask(appId, task); err != nil {

@@ -159,54 +159,84 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	// broadcasting task events
 	log.Debugf("task %s healthy: %s --> %s (%s)", taskId, previousHealthy, task.Healthy, task.Status)
-	if previousHealthy == task.Healthy { // skip on no-change
-		return
-	}
-
-	evType := types.EventTypeTaskUnhealthy
-	switch task.Healthy {
-	case types.TaskHealthy:
-		evType = types.EventTypeTaskHealthy
-	case types.TaskHealthyUnset:
-		if task.Status == "TASK_RUNNING" {
+	if previousHealthy != task.Healthy { // skip on no-change
+		evType := types.EventTypeTaskUnhealthy
+		switch task.Healthy {
+		case types.TaskHealthy:
 			evType = types.EventTypeTaskHealthy
+		case types.TaskHealthyUnset:
+			if task.Status == "TASK_RUNNING" {
+				evType = types.EventTypeTaskHealthy
+			}
+		case types.TaskUnHealthy:
 		}
-	case types.TaskUnHealthy:
+
+		var (
+			alias        string
+			proxyEnabled bool
+			listen       string
+			sticky       bool
+		)
+		if ver.Proxy != nil {
+			proxyEnabled = ver.Proxy.Enabled
+			alias = ver.Proxy.Alias
+			listen = ver.Proxy.Listen
+			sticky = ver.Proxy.Sticky
+		}
+
+		taskEv := &types.TaskEvent{
+			Type:           evType,
+			AppID:          appId,
+			AppAlias:       alias,
+			AppListen:      listen,
+			AppSticky:      sticky,
+			TaskID:         taskId,
+			IP:             task.IP,
+			Port:           task.Port,
+			Weight:         task.Weight,
+			GatewayEnabled: proxyEnabled,
+		}
+
+		if err := s.eventmgr.broadcast(taskEv); err != nil {
+			log.Errorln("broadcast task event got error:", err)
+		}
+
+		if err := s.broadcastEventRecords(taskEv); err != nil {
+			log.Errorln("broadcast to sync proxy & dns records error:", err)
+			// TODO: memo db task errmsg
+		}
 	}
 
-	var (
-		alias        string
-		proxyEnabled bool
-		listen       string
-		sticky       bool
-	)
-	if ver.Proxy != nil {
-		proxyEnabled = ver.Proxy.Enabled
-		alias = ver.Proxy.Alias
-		listen = ver.Proxy.Listen
-		sticky = ver.Proxy.Sticky
-	}
+	// reschedule failed tasks
+	if state != mesosproto.TaskState_TASK_RUNNING {
+		if task.Retries >= task.MaxRetries {
+			// no more retry
+			log.Debugln("task", taskId, "maxRetries:", task.MaxRetries, "retries:", task.Retries)
+			return
+		}
 
-	taskEv := &types.TaskEvent{
-		Type:           evType,
-		AppID:          appId,
-		AppAlias:       alias,
-		AppListen:      listen,
-		AppSticky:      sticky,
-		TaskID:         taskId,
-		IP:             task.IP,
-		Port:           task.Port,
-		Weight:         task.Weight,
-		GatewayEnabled: proxyEnabled,
-	}
+		if t := s.getPendingTask(taskId); t != nil {
+			// task already being rescheduling.
+			log.Debugln("task already in rescheduling", taskId)
+			return
+		}
 
-	if err := s.eventmgr.broadcast(taskEv); err != nil {
-		log.Errorln("broadcast task event got error:", err)
-	}
+		app, err := s.db.GetApp(appId)
+		if err != nil {
+			if strings.Contains(err.Error(), "not exists") {
+				return
+			}
 
-	if err := s.broadcastEventRecords(taskEv); err != nil {
-		log.Errorln("broadcast to sync proxy & dns records error:", err)
-		// TODO: memo db task errmsg
+			log.Errorf("updateHandler:rescheduleTask s.db.GetApp() failed %s", err)
+			return
+		}
+
+		if app.OpStatus == types.OpStatusDeleting {
+			// deleting task no need to reschedule.
+			return
+		}
+
+		go s.rescheduleTask(appId, task)
 	}
 
 	return

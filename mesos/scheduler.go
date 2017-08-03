@@ -17,6 +17,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/utils"
 )
 
 const (
@@ -901,5 +902,71 @@ func (s *Scheduler) Load() map[string]interface{} {
 
 	return map[string]interface{}{
 		"tasks": tasks,
+	}
+}
+
+func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
+	log.Debugln("Rescheduling task", task.Name)
+
+	var (
+		taskName = task.Name
+		verId    = task.Version
+		retries  = task.Retries
+	)
+
+	ver, err := s.db.GetVersion(appId, verId)
+	if err != nil {
+		log.Errorf("rescheduleTask(): get version failed: %s", err)
+		return
+	}
+
+	cfg := types.NewTaskConfig(ver)
+
+	var (
+		name = taskName
+		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+	)
+
+	dbtask := &types.Task{
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "pending",
+		Version:    verId,
+		Retries:    retries + 1,
+		MaxRetries: ver.RestartPolicy.Attempts,
+		Created:    time.Now(),
+		Updated:    time.Now(),
+	}
+
+	if err := s.db.CreateTask(appId, dbtask); err != nil {
+		log.Errorf("rescheduleTask(): create task failed: %s", err)
+		return
+	}
+
+	m := NewTask(cfg, dbtask.ID, dbtask.Name)
+
+	results, err := s.LaunchTasks([]*Task{m})
+	if err != nil {
+		log.Errorf("launch task %s got error: %v", dbtask.ID, err)
+
+		task.Status = "Failed"
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+
+		if err = s.db.UpdateTask(appId, dbtask); err != nil {
+			log.Errorf("update task %s got error: %v", dbtask.ID, err)
+		}
+		return
+	}
+
+	for taskId, err := range results {
+		log.Errorf("launch task %s got error: %v", taskId, err)
+
+		task.Status = "Failed"
+		task.ErrMsg = err.Error()
+
+		if err = s.db.UpdateTask(appId, dbtask); err != nil {
+			log.Errorf("update task %s status got error: %v", taskId, err)
+		}
 	}
 }
