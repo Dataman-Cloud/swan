@@ -209,9 +209,9 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	// reschedule failed tasks
 	if state != mesosproto.TaskState_TASK_RUNNING {
-		if task.Retries >= task.MaxRetries {
+		if len(task.Histories) >= task.MaxRetries {
 			// no more retry
-			log.Debugln("task", taskId, "maxRetries:", task.MaxRetries, "retries:", task.Retries)
+			log.Debugln("task", taskId, "maxRetries:", task.MaxRetries, "retries:", len(task.Histories))
 			return
 		}
 

@@ -911,7 +911,6 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	var (
 		taskName = task.Name
 		verId    = task.Version
-		retries  = task.Retries
 	)
 
 	ver, err := s.db.GetVersion(appId, verId)
@@ -933,15 +932,26 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		Weight:     100,
 		Status:     "pending",
 		Version:    verId,
-		Retries:    retries + 1,
 		MaxRetries: ver.RestartPolicy.Attempts,
 		Created:    time.Now(),
 		Updated:    time.Now(),
 	}
 
+	for _, history := range task.Histories {
+		dbtask.Histories = append(dbtask.Histories, history)
+	}
+
+	task.Histories = []*types.Task{}
+
+	dbtask.Histories = append(dbtask.Histories, task)
+
 	if err := s.db.CreateTask(appId, dbtask); err != nil {
 		log.Errorf("rescheduleTask(): create task failed: %s", err)
 		return
+	}
+
+	if err := s.db.DeleteTask(task.ID); err != nil {
+		log.Errorf("rescheduleTask(): delete task failed: %s", err)
 	}
 
 	m := NewTask(cfg, dbtask.ID, dbtask.Name)
