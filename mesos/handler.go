@@ -90,28 +90,23 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
-	// get container id & name
-	var cinfos []struct {
-		ID   string `json:"Id"`
-		Name string `json:"Name"`
-	}
-	json.Unmarshal(data, &cinfos)
-
-	// only broadcast unhealthy event and return
-	if state == mesosproto.TaskState_TASK_FINISHED ||
-		state == mesosproto.TaskState_TASK_UNKNOWN ||
-		state == mesosproto.TaskState_TASK_KILLING {
+	app, err := s.db.GetApp(appId)
+	if err != nil || app.OpStatus == types.OpStatusDeleting {
+		log.Debugln("Sending task unhealth event only.")
 		taskEv := &types.TaskEvent{
 			Type:   types.EventTypeTaskUnhealthy,
 			AppID:  appId,
 			TaskID: taskId,
 		}
+
 		if err := s.eventmgr.broadcast(taskEv); err != nil {
 			log.Errorln("broadcast task event got error:", err)
 		}
+
 		if err := s.broadcastEventRecords(taskEv); err != nil {
 			log.Errorln("broadcast to sync proxy & dns records error:", err)
 		}
+
 		return
 	}
 
@@ -121,7 +116,13 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		return
 	}
 
-	task.Status = state.String()
+	// get container id & name
+	var cinfos []struct {
+		ID   string `json:"Id"`
+		Name string `json:"Name"`
+	}
+	json.Unmarshal(data, &cinfos)
+
 	if len(cinfos) > 0 {
 		if cid := cinfos[0].ID; cid != "" {
 			task.ContainerID = cid
@@ -148,6 +149,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		}
 	}
 
+	task.Status = state.String()
 	if state != mesosproto.TaskState_TASK_RUNNING {
 		task.ErrMsg = status.GetReason().String() + ":" + status.GetMessage()
 	}
@@ -221,19 +223,8 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 			return
 		}
 
-		app, err := s.db.GetApp(appId)
-		if err != nil {
-			if strings.Contains(err.Error(), "not exists") {
-				return
-			}
-
-			log.Errorf("updateHandler:rescheduleTask s.db.GetApp() failed %s", err)
-			return
-		}
-
-		if app.OpStatus == types.OpStatusDeleting {
-			// deleting task no need to reschedule.
-			return
+		if err := s.db.DeleteTask(task.ID); err != nil {
+			log.Errorf("updateHandler(): delete task failed: %s", err)
 		}
 
 		go s.rescheduleTask(appId, task)

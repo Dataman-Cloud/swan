@@ -911,19 +911,25 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	cfg := types.NewTaskConfig(ver)
 
 	var (
-		name = taskName
-		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		name      = taskName
+		id        = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
 	)
 
 	dbtask := &types.Task{
 		ID:         id,
 		Name:       name,
 		Weight:     100,
-		Status:     "pending",
+		Status:     "retrying",
 		Version:    verId,
+		Healthy:    types.TaskHealthyUnset,
 		MaxRetries: ver.RestartPolicy.Attempts,
 		Created:    time.Now(),
 		Updated:    time.Now(),
+	}
+
+	if healthSet {
+		dbtask.Healthy = types.TaskUnHealthy
 	}
 
 	for _, history := range task.Histories {
@@ -939,17 +945,13 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		return
 	}
 
-	if err := s.db.DeleteTask(task.ID); err != nil {
-		log.Errorf("rescheduleTask(): delete task failed: %s", err)
-	}
-
 	m := NewTask(cfg, dbtask.ID, dbtask.Name)
 
 	if launchErr := s.LaunchTasks([]*Task{m}); launchErr != nil {
 		log.Errorf("launch task %s got error: %v", dbtask.ID, launchErr)
 
-		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
+		dbtask.Status = "Failed"
+		dbtask.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
 
 		if err = s.db.UpdateTask(appId, dbtask); err != nil {
 			log.Errorf("update task %s got error: %v", dbtask.ID, err)
