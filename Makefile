@@ -7,7 +7,7 @@ PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]')
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
-PKG=$(shell go list .)
+PKG := "github.com/Dataman-Cloud/swan"
 gitCommit=$(shell git describe --tags)
 gitDirty=$(shell git status --porcelain --untracked-files=no)
 GIT_COMMIT=$(gitCommit)
