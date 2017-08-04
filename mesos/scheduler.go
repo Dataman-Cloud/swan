@@ -38,6 +38,7 @@ var (
 	errCreationTimeout   = errors.New("task create timeout")
 	errDeletingTimeout   = errors.New("task delete timeout")
 	errNoSatisfiedAgent  = errors.New("no satisfied agent")
+	errLaunchFailed      = errors.New("launch task failed")
 )
 
 type SchedulerConfig struct {
@@ -699,7 +700,10 @@ func (s *Scheduler) Dump() interface{} {
 
 func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 	var (
-		wg     sync.WaitGroup
+		wg   sync.WaitGroup
+		p    sync.RWMutex
+		errs = []error{}
+
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
@@ -771,6 +775,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if task.IsDone(status) {
+						if err := task.DetectError(status); err != nil {
+							p.Lock()
+							errs = append(errs, err)
+							p.Unlock()
+						}
 						s.removePendingTask(task.ID())
 						return
 					}
@@ -781,7 +790,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 	wg.Wait()
 
-	return nil
+	if len(errs) <= 0 {
+		return nil
+	}
+
+	return errLaunchFailed
 }
 
 func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
