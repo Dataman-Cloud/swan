@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -908,7 +909,9 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		return
 	}
 
-	cfg := types.NewTaskConfig(ver)
+	seq := strings.SplitN(task.Name, ".", 2)[0]
+	idx, _ := strconv.Atoi(seq)
+	cfg := types.NewTaskConfig(ver, idx)
 
 	var (
 		name      = taskName

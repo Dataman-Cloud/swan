@@ -159,9 +159,8 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				}
 
 				var (
-					t       = mesos.NewTask(cfg, taskId, taskName)
-					tasks   = []*mesos.Task{t}
-					results map[string]error
+					t     = mesos.NewTask(cfg, taskId, taskName)
+					tasks = []*mesos.Task{t}
 				)
 
 				err = r.driver.LaunchTasks(tasks)
