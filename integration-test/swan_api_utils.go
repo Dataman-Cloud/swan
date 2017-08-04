@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"text/template"
 	"time"
 
 	"gopkg.in/check.v1"
@@ -16,8 +17,9 @@ import (
 )
 
 var (
-	errWaitAppTimeout   = errors.New("wait app timeout")
-	errWaitPurgeTimeout = errors.New("wait purge timeout")
+	errWaitAppTimeout     = errors.New("wait app timeout")
+	errWaitComposeTimeout = errors.New("wait compose timeout")
+	errWaitPurgeTimeout   = errors.New("wait purge timeout")
 )
 
 // wait App status reached to expected status until timeout
@@ -178,6 +180,96 @@ func (s *ApiSuite) scaleApp(id string, n int, c *check.C) {
 	c.Assert(code, check.Equals, http.StatusAccepted)
 }
 
+// composes
+func (s *ApiSuite) waitCompose(id, expect string, maxWait time.Duration, c *check.C) error {
+	timeout := time.After(maxWait)
+
+	ticker := time.NewTicker(time.Second * 1)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return errWaitComposeTimeout
+
+		case <-ticker.C:
+			cmp := s.inspectCompose(id, c)
+			if cmp.OpStatus == expect {
+				return nil
+			}
+			c.Logf("Compose: %s is %s ...", id, cmp.OpStatus)
+		}
+	}
+}
+
+func (s *ApiSuite) inspectCompose(id string, c *check.C) *types.ComposeWrapper {
+	code, body, err := s.sendRequest("GET", "/v1/compose/"+id, nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	wrapper := new(types.ComposeWrapper)
+	err = s.bind(body, &wrapper)
+	c.Assert(err, check.IsNil)
+
+	return wrapper
+}
+
+func (s *ApiSuite) removeCompose(id string, maxWait time.Duration, c *check.C) error {
+	code, _, err := s.sendRequest("DELETE", "/v1/compose/"+id, nil)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusNoContent)
+
+	timeout := time.After(maxWait)
+
+	ticker := time.NewTicker(time.Second * 1)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-timeout:
+			return errWaitComposeTimeout
+
+		case <-ticker.C:
+			if !s.existsCompose(id, c) {
+				return nil
+			}
+			c.Logf("waitting Compose %s to be removed ...", id)
+		}
+	}
+}
+
+func (s *ApiSuite) existsCompose(id string, c *check.C) bool {
+	code, body, err := s.sendRequest("GET", "/v1/compose/"+id, nil)
+	c.Log(string(body))
+	c.Assert(err, check.IsNil)
+
+	matched, err := regexp.Match(".*no such compose.*", body)
+	return !(code == http.StatusNotFound && matched)
+}
+
+func (s *ApiSuite) runCompose(cmp *types.Compose, c *check.C) string {
+	code, body, err := s.rawRunCompose(cmp)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusCreated)
+
+	var resp struct {
+		Id string
+	}
+	err = s.bind(body, &resp)
+	c.Assert(err, check.IsNil)
+	c.Logf("created Compose%s", resp.Id)
+
+	return resp.Id
+}
+
+func (s *ApiSuite) rawRunCompose(cmp *types.Compose) (int, []byte, error) {
+	return s.sendRequest("POST", "/v1/compose", cmp)
+}
+
+// purge
+//
 func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
 	code, _, err := s.sendRequest("POST", "/v1/purge", nil)
 	c.Assert(err, check.IsNil)
@@ -194,6 +286,8 @@ func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
 	return errWaitPurgeTimeout
 }
 
+// base
+//
 func (s *ApiSuite) sendRequest(method, uri string, data interface{}) (code int, body []byte, err error) {
 	req, err := s.newRawReq(method, uri, data)
 	if err != nil {
@@ -309,4 +403,85 @@ func demoVersion() *verBuilder {
 			},
 		},
 	}
+}
+
+// compose builder
+//
+//
+type cmpBuilder types.Compose
+
+func (b *cmpBuilder) Get() *types.Compose {
+	v := types.Compose(*b)
+	return &v
+}
+
+func (b *cmpBuilder) setName(name string) *cmpBuilder {
+	b.Name = name
+	return b
+}
+
+func (b *cmpBuilder) setDesc(desc string) *cmpBuilder {
+	b.Desc = desc
+	return b
+}
+
+func (b *cmpBuilder) setYAML(yaml string, extra map[string]*types.YamlExtra) *cmpBuilder {
+	b.YAMLRaw = yaml
+	b.YAMLExtra = extra
+	return b
+}
+
+func demoCompose() *cmpBuilder {
+	return &cmpBuilder{
+		Name:      "demo",
+		Desc:      "demo compose description",
+		YAMLRaw:   "",
+		YAMLEnv:   map[string]string{},
+		YAMLExtra: map[string]*types.YamlExtra{},
+	}
+}
+
+// yaml
+//
+var dockerYAMLHeader = `version: "3"
+
+services:
+`
+
+var dockerServiceTemplate = ` {{.Name}}:
+    image: {{.Image}}
+    command: {{.Command}}
+    network_mode: {{.NetworkMode}}
+
+`
+
+type DockerService struct {
+	Name        string
+	Image       string
+	Command     string
+	NetworkMode string
+}
+
+func demoYAML() (string, map[string]*types.YamlExtra) {
+	buf := bytes.NewBufferString(dockerYAMLHeader)
+
+	exts := make(map[string]*types.YamlExtra)
+	for i := 1; i <= 3; i++ {
+		svrName := fmt.Sprintf("srv%d", i)
+		ds := &DockerService{
+			Name:        svrName,
+			Image:       "busybox",
+			Command:     "sleep 100d",
+			NetworkMode: "bridge",
+		}
+		exts[svrName] = &types.YamlExtra{
+			Resource: &types.Resource{0.01, 0, 10, 0, nil},
+			RunAs:    "bbk",
+			Labels:   map[string]string{"service_name": svrName},
+		}
+		tmpl, _ := template.New("").Parse(dockerServiceTemplate)
+		tmpl.Execute(buf, ds)
+	}
+
+	return buf.String(), exts
 }
