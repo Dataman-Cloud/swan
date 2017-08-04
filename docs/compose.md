@@ -125,441 +125,143 @@ Request:
 }
 ```
 
-Response:
-```json
-201:
-
-400:
-yaml convert: yaml: line 104: did not find expected key
-missing dependency: cache -> dbmaster
-dependency circled: [cache dbmaster cache]
-at least one of ServiceGroup or YamlRaw required
-...
-
-409: conflict
-
-500:
-```
-
 ### list
 `GET` `/v1/compose`
 
 ### get
-`GET` `/v1/compose/b`  
-`GET` `/v1/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+`GET` `/v1/compose/a`  
+`GET` `/v1/compose/1653a0b51ae8f5ff`
 
 Response
 ```json
 {
-  "id": "643a4c42-9f7b-4a65-82f5-7d89d1d7c766",
-  "name": "b",
+  "id": "1653a0b51ae8f5ff",
+  "name": "a",
+  "display_name": "a.bbk.dataman-mesos",
   "desc": "demo instance",
-  "version_id": "xxx",
-  "status": "ready",      // creating, ready, failed
+  "op_status": "noop",   // creating, deleting, noop
   "errmsg": "",
-  "created_at": "2017-05-09T10:39:06.406874508+08:00",
-  "updated_at": "2017-05-09T10:39:27.066117222+08:00",
-  "service_group": {   // same as above
+  "created_at": "2017-08-04T15:40:45.209451241+08:00",
+  "updated_at": "2017-08-04T15:40:56.251093817+08:00",
+  "yaml_raw": "", // same as above
+  "yaml_env": {
+    "HOSTNAME": "damnhost",
+    "WORKDIR": "/bbklab"
   },
-  "yaml_raw": "",      // same as above
-  "yaml_extra": {      // same as above
-  },
-  "apps": [            // related apps
+  "yaml_extra": {}, // same as above
+  "service_group": {}, // same as above
+  "apps": [
     {
-      "id": "web-b-bbk-datamanmesos",
-      "name": "web",
-      "instances": 3,
-      "updatedInstances": 0,
-      "runningInstances": 3,
-      "runAs": "bbk",
-      "priority": 0,
-      "clusterID": "datamanmesos",
-      "created": "2017-05-09T10:39:17.543846121+08:00",
-      "updated": "2017-05-09T10:39:17.543846336+08:00",
-      "mode": "replicates",
-      "state": "normal",
-      "currentVersion": {
-        "id": "1494297557",
-        "appName": "web",
-        "appVersion": "xxx",
-        "cmd": "sleep 100d",
-        "cpus": 0.01,
-        "mem": 50,
-        "disk": 100,
-        "instances": 3,
-        "runAs": "bbk",
-        "priority": 0,
-        "container": {
-          "type": "docker",
-          "docker": {
-            "image": "nginx:latest",
-            "network": "bridge",
-            "parameters": [
-              {
-                "key": "ipc",
-                "value": "host"
-              },
-              {
-                "key": "mac-address",
-                "value": "02:42:ac:11:65:43"
-              },
-              {
-                "key": "user",
-                "value": "root"
-              },
-              {
-                "key": "tty",
-                "value": "true"
-              },
-              {
-                "key": "name",
-                "value": "my-web-container"
-              },
-              {
-                "key": "pid",
-                "value": "host"
-              },
-              {
-                "key": "stop-signal",
-                "value": "SIGTERM"
-              },
-              {
-                "key": "restart",
-                "value": "no"
-              },
-              {
-                "key": "workdir",
-                "value": "/"
-              },
-              {
-                "key": "read-only",
-                "value": "true"
-              },
-              {
-                "key": "log-driver",
-                "value": "syslog"
-              },
-              {
-                "key": "hostname",
-                "value": "foo"
-              },
-              {
-                "key": "tmpfs",
-                "value": "/run"
-              },
-              {
-                "key": "tmpfs",
-                "value": "/tmp"
-              },
-              {
-                "key": "label",
-                "value": "name=bbklab"
-              },
-              {
-                "key": "label",
-                "value": "description=bbklab desc"
-              },
-              {
-                "key": "cap-drop",
-                "value": "NET_ADMIN"
-              },
-              {
-                "key": "cap-drop",
-                "value": "SYS_ADMIN"
-              },
-              {
-                "key": "dns",
-                "value": "114.114.114.114"
-              },
-              {
-                "key": "dns",
-                "value": "8.8.8.8"
-              },
-              {
-                "key": "env",
-                "value": "DEMO=true"
-              },
-              {
-                "key": "env",
-                "value": "PROD=false"
-              },
-              {
-                "key": "expose",
-                "value": "80"
-              },
-              {
-                "key": "expose",
-                "value": "443"
-              },
-              {
-                "key": "security-opt",
-                "value": "label:user:USER"
-              },
-              {
-                "key": "security-opt",
-                "value": "label:role:ROLE"
-              },
-              {
-                "key": "ulimit",
-                "value": "nproc=65535:65535"
-              },
-              {
-                "key": "ulimit",
-                "value": "nofile=20000:40000"
-              },
-              {
-                "key": "cap-add",
-                "value": "ALL"
-              },
-              {
-                "key": "device",
-                "value": "/dev/tty10:/dev/tty10"
-              },
-              {
-                "key": "dns-search",
-                "value": "swan.local"
-              },
-              {
-                "key": "add-host",
-                "value": "bbk:127.0.0.1"
-              },
-              {
-                "key": "add-host",
-                "value": "google-dns:8.8.8.8"
-              },
-              {
-                "key": "volume",
-                "value": "/tmp:/data:rw"
-              },
-              {
-                "key": "volume",
-                "value": "/var/log:/log:ro"
-              }
-            ],
-            "portMappings": [
-              {
-                "containerPort": 3000,
-                "hostPort": 3000,
-                "name": "3000",
-                "protocol": "udp"
-              },
-              {
-                "containerPort": 3001,
-                "hostPort": 3001,
-                "name": "3001",
-                "protocol": "udp"
-              },
-              {
-                "containerPort": 3002,
-                "hostPort": 3002,
-                "name": "3002",
-                "protocol": "udp"
-              },
-              {
-                "containerPort": 3003,
-                "hostPort": 3003,
-                "name": "3003",
-                "protocol": "udp"
-              },
-              {
-                "containerPort": 800,
-                "hostPort": 8080,
-                "name": "8080",
-                "protocol": "tcp"
-              },
-              {
-                "containerPort": 443,
-                "hostPort": 8090,
-                "name": "8090",
-                "protocol": "tcp"
-              }
-            ],
-            "privileged": true
-          }
-        },
-        "labels": {
-          "DM_COMPOSE_NAME": "b",
-          "description": "bbklab desc",
-          "name": "bbklab"
-        },
-        "healthCheck": {
-          "protocol": "cmd",
-          "value": "echo ok",
-          "consecutiveFailures": 3,
-          "intervalSeconds": 30,
-          "timeoutSeconds": 10
-        },
-        "env": {
-          "DEMO": "true",
-          "PROD": "false"
-        },
-        "killPolicy": {
-          "duration": 10
-        }
-      },
-      "labels": {
-        "DM_COMPOSE_NAME": "b",
-        "description": "bbklab desc",
-        "name": "bbklab"
-      },
-      "env": {
-        "DEMO": "true",
-        "PROD": "false"
-      }
-    },
-    {
-      "id": "cache-b-bbk-datamanmesos",
-      "name": "cache",
-      "instances": 1,
-      "updatedInstances": 0,
-      "runningInstances": 1,
-      "runAs": "bbk",
-      "priority": 0,
-      "clusterID": "datamanmesos",
-      "created": "2017-05-09T10:39:13.469840343+08:00",
-      "updated": "2017-05-09T10:39:13.469840415+08:00",
-      "mode": "replicates",
-      "state": "normal",
-      "currentVersion": {
-        "id": "1494297553",
-        "appName": "cache",
-        "appVersion": "xxx",
-        "cpus": 0.02,
-        "mem": 100,
-        "disk": 33,
-        "instances": 1,
-        "runAs": "bbk",
-        "priority": 0,
-        "container": {
-          "type": "docker",
-          "docker": {
-            "image": "redis:alpine",
-            "network": "bridge",
-            "parameters": [
-              {
-                "key": "read-only",
-                "value": "false"
-              },
-              {
-                "key": "tty",
-                "value": "false"
-              }
-            ]
-          }
-        },
-        "labels": {
-          "DM_COMPOSE_NAME": "b"
-        }
-      },
-      "labels": {
-        "DM_COMPOSE_NAME": "b"
-      }
-    },
-    {
-      "id": "dbslave-b-bbk-datamanmesos",
-      "name": "dbslave",
-      "instances": 1,
-      "updatedInstances": 0,
-      "runningInstances": 1,
-      "runAs": "bbk",
-      "priority": 0,
-      "clusterID": "datamanmesos",
-      "created": "2017-05-09T10:39:09.38498159+08:00",
-      "updated": "2017-05-09T10:39:09.384981688+08:00",
-      "mode": "replicates",
-      "state": "normal",
-      "currentVersion": {
-        "id": "1494297549",
-        "appName": "dbslave",
-        "appVersion": "xxx",
-        "cmd": "sleep 100d",
-        "cpus": 0.03,
-        "mem": 100,
-        "disk": 0,
-        "instances": 1,
-        "runAs": "bbk",
-        "priority": 0,
-        "container": {
-          "type": "docker",
-          "docker": {
-            "image": "busybox:latest",
-            "network": "host",
-            "parameters": [
-              {
-                "key": "tty",
-                "value": "false"
-              },
-              {
-                "key": "read-only",
-                "value": "false"
-              }
-            ]
-          }
-        },
-        "labels": {
-          "DM_COMPOSE_NAME": "b"
-        }
-      },
-      "labels": {
-        "DM_COMPOSE_NAME": "b"
-      }
-    },
-    {
-      "id": "dbmaster-b-bbk-datamanmesos",
+      "id": "dbmaster.a.bbk.dataman-mesos",
       "name": "dbmaster",
-      "instances": 1,
-      "updatedInstances": 0,
-      "runningInstances": 1,
       "runAs": "bbk",
-      "priority": 0,
-      "clusterID": "datamanmesos",
-      "created": "2017-05-09T10:39:06.511004581+08:00",
-      "updated": "2017-05-09T10:39:06.511004689+08:00",
-      "mode": "replicates",
-      "state": "normal",
-      "currentVersion": {
-        "id": "1494297546",
-        "appName": "dbmaster",
-        "appVersion": "xxx",
-        "cmd": "sleep 100d",
-        "cpus": 0.03,
-        "mem": 100,
-        "disk": 0,
-        "instances": 1,
-        "runAs": "bbk",
-        "priority": 0,
-        "container": {
-          "type": "docker",
-          "docker": {
-            "image": "busybox:latest",
-            "network": "host",
-            "parameters": [
-              {
-                "key": "read-only",
-                "value": "false"
-              },
-              {
-                "key": "tty",
-                "value": "false"
-              }
-            ]
-          }
-        },
-        "labels": {
-          "DM_COMPOSE_NAME": "b"
-        }
+      "cluster": "dataman-mesos",
+      "operationStatus": "noop",
+      "progress": 0,
+      "task_count": 1,
+      "currentVersion": [
+        "1501832445215187780"
+      ],
+      "version_count": 1,
+      "status": "available",
+      "tasks_status": {
+        "TASK_RUNNING": 1
       },
-      "labels": {
-        "DM_COMPOSE_NAME": "b"
-      }
+      "health": {
+        "total": 1,
+        "healthy": 0,
+        "unhealthy": 0,
+        "unset": 1
+      },
+      "errmsg": "",
+      "created": "2017-08-04T15:40:45.215218542+08:00",
+      "updated": "2017-08-04T15:40:49.051227394+08:00"
+    },
+    {
+      "id": "cache.a.bbk.dataman-mesos",
+      "name": "cache",
+      "runAs": "bbk",
+      "cluster": "dataman-mesos",
+      "operationStatus": "noop",
+      "progress": 0,
+      "task_count": 1,
+      "currentVersion": [
+        "1501832450869902669"
+      ],
+      "version_count": 1,
+      "status": "available",
+      "tasks_status": {
+        "TASK_RUNNING": 1
+      },
+      "health": {
+        "total": 1,
+        "healthy": 0,
+        "unhealthy": 0,
+        "unset": 1
+      },
+      "errmsg": "",
+      "created": "2017-08-04T15:40:50.869925765+08:00",
+      "updated": "2017-08-04T15:40:52.68310734+08:00"
+    },
+    {
+      "id": "dbslave.a.bbk.dataman-mesos",
+      "name": "dbslave",
+      "runAs": "bbk",
+      "cluster": "dataman-mesos",
+      "operationStatus": "noop",
+      "progress": 0,
+      "task_count": 1,
+      "currentVersion": [
+        "1501832449054682772"
+      ],
+      "version_count": 1,
+      "status": "available",
+      "tasks_status": {
+        "TASK_RUNNING": 1
+      },
+      "health": {
+        "total": 1,
+        "healthy": 0,
+        "unhealthy": 0,
+        "unset": 1
+      },
+      "errmsg": "",
+      "created": "2017-08-04T15:40:49.054705667+08:00",
+      "updated": "2017-08-04T15:40:50.866596828+08:00"
+    },
+    {
+      "id": "web.a.bbk.dataman-mesos",
+      "name": "web",
+      "runAs": "bbk",
+      "cluster": "dataman-mesos",
+      "operationStatus": "noop",
+      "progress": 0,
+      "task_count": 3,
+      "currentVersion": [
+        "1501832452686746879"
+      ],
+      "version_count": 1,
+      "status": "available",
+      "tasks_status": {
+        "TASK_RUNNING": 3
+      },
+      "health": {
+        "total": 3,
+        "healthy": 3,
+        "unhealthy": 0,
+        "unset": 0
+      },
+      "errmsg": "",
+      "created": "2017-08-04T15:40:52.68680238+08:00",
+      "updated": "2017-08-04T15:40:56.247136433+08:00"
     }
   ]
 }
 ```
 
 ### remove
-`DELETE` `/v1/compose/b`  
-`DELETE` `/v1/compose/643a4c42-9f7b-4a65-82f5-7d89d1d7c766`
+`DELETE` `/v1/compose/a`  
+`DELETE` `/v1/compose/1653a0b51ae8f5ff`
 
 Response:
 204

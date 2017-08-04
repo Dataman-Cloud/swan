@@ -3,6 +3,8 @@ package api
 import (
 	"fmt"
 	"net/http"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -180,7 +182,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	writeJSON(w, http.StatusAccepted, "accepted")
+	writeJSON(w, http.StatusCreated, map[string]string{"Id": cmp.ID})
 }
 
 func (r *Server) parseYAML(w http.ResponseWriter, req *http.Request) {
@@ -225,6 +227,7 @@ func (r *Server) listComposes(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	sort.Sort(types.ComposeSorter(cs))
 	writeJSON(w, http.StatusOK, cs)
 }
 
@@ -232,11 +235,21 @@ func (r *Server) getCompose(w http.ResponseWriter, req *http.Request) {
 	composeId := mux.Vars(req)["compose_id"]
 	cmp, err := r.db.GetCompose(composeId)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such compose") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, cmp)
+	wrapper, err := r.wrapCompose(cmp)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, wrapper)
 }
 
 func (r *Server) getComposeDependency(w http.ResponseWriter, req *http.Request) {
@@ -255,6 +268,10 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 	composeId := mux.Vars(req)["compose_id"]
 	cmp, err := r.db.GetCompose(composeId)
 	if err != nil {
+		if strings.Contains(err.Error(), "no such compose") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -364,4 +381,20 @@ func (r *Server) ensureAppReady(appId string, maxWait time.Duration) error {
 
 	return fmt.Errorf("app %s not ready, only %d/%d tasks running",
 		appId, app.TasksStatus["TASK_RUNNING"], app.TaskCount)
+}
+
+func (r *Server) wrapCompose(cmp *types.Compose) (*types.ComposeWrapper, error) {
+	wrapper := &types.ComposeWrapper{Compose: cmp}
+
+	apps, err := r.db.ListApps()
+	if err != nil {
+		return nil, err
+	}
+
+	for _, app := range apps {
+		if app.Name+"."+cmp.DisplayName == app.ID {
+			wrapper.Apps = append(wrapper.Apps, app)
+		}
+	}
+	return wrapper, nil
 }

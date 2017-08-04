@@ -23,6 +23,19 @@ func init() {
 	}
 }
 
+// compose sorter
+type ComposeSorter []*Compose
+
+func (s ComposeSorter) Len() int           { return len(s) }
+func (s ComposeSorter) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
+func (s ComposeSorter) Less(i, j int) bool { return s[i].UpdatedAt.After(s[j].UpdatedAt) }
+
+// wrap compose with related apps
+type ComposeWrapper struct {
+	*Compose
+	Apps []*Application `json:"apps"`
+}
+
 // Compose
 //
 type Compose struct {
