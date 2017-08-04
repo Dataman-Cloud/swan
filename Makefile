@@ -2,6 +2,7 @@
 .PHONY: build image docker docker-centos clean
 
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
+PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]')
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
@@ -53,12 +54,12 @@ rm-local-cluster:
 	docker-compose stop
 	docker-compose rm -f
 
-integration-prepare:
+integration-prepare: rm-local-cluster local-cluster
 
 integration-test: integration-prepare
 	docker run --rm \
 		-w /go/src/github.com/Dataman-Cloud/swan/integration-test \
-		-e SWAN_HOST=${SWAN_HOST} \
+		-e SWAN_HOST=$(shell docker inspect -f "{{.NetworkSettings.IPAddress}}" ${PRJNAME}_swan-master_1):9999 \
 		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
 		golang:1.8.1-alpine \
 		sh -c 'go test -check.v github.com/Dataman-Cloud/swan/integration-test'

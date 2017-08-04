@@ -14,7 +14,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	//
 	err := s.purge(time.Second*30, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() purged")
+	fmt.Println("TestRollBackApp() purged")
 
 	// New Create App
 	//
@@ -22,7 +22,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() created")
+	fmt.Println("TestRollBackApp() created")
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -52,7 +52,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	s.updateApp(id, newVer, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*120, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() updated")
+	fmt.Println("TestRollBackApp() updated")
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -81,7 +81,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	s.rollbackApp(id, "", c) // rollback to previous version
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*120, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() rolled back")
+	fmt.Println("TestRollBackApp() rolled back")
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -109,5 +109,5 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	//
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() removed")
+	fmt.Println("TestRollBackApp() removed")
 }
