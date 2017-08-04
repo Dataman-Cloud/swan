@@ -31,6 +31,8 @@ type Task struct {
 	OpStatus      string    `json:"opstatus"`
 	ContainerID   string    `json:"container_id"`
 	ContainerName string    `json:"container_name"`
+	MaxRetries    int       `json:"maxRetries"`
+	Histories     []*Task   `json:"histories"`
 	Created       time.Time `json:"created"`
 	Updated       time.Time `json:"updated"`
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -17,6 +18,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
+	"github.com/Dataman-Cloud/swan/utils"
 )
 
 const (
@@ -36,6 +38,7 @@ var (
 	errCreationTimeout   = errors.New("task create timeout")
 	errDeletingTimeout   = errors.New("task delete timeout")
 	errNoSatisfiedAgent  = errors.New("no satisfied agent")
+	errLaunchFailed      = errors.New("launch task failed")
 )
 
 type SchedulerConfig struct {
@@ -695,14 +698,12 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
-func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
+func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 	var (
 		wg   sync.WaitGroup
-		l    sync.RWMutex
-		rets = map[string]error{}
-	)
+		p    sync.RWMutex
+		errs = []error{}
 
-	var (
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
@@ -725,7 +726,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 			filtered, err := s.applyFilters(filter)
 			if err != nil {
 				s.unlock()
-				return nil, err
+				return err
 			}
 			log.Debugln("Find", len(filtered), "agent(s) satisfied the constraints")
 
@@ -774,14 +775,12 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if task.IsDone(status) {
-						err := task.DetectError(status)
-						if err != nil {
-							l.Lock()
-							rets[task.ID()] = err
-							l.Unlock()
+						if err := task.DetectError(status); err != nil {
+							p.Lock()
+							errs = append(errs, err)
+							p.Unlock()
 						}
 						s.removePendingTask(task.ID())
-
 						return
 					}
 				}
@@ -790,7 +789,12 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) (map[string]error, error) {
 	}
 
 	wg.Wait()
-	return rets, nil
+
+	if len(errs) <= 0 {
+		return nil
+	}
+
+	return errLaunchFailed
 }
 
 func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
@@ -901,5 +905,80 @@ func (s *Scheduler) Load() map[string]interface{} {
 
 	return map[string]interface{}{
 		"tasks": tasks,
+	}
+}
+
+func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
+	log.Debugln("Rescheduling task", task.Name)
+
+	var (
+		taskName = task.Name
+		verId    = task.Version
+	)
+
+	ver, err := s.db.GetVersion(appId, verId)
+	if err != nil {
+		log.Errorf("rescheduleTask(): get version failed: %s", err)
+		return
+	}
+
+	seq := strings.SplitN(task.Name, ".", 2)[0]
+	idx, _ := strconv.Atoi(seq)
+	cfg := types.NewTaskConfig(ver, idx)
+
+	var (
+		name      = taskName
+		id        = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
+		restart   = ver.RestartPolicy
+		retries   = 3
+	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
+
+	dbtask := &types.Task{
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "retrying",
+		Version:    verId,
+		Healthy:    types.TaskHealthyUnset,
+		MaxRetries: retries,
+		Created:    time.Now(),
+		Updated:    time.Now(),
+	}
+
+	if healthSet {
+		dbtask.Healthy = types.TaskUnHealthy
+	}
+
+	for _, history := range task.Histories {
+		dbtask.Histories = append(dbtask.Histories, history)
+	}
+
+	task.Histories = []*types.Task{}
+
+	dbtask.Histories = append(dbtask.Histories, task)
+
+	if err := s.db.CreateTask(appId, dbtask); err != nil {
+		log.Errorf("rescheduleTask(): create task failed: %s", err)
+		return
+	}
+
+	m := NewTask(cfg, dbtask.ID, dbtask.Name)
+
+	if launchErr := s.LaunchTasks([]*Task{m}); launchErr != nil {
+		log.Errorf("launch task %s got error: %v", dbtask.ID, launchErr)
+
+		dbtask.Status = "Failed"
+		dbtask.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
+
+		if err = s.db.UpdateTask(appId, dbtask); err != nil {
+			log.Errorf("update task %s got error: %v", dbtask.ID, err)
+		}
+
+		return
 	}
 }

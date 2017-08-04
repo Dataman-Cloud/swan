@@ -10,7 +10,7 @@ import (
 
 type Driver interface {
 	KillTask(string, string) error
-	LaunchTasks([]*mesos.Task) (map[string]error, error)
+	LaunchTasks([]*mesos.Task) error
 
 	ClusterName() string
 

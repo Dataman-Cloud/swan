@@ -52,7 +52,13 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		id        = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
 		count     = int(version.Instances)
 		healthSet = version.HealthCheck != nil && !version.HealthCheck.IsEmpty()
+		restart   = version.RestartPolicy
+		retries   = 3
 	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
 
 	app := &types.Application{
 		ID:        id,
@@ -109,14 +115,15 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			// save db tasks
 			// TODO move db task creation to each runtime task logic
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: version.ID,
-				Created: time.Now(),
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    version.ID,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
 			}
 			if healthSet {
 				task.Healthy = types.TaskUnHealthy
@@ -129,38 +136,11 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		log.Printf("Launching %d tasks on mesos", len(tasks))
-
-		// launch!
-		var results map[string]error
-		results, err = r.driver.LaunchTasks(tasks)
+		err = r.driver.LaunchTasks(tasks)
 		if err != nil {
 			err = fmt.Errorf("launch tasks got error: %v", err)
 			return
 		}
-
-		// save failed task's errmsg onto each db task
-		for taskId, taskErr := range results {
-			log.Errorf("launch task %s got error: %v", taskId, taskErr)
-			task, err := r.db.GetTask(appId, taskId)
-			if err != nil {
-				log.Errorf("find task from zk got error: %v", err)
-				continue
-			}
-
-			task.Status = "Failed"
-			task.ErrMsg = taskErr.Error()
-
-			if err = r.db.UpdateTask(appId, task); err != nil {
-				log.Errorf("update task %s status got error: %v", taskId, err)
-			}
-		}
-
-		if n := len(results); n > 0 {
-			err = fmt.Errorf("%d tasks launch failed", n)
-			return
-		}
-
 	}(app.ID)
 
 	writeJSON(w, http.StatusCreated, map[string]string{"Id": app.ID})
@@ -443,9 +423,15 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		// prepare for all of runtime tasks & db tasks
 		for i := current; i < goal; i++ {
 			var (
-				name = fmt.Sprintf("%d.%s", i, appId)
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = fmt.Sprintf("%d.%s", i, appId)
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = version.RestartPolicy
+				retries = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			// runtime tasks
 			cfg := types.NewTaskConfig(version, i)
@@ -454,15 +440,17 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 
 			// db tasks
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: version.ID,
-				Created: time.Now(),
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    version.ID,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
 			}
+
 			if healthSet {
 				task.Healthy = types.TaskUnHealthy
 			}
@@ -473,32 +461,9 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 			}
 		}
 
-		var results map[string]error
-		results, err = r.driver.LaunchTasks(tasks)
+		err = r.driver.LaunchTasks(tasks)
 		if err != nil {
 			err = fmt.Errorf("launch tasks got error: %v", err)
-			return
-		}
-
-		// save failed task's errmsg onto each db task
-		for taskId, taskErr := range results {
-			log.Errorf("launch task %s got error: %v", taskId, taskErr)
-			task, err := r.db.GetTask(appId, taskId)
-			if err != nil {
-				log.Errorf("find task from zk got error: %v", err)
-				continue
-			}
-
-			task.Status = "Failed"
-			task.ErrMsg = taskErr.Error()
-
-			if err = r.db.UpdateTask(appId, task); err != nil {
-				log.Errorf("update task %s status got error: %v", taskId, err)
-			}
-		}
-
-		if n := len(results); n > 0 {
-			err = fmt.Errorf("%d tasks launch failed", n)
 			return
 		}
 	}()
@@ -595,19 +560,26 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(newVer, i)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = newVer.RestartPolicy
+				retries = 3
 			)
 
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
+
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "pending",
-				Healthy: types.TaskHealthyUnset,
-				Version: newVer.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    newVer.ID,
+				MaxRetries: retries,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if healthSet {
@@ -623,27 +595,11 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 			tasks := []*mesos.Task{m}
 
-			results, gerr := r.driver.LaunchTasks(tasks)
-			if gerr != nil {
-				log.Errorf("launch task %s got error: %v", id, gerr)
+			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
+				log.Errorf("launch task %s got error: %v", id, launchErr)
 
 				task.Status = "Failed"
-				task.ErrMsg = gerr.Error()
-
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", id, err)
-				}
-
-				if onfailure == types.UpdateStop {
-					return
-				}
-			}
-
-			for taskId, lerr := range results {
-				log.Errorf("launch task %s got error: %v", taskId, lerr)
-
-				task.Status = "Failed"
-				task.ErrMsg = lerr.Error()
+				task.ErrMsg = launchErr.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
@@ -784,18 +740,25 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(newVer, i+new)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = newVer.RestartPolicy
+				retries = 3
 			)
 
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
+
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  newWeight,
-				Healthy: types.TaskHealthyUnset,
-				Version: newVer.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     newWeight,
+				Healthy:    types.TaskHealthyUnset,
+				Version:    newVer.ID,
+				MaxRetries: retries,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if healthSet {
@@ -811,34 +774,14 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 			tasks := []*mesos.Task{m}
 
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch task %s got error: %v", id, err)
+			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
+				log.Errorf("launch task %s got error: %v", id, launchErr)
 
 				task.Status = "Failed"
-				task.ErrMsg = err.Error()
+				task.ErrMsg = launchErr.Error()
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
-				}
-
-				if onfailure == types.CanaryUpdateOnFailureStop {
-					return
-				}
-
-			}
-
-			for taskId, err := range results {
-				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
-				}
-
-				task, err := r.db.GetTask(appId, taskId)
-				if err == nil {
-					task.OpStatus = types.OpStatusNoop
-					if err = r.db.UpdateTask(appId, task); err != nil {
-						log.Errorf("update task %s got error: %v", id, err)
-					}
 				}
 
 				if onfailure == types.CanaryUpdateOnFailureStop {
@@ -951,18 +894,25 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(desired, i)
 
 			var (
-				name = t.Name
-				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				name    = t.Name
+				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+				restart = desired.RestartPolicy
+				retries = 3
 			)
 
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
+
 			task := &types.Task{
-				ID:      id,
-				Name:    name,
-				Weight:  100,
-				Status:  "updating",
-				Version: desired.ID,
-				Created: t.Created,
-				Updated: time.Now(),
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "updating",
+				Version:    desired.ID,
+				MaxRetries: retries,
+				Created:    t.Created,
+				Updated:    time.Now(),
 			}
 
 			if err := r.db.CreateTask(appId, task); err != nil {
@@ -974,26 +924,17 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 
 			tasks := []*mesos.Task{m}
 
-			results, err := r.driver.LaunchTasks(tasks)
-			if err != nil {
-				log.Errorf("launch task %s got error: %v", task.ID, err)
+			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
+				log.Errorf("launch task %s got error: %v", task.ID, launchErr)
 
 				task.Status = "Failed"
-				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+				task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
 
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", task.ID, err)
 				}
 
 				return
-			}
-
-			for taskId, err := range results {
-				if err != nil {
-					log.Errorf("launch task %s got error: %v", taskId, err)
-					return
-				}
-
 			}
 
 			time.Sleep(2 * time.Second)
@@ -1324,18 +1265,25 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	cfg := types.NewTaskConfig(&version, idx)
 
 	var (
-		name = t.Name
-		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		name    = t.Name
+		id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		restart = version.RestartPolicy
+		retries = 3
 	)
 
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
+
 	task := &types.Task{
-		ID:      id,
-		Name:    name,
-		Weight:  100,
-		Status:  "updating",
-		Version: version.ID,
-		Created: t.Created,
-		Updated: time.Now(),
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "updating",
+		Version:    version.ID,
+		MaxRetries: retries,
+		Created:    t.Created,
+		Updated:    time.Now(),
 	}
 
 	if err := r.db.CreateTask(appId, task); err != nil {
@@ -1346,26 +1294,17 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	m := mesos.NewTask(cfg, task.ID, task.Name)
 	tasks := []*mesos.Task{m}
 
-	results, err := r.driver.LaunchTasks(tasks)
-	if err != nil {
-		log.Errorf("launch task %s got error: %v", task.ID, err)
+	if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, launchErr)
 
 		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
 
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	for taskId, err := range results {
-		if err != nil {
-			log.Errorf("launch task %s got error: %v", taskId, err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
@@ -1468,18 +1407,25 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	cfg := types.NewTaskConfig(desired, idx)
 
 	var (
-		name = t.Name
-		id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		name    = t.Name
+		id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		restart = desired.RestartPolicy
+		retries = 3
 	)
 
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
+
 	task := &types.Task{
-		ID:      id,
-		Name:    name,
-		Weight:  100,
-		Status:  "updating",
-		Version: desired.ID,
-		Created: t.Created,
-		Updated: time.Now(),
+		ID:         id,
+		Name:       name,
+		Weight:     100,
+		Status:     "updating",
+		Version:    desired.ID,
+		MaxRetries: retries,
+		Created:    t.Created,
+		Updated:    time.Now(),
 	}
 
 	if err := r.db.CreateTask(appId, task); err != nil {
@@ -1491,26 +1437,17 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 
 	tasks := []*mesos.Task{m}
 
-	results, err := r.driver.LaunchTasks(tasks)
-	if err != nil {
-		log.Errorf("launch task %s got error: %v", task.ID, err)
+	if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, launchErr)
 
 		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
 
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
 		}
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	}
-
-	for taskId, err := range results {
-		if err != nil {
-			log.Errorf("launch task %s got error: %v", taskId, err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
 	}
 
 	writeJSON(w, http.StatusAccepted, "accepted")
