@@ -612,7 +612,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	app.OpStatus = types.OpStatusUpdating
 
 	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -805,7 +805,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	app.OpStatus = types.OpStatusUpdating
 
 	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-update got error: %v", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -970,7 +970,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 	app.OpStatus = types.OpStatusRollback
 
 	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
@@ -1486,7 +1486,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 	app.OpStatus = types.OpStatusRollback
 
 	if err := r.db.UpdateApp(app); err != nil {
-		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("updating app opstatus to rolling-back got error: %v", err.Error()), http.StatusInternalServerError)
 		return
 	}
 
