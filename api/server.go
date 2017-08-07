@@ -1,13 +1,11 @@
 package api
 
 import (
-	"bufio"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
 	"net/http/pprof"
-	"net/url"
 	"strings"
 	"sync"
 	"time"
@@ -159,75 +157,51 @@ func (s *Server) GetLeader() string {
 }
 
 func (s *Server) forwardRequest(w http.ResponseWriter, r *http.Request) {
-	// NOTE(nmg): If you just use ip address here, the `url.Parse` with get error with
-	// `first path segment in URL cannot contain colon`.
-	// It's golang 1.8's bug. more details see https://github.com/golang/go/issues/18824.
-	leaderUrl := s.leader
-	if !strings.HasPrefix(leaderUrl, "http://") {
-		leaderUrl = "http://" + s.leader
+	// dial leader
+	dst, err := net.DialTimeout("tcp", s.leader, time.Second*60)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
+	defer dst.Close()
 
-	leaderURL, err := url.Parse(leaderUrl + r.URL.Path)
+	err = r.WriteProxy(dst) // send original request
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	rr, err := http.NewRequest(r.Method, leaderURL.String(), r.Body)
-	rr.URL.RawQuery = r.URL.RawQuery
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+	log.Printf("Request forwarding %s %s --> %s", r.Method, r.URL, s.leader)
+
+	// obtian the client underlying net.Conn
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, fmt.Sprintf("not support http hijack: %T", w), 500)
 		return
 	}
 
-	copyHeader(r.Header, &rr.Header)
-
-	// Create a client and query the target
-	client := &http.Client{}
-	lresp, err := client.Do(rr)
+	src, _, err := hj.Hijack()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), 500)
 		return
 	}
-	log.Printf("Request forwarding %s %s %s", rr.Method, rr.URL, lresp.Status)
+	defer src.Close()
 
-	dH := w.Header()
-	copyHeader(lresp.Header, &dH)
-	dH.Add("Requested-Host", rr.Host)
-
-	reader := bufio.NewReader(lresp.Body)
-	for {
-		line, err := reader.ReadBytes('\n')
-
-		if err == io.EOF {
-			if _, err := w.Write(line); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			return
-		}
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if len(line) == 0 {
-			continue
-		}
-
-		if _, err := w.Write(line); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	// io copy between src & dst
+	errc := make(chan error, 2)
+	cp := func(w io.WriteCloser, r io.Reader) {
+		defer w.Close()
+		_, err := io.Copy(w, r) // TODO caculate each piece of io buffer by real time
+		errc <- err
 	}
-}
 
-func copyHeader(src http.Header, dest *http.Header) {
-	for n, v := range src {
-		for _, vv := range v {
-			dest.Set(n, vv)
-		}
+	go cp(dst, src)
+	cp(src, dst) // note: hanging wait while copying the response
+
+	err = <-errc
+	if err != nil && err != io.EOF {
+		err = fmt.Errorf("io copy error: %v", err)
+		src.Write([]byte("HTTP/1.0 500 Internal Server Error\r\n\r\n" + err.Error() + "\r\n"))
+		return
 	}
 }

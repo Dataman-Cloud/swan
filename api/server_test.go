@@ -425,21 +425,3 @@ func TestServer_forwardRequest(t *testing.T) {
 		})
 	}
 }
-
-func Test_copyHeader(t *testing.T) {
-	type args struct {
-		src  http.Header
-		dest *http.Header
-	}
-	tests := []struct {
-		name string
-		args args
-	}{
-	// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			copyHeader(tt.args.src, tt.args.dest)
-		})
-	}
-}

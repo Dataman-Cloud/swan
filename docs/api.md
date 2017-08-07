@@ -211,7 +211,7 @@ Example request:
   },
   "uris": [
   ],
-  "label": {
+  "labels": {
     "USER_ID": "1"
   },
   "healthCheck":
@@ -443,7 +443,7 @@ Example request:
   },
   "uris": [
   ],
-  "label": {
+  "labels": {
     "USER_ID": "1"
   },
   "healthCheck":
@@ -845,7 +845,7 @@ Example request:
   },
   "uris": [
   ],
-  "label": {
+  "labels": {
     "USER_ID": "1"
   },
   "healthCheck":

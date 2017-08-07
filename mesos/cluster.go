@@ -70,18 +70,6 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 				return nil
 			}
 
-			reqProxy, err := s.buildAgentProxyReq(ev)
-			if err != nil {
-				return
-			}
-			reqProxy.Close = true
-			reqProxy.Header.Set("Connection", "close")
-			reqProxy.Host = agent.ID()
-			err = funcDoReq(reqProxy)
-			if err != nil {
-				return
-			}
-
 			reqDNS, err := s.buildAgentDNSReq(ev)
 			if err != nil {
 				return
@@ -90,6 +78,22 @@ func (s *Scheduler) broadcastEventRecords(ev *types.TaskEvent) error {
 			reqDNS.Header.Set("Connection", "close")
 			reqDNS.Host = agent.ID()
 			err = funcDoReq(reqDNS)
+			if err != nil {
+				return
+			}
+
+			if !ev.GatewayEnabled {
+				return
+			}
+
+			reqProxy, err := s.buildAgentProxyReq(ev)
+			if err != nil {
+				return
+			}
+			reqProxy.Close = true
+			reqProxy.Header.Set("Connection", "close")
+			reqProxy.Host = agent.ID()
+			err = funcDoReq(reqProxy)
 			if err != nil {
 				return
 			}

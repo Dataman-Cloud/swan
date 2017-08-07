@@ -139,9 +139,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	var (
-		previousHealthy = task.Healthy // save previous
+		previousHealthy = task.Healthy // previous healthy
+		previousStatus  = task.Status  // previous status
 	)
 
+	// set healthy
 	if task.Healthy != types.TaskHealthyUnset {
 		task.Healthy = types.TaskUnHealthy
 		if healthy {
@@ -149,19 +151,32 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		}
 	}
 
+	// set status
 	task.Status = state.String()
 	if state != mesosproto.TaskState_TASK_RUNNING {
 		task.ErrMsg = status.GetReason().String() + ":" + status.GetMessage()
 	}
 
+	// memo db update
 	if err := s.db.UpdateTask(appId, task); err != nil {
 		log.Errorf("update task status error: %v, %s", err, state.String())
 		return
 	}
 
+	// if task healthy / status changed
+	var healthyChange bool
+	switch previousHealthy {
+	case types.TaskHealthyUnset:
+		healthyChange = previousStatus != task.Status
+	default:
+		healthyChange = previousHealthy != task.Healthy
+	}
+
 	// broadcasting task events
-	log.Debugf("task %s healthy: %s --> %s (%s)", taskId, previousHealthy, task.Healthy, task.Status)
-	if previousHealthy != task.Healthy { // skip on no-change
+	log.Debugf("task %s healthy & status: %s (%s) --> %s (%s)",
+		taskId, previousHealthy, previousStatus, task.Healthy, task.Status)
+
+	if healthyChange { // skip on no-change
 		evType := types.EventTypeTaskUnhealthy
 		switch task.Healthy {
 		case types.TaskHealthy:
