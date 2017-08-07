@@ -165,8 +165,7 @@ func (zk *ZKStore) tasks(p, id string) (types.TaskList, error) {
 		p := path.Join(keyApp, id, "tasks", child)
 		data, _, err := zk.get(p)
 		if err != nil {
-			log.Errorf("get %s got error: %v", p, err)
-			return nil, err
+			continue
 		}
 
 		var task *types.Task
