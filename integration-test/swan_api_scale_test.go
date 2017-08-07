@@ -54,7 +54,7 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 	fmt.Println("TestScaleApp() scaled up")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 1)
+	c.Assert(app.VersionCount, check.Equals, 2)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 20)
@@ -67,7 +67,7 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 	fmt.Println("TestScaleApp() scaled down")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 1)
+	c.Assert(app.VersionCount, check.Equals, 3)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 1)
@@ -80,7 +80,7 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 	fmt.Println("TestScaleApp() scaled up")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 1)
+	c.Assert(app.VersionCount, check.Equals, 4)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 10)
@@ -93,7 +93,7 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 	fmt.Println("TestScaleApp() scaled down")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 1)
+	c.Assert(app.VersionCount, check.Equals, 5)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 0)
