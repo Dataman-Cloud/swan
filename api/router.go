@@ -13,6 +13,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("DELETE", "/v1/apps/{app_id}", s.deleteApp),
 		NewRoute("POST", "/v1/apps/{app_id}/scale", s.scaleApp),
 		NewRoute("PUT", "/v1/apps/{app_id}", s.updateApp),
+		NewRoute("POST", "/v1/apps/{app_id}/stop", s.stopApp),
 		NewRoute("PUT", "/v1/apps/{app_id}/canary", s.canaryUpdate),
 		NewRoute("POST", "/v1/apps/{app_id}/rollback", s.rollback),
 		NewRoute("PATCH", "/v1/apps/{app_id}/weights", s.updateWeights),

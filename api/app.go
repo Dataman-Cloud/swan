@@ -635,6 +635,57 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
+func (s *Server) stopApp(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := s.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
+		return
+	}
+
+	tasks, err := s.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for stopping. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	app.OpStatus = types.OpStatusStopping
+	if err := s.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		defer func() {
+			app.OpStatus = types.OpStatusNoop
+			if err := s.db.UpdateApp(app); err != nil {
+				log.Errorf("update app opstatus from stopping to noop got error: %v", err)
+			}
+		}()
+		var wg sync.WaitGroup
+		for _, task := range tasks {
+			wg.Add(1)
+			go func(task *types.Task) {
+				defer wg.Done()
+
+				if err := s.delTask(appId, task); err != nil {
+					log.Errorf("app %s stop task %s error: %v", appId, task.ID)
+				}
+			}(task)
+		}
+
+		wg.Wait()
+	}()
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
 func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
@@ -1525,6 +1576,30 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	// remove db app
 	if err := r.db.DeleteApp(appId); err != nil {
 		log.Errorf("Delete app %s got error: %v", appId, err)
+	}
+
+	return nil
+}
+
+func (s *Server) delTask(appId string, task *types.Task) error {
+	if err := s.driver.KillTask(task.ID, task.AgentId); err != nil {
+		log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+		task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+		if err = s.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", task.Name, err)
+		}
+
+		return err
+	}
+
+	if err := s.db.DeleteTask(task.ID); err != nil {
+		log.Errorf("Delete task %s got error: %v", task.ID, err)
+
+		task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+		if err = s.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", task.Name, err)
+		}
 	}
 
 	return nil
