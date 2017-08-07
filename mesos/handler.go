@@ -90,8 +90,8 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		appId = parts[2]
 	}
 
-	app, err := s.db.GetApp(appId)
-	if err != nil || app.OpStatus == types.OpStatusDeleting {
+	ops, err := s.db.GetAppOpStatus(appId)
+	if err != nil || ops == types.OpStatusDeleting || ops == types.OpStatusStopping {
 		log.Debugln("Sending task unhealth event only.")
 		taskEv := &types.TaskEvent{
 			Type:   types.EventTypeTaskUnhealthy,

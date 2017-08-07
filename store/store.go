@@ -15,6 +15,7 @@ type Store interface {
 	GetApp(appId string) (*types.Application, error)
 	ListApps() ([]*types.Application, error)
 	DeleteApp(appId string) error
+	GetAppOpStatus(string) (string, error)
 
 	CreateTask(string, *types.Task) error
 	GetTask(string, string) (*types.Task, error)
