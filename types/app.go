@@ -12,6 +12,8 @@ const (
 	OpStatusCreating = "creating"
 	OpStatusScaling  = "scaling"
 	OpStatusUpdating = "updating"
+	OpStatusStarting = "starting"
+	OpStatusStopping = "stopping"
 	OpStatusDeleting = "deleting"
 	OpStatusRollback = "rollbacking"
 )

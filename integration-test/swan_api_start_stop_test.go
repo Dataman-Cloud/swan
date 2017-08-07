@@ -9,12 +9,12 @@ import (
 	"github.com/Dataman-Cloud/swan/types"
 )
 
-func (s *ApiSuite) TestScaleApp(c *check.C) {
+func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	// Purge
 	//
 	err := s.purge(time.Second*30, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() purged")
+	fmt.Println("TestStartStopApp() purged")
 
 	// New Create App
 	//
@@ -22,7 +22,7 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() created")
+	fmt.Println("TestStartStopApp() created")
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -46,61 +46,61 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
 	}
 
-	// Scale Up App
+	// Stop App
 	//
-	s.scaleApp(id, 20, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
-	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled up")
-
-	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 2)
-
-	tasks = s.listAppTasks(id, c)
-	c.Assert(len(tasks), check.Equals, 20)
-
-	// Scale Down App
-	//
-	s.scaleApp(id, 1, c)
+	s.stopApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled down")
+	fmt.Println("TestStartStopApp() stopped")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 3)
+	c.Assert(app.VersionCount, check.Equals, 1)
 
 	tasks = s.listAppTasks(id, c)
-	c.Assert(len(tasks), check.Equals, 1)
+	c.Assert(len(tasks), check.Equals, 0)
 
-	// Scale Up App Again
+	// Start App
 	//
-	s.scaleApp(id, 10, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	s.startApp(id, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled up")
+	fmt.Println("TestStartStopApp() started")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 4)
+	c.Assert(app.VersionCount, check.Equals, 1)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 10)
 
-	// Scale Down App Again
+	// Stop App Again
 	//
-	s.scaleApp(id, 0, c)
+	s.stopApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled down")
+	fmt.Println("TestStartStopApp() stopped")
 
 	app = s.inspectApp(id, c)
-	c.Assert(app.VersionCount, check.Equals, 5)
+	c.Assert(app.VersionCount, check.Equals, 1)
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 0)
+
+	// Start App Again
+	//
+	s.startApp(id, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*10, c)
+	c.Assert(err, check.IsNil)
+	fmt.Println("TestStartStopApp() started")
+
+	app = s.inspectApp(id, c)
+	c.Assert(app.VersionCount, check.Equals, 1)
+
+	tasks = s.listAppTasks(id, c)
+	c.Assert(len(tasks), check.Equals, 10)
 
 	// Remove
 	//
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() removed")
+	fmt.Println("TestStartStopApp() removed")
 }

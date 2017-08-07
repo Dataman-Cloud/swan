@@ -321,6 +321,22 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ver, err := r.db.GetVersion(app.ID, app.Version[0])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("get version got error for scale app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	newVer := ver
+	newVer.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	newVer.Instances = int32(goal)
+	newVer.IPs = ips
+
+	if err := r.db.CreateVersion(appId, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	if err := r.memoAppStatus(appId, types.OpStatusScaling, "", 0); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
 		return
@@ -351,25 +367,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				go func(task *types.Task) {
 					defer wg.Done()
 
-					if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-						log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-						task.OpStatus = fmt.Sprintf("kill task error: %v", err)
-						if err = r.db.UpdateTask(appId, task); err != nil {
-							log.Errorf("update task %s got error: %v", task.Name, err)
-						}
-
-						return
-					}
-
-					if err := r.db.DeleteTask(task.ID); err != nil {
-						log.Errorf("Delete task %s got error: %v", task.ID, err)
-
-						task.OpStatus = fmt.Sprintf("delete task error: %v", err)
-						if err = r.db.UpdateTask(appId, task); err != nil {
-							log.Errorf("update task %s got error: %v", task.Name, err)
-						}
-
+					if err := r.delTask(appId, task); err != nil {
 						return
 					}
 
@@ -541,19 +539,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			progress++
 			r.memoAppStatus(appId, types.OpStatusUpdating, "", progress) // TODO should quit if error occured here.
 
-			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-				t.Status = "Failed"
-				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
-
-				if err = r.db.UpdateTask(app.ID, t); err != nil {
-					log.Errorf("update task %s got error: %v", t.ID, err)
-				}
-
-				return
-			}
-
-			if err := r.db.DeleteTask(t.ID); err != nil {
-				log.Errorf("delete task %s got error: %v", t.ID, err)
+			if err := r.delTask(appId, t); err != nil {
 				return
 			}
 
@@ -614,6 +600,150 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
+	}()
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
+func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := s.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
+		return
+	}
+
+	ver, err := s.db.GetVersion(appId, app.Version[0])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("get app version error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.memoAppStatus(appId, types.OpStatusStarting, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		count     = int(ver.Instances)
+		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
+		restart   = ver.RestartPolicy
+		retries   = 3
+	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
+
+	go func(appId string) {
+		var err error
+
+		// defer to mark op status
+		defer func() {
+			if err != nil {
+				log.Errorf("launch app %s error: %v", appId, err)
+				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err), 0)
+			} else {
+				s.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+			}
+		}()
+
+		tasks := []*mesos.Task{}
+		for i := 0; i < count; i++ {
+			var (
+				name = fmt.Sprintf("%d.%s", i, appId)
+				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+			)
+
+			// runtime tasks
+			cfg := types.NewTaskConfig(ver, i)
+			t := mesos.NewTask(cfg, id, name)
+			tasks = append(tasks, t)
+
+			// save db tasks
+			// TODO move db task creation to each runtime task logic
+			task := &types.Task{
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    ver.ID,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
+			}
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
+			}
+
+			log.Debugf("Create task %s in db", task.ID)
+			if err = s.db.CreateTask(app.ID, task); err != nil {
+				err = fmt.Errorf("create db task failed: %v", err)
+				return
+			}
+		}
+
+		err = s.driver.LaunchTasks(tasks)
+		if err != nil {
+			err = fmt.Errorf("launch tasks got error: %v", err)
+			return
+		}
+	}(appId)
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
+func (s *Server) stopApp(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := s.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
+		return
+	}
+
+	tasks, err := s.db.ListTasks(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list tasks got error for stopping. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if err := s.memoAppStatus(appId, types.OpStatusStopping, "", 0); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	go func() {
+		defer func() {
+			if err := s.memoAppStatus(appId, types.OpStatusNoop, "", 0); err != nil {
+				log.Errorf("update app opstatus from stopping to noop got error: %v", err)
+			}
+		}()
+		var wg sync.WaitGroup
+		for _, task := range tasks {
+			wg.Add(1)
+			go func(task *types.Task) {
+				defer wg.Done()
+
+				if err := s.delTask(appId, task); err != nil {
+					log.Errorf("app %s stop task %s error: %v", appId, task.ID)
+				}
+			}(task)
+		}
+
+		wg.Wait()
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
@@ -721,19 +851,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		healthSet := newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
 
 		for i, t := range pending {
-			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-				t.Status = "Failed"
-				t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
-
-				if err = r.db.UpdateTask(app.ID, t); err != nil {
-					log.Errorf("update task %s got error: %v", t.ID, err)
-				}
-
-				return
-			}
-
-			if err := r.db.DeleteTask(t.ID); err != nil {
-				log.Errorf("delete task %s got error: %v", t.ID, err)
+			if err := r.delTask(appId, t); err != nil {
 				return
 			}
 
@@ -875,19 +993,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for i, t := range tasks {
-			if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-				t.Status = "Failed"
-				t.ErrMsg = fmt.Sprintf("kill task for rollback :%v", err)
-
-				if err = r.db.UpdateTask(appId, t); err != nil {
-					log.Errorf("update task %s got error: %v", t.ID, err)
-				}
-
-				return
-			}
-
-			if err := r.db.DeleteTask(t.ID); err != nil {
-				log.Errorf("delete task %s got error: %v", t.ID, err)
+			if err := r.delTask(appId, t); err != nil {
 				return
 			}
 
@@ -1148,12 +1254,7 @@ func (r *Server) deleteTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	if err := r.db.DeleteTask(task.ID); err != nil {
+	if err := r.delTask(appId, task); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -1186,25 +1287,7 @@ func (r *Server) deleteTasks(w http.ResponseWriter, req *http.Request) {
 
 	for _, task := range tasks {
 		go func(task *types.Task, appId string) {
-			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-				log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-				task.OpStatus = fmt.Sprintf("kill task error: %v", err)
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.Name, err)
-				}
-
-				return
-			}
-
-			if err := r.db.DeleteTask(task.ID); err != nil {
-				log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-				task.OpStatus = fmt.Sprintf("delete task error: %v", err)
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.Name, err)
-				}
-
+			if err := r.delTask(appId, task); err != nil {
 				return
 			}
 
@@ -1244,19 +1327,7 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-		t.Status = "Failed"
-		t.ErrMsg = fmt.Sprintf("kill task for updating :%v", err)
-
-		if err = r.db.UpdateTask(appId, t); err != nil {
-			log.Errorf("update task %s got error: %v", t.ID, err)
-		}
-
-		return
-	}
-
-	if err := r.db.DeleteTask(t.ID); err != nil {
-		log.Errorf("delete task %s got error: %v", t.ID, err)
+	if err := r.delTask(appId, t); err != nil {
 		return
 	}
 
@@ -1386,19 +1457,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.driver.KillTask(t.ID, t.AgentId); err != nil {
-		t.Status = "Failed"
-		t.ErrMsg = fmt.Sprintf("kill task for rollback :%v", err)
-
-		if err = r.db.UpdateTask(appId, t); err != nil {
-			log.Errorf("update task %s got error: %v", t.ID, err)
-		}
-
-		return
-	}
-
-	if err := r.db.DeleteTask(t.ID); err != nil {
-		log.Errorf("delete task %s got error: %v", t.ID, err)
+	if err := r.delTask(appId, t); err != nil {
 		return
 	}
 
@@ -1467,26 +1526,7 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 		go func(task *types.Task) {
 			defer wg.Done()
 
-			// kill runtime task
-			if err := r.driver.KillTask(task.ID, task.AgentId); err != nil {
-				log.Errorf("Kill task %s got error: %v", task.ID, err)
-
-				task.ErrMsg = fmt.Sprintf("kill task error: %v", err)
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.Name, err)
-				}
-
-				return
-			}
-
-			// remove db task
-			if err := r.db.DeleteTask(task.ID); err != nil {
-				log.Errorf("Delete task %s got error: %v", task.ID, err)
-
-				task.ErrMsg = fmt.Sprintf("delete task error: %v", err)
-				if err = r.db.UpdateTask(appId, task); err != nil {
-					log.Errorf("update task %s got error: %v", task.Name, err)
-				}
+			if err := r.delTask(appId, task); err != nil {
 				return
 			}
 
@@ -1509,6 +1549,32 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	// remove db app
 	if err := r.db.DeleteApp(appId); err != nil {
 		log.Errorf("Delete app %s got error: %v", appId, err)
+	}
+
+	return nil
+}
+
+func (s *Server) delTask(appId string, task *types.Task) error {
+	if err := s.driver.KillTask(task.ID, task.AgentId); err != nil {
+		log.Errorf("Kill task %s got error: %v", task.ID, err)
+
+		task.OpStatus = fmt.Sprintf("kill task error: %v", err)
+		if err = s.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", task.Name, err)
+		}
+
+		return err
+	}
+
+	if err := s.db.DeleteTask(task.ID); err != nil {
+		log.Errorf("Delete task %s got error: %v", task.ID, err)
+
+		task.OpStatus = fmt.Sprintf("delete task error: %v", err)
+		if err = s.db.UpdateTask(appId, task); err != nil {
+			log.Errorf("update task %s got error: %v", task.Name, err)
+		}
+
+		return err
 	}
 
 	return nil

@@ -136,6 +136,20 @@ func (s *ApiSuite) inspectApp(id string, c *check.C) *types.Application {
 	return app
 }
 
+func (s *ApiSuite) startApp(id string, c *check.C) {
+	code, body, err := s.sendRequest("POST", "/v1/apps/"+id+"/start", nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusAccepted)
+}
+
+func (s *ApiSuite) stopApp(id string, c *check.C) {
+	code, body, err := s.sendRequest("POST", "/v1/apps/"+id+"/stop", nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusAccepted)
+}
+
 func (s *ApiSuite) removeApp(id string, maxWait time.Duration, c *check.C) error {
 	code, _, err := s.sendRequest("DELETE", "/v1/apps/"+id, nil)
 	c.Assert(err, check.IsNil)

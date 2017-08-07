@@ -90,6 +90,23 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	return &app, nil
 }
 
+func (zk *ZKStore) GetAppOpStatus(appId string) (string, error) {
+	p := path.Join(keyApp, appId)
+
+	data, _, err := zk.get(p)
+	if err != nil {
+		log.Errorf("find app %s got error: %v", appId, err)
+		return "", fmt.Errorf("find app %s got error: %v", appId, err)
+	}
+
+	var app types.Application
+	if err := decode(data, &app); err != nil {
+		return "", err
+	}
+
+	return app.OpStatus, nil
+}
+
 func (zk *ZKStore) ListApps() ([]*types.Application, error) {
 	nodes, err := zk.list(keyApp)
 	if err != nil {
@@ -148,8 +165,7 @@ func (zk *ZKStore) tasks(p, id string) (types.TaskList, error) {
 		p := path.Join(keyApp, id, "tasks", child)
 		data, _, err := zk.get(p)
 		if err != nil {
-			log.Errorf("get %s got error: %v", p, err)
-			return nil, err
+			continue
 		}
 
 		var task *types.Task

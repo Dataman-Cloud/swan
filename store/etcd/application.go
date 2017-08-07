@@ -101,6 +101,26 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 	return &app, nil
 }
 
+func (s *EtcdStore) GetAppOpStatus(appId string) (string, error) {
+	var (
+		p    = path.Join(keyApp, appId)
+		pval = path.Join(p, "value")
+	)
+
+	data, err := s.get(pval)
+	if err != nil {
+		log.Errorf("find app %s got error: %v", appId, err)
+		return "", err
+	}
+
+	var app types.Application
+	if err := decode(data, &app); err != nil {
+		return "", err
+	}
+
+	return app.OpStatus, nil
+}
+
 func (s *EtcdStore) ListApps() ([]*types.Application, error) {
 	nodes, err := s.list(keyApp)
 	if err != nil {
