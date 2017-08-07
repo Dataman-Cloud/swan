@@ -321,6 +321,22 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	ver, err := r.db.GetVersion(app.ID, app.Version[0])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("get version got error for scale app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	newVer := ver
+	newVer.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+	newVer.Instances = int32(goal)
+	newVer.IPs = ips
+
+	if err := r.db.CreateVersion(appId, newVer); err != nil {
+		http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	if err := r.memoAppStatus(appId, types.OpStatusScaling, "", 0); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
 		return
