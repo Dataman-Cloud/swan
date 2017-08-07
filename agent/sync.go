@@ -35,13 +35,13 @@ func (agent *Agent) syncFull(addr string) error {
 			dns   = cmb.DNS
 		)
 
-		if agent.config.DNS.Enabled {
+		if agent.config.DNS.Enabled && dns != nil {
 			if err := agent.resolver.Upsert(dns); err != nil {
 				log.Errorln("full syncing, upsert dns record error:", err)
 			}
 		}
 
-		if agent.config.Janitor.Enabled {
+		if agent.config.Janitor.Enabled && proxy != nil {
 			if err := agent.janitor.UpsertBackend(proxy); err != nil {
 				log.Errorln("full syncing, upsert proxy record error:", err)
 			}

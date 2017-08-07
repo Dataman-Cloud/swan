@@ -67,11 +67,15 @@ func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
 				GatewayEnabled: proxyEnabled,
 			}
 
-			ret = append(ret, &types.CombinedEvents{
+			cmb := &types.CombinedEvents{
 				Event: taskEv,
-				Proxy: s.buildAgentProxyRecord(taskEv),
 				DNS:   s.buildAgentDNSRecord(taskEv),
-			})
+			}
+			if proxyEnabled {
+				cmb.Proxy = s.buildAgentProxyRecord(taskEv)
+			}
+
+			ret = append(ret, cmb)
 		}
 	}
 
