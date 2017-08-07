@@ -635,6 +635,102 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
+func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
+	appId := mux.Vars(req)["app_id"]
+
+	app, err := s.db.GetApp(appId)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	if app.OpStatus != types.OpStatusNoop {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
+		return
+	}
+
+	ver, err := s.db.GetVersion(appId, app.Version[0])
+	if err != nil {
+		http.Error(w, fmt.Sprintf("get app version error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	app.OpStatus = types.OpStatusStarting
+	if err := s.db.UpdateApp(app); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		count     = int(ver.Instances)
+		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
+		restart   = ver.RestartPolicy
+		retries   = 3
+	)
+
+	if restart != nil && restart.Retries > retries {
+		retries = restart.Retries
+	}
+
+	go func(appId string) {
+		var err error
+
+		// defer to mark op status
+		defer func() {
+			if err != nil {
+				log.Errorf("launch app %s error: %v", appId, err)
+				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err), 0)
+			} else {
+				s.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+			}
+		}()
+
+		tasks := []*mesos.Task{}
+		for i := 0; i < count; i++ {
+			var (
+				name = fmt.Sprintf("%d.%s", i, appId)
+				id   = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+			)
+
+			// runtime tasks
+			cfg := types.NewTaskConfig(ver, i)
+			t := mesos.NewTask(cfg, id, name)
+			tasks = append(tasks, t)
+
+			// save db tasks
+			// TODO move db task creation to each runtime task logic
+			task := &types.Task{
+				ID:         id,
+				Name:       name,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    types.TaskHealthyUnset,
+				Version:    ver.ID,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
+			}
+			if healthSet {
+				task.Healthy = types.TaskUnHealthy
+			}
+
+			log.Debugf("Create task %s in db", task.ID)
+			if err = s.db.CreateTask(app.ID, task); err != nil {
+				err = fmt.Errorf("create db task failed: %v", err)
+				return
+			}
+		}
+
+		err = s.driver.LaunchTasks(tasks)
+		if err != nil {
+			err = fmt.Errorf("launch tasks got error: %v", err)
+			return
+		}
+	}(appId)
+
+	writeJSON(w, http.StatusAccepted, "accepted")
+}
+
 func (s *Server) stopApp(w http.ResponseWriter, req *http.Request) {
 	appId := mux.Vars(req)["app_id"]
 
