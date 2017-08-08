@@ -49,11 +49,10 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		id        = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
-		count     = int(version.Instances)
-		healthSet = version.HealthCheck != nil && !version.HealthCheck.IsEmpty()
-		restart   = version.RestartPolicy
-		retries   = 3
+		id      = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
+		count   = int(version.Instances)
+		restart = version.RestartPolicy
+		retries = 3
 	)
 
 	if restart != nil && restart.Retries > retries {
@@ -91,9 +90,9 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err != nil {
 				log.Errorf("launch app %s error: %v", appId, err)
-				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err), 0)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err))
 			} else {
-				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+				r.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
 
@@ -125,7 +124,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				Created:    time.Now(),
 				Updated:    time.Now(),
 			}
-			if healthSet {
+			if version.IsHealthSet() {
 				task.Healthy = types.TaskUnHealthy
 			}
 
@@ -257,7 +256,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	log.Debugf("app %s has %d versions", appId, len(versions))
 
 	// mark app op status
-	if err := r.memoAppStatus(appId, types.OpStatusDeleting, "", 0); err != nil {
+	if err := r.memoAppStatus(appId, types.OpStatusDeleting, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to deleting got error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -269,7 +268,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err != nil {
 				log.Errorf("delete app %s error: %v", appId, err)
-				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("delete app error: %v", err), 0)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("delete app error: %v", err))
 			}
 		}()
 
@@ -337,7 +336,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusScaling, "", 0); err != nil {
+	if err := r.memoAppStatus(appId, types.OpStatusScaling, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -349,9 +348,9 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 			defer func() {
 				if err != nil {
 					log.Errorf("scale down app %s error: %v", appId, err)
-					r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale down app error: %v", err), 0)
+					r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale down app error: %v", err))
 				} else {
-					r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+					r.memoAppStatus(appId, types.OpStatusNoop, "")
 				}
 			}()
 
@@ -407,15 +406,14 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err != nil {
 				log.Errorf("scale up app %s error: %v", appId, err)
-				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale up app error: %v", err), 0)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale up app error: %v", err))
 			} else {
-				r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+				r.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
 
 		var (
-			tasks     = []*mesos.Task{}
-			healthSet = version.HealthCheck != nil && !version.HealthCheck.IsEmpty()
+			tasks = []*mesos.Task{}
 		)
 
 		// prepare for all of runtime tasks & db tasks
@@ -448,8 +446,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				Created:    time.Now(),
 				Updated:    time.Now(),
 			}
-
-			if healthSet {
+			if version.IsHealthSet() {
 				task.Healthy = types.TaskUnHealthy
 			}
 
@@ -506,7 +503,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusUpdating, "", 0); err != nil {
+	if err := r.memoAppStatus(appId, types.OpStatusUpdating, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to rolling-update got error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -527,17 +524,11 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 	go func() {
 		defer func() {
-			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+			r.memoAppStatus(appId, types.OpStatusNoop, "")
 		}()
 
-		var (
-			progress  = 0
-			healthSet = newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
-		)
-
 		for i, t := range pending {
-			progress++
-			r.memoAppStatus(appId, types.OpStatusUpdating, "", progress) // TODO should quit if error occured here.
+			r.memoAppStatus(appId, types.OpStatusUpdating, "") // TODO should quit if error occured here.
 
 			if err := r.delTask(appId, t); err != nil {
 				return
@@ -567,8 +558,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				Created:    t.Created,
 				Updated:    time.Now(),
 			}
-
-			if healthSet {
+			if newVer.IsHealthSet() {
 				task.Healthy = types.TaskUnHealthy
 			}
 
@@ -625,16 +615,15 @@ func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := s.memoAppStatus(appId, types.OpStatusStarting, "", 0); err != nil {
+	if err := s.memoAppStatus(appId, types.OpStatusStarting, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	var (
-		count     = int(ver.Instances)
-		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
-		restart   = ver.RestartPolicy
-		retries   = 3
+		count   = int(ver.Instances)
+		restart = ver.RestartPolicy
+		retries = 3
 	)
 
 	if restart != nil && restart.Retries > retries {
@@ -648,9 +637,9 @@ func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
 		defer func() {
 			if err != nil {
 				log.Errorf("launch app %s error: %v", appId, err)
-				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err), 0)
+				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err))
 			} else {
-				s.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+				s.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
 
@@ -679,7 +668,7 @@ func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
 				Created:    time.Now(),
 				Updated:    time.Now(),
 			}
-			if healthSet {
+			if ver.IsHealthSet() {
 				task.Healthy = types.TaskUnHealthy
 			}
 
@@ -720,16 +709,14 @@ func (s *Server) stopApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := s.memoAppStatus(appId, types.OpStatusStopping, "", 0); err != nil {
+	if err := s.memoAppStatus(appId, types.OpStatusStopping, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	go func() {
 		defer func() {
-			if err := s.memoAppStatus(appId, types.OpStatusNoop, "", 0); err != nil {
-				log.Errorf("update app opstatus from stopping to noop got error: %v", err)
-			}
+			s.memoAppStatus(appId, types.OpStatusNoop, "")
 		}()
 		var wg sync.WaitGroup
 		for _, task := range tasks {
@@ -758,11 +745,12 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if app.OpStatus != types.OpStatusNoop {
-		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", app.OpStatus), http.StatusLocked)
+	if s := app.OpStatus; s != types.OpStatusNoop && s != types.OpStatusCanaryUnfinished {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", s), http.StatusLocked)
 		return
 	}
 
+	// obtain new version & policy & verify
 	canary := new(types.CanaryUpdateBody)
 	if err := decode(req.Body, canary); err != nil {
 		http.Error(w, fmt.Sprintf("decode gray publish body got error: %v", err), http.StatusBadRequest)
@@ -777,8 +765,39 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		delay     = canary.Delay
 	)
 
+	// obtain new version
+	switch s := app.OpStatus; s {
+
+	case types.OpStatusNoop: // from new request version on begin & save
+		if newVer == nil {
+			http.Error(w, "new version required on canary update begin", http.StatusBadRequest)
+			return
+		}
+
+		// db save
+		// TODO rewrite more fields which can't be changed before db saving
+		newVer.ID = fmt.Sprintf("%d", time.Now().UTC().UnixNano())
+		if err := r.db.CreateVersion(appId, newVer); err != nil {
+			http.Error(w, fmt.Sprintf("create app version failed: %v", err), http.StatusInternalServerError)
+			return
+		}
+
+	case types.OpStatusCanaryUnfinished: // from previous saved version
+		versions, err := r.db.ListVersions(app.ID)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("list versions error for canary update. %v", err), http.StatusInternalServerError)
+			return
+		}
+		if len(versions) < 2 {
+			http.Error(w, "no new version for canary update", http.StatusBadRequest)
+			return
+		}
+		types.VersionList(versions).Reverse()
+		newVer = versions[0]
+	}
+
 	if value == 0 {
-		http.Error(w, "canary value must between (0, 1)", http.StatusInternalServerError)
+		http.Error(w, "canary value must between (0, 1)", http.StatusBadRequest)
 		return
 	}
 
@@ -786,76 +805,75 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		count = 1
 	}
 
-	if newVer == nil {
-		versions, err := r.db.ListVersions(app.ID)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("list versions got error for canary update. %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		if len(versions) < 2 {
-			http.Error(w, "canary version not specified and app has no new version", http.StatusInternalServerError)
-			return
-		}
-
-		types.VersionList(versions).Reverse() // TODO
-
-		newVer = versions[0]
-	}
-
 	if delay == 0 {
 		delay = types.DefaultCanaryUpdateDelay
 	}
 
+	// obtain all db tasks
 	tasks, err := r.db.ListTasks(app.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for canary update. %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusUpdating, "", 0); err != nil {
-		http.Error(w, fmt.Sprintf("update app opstatus to rolling-update got error: %v", err), http.StatusInternalServerError)
-		return
-	}
+	types.TaskList(tasks).Sort()
 
-	types.TaskList(tasks).Sort() // TODO
-
+	// current progress
 	new := 0
-	newTasks := make([]*types.Task, 0)
 	for _, task := range tasks {
 		if task.Version == newVer.ID {
 			new++
-
-			newTasks = append(newTasks, task)
 		}
 	}
 
 	var (
-		total = app.TaskCount
+		total = len(tasks)
 		goal  = new + count
 	)
-
 	if goal > total {
 		goal = total
 	}
 
+	pending := tasks[new:goal]
 	newWeight := utils.ComputeWeight(float64(goal), float64(total), value)
 
-	pending := tasks[new:goal]
+	// mark app db status
+	if err := r.memoAppStatus(appId, types.OpStatusCanaryUpdating, ""); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to canary-update got error: %v", err), http.StatusInternalServerError)
+		return
+	}
 
 	go func() {
+		var (
+			err      error
+			progress int
+		)
+
+		// defer to mark app db status
 		defer func() {
-			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
-		}()
-
-		healthSet := newVer.HealthCheck != nil && !newVer.HealthCheck.IsEmpty()
-
-		for i, t := range pending {
-			if err := r.delTask(appId, t); err != nil {
-				return
+			var (
+				errmsg   string
+				opStatus = types.OpStatusCanaryUnfinished
+			)
+			if err != nil {
+				log.Errorf("canary update app %s error: %v", appId, err)
+				errmsg = fmt.Sprintf("canary update error: %v", err)
+			}
+			if progress >= total {
+				opStatus = types.OpStatusNoop
 			}
 
-			cfg := types.NewTaskConfig(newVer, i+new)
+			r.memoAppStatus(appId, opStatus, errmsg)
+		}()
+
+		for i, t := range pending {
+			progress = new + i + 1
+
+			// remove old task
+			if err = r.delTask(appId, t); err != nil {
+				err = fmt.Errorf("remove old task %s error: %v", t.ID, err)
+				return
+			}
 
 			var (
 				name    = t.Name
@@ -868,6 +886,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				retries = restart.Retries
 			}
 
+			// db save new task
 			task := &types.Task{
 				ID:         id,
 				Name:       name,
@@ -878,26 +897,23 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				Created:    t.Created,
 				Updated:    time.Now(),
 			}
-
-			if healthSet {
+			if newVer.IsHealthSet() {
 				task.Healthy = types.TaskUnHealthy
 			}
 
-			if err := r.db.CreateTask(appId, task); err != nil {
-				log.Errorf("create task failed: %s", err)
+			if err = r.db.CreateTask(appId, task); err != nil {
+				err = fmt.Errorf("create db task %s error: %v", id, err)
 				return
 			}
 
+			// launch new runtime task
+			cfg := types.NewTaskConfig(newVer, i+new)
 			m := mesos.NewTask(cfg, task.ID, task.Name)
-
 			tasks := []*mesos.Task{m}
 
-			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
-				log.Errorf("launch task %s got error: %v", id, launchErr)
-
+			if err = r.driver.LaunchTasks(tasks); err != nil {
 				task.Status = "Failed"
-				task.ErrMsg = launchErr.Error()
-
+				task.ErrMsg = err.Error()
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
 				}
@@ -905,10 +921,9 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				if onfailure == types.CanaryUpdateOnFailureStop {
 					return
 				}
-
 			}
 
-			// notify proxy
+			// TODO notify proxy
 
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
@@ -948,7 +963,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusRollback, "", 0); err != nil {
+	if err := r.memoAppStatus(appId, types.OpStatusRollback, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
 		return
 	}
@@ -989,7 +1004,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 
 	go func() {
 		defer func() {
-			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+			r.memoAppStatus(appId, types.OpStatusNoop, "")
 		}()
 
 		for i, t := range tasks {
@@ -1410,13 +1425,13 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusRollback, "", 0); err != nil {
+	if err := r.memoAppStatus(appId, types.OpStatusRollback, ""); err != nil {
 		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	defer func() {
-		r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+		r.memoAppStatus(appId, types.OpStatusNoop, "")
 	}()
 
 	verId := req.Form.Get("version")
@@ -1580,9 +1595,9 @@ func (s *Server) delTask(appId string, task *types.Task) error {
 	return nil
 }
 
-// short hands to memo update App.OpStatus & App.ErrMsg & App.Progress
+// short hands to memo update App.OpStatus & App.ErrMsg
 // it's the caller responsibility to process the db error.
-func (r *Server) memoAppStatus(appId, op, errmsg string, progress int) error {
+func (r *Server) memoAppStatus(appId, op, errmsg string) error {
 	app, err := r.db.GetApp(appId)
 	if err != nil {
 		log.Errorf("memoAppStatus() get db app %s error: %v", appId, err)
@@ -1590,18 +1605,15 @@ func (r *Server) memoAppStatus(appId, op, errmsg string, progress int) error {
 	}
 
 	var (
-		prevOp  = app.OpStatus
-		prevPrg = app.Progress
+		prevOp = app.OpStatus
 	)
 
 	app.OpStatus = op
-	app.Progress = progress
 	app.ErrMsg = errmsg
 	app.UpdatedAt = time.Now()
 
 	if err := r.db.UpdateApp(app); err != nil {
-		log.Errorf("memoAppStatus() update app db status from %s(%d) -> %s(%d) error: %v",
-			prevOp, prevPrg, op, progress, err)
+		log.Errorf("memoAppStatus() update app db status from %s -> %s error: %v", prevOp, op, err)
 		return err
 	}
 

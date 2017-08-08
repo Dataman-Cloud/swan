@@ -139,9 +139,11 @@ type Gateway struct {
 	Weight  float64 `json:"weight,omitempty"`
 }
 
+func (v *Version) IsHealthSet() bool {
+	return v.HealthCheck != nil && !v.HealthCheck.IsEmpty()
+}
+
 // AddLabel adds a label to the application
-//		name:	the name of the label
-//		value: value for this label
 func (v *Version) AddLabel(name, value string) *Version {
 	if v.Labels == nil {
 		v.EmptyLabels()
@@ -151,9 +153,7 @@ func (v *Version) AddLabel(name, value string) *Version {
 	return v
 }
 
-// EmptyLabels explicitly empties the labels -- use this if you need to empty
-// the labels of an application that already has labels set (setting labels to nil will
-// keep the current value)
+// EmptyLabels explicitly empties the labels
 func (v *Version) EmptyLabels() *Version {
 	v.Labels = map[string]string{}
 

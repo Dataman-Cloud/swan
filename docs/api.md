@@ -64,7 +64,6 @@ Example response:
     "name": "nginx0r1",
     "alias": "",
     "runAs": "xcm",
-    "priority": 0,
     "cluster": "dataman",
     "operationStatus": "noop",
     "tasks": [
@@ -96,7 +95,6 @@ Example response:
         "disk": 0,
         "instances": 1,
         "runAs": "xcm",
-        "priority": 100,
         "container": {
           "type": "DOCKER",
           "docker": {
@@ -172,7 +170,6 @@ Example request:
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
-  "priority": 100,
   "instances": 10,
   "constraints": [],
   "container": {
@@ -258,7 +255,6 @@ Content-Type: application/json
     "name":"nginx0r2",
     "alias":"",
     "runAs":"xcm",
-    "priority":0,
     "cluster":"dataman",
     "operationStatus":"noop",
     "tasks":[
@@ -290,7 +286,6 @@ Content-Type: application/json
             "disk":0,
             "instances":1,
             "runAs":"xcm",
-            "priority":100,
             "container":{
                 "type":"DOCKER",
                 "docker":{
@@ -404,7 +399,6 @@ Example request:
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
-  "priority": 100,
   "instances": 10,
   "constraints": [],
   "container": {
@@ -540,7 +534,6 @@ Content-Type: application/json
         "mem": 32,
         "disk": 0,
         "runAs": "xcm",
-        "priority": 100,
         "instances": 10,
         "constraints": [],
         "container": {
@@ -623,6 +616,43 @@ Example response:
   HTTP/1.1 202 Accepted 
 ```
 
+```json
+{
+  "id": "demo.default.bbk.dataman-mesos",
+  "name": "demo",
+  "runAs": "bbk",
+  "cluster": "dataman-mesos",
+  "operationStatus": "canary_unfinished", // canary_updating, canary_unfinished, noop
+  "progress": 3,						  // task progress count
+  "progress_details": {					  // task progress details
+    "106af6135cf0.0.demo.default.bbk.dataman-mesos": true,
+    "1a0959454228.2.demo.default.bbk.dataman-mesos": true,
+    "641a0ad32e5b.4.demo.default.bbk.dataman-mesos": false,
+    "6dd5300ad5e5.3.demo.default.bbk.dataman-mesos": false,
+    "a33c06d46e3e.1.demo.default.bbk.dataman-mesos": true
+  },
+  "task_count": 5,
+  "currentVersion": [
+    "1502183593944171595",
+    "1502183799949971040"
+  ],
+  "version_count": 3,
+  "status": "available",
+  "tasks_status": {
+    "TASK_RUNNING": 5
+  },
+  "health": {
+    "total": 5,
+    "healthy": 5,
+    "unhealthy": 0,
+    "unset": 0
+  },
+  "errmsg": "",
+  "created": "2017-08-08T17:12:25.979196132+08:00",
+  "updated": "2017-08-08T17:16:58.704153869+08:00"
+}
+```
+
 
 #### List all versions for a app
 
@@ -647,7 +677,6 @@ Content-Type: application/json
     "disk": 0,
     "instances": 1,
     "runAs": "xcm",
-    "priority": 100,
     "container": {
       "type": "DOCKER",
       "docker": {
@@ -745,7 +774,6 @@ Content-Type: application/json
   "disk": 0,
   "instances": 1,
   "runAs": "xcm",
-  "priority": 100,
   "container": {
     "type": "DOCKER",
     "docker": {
@@ -806,7 +834,6 @@ Example request:
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
-  "priority": 100,
   "instances": 10,
   "constraints": [],
   "container": {

@@ -178,7 +178,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 			}
 
 			// mark app status
-			r.memoAppStatus(appId, types.OpStatusNoop, "", 0)
+			r.memoAppStatus(appId, types.OpStatusNoop, "")
 		}
 	}()
 
