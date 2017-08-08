@@ -157,6 +157,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		task.ErrMsg = status.GetReason().String() + ":" + status.GetMessage()
 	}
 
+	// reset task failed retry time to zero
+	if state == mesosproto.TaskState_TASK_RUNNING {
+		task.Retries = 0
+	}
+
 	// memo db update
 	if err := s.db.UpdateTask(appId, task); err != nil {
 		log.Errorf("update task status error: %v, %s", err, state.String())
@@ -230,10 +235,12 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	// reschedule failed tasks
-	if state != mesosproto.TaskState_TASK_RUNNING {
-		if len(task.Histories) >= task.MaxRetries {
+	if state != mesosproto.TaskState_TASK_STAGING &&
+		state != mesosproto.TaskState_TASK_STARTING &&
+		state != mesosproto.TaskState_TASK_RUNNING {
+		if task.Retries >= task.MaxRetries {
 			// no more retry
-			log.Debugln("task", taskId, "maxRetries:", task.MaxRetries, "retries:", len(task.Histories))
+			log.Debugln("task", taskId, "maxRetries:", task.MaxRetries, "retries:", task.Retries)
 			return
 		}
 
