@@ -932,15 +932,16 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	cfg := types.NewTaskConfig(ver, idx)
 
 	var (
-		name      = taskName
-		id        = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
-		healthSet = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
-		restart   = ver.RestartPolicy
-		retries   = 3
+		name       = taskName
+		id         = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
+		healthSet  = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
+		restart    = ver.RestartPolicy
+		retries    = task.Retries
+		maxRetries = 3
 	)
 
-	if restart != nil && restart.Retries > retries {
-		retries = restart.Retries
+	if restart != nil && restart.Retries > maxRetries {
+		maxRetries = restart.Retries
 	}
 
 	dbtask := &types.Task{
@@ -950,7 +951,8 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		Status:     "retrying",
 		Version:    verId,
 		Healthy:    types.TaskHealthyUnset,
-		MaxRetries: retries,
+		Retries:    retries + 1,
+		MaxRetries: maxRetries,
 		Created:    time.Now(),
 		Updated:    time.Now(),
 	}
@@ -959,7 +961,13 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		dbtask.Healthy = types.TaskUnHealthy
 	}
 
-	for _, history := range task.Histories {
+	histories := task.Histories
+
+	if len(histories) >= maxRetries {
+		histories = histories[1:]
+	}
+
+	for _, history := range histories {
 		dbtask.Histories = append(dbtask.Histories, history)
 	}
 
