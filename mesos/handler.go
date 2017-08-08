@@ -201,6 +201,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 			sticky = ver.Proxy.Sticky
 		}
 
+		var taskPort uint64
+		if len(task.Ports) > 0 { // currently only support the first port within proxy & events
+			taskPort = task.Ports[0]
+		}
+
 		taskEv := &types.TaskEvent{
 			Type:           evType,
 			AppID:          appId,
@@ -209,7 +214,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 			AppSticky:      sticky,
 			TaskID:         taskId,
 			IP:             task.IP,
-			Port:           task.Port,
+			Port:           taskPort,
 			Weight:         task.Weight,
 			GatewayEnabled: proxyEnabled,
 		}
