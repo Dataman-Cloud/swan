@@ -56,13 +56,18 @@ func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
 				proxyEnabled = ver.Proxy.Enabled
 			}
 
+			var taskPort uint64
+			if len(task.Ports) > 0 {
+				taskPort = task.Ports[0] // currently only support the first port within proxy & events
+			}
+
 			taskEv := &types.TaskEvent{
 				Type:           evType,
 				AppID:          app.ID,
 				AppAlias:       alias,
 				TaskID:         task.ID,
 				IP:             task.IP,
-				Port:           task.Port,
+				Port:           taskPort,
 				Weight:         task.Weight,
 				GatewayEnabled: proxyEnabled,
 			}

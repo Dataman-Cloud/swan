@@ -21,7 +21,7 @@ type Task struct {
 	ID            string    `json:"id"`
 	Name          string    `json:"name"`
 	IP            string    `json:"ip"`
-	Port          uint64    `json:"port"`
+	Ports         []uint64  `json:"ports"`
 	Healthy       string    `json:"healthy"`
 	Weight        float64   `json:"weight"`
 	AgentId       string    `json:"agentId"`
@@ -62,7 +62,7 @@ type TaskConfig struct {
 	Mem            float64           `json:"mem"`
 	Disk           float64           `json:"disk"`
 	IP             string            `json:"ip"`
-	Port           uint64            `json:"ports"`
+	Ports          []uint64          `json:"ports"`
 	Image          string            `json:"image"`
 	Command        string            `json:"cmd"`
 	Privileged     bool              `json:"privileged"`
@@ -206,10 +206,10 @@ func (c *TaskConfig) portMappings() []*mesosproto.ContainerInfo_DockerInfo_PortM
 	)
 
 	if c.Network == "bridge" {
-		for _, m := range pms {
+		for idx, m := range pms {
 			dpms = append(dpms,
 				&mesosproto.ContainerInfo_DockerInfo_PortMapping{
-					HostPort:      proto.Uint32(uint32(c.Port)),
+					HostPort:      proto.Uint32(uint32(c.Ports[idx])),
 					ContainerPort: proto.Uint32(uint32(m.ContainerPort)),
 					Protocol:      proto.String(m.Protocol),
 				})
@@ -327,7 +327,7 @@ func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 		})
 	}
 
-	for _, pm := range c.PortMappings {
+	for idx, pm := range c.PortMappings {
 		switch c.Network {
 		case "host":
 			if pm.HostPort == 0 {
@@ -337,15 +337,15 @@ func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 					Ranges: &mesosproto.Value_Ranges{
 						Range: []*mesosproto.Value_Range{
 							{
-								Begin: proto.Uint64(c.Port),
-								End:   proto.Uint64(c.Port),
+								Begin: proto.Uint64(c.Ports[idx]),
+								End:   proto.Uint64(c.Ports[idx]),
 							},
 						},
 					},
 				})
 			}
 
-			c.Env[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(pm.Name))] = fmt.Sprintf("%d", c.Port)
+			c.Env[fmt.Sprintf("SWAN_HOST_PORT_%s", strings.ToUpper(pm.Name))] = fmt.Sprintf("%d", c.Ports[idx])
 		case "bridge":
 			rs = append(rs, &mesosproto.Resource{
 				Name: proto.String("ports"),
@@ -353,8 +353,8 @@ func (c *TaskConfig) BuildResources() []*mesosproto.Resource {
 				Ranges: &mesosproto.Value_Ranges{
 					Range: []*mesosproto.Value_Range{
 						{
-							Begin: proto.Uint64(c.Port),
-							End:   proto.Uint64(c.Port),
+							Begin: proto.Uint64(c.Ports[idx]),
+							End:   proto.Uint64(c.Ports[idx]),
 						},
 					},
 				},

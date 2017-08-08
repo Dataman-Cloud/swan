@@ -803,10 +803,15 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 		ports = append(ports, offer.GetPorts()...)
 	}
 
-	for i, task := range tasks {
-		if i < len(ports) {
-			task.cfg.Port = ports[i]
+	var idx int
+	for _, task := range tasks {
+		num := len(task.cfg.PortMappings)
+		if idx+num > len(ports) {
+			return errors.New("no enough ports avaliable")
 		}
+
+		task.cfg.Ports = ports[idx : idx+num]
+		idx += num
 
 		task.AgentId = &mesosproto.AgentID{
 			Value: proto.String(offers[0].GetAgentId()),
@@ -817,23 +822,23 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 
 	appId := strings.SplitN(tasks[0].GetName(), ".", 2)[1]
 
+	// memo update each db tasks' AgentID, IP, Port ...
 	for _, t := range tasks {
-		task, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
+		dbtask, err := s.db.GetTask(appId, t.GetTaskId().GetValue())
 		if err != nil {
 			log.Errorln("get task got error: %v", err)
 			continue
 		}
 
-		task.AgentId = t.AgentId.GetValue()
-		task.IP = t.cfg.IP
-
-		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
-			task.IP = offers[0].GetHostname()
+		dbtask.AgentId = t.AgentId.GetValue()
+		dbtask.IP = t.cfg.IP                                      // fixed ip (user specified)
+		if t.cfg.Network == "host" || t.cfg.Network == "bridge" { // mesos slave node IP
+			dbtask.IP = offers[0].GetHostname()
 		}
 
-		task.Port = t.cfg.Port
+		dbtask.Ports = t.cfg.Ports
 
-		if err := s.db.UpdateTask(appId, task); err != nil {
+		if err := s.db.UpdateTask(appId, dbtask); err != nil {
 			log.Errorln("update task got error: %v", err)
 			continue
 		}
