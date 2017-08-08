@@ -165,6 +165,53 @@ func (g *gatherer) ips() error {
 	return nil
 }
 
+func (g *gatherer) osListenings() error {
+	var (
+		tcpf, tcp6f = "/proc/net/tcp", "/proc/net/tcp6"
+		bufReader   = bufio.NewReader(nil)
+	)
+	defer bufReader.Reset(nil)
+
+	for _, file := range []string{tcpf, tcp6f} {
+		f, err := os.Open(file)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+
+		bufReader.Reset(f)
+		for {
+			line, err := bufReader.ReadString('\n')
+			if err != nil {
+				break
+			}
+
+			parts := strings.Fields(line)
+			if len(parts) < 4 {
+				continue
+			}
+
+			if parts[3] != "0A" {
+				continue
+			}
+
+			parts = strings.SplitN(parts[1], ":", 2)
+			if len(parts) != 2 {
+				continue
+			}
+
+			listening, err := strconv.ParseInt(parts[1], 16, 32)
+			if err != nil {
+				continue
+			}
+
+			g.info.Listenings = append(g.info.Listenings, listening)
+		}
+	}
+
+	return nil
+}
+
 func (g *gatherer) containers() error {
 	return nil // TODO
 }
@@ -181,6 +228,7 @@ func Gather() (*types.SysInfo, error) {
 		g.memory,
 		g.ips,
 		g.containers,
+		g.osListenings,
 	}
 
 	for _, fun := range funcs {

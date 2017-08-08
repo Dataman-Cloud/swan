@@ -1,33 +1,43 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 
+	"github.com/Dataman-Cloud/swan/types"
 	log "github.com/Sirupsen/logrus"
 	"github.com/gorilla/mux"
 )
 
 func (r *Server) listAgents(w http.ResponseWriter, req *http.Request) {
-	ret := r.driver.ClusterAgents()
+	var ret = map[string]interface{}{}
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAgentInfo(id)
+		if err != nil {
+			ret[id] = err.Error()
+		} else {
+			ret[id] = info
+		}
+	}
 	writeJSON(w, http.StatusOK, ret)
 }
 
 func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
 	var (
-		id    = mux.Vars(req)["agent_id"]
-		agent = r.driver.ClusterAgent(id)
+		id = mux.Vars(req)["agent_id"]
 	)
 
-	if agent == nil {
-		http.Error(w, "no such agent: "+id, http.StatusNotFound)
+	info, err := r.getAgentInfo(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/sysinfo", id), nil)
-	r.proxyAgentHandle(id, agentReq, w)
+	writeJSON(w, http.StatusOK, info)
 }
 
 func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
@@ -116,4 +126,22 @@ func (r *Server) proxyAgent(id string, req *http.Request) (*http.Response, error
 	log.Printf("proxying agent request: %s", req.URL.String())
 
 	return agent.Client().Do(req)
+}
+
+func (r *Server) getAgentInfo(id string) (*types.SysInfo, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/sysinfo", id), nil)
+	resp, err := r.proxyAgent(id, agentReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if code := resp.StatusCode; code != 200 {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%d - %s", code, string(bs))
+	}
+
+	var info *types.SysInfo
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	return info, err
 }

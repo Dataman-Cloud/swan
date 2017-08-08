@@ -10,6 +10,7 @@ type SysInfo struct {
 	Memory     MemoryInfo          `json:"memory"`
 	Containers ContainersInfo      `json:"containers"`
 	IPs        map[string][]string `json:"ips"` // inet name -> ips
+	Listenings []int64             `json:"listenings"`
 }
 
 type MemoryInfo struct {

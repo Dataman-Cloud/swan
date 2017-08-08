@@ -36,6 +36,10 @@
   - [GET /v1/debug/dump](#dump)
   - [GET /v1/debug/load](#load)
 
++ agents
+  - [GET /v1/agents](#agents)
+  - [GET /v1/agents/{agent_id}](#agent)
+
 + reset 
   - [POST /v1/apps/{app_id}/reset](#reset)
 
@@ -1009,4 +1013,122 @@ Example response:
     "previous": "scaling",
     "current": "noop"
 }
+```
 
+
+### agents
+
+```
+GET /v1/agents
+GET /v1/agents/{agent_id}
+```
+
+```json
+{
+  "3264208446845635": {
+    "hostname": "master",
+    "os": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n",
+    "uptime": "34909.000000",
+    "unixtime": 1502193274,
+    "loadavg": 0.31,
+    "cpu": {
+      "processor": 4,
+      "physical": 4,
+      "used": 2.174071913836869
+    },
+    "memory": {
+      "total": 3975307264,
+      "used": 1428484096
+    },
+    "containers": {
+      "total": 0,
+      "running": 0,
+      "stopped": 0,
+      "killed": 0,
+      "paused": 0
+    },
+    "ips": {
+      "docker0": [
+        "172.17.0.1"
+      ],
+      "enp0s3": [
+        "192.168.1.117",
+        "192.168.1.196"
+      ]
+    },
+    "listenings": [
+      2379,
+      2380,
+      9999,
+      80,
+      10000,
+      10001,
+      57489,
+      47220,
+      22,
+      52921,
+      5050,
+      5051,
+      34237,
+      514,
+      60326,
+      9900,
+      22,
+      31000,
+      31001,
+      443,
+      31004,
+      31005,
+      31006,
+      31007,
+      31008,
+      31009,
+      31010,
+      9090,
+      514,
+      31011,
+      38883,
+      2181
+    ]
+  },
+  "3981314045636649": {
+    "hostname": "node1",
+    "os": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n",
+    "uptime": "34906.000000",
+    "unixtime": 1502193275,
+    "loadavg": 0,
+    "cpu": {
+      "processor": 4,
+      "physical": 4,
+      "used": 0.11925134971008333
+    },
+    "memory": {
+      "total": 3975307264,
+      "used": 186720256
+    },
+    "containers": {
+      "total": 0,
+      "running": 0,
+      "stopped": 0,
+      "killed": 0,
+      "paused": 0
+    },
+    "ips": {
+      "docker0": [
+        "172.17.0.1"
+      ],
+      "enp0s3": [
+        "192.168.1.130"
+      ]
+    },
+    "listenings": [
+      80,
+      22,
+      5051,
+      9900,
+      22,
+      443
+    ]
+  }
+}
+```
