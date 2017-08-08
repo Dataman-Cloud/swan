@@ -71,6 +71,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	app.TasksStatus = zk.tasksStatus(tasks)
 	app.Version = zk.version(tasks)
 	app.Health = zk.health(tasks)
+	app.Progress, app.ProgressDetails = zk.progress(tasks)
 
 	versions, err := zk.versions(p, id)
 	if err != nil {
@@ -224,6 +225,27 @@ func (zk *ZKStore) tasksStatus(tasks types.TaskList) map[string]int {
 		ret[task.Status]++
 	}
 	return ret
+}
+
+func (zk *ZKStore) progress(tasks types.TaskList) (int, map[string]bool) {
+	versions := zk.version(tasks)
+	if len(versions) < 2 {
+		return -1, nil
+	}
+
+	var (
+		n int
+		m = map[string]bool{}
+	)
+	for _, task := range tasks {
+		if task.Version == versions[1] {
+			n++
+			m[task.ID] = true
+		} else {
+			m[task.ID] = false
+		}
+	}
+	return n, m
 }
 
 func (zk *ZKStore) health(tasks types.TaskList) *types.Health {
