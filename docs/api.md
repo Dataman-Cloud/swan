@@ -599,21 +599,21 @@ Content-Type: application/json
             "onfailure": "continue"
         }
     },
-    "Instances": 5,
-    "Value": 0.1,
-    "Delay": 5,
-    "OnFailure": "stop"
+    "instances": 5,
+    "value": 0.1,
+    "delay": 5,
+    "onFailure": "stop"
 }
 ```
 Json Parameters:
 ```
-Version: (types.Version) the new version to be updated to, can be empty(null).
+version: (types.Version) the new version to be updated to, can be empty(null).
 
-Instances: (int) the task count to be updated to new version.
+instances: (int) the task count to be updated to new version.
 
-Delay: (float) the delay seconds between two updates.
+delay: (float) the delay seconds between two updates.
 
-OnFailure:(string) the action when update failed.
+onFailure:(string) the action when update failed.
 ```
 Example response:
 ```

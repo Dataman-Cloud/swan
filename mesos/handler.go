@@ -72,6 +72,27 @@ func (s *Scheduler) rescindedHandler(event *mesosproto.Event) {
 	}
 }
 
+// we use this in task update event handler to ensure removed db objects'
+// dns & proxy records could be cleaned up
+func (s *Scheduler) broadCastCleanupEvents(appId, taskId string) {
+	log.Debugln("broadcast task unhealthy evnets for not exists app or tasks")
+
+	taskEv := &types.TaskEvent{
+		Type:           types.EventTypeTaskUnhealthy,
+		AppID:          appId,
+		TaskID:         taskId,
+		GatewayEnabled: true, // set true to clean up agent's potential outdated proxy records
+	}
+
+	if err := s.eventmgr.broadcast(taskEv); err != nil {
+		log.Errorln("broadcast task event got error:", err)
+	}
+
+	if err := s.broadcastEventRecords(taskEv); err != nil {
+		log.Errorln("broadcast to sync proxy & dns records error:", err)
+	}
+}
+
 func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	var (
 		status  = event.GetUpdate().GetStatus()
@@ -83,36 +104,25 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
 
-	var appId string
 	// get appId
+	var appId string
 	parts := strings.SplitN(taskId, ".", 3)
 	if len(parts) >= 3 {
 		appId = parts[2]
 	}
 
+	// obtain db app op status
 	ops, err := s.db.GetAppOpStatus(appId)
-	if err != nil || ops == types.OpStatusDeleting || ops == types.OpStatusStopping {
-		log.Debugln("Sending task unhealth event only.")
-		taskEv := &types.TaskEvent{
-			Type:   types.EventTypeTaskUnhealthy,
-			AppID:  appId,
-			TaskID: taskId,
-		}
-
-		if err := s.eventmgr.broadcast(taskEv); err != nil {
-			log.Errorln("broadcast task event got error:", err)
-		}
-
-		if err := s.broadcastEventRecords(taskEv); err != nil {
-			log.Errorln("broadcast to sync proxy & dns records error:", err)
-		}
-
+	if err != nil {
+		log.Errorf("find app op status got error: %v. app %s", err, appId)
 		return
 	}
 
 	// obtain db task & update
 	task, err := s.db.GetTask(appId, taskId)
 	if err != nil {
+		s.broadCastCleanupEvents(appId, taskId)
+		log.Errorf("find task got error: %v. task %s", err, taskId)
 		return
 	}
 
@@ -130,12 +140,6 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		if cname := cinfos[0].Name; cname != "" {
 			task.ContainerName = cname
 		}
-	}
-
-	ver, err := s.db.GetVersion(appId, task.Version) // task corresponding version
-	if err != nil {
-		log.Errorf("find task version got error: %v. task %s, version %s", err, task.ID, task.Version)
-		return
 	}
 
 	var (
@@ -162,9 +166,20 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		task.Retries = 0
 	}
 
-	// memo db update
+	// memo db update db task
 	if err := s.db.UpdateTask(appId, task); err != nil {
+		if s.db.IsErrNotFound(err) {
+			s.broadCastCleanupEvents(appId, taskId)
+		}
 		log.Errorf("update task status error: %v, %s", err, state.String())
+		return
+	}
+
+	// obtain db task version
+	ver, err := s.db.GetVersion(appId, task.Version) // task corresponding version
+	if err != nil {
+		s.broadCastCleanupEvents(appId, taskId)
+		log.Errorf("find task version got error: %v. task %s, version %s", err, task.ID, task.Version)
 		return
 	}
 
@@ -234,6 +249,13 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		}
 	}
 
+	// FIXME enable reschedule only on app is running, creating, starting, scaling-up ...
+	switch ops {
+	case types.OpStatusNoop, types.OpStatusCreating, types.OpStatusStarting, types.OpStatusScalingUp:
+	default:
+		return
+	}
+
 	// reschedule failed tasks
 	if state != mesosproto.TaskState_TASK_STAGING &&
 		state != mesosproto.TaskState_TASK_STARTING &&
@@ -256,8 +278,6 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 
 		go s.rescheduleTask(appId, task)
 	}
-
-	return
 }
 
 func (s *Scheduler) heartbeatHandler(event *mesosproto.Event) {

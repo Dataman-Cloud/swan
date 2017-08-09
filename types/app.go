@@ -10,7 +10,8 @@ import (
 const (
 	OpStatusNoop             = "noop"
 	OpStatusCreating         = "creating"
-	OpStatusScaling          = "scaling"
+	OpStatusScalingUp        = "scaling_up"
+	OpStatusScalingDown      = "scaling_down"
 	OpStatusUpdating         = "updating"
 	OpStatusCanaryUpdating   = "canary_updating"
 	OpStatusCanaryUnfinished = "canary_unfinished"

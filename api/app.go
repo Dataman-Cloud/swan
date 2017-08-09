@@ -208,7 +208,7 @@ func (r *Server) getApp(w http.ResponseWriter, req *http.Request) {
 
 	app, err := r.db.GetApp(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "node does not exist") {
+		if r.db.IsErrNotFound(err) {
 			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
@@ -228,7 +228,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 	// get app
 	_, err := r.db.GetApp(appId)
 	if err != nil {
-		if strings.Contains(err.Error(), "node does not exist") {
+		if r.db.IsErrNotFound(err) {
 			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
 			return
 		}
@@ -336,12 +336,12 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusScaling, ""); err != nil {
-		http.Error(w, fmt.Sprintf("update app opstatus to scaling got error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
 	if goal < current { // scale dwon
+		if err := r.memoAppStatus(appId, types.OpStatusScalingDown, ""); err != nil {
+			http.Error(w, fmt.Sprintf("update app opstatus to scaling down error: %v", err), http.StatusInternalServerError)
+			return
+		}
+
 		go func() {
 			var err error
 
@@ -385,6 +385,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// scale up
+
 	version, err := r.db.GetVersion(appId, app.Version[0])
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -399,6 +400,10 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	if err := r.memoAppStatus(appId, types.OpStatusScalingUp, ""); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to scaling up error: %v", err), http.StatusInternalServerError)
+		return
+	}
 	go func() {
 		var err error
 
@@ -1285,7 +1290,7 @@ func (r *Server) deleteTasks(w http.ResponseWriter, req *http.Request) {
 
 	app, err := r.db.GetApp(appId)
 	if err != nil {
-		if strings.Contains(err.Error(), "node does not exist") {
+		if r.db.IsErrNotFound(err) {
 			http.Error(w, fmt.Sprintf("app %s not exists", appId), http.StatusNotFound)
 			return
 		}

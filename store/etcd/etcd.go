@@ -198,6 +198,10 @@ type MemberWrapper struct {
 	EndPoint string `json:"endpoint"`
 }
 
+func (s *EtcdStore) IsErrNotFound(err error) bool {
+	return isEtcdKeyNotFound(err)
+}
+
 func (s *EtcdStore) ClusterInfo() (EtcdClusterInfo, error) {
 	var eci = EtcdClusterInfo{}
 
