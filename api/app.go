@@ -802,7 +802,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 	}
 
 	if value == 0 {
-		http.Error(w, "canary value must between (0, 1)", http.StatusBadRequest)
+		http.Error(w, "canary value must between (0, 1]", http.StatusBadRequest)
 		return
 	}
 
@@ -835,12 +835,13 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		total = len(tasks)
 		goal  = new + count
 	)
+
 	if goal > total {
 		goal = total
 	}
 
-	pending := tasks[new:goal]
 	newWeight := utils.ComputeWeight(float64(goal), float64(total), value)
+	pending := tasks[:goal]
 
 	// mark app db status
 	if err := r.memoAppStatus(appId, types.OpStatusCanaryUpdating, ""); err != nil {
@@ -860,10 +861,12 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				errmsg   string
 				opStatus = types.OpStatusCanaryUnfinished
 			)
+
 			if err != nil {
 				log.Errorf("canary update app %s error: %v", appId, err)
 				errmsg = fmt.Sprintf("canary update error: %v", err)
 			}
+
 			if progress >= total {
 				opStatus = types.OpStatusNoop
 			}
@@ -872,7 +875,19 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		}()
 
 		for i, t := range pending {
-			progress = new + i + 1
+			progress = i + 1
+
+			if t.Version == newVer.ID {
+				t.Weight = newWeight
+
+				if uerr := r.db.UpdateTask(appId, t); uerr != nil {
+					err = fmt.Errorf("update task %s weight got error: %v", t.ID, uerr)
+					return
+				}
+				// TODO notify proxy
+
+				continue
+			}
 
 			// remove old task
 			if err = r.delTask(appId, t); err != nil {
