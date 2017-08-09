@@ -539,6 +539,7 @@ func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
 }
 
 func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.AgentID) error {
+	log.Printf("reconcile %d tasks", len(tasks))
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_RECONCILE.Enum(),
@@ -601,7 +602,12 @@ func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
 	return nil
 }
 
-func (s *Scheduler) reconcile() {
+func (s *Scheduler) runReconcile() {
+	var (
+		step  = int(s.cfg.ReconciliationStep)
+		delay = time.Duration(s.cfg.ReconciliationStepDelay) * time.Second
+	)
+
 	log.Println("Start task reconciliation with the Mesos master")
 
 	apps, err := s.db.ListApps()
@@ -610,74 +616,57 @@ func (s *Scheduler) reconcile() {
 		return
 	}
 
-	m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+	tasks := make([]*types.Task, 0)
+
 	for _, app := range apps {
-		tasks, err := s.db.ListTasks(app.ID)
+		ts, err := s.db.ListTasks(app.ID)
 		if err != nil {
 			log.Errorf("List tasks got error: %v", err)
 			continue
 		}
-		for _, task := range tasks {
-			m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
+
+		for _, t := range ts {
+			tasks = append(tasks, t)
 		}
 	}
-	if err := s.reconcileTasks(m); err != nil {
-		log.Errorf("reconcile tasks got error: %v", err)
+
+	var (
+		total = len(tasks)
+		send  = 0
+	)
+	log.Printf("%d tasks to be reconciled", total)
+
+	m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+	for _, task := range tasks {
+		taskID := &mesosproto.TaskID{Value: proto.String(task.ID)}
+		agentID := &mesosproto.AgentID{Value: proto.String(task.AgentId)}
+
+		m[taskID] = agentID
+
+		if len(m) >= step || (len(m)+send) >= total {
+			if err := s.reconcileTasks(m); err != nil {
+				log.Errorf("reconcile %d tasks got error: %v", len(m), err)
+			}
+
+			send += len(m)
+			m = make(map[*mesosproto.TaskID]*mesosproto.AgentID)
+			time.Sleep(delay)
+		}
 	}
 }
 
-func (s *Scheduler) startReconcile() {
+func (s *Scheduler) startReconcileLoop() {
 	var (
 		interval = time.Duration(s.cfg.ReconciliationInterval) * time.Second
-		step     = int(s.cfg.ReconciliationStep)
-		delay    = time.Duration(s.cfg.ReconciliationStepDelay) * time.Second
 	)
 
 	s.reconcileTimer = time.NewTicker(interval)
+
 	go func() {
+		s.runReconcile() // run reconcile once immediately on start up
+
 		for range s.reconcileTimer.C {
-			apps, err := s.db.ListApps()
-			if err != nil {
-				log.Errorf("List app got error for task reconcile. %v", err)
-				return
-			}
-
-			tasks := make([]*types.Task, 0)
-
-			for _, app := range apps {
-				tasks, err := s.db.ListTasks(app.ID)
-				if err != nil {
-					log.Errorf("List tasks got error: %v", err)
-					continue
-				}
-
-				for _, task := range tasks {
-					tasks = append(tasks, task)
-				}
-			}
-
-			var (
-				total = len(tasks)
-				send  = 0
-			)
-
-			m := make(map[*mesosproto.TaskID]*mesosproto.AgentID)
-
-			for _, task := range tasks {
-				m[&mesosproto.TaskID{Value: proto.String(task.ID)}] = &mesosproto.AgentID{Value: proto.String(task.AgentId)}
-
-				if len(m) >= step || (len(m)+send) >= total {
-					if err := s.reconcileTasks(m); err != nil {
-						log.Errorf("reconcile tasks got error: %v", err)
-					}
-
-					send += len(m)
-
-					m = make(map[*mesosproto.TaskID]*mesosproto.AgentID)
-
-					time.Sleep(delay)
-				}
-			}
+			s.runReconcile()
 		}
 	}()
 }
