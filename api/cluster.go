@@ -40,6 +40,11 @@ func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, info)
 }
 
+func (r *Server) closeAgent(w http.ResponseWriter, req *http.Request) {
+	id := mux.Vars(req)["agent_id"]
+	r.driver.CloseClusterAgent(id)
+}
+
 func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]

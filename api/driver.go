@@ -19,6 +19,7 @@ type Driver interface {
 
 	ClusterAgents() map[string]*mole.ClusterAgent
 	ClusterAgent(id string) *mole.ClusterAgent
+	CloseClusterAgent(id string)
 
 	// for debug convenience
 	Dump() interface{}
