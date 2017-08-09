@@ -801,7 +801,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		newVer = versions[0]
 	}
 
-	if value == 0 {
+	if value <= 0 || value > 1 {
 		http.Error(w, "canary value must between (0, 1]", http.StatusBadRequest)
 		return
 	}
@@ -836,8 +836,11 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 		goal  = new + count
 	)
 
-	if goal > total {
+	if goal >= total {
 		goal = total
+		if value != 1 {
+			value = 1
+		}
 	}
 
 	newWeight := utils.ComputeWeight(float64(goal), float64(total), value)
