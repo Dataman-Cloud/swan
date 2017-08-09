@@ -516,6 +516,13 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		}
 	}
 
+	// ensure dns & proxy records could be cleaned up
+	parts := strings.SplitN(taskId, ".", 3)
+	if len(parts) >= 3 {
+		appId := parts[2]
+		s.broadCastCleanupEvents(appId, taskId)
+	}
+
 	return nil
 }
 

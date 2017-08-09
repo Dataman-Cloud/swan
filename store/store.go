@@ -36,6 +36,8 @@ type Store interface {
 	UpdateCompose(ins *types.Compose) error // status, errmsg, updateAt
 	GetCompose(id string) (*types.Compose, error)
 	ListComposes() ([]*types.Compose, error)
+
+	IsErrNotFound(err error) bool
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

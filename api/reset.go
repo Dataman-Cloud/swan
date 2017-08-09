@@ -3,7 +3,6 @@ package api
 import (
 	"fmt"
 	"net/http"
-	"strings"
 
 	"github.com/Dataman-Cloud/swan/types"
 
@@ -15,7 +14,7 @@ func (r *Server) resetStatus(w http.ResponseWriter, req *http.Request) {
 	id := mux.Vars(req)["app_id"]
 	app, err := r.db.GetApp(id)
 	if err != nil {
-		if strings.Contains(err.Error(), "node does not exist") {
+		if r.db.IsErrNotFound(err) {
 			http.Error(w, fmt.Sprintf("app %s not exists", id), http.StatusNotFound)
 			return
 		}

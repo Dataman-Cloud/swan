@@ -60,6 +60,13 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	return zs, nil
 }
 
+func (zs *ZKStore) IsErrNotFound(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "node does not exist")
+}
+
 func (zs *ZKStore) initConnection() error {
 	hosts := strings.Split(zs.url.Host, ",")
 	conn, connCh, err := zk.Connect(hosts, 5*time.Second)

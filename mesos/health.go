@@ -47,29 +47,25 @@ func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
 			case types.TaskUnHealthy:
 			}
 
-			var (
-				alias        string
-				proxyEnabled bool
-			)
-			if ver.Proxy != nil {
-				alias = ver.Proxy.Alias
-				proxyEnabled = ver.Proxy.Enabled
-			}
-
-			var taskPort uint64
-			if len(task.Ports) > 0 {
-				taskPort = task.Ports[0] // currently only support the first port within proxy & events
-			}
-
 			taskEv := &types.TaskEvent{
-				Type:           evType,
-				AppID:          app.ID,
-				AppAlias:       alias,
-				TaskID:         task.ID,
-				IP:             task.IP,
-				Port:           taskPort,
-				Weight:         task.Weight,
-				GatewayEnabled: proxyEnabled,
+				Type:   evType,
+				AppID:  app.ID,
+				TaskID: task.ID,
+				IP:     task.IP,
+				Weight: task.Weight,
+			}
+
+			var proxyEnabled bool
+			if ver.Proxy != nil {
+				proxyEnabled = ver.Proxy.Enabled
+				taskEv.GatewayEnabled = ver.Proxy.Enabled
+				taskEv.AppAlias = ver.Proxy.Alias
+				taskEv.AppListen = ver.Proxy.Listen
+				taskEv.AppSticky = ver.Proxy.Sticky
+			}
+
+			if len(task.Ports) > 0 {
+				taskEv.Port = task.Ports[0] // currently only support the first port within proxy & events
 			}
 
 			cmb := &types.CombinedEvents{

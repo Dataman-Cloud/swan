@@ -23,16 +23,16 @@ type CombinedEvents struct {
 type TaskEvent struct {
 	Type           string  `json:"type"`
 	AppID          string  `json:"app_id"`
-	AppAlias       string  `json:"app_alias"`
-	AppListen      string  `json:"app_listen"`
-	AppSticky      bool    `json:"app_sticky"`
+	AppAlias       string  `json:"app_alias"`  // for proxy
+	AppListen      string  `json:"app_listen"` // for proxy
+	AppSticky      bool    `json:"app_sticky"` // for proxy
 	VersionID      string  `json:"version_id"`
 	AppVersion     string  `json:"app_version"`
 	TaskID         string  `json:"task_id"`
 	IP             string  `json:"task_ip"`
 	Port           uint64  `json:"task_port"`
 	Weight         float64 `json:"weihgt"`
-	GatewayEnabled bool    `json:"gateway"`
+	GatewayEnabled bool    `json:"gateway"` // for proxy
 }
 
 // Format format task events to SSE text
