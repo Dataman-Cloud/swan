@@ -32,7 +32,7 @@ func (s *Scheduler) subscribedHandler(event *mesosproto.Event) {
 		log.Errorf("update frameworkid got error:%s", err)
 	}
 
-	s.startReconcile()
+	s.startReconcileLoop()
 }
 
 func (s *Scheduler) offersHandler(event *mesosproto.Event) {
