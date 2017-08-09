@@ -102,7 +102,8 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		data    = status.GetData()
 	)
 
-	log.Debugf("Received status update %s for task %s %s %s", status.GetState(), taskId, status.GetReason().String(), status.GetMessage())
+	log.Debugf("Received status update %s(%v) for task:%s, reason:%s, message:%s",
+		status.GetState(), healthy, taskId, status.GetReason().String(), status.GetMessage())
 
 	// get appId
 	var appId string
@@ -171,7 +172,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		if s.db.IsErrNotFound(err) {
 			s.broadCastCleanupEvents(appId, taskId)
 		}
-		log.Errorf("update task status error: %v, %s", err, state.String())
+		log.Errorf("update task %d db status to %s error: %v", taskId, state.String(), err)
 		return
 	}
 
