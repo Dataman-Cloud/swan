@@ -484,21 +484,22 @@ func (c *TaskConfig) extra(id, name string) map[string]string {
 	var extra = map[string]string{
 		"SWAN_APP_ID":      parts[1],
 		"SWAN_APP_VERSION": c.Version,
-		"MESOS_TASK_ID":    id,
-		"PORTS":            strings.Join(ports, ","),
-		"HOST":             c.IP,
+		"SWAN_TASK_ID":     id,
+		"SWAN_TASK_NAME":   name,
+		"SWAN_PORTS":       strings.Join(ports, ","),
+		"SWAN_HOST":        c.IP,
 	}
 
 	// add PORT0, PORT1...
 	for i, port := range c.Ports {
-		idx := "PORT" + fmt.Sprint(i)
+		idx := "SWAN_PORT" + fmt.Sprint(i)
 		extra[idx] = fmt.Sprint(port)
 	}
 
 	// add  PORT_80, PORT_81...
 	for i, mapping := range c.PortMappings {
 		if len(c.Ports) > i {
-			idx := "PORT_" + fmt.Sprint(mapping.ContainerPort)
+			idx := "SWAN_PORT_" + fmt.Sprint(mapping.ContainerPort)
 			extra[idx] = fmt.Sprint(c.Ports[i])
 		}
 	}
