@@ -806,6 +806,11 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 			Value: proto.String(offers[0].GetAgentId()),
 		}
 
+		// Set IP for build. Host or Bridge mode use mesos agent IP.
+		if task.cfg.IP == "" {
+			task.cfg.IP = offers[0].GetHostname()
+		}
+
 		task.Build()
 	}
 
@@ -820,11 +825,7 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 		}
 
 		dbtask.AgentId = t.AgentId.GetValue()
-		dbtask.IP = t.cfg.IP                                      // fixed ip (user specified)
-		if t.cfg.Network == "host" || t.cfg.Network == "bridge" { // mesos slave node IP
-			dbtask.IP = offers[0].GetHostname()
-		}
-
+		dbtask.IP = t.cfg.IP
 		dbtask.Ports = t.cfg.Ports
 
 		if err := s.db.UpdateTask(appId, dbtask); err != nil {

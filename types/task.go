@@ -80,6 +80,7 @@ type TaskConfig struct {
 	Env            map[string]string `json:"env"`
 	Constraints    []*Constraint     `json:"constraints"`
 	Proxy          *Proxy            `json:"proxy"`
+	Version        string            `json:"version"`
 }
 
 func NewTaskConfig(spec *Version, idx int) *TaskConfig {
@@ -104,6 +105,7 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 		Env:            spec.Env,
 		Constraints:    spec.Constraints,
 		Proxy:          spec.Proxy,
+		Version:        spec.ID,
 	}
 
 	// with user specified ip address
@@ -220,7 +222,7 @@ func (c *TaskConfig) portMappings() []*mesosproto.ContainerInfo_DockerInfo_PortM
 	return dpms
 }
 
-func (c *TaskConfig) parameters() []*mesosproto.Parameter {
+func (c *TaskConfig) parameters(id, name string) []*mesosproto.Parameter {
 	var (
 		ps  = c.Parameters
 		mps = make([]*mesosproto.Parameter, 0, 0)
@@ -254,10 +256,30 @@ func (c *TaskConfig) parameters() []*mesosproto.Parameter {
 		}
 	}
 
+	// add extra labels
+	extraLabels := c.extra(id, name)
+	for k, v := range extraLabels {
+		value := fmt.Sprintf("%s=%s", k, v)
+		mps = append(mps, &mesosproto.Parameter{
+			Key:   proto.String("label"),
+			Value: proto.String(value),
+		})
+	}
+
+	// add extra envs
+	extraEnvs := c.extra(id, name)
+	for k, v := range extraEnvs {
+		env := fmt.Sprintf("%s=%s", k, v)
+		mps = append(mps, &mesosproto.Parameter{
+			Key:   proto.String("env"),
+			Value: proto.String(env),
+		})
+	}
+
 	return mps
 }
 
-func (c *TaskConfig) BuildContainer() *mesosproto.ContainerInfo {
+func (c *TaskConfig) BuildContainer(id, name string) *mesosproto.ContainerInfo {
 	var (
 		image      = c.Image
 		privileged = c.Privileged
@@ -272,7 +294,7 @@ func (c *TaskConfig) BuildContainer() *mesosproto.ContainerInfo {
 			Privileged:     proto.Bool(privileged),
 			Network:        c.network(),
 			PortMappings:   c.portMappings(),
-			Parameters:     c.parameters(),
+			Parameters:     c.parameters(id, name),
 			ForcePullImage: proto.Bool(force),
 		},
 	}
@@ -432,21 +454,57 @@ func (c *TaskConfig) BuildKillPolicy() *mesosproto.KillPolicy {
 		},
 	}
 }
-func (c *TaskConfig) BuildLabels(name string) *mesosproto.Labels {
-	appId := strings.SplitN(name, ".", 2)[1]
+func (c *TaskConfig) BuildLabels(id, name string) *mesosproto.Labels {
+	extraLabels := c.extra(id, name)
 
-	labl := &mesosproto.Label{
-		Key:   proto.String("app_name"),
-		Value: proto.String(appId),
+	labels := make([]*mesosproto.Label, 0)
+
+	for k, v := range extraLabels {
+		label := &mesosproto.Label{
+			Key:   proto.String(k),
+			Value: proto.String(v),
+		}
+
+		labels = append(labels, label)
 	}
-
-	labls := make([]*mesosproto.Label, 0)
-
-	labls = append(labls, labl)
 
 	return &mesosproto.Labels{
-		Labels: labls,
+		Labels: labels,
 	}
+}
+
+func (c *TaskConfig) extra(id, name string) map[string]string {
+	parts := strings.SplitN(name, ".", 2)
+	var ports = []string{}
+	for _, port := range c.Ports {
+		s := fmt.Sprint(port)
+		ports = append(ports, s)
+	}
+
+	var extra = map[string]string{
+		"SWAN_APP_ID":      parts[1],
+		"SWAN_APP_VERSION": c.Version,
+		"SWAN_TASK_ID":     id,
+		"SWAN_TASK_NAME":   name,
+		"SWAN_PORTS":       strings.Join(ports, ","),
+		"SWAN_HOST":        c.IP,
+	}
+
+	// add PORT0, PORT1...
+	for i, port := range c.Ports {
+		idx := "SWAN_PORT" + fmt.Sprint(i)
+		extra[idx] = fmt.Sprint(port)
+	}
+
+	// add  PORT_80, PORT_81...
+	for i, mapping := range c.PortMappings {
+		if len(c.Ports) > i {
+			idx := "SWAN_PORT_" + fmt.Sprint(mapping.ContainerPort)
+			extra[idx] = fmt.Sprint(c.Ports[i])
+		}
+	}
+
+	return extra
 }
 
 type TaskSorter []*Task
