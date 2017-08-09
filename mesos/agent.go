@@ -115,6 +115,8 @@ func (s *Agent) Attributes() map[string]string {
 		for k, v := range offer.GetAttrs() {
 			attrs[k] = v
 		}
+		// add hostname(ip) as an extra attribute
+		attrs["hostname"] = offer.GetHostname()
 	}
 
 	return attrs

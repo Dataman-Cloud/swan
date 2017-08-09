@@ -2,6 +2,7 @@ package types
 
 import (
 	"fmt"
+	"regexp"
 )
 
 var supportedOperator = []string{"==", "!=", "~="}
@@ -48,5 +49,6 @@ func not(n, m string) bool {
 }
 
 func like(n, m string) bool {
-	return true
+	matched, _ := regexp.MatchString(n, m)
+	return matched
 }
