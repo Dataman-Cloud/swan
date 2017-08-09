@@ -168,6 +168,7 @@ func (sg ServiceGroup) Valid() error {
 	if len(sg) == 0 {
 		return errors.New("serviceGroup empty")
 	}
+
 	for name, srv := range sg {
 		if name == "" {
 			return errors.New("service name required")
@@ -182,6 +183,29 @@ func (sg ServiceGroup) Valid() error {
 			return fmt.Errorf("validate service %s error: %v", name, err)
 		}
 	}
+
+	// ensure uniq on proxy's alias & listen settings
+	seenAlias, seenListen := map[string]bool{}, map[string]bool{}
+	for name, srv := range sg {
+		if p := srv.Extra.Proxy; p != nil && p.Enabled {
+			var (
+				alias  = p.Alias
+				listen = p.Listen
+			)
+
+			if _, ok := seenAlias[alias]; ok {
+				return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+			}
+			seenAlias[alias] = true
+
+			if _, ok := seenListen[listen]; ok {
+				return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+			}
+			seenListen[listen] = true
+		}
+	}
+
+	// check dependency circled or not
 	return sg.circled()
 }
 

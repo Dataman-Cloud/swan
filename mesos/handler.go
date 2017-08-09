@@ -194,8 +194,8 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	// broadcasting task events
-	log.Debugf("task %s healthy & status: %s (%s) --> %s (%s)",
-		taskId, previousHealthy, previousStatus, task.Healthy, task.Status)
+	log.Debugf("task %s healthy & status: %s (%s) --> %s (%s) --> changed=%v",
+		taskId, previousHealthy, previousStatus, task.Healthy, task.Status, healthyChange)
 
 	if healthyChange { // skip on no-change
 		evType := types.EventTypeTaskUnhealthy
