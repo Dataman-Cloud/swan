@@ -38,7 +38,8 @@
 
 + agents
   - [GET /v1/agents](#agents)
-  - [GET /v1/agents/{agent_id}](#agent)
+  - [GET /v1/agents/{agent_id}]
+  - [DELETE /v1/agents/{agent_id}]
 
 + reset 
   - [POST /v1/apps/{app_id}/reset](#reset)

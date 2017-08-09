@@ -23,6 +23,10 @@ func (s *Scheduler) ClusterAgent(id string) *mole.ClusterAgent {
 	return s.clusterMaster.Agent(id)
 }
 
+func (s *Scheduler) CloseClusterAgent(id string) {
+	s.clusterMaster.CloseAgent(id)
+}
+
 type broadcastRes struct {
 	sync.Mutex
 	m [][2]string // agent-id, errmsg
