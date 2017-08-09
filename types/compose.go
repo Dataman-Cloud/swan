@@ -536,19 +536,27 @@ func (s *DockerService) parameters(dnsSearch, cName string) []*Parameter {
 	return ret
 }
 
+// note: nat.ParsePortSpecs() will make the original port disordered.
+// we have to reorder the returned bindings to make fit with mesos port assignments.
 func (s *DockerService) portMappings() ([]*PortMapping, error) {
-	_, binding, err := nat.ParsePortSpecs(s.Service.Ports)
-	if err != nil {
-		return nil, err
+	var orgPorts []nat.Port
+	for _, portSpec := range s.Service.Ports {
+		bindings, err := nat.ParsePortSpec(portSpec)
+		if err != nil {
+			return nil, err
+		}
+		for _, binding := range bindings {
+			orgPorts = append(orgPorts, binding.Port)
+		}
 	}
 
 	ret := make([]*PortMapping, 0, 0)
-	for k := range binding {
-		cp, _ := strconv.Atoi(k.Port())
+	for _, p := range orgPorts {
+		cp, _ := strconv.Atoi(p.Port())
 		ret = append(ret, &PortMapping{
 			Name:          fmt.Sprintf("%d", cp), // TODO
 			ContainerPort: int32(cp),
-			Protocol:      strings.ToUpper(k.Proto()),
+			Protocol:      strings.ToUpper(p.Proto()),
 		})
 	}
 
