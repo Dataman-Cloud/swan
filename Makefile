@@ -32,7 +32,7 @@ docker-centos:
 
 # compitable for legacy docker version
 docker-build:
-	docker run --rm \
+	docker run --name=buildswan --rm \
 		-w /go/src/github.com/Dataman-Cloud/swan \
 		-e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  \
 		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
@@ -57,7 +57,7 @@ rm-local-cluster:
 integration-prepare: rm-local-cluster local-cluster
 
 integration-test: integration-prepare
-	docker run --rm \
+	docker run --name=testswan --rm \
 		-w /go/src/github.com/Dataman-Cloud/swan/integration-test \
 		-e SWAN_HOST=$(shell docker inspect -f "{{.NetworkSettings.IPAddress}}" ${PRJNAME}_swan-master_1):9999 \
 		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
