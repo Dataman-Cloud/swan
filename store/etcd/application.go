@@ -1,6 +1,7 @@
 package etcd
 
 import (
+	"fmt"
 	"path"
 	"sort"
 
@@ -89,6 +90,10 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 	if err != nil {
 		log.Errorf("get app %s versions got error: %v", id, err)
 		return nil, err
+	}
+
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("app %s versions temporary not ready", id)
 	}
 
 	app.VersionCount = len(versions)
