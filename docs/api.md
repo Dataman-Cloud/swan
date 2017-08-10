@@ -17,6 +17,11 @@
   - [GET /v1/apps/{app_id}/versions](#list-all-versions-for-a-app) *List all versions for a app*
   - [GET /v1/apps/{app_id}/versions/{version_id}](#inspect-a-version) *Inpect a version*
 
++ dns/proxy/traffics
+  - [GET /v1/apps/{app_id}/dns](#list-all-dns-for-a-app) *List all dns records for a app*
+  - [GET /v1/apps/{app_id}/proxy](#list-all-proxy-for-a-app) *List all proxy records for a app*
+  - [GET /v1/apps/{app_id}/proxy/traffics](#list-all-traffics-for-a-app) *List all proxy traffics for a app*
+
 + compose
   - [compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)
 
@@ -953,6 +958,310 @@ Weight: the task weight
 Example response:
 ```
 HTTP/1.1 202 Accepted
+```
+
+#### List all dns for a app
+```
+GET /v1/apps/{app_id}/dns
+```
+
+```json
+{
+  "3264208446845635": [ // agent id
+    {
+      "clean_name": "2.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "872e5253d705.2.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31004",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "1.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "df98d3f720f2.1.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31002",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "0.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "b1a86b5f2b3f.0.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31000",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "4.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "35ff224db20c.4.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31008",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "3.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "7377d5c1cd9e.3.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31006",
+      "proxy_record": false,
+      "weight": 100
+    }
+  ],
+  "3981314045636649": [ // agent id
+    {
+      "clean_name": "2.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "872e5253d705.2.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31004",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "1.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "df98d3f720f2.1.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31002",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "0.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "b1a86b5f2b3f.0.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31000",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "4.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "35ff224db20c.4.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31008",
+      "proxy_record": false,
+      "weight": 100
+    },
+    {
+      "clean_name": "3.demo.default.bbk.dataman-mesos.bbklab.net.",
+      "id": "7377d5c1cd9e.3.demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "port": "31006",
+      "proxy_record": false,
+      "weight": 100
+    }
+  ]
+}
+```
+
+#### List all proxy for a app
+```
+GET /v1/apps/{app_id}/proxy
+```
+
+```json
+{
+  "3264208446845635": { // node id
+    "alias": "g.cn",
+    "listen": ":99",
+    "name": "demo.default.bbk.dataman-mesos",
+    "sticky": false
+    "backends": [
+      {
+        "clean_name": "2.demo.default.bbk.dataman-mesos",
+        "id": "872e5253d705.2.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31004,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "1.demo.default.bbk.dataman-mesos",
+        "id": "df98d3f720f2.1.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31002,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "0.demo.default.bbk.dataman-mesos",
+        "id": "b1a86b5f2b3f.0.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31000,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "4.demo.default.bbk.dataman-mesos",
+        "id": "35ff224db20c.4.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31008,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "3.demo.default.bbk.dataman-mesos",
+        "id": "7377d5c1cd9e.3.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31006,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      }
+    ]
+  },
+  "3981314045636649": { // node id
+    "alias": "g.cn",
+    "listen": ":99",
+    "name": "demo.default.bbk.dataman-mesos",
+    "sticky": false
+    "backends": [
+      {
+        "clean_name": "2.demo.default.bbk.dataman-mesos",
+        "id": "872e5253d705.2.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31004,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "1.demo.default.bbk.dataman-mesos",
+        "id": "df98d3f720f2.1.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31002,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "0.demo.default.bbk.dataman-mesos",
+        "id": "b1a86b5f2b3f.0.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31000,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "4.demo.default.bbk.dataman-mesos",
+        "id": "35ff224db20c.4.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31008,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      },
+      {
+        "clean_name": "3.demo.default.bbk.dataman-mesos",
+        "id": "7377d5c1cd9e.3.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31006,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100
+      }
+    ]
+  }
+}
+```
+
+#### List all traffics for a app
+```
+GET /v1/apps/{app_id}/proxy/traffics
+```
+
+```json
+{
+  "3264208446845635": { // node id
+    "35ff224db20c.4.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 1,
+      "requests_rate": 0,
+      "rx_bytes": 80,
+      "rx_rate": 0,
+      "tx_bytes": 851,
+      "tx_rate": 0,
+      "uptime": "11m15.219579111s"
+    },
+    "872e5253d705.2.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 1,
+      "requests_rate": 0,
+      "rx_bytes": 80,
+      "rx_rate": 0,
+      "tx_bytes": 851,
+      "tx_rate": 0,
+      "uptime": "11m15.909388496s"
+    }
+  },
+  "3981314045636649": { // node id
+    "35ff224db20c.4.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 5,
+      "requests_rate": 0,
+      "rx_bytes": 400,
+      "rx_rate": 0,
+      "tx_bytes": 4255,
+      "tx_rate": 0,
+      "uptime": "12m21.369988696s"
+    },
+    "7377d5c1cd9e.3.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 1,
+      "requests_rate": 0,
+      "rx_bytes": 80,
+      "rx_rate": 0,
+      "tx_bytes": 851,
+      "tx_rate": 0,
+      "uptime": "11m27.356938773s"
+    },
+    "872e5253d705.2.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 6,
+      "requests_rate": 0,
+      "rx_bytes": 480,
+      "rx_rate": 0,
+      "tx_bytes": 5106,
+      "tx_rate": 0,
+      "uptime": "12m20.339854227s"
+    },
+    "b1a86b5f2b3f.0.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 4,
+      "requests_rate": 0,
+      "rx_bytes": 320,
+      "rx_rate": 0,
+      "tx_bytes": 3404,
+      "tx_rate": 0,
+      "uptime": "12m20.029829649s"
+    },
+    "df98d3f720f2.1.demo.default.bbk.dataman-mesos": {
+      "active_clients": 0,
+      "requests": 2,
+      "requests_rate": 0,
+      "rx_bytes": 160,
+      "rx_rate": 0,
+      "tx_bytes": 1702,
+      "tx_rate": 0,
+      "uptime": "12m19.142783872s"
+    }
+  }
+}
 ```
 
 #### Ping

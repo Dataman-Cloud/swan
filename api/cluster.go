@@ -60,11 +60,6 @@ func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
 	r.proxyAgentHandle(id, agentReq, w)
 }
 
-func (r *Server) fullEventsAndRecords(w http.ResponseWriter, req *http.Request) {
-	ret := r.driver.FullTaskEventsAndRecords()
-	writeJSON(w, http.StatusOK, ret)
-}
-
 func (r *Server) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
 	n := len(`/v1/agents/docker/`) + 16
 	r.redirectAgent(n, w, req)
@@ -85,6 +80,62 @@ func (r *Server) redirectAgentIPAM(w http.ResponseWriter, req *http.Request) {
 	r.redirectAgent(n, w, req)
 }
 
+func (r *Server) getAppDNS(w http.ResponseWriter, req *http.Request) {
+	var (
+		appId = mux.Vars(req)["app_id"]
+		ret   = make(map[string]interface{})
+	)
+
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAppDNSInfo(id, appId)
+		if err != nil {
+			ret[id] = err.Error()
+		} else {
+			ret[id] = info
+		}
+	}
+
+	writeJSON(w, http.StatusOK, ret)
+}
+
+func (r *Server) getAppProxy(w http.ResponseWriter, req *http.Request) {
+	var (
+		appId = mux.Vars(req)["app_id"]
+		ret   = make(map[string]interface{})
+	)
+
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAppProxyInfo(id, appId)
+		if err != nil {
+			ret[id] = err.Error()
+		} else {
+			ret[id] = info
+		}
+	}
+
+	writeJSON(w, http.StatusOK, ret)
+}
+
+func (r *Server) getAppTraffics(w http.ResponseWriter, req *http.Request) {
+	var (
+		appId = mux.Vars(req)["app_id"]
+		ret   = make(map[string]interface{})
+	)
+
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAppTrafficInfo(id, appId)
+		if err != nil {
+			ret[id] = err.Error()
+		} else {
+			ret[id] = info
+		}
+	}
+
+	writeJSON(w, http.StatusOK, ret)
+}
+
+// utils
+//
 func (r *Server) redirectAgent(stripN int, w http.ResponseWriter, req *http.Request) {
 	var (
 		id    = mux.Vars(req)["agent_id"]
@@ -147,6 +198,60 @@ func (r *Server) getAgentInfo(id string) (*types.SysInfo, error) {
 	}
 
 	var info *types.SysInfo
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	return info, err
+}
+
+func (r *Server) getAppDNSInfo(agentId, appId string) ([]interface{}, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/dns/records/%s", agentId, appId), nil)
+	resp, err := r.proxyAgent(agentId, agentReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if code := resp.StatusCode; code != 200 {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%d - %s", code, string(bs))
+	}
+
+	var info []interface{}
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	return info, err
+}
+
+func (r *Server) getAppProxyInfo(agentId, appId string) (map[string]interface{}, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/proxy/upstreams/%s", agentId, appId), nil)
+	resp, err := r.proxyAgent(agentId, agentReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if code := resp.StatusCode; code != 200 {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%d - %s", code, string(bs))
+	}
+
+	var info map[string]interface{}
+	err = json.NewDecoder(resp.Body).Decode(&info)
+	return info, err
+}
+
+func (r *Server) getAppTrafficInfo(agentId, appId string) (map[string]interface{}, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/proxy/stats/%s", agentId, appId), nil)
+	resp, err := r.proxyAgent(agentId, agentReq)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if code := resp.StatusCode; code != 200 {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("%d - %s", code, string(bs))
+	}
+
+	var info map[string]interface{}
 	err = json.NewDecoder(resp.Body).Decode(&info)
 	return info, err
 }

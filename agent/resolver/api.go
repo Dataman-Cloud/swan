@@ -10,6 +10,18 @@ func (s *Resolver) ListRecords(c *gin.Context) {
 	c.JSON(200, s.allRecords())
 }
 
+func (s *Resolver) GetRecord(c *gin.Context) {
+	var (
+		id  = c.Param("id")
+		m   = s.allRecords()
+		ret = make([]*Record, 0)
+	)
+	if val, ok := m[id]; ok {
+		ret = val
+	}
+	c.JSON(200, ret)
+}
+
 func (s *Resolver) UpsertRecord(c *gin.Context) {
 	var record *Record
 	if err := c.BindJSON(&record); err != nil {
