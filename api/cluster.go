@@ -184,6 +184,28 @@ func (r *Server) proxyAgent(id string, req *http.Request) (*http.Response, error
 	return agent.Client().Do(req)
 }
 
+func (r *Server) getAgentsListenings() []int64 {
+	ls := make([]int64, 0)
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAgentInfo(id)
+		if err != nil {
+			continue
+		}
+		ls = append(ls, info.Listenings...)
+	}
+
+	// make uniq
+	seen := map[int64]bool{}
+	for _, l := range ls {
+		if _, ok := seen[l]; !ok {
+			ls[len(seen)] = l
+			seen[l] = true
+		}
+	}
+
+	return ls[:len(seen)] // re-slice
+}
+
 func (r *Server) getAgentInfo(id string) (*types.SysInfo, error) {
 	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/sysinfo", id), nil)
 	resp, err := r.proxyAgent(id, agentReq)

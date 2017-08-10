@@ -215,9 +215,9 @@ type ProxyAlias struct {
 
 // hijack Marshaler & Unmarshaler to make fit with int type `Listen`
 func (p *Proxy) MarshalJSON() ([]byte, error) {
-	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
-	if err != nil {
-		return nil, err
+	var l int
+	if p.Listen != "" {
+		l, _ = strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
 	}
 	var pa = &ProxyAlias{
 		Enabled: p.Enabled,
@@ -235,14 +235,11 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 	}
 	p.Enabled = pa.Enabled
 	p.Alias = pa.Alias
-	p.Listen = fmt.Sprintf(":%d", pa.Listen)
+	if pa.Listen > 0 {
+		p.Listen = fmt.Sprintf(":%d", pa.Listen)
+	}
 	p.Sticky = pa.Sticky
 	return nil
-}
-
-type Gateway struct {
-	Enabled bool    `json:"enabled"`
-	Weight  float64 `json:"weight,omitempty"`
 }
 
 func (v *Version) IsHealthSet() bool {

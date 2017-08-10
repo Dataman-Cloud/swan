@@ -48,6 +48,18 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		compose = "default"
 	}
 
+	// ensure proxy Listen & Alias uniq
+	//if err := r.checkProxyDuplication(version.Porxy); err != nil {
+	//http.Error(w, err.Error(), http.StatusConflict)
+	//return
+	//}
+
+	// ensure os ports not in using
+	if err := r.checkPortListening(version.Proxy); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
+
 	var (
 		id      = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
 		count   = int(version.Instances)
@@ -1758,6 +1770,30 @@ func (r *Server) memoAppStatus(appId, op, errmsg string) error {
 	if err := r.db.UpdateApp(app); err != nil {
 		log.Errorf("memoAppStatus() update app db status from %s -> %s error: %v", prevOp, op, err)
 		return err
+	}
+
+	return nil
+}
+
+func (r *Server) checkPortListening(p *types.Proxy) error {
+	if p == nil {
+		return nil
+	}
+
+	if !p.Enabled {
+		return nil
+	}
+
+	if p.Listen == "" {
+		return nil
+	}
+
+	l, _ := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+
+	for _, v := range r.getAgentsListenings() {
+		if int64(l) == v {
+			return fmt.Errorf("proxy.Listen %d occupied on nodes", l)
+		}
 	}
 
 	return nil
