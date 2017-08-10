@@ -378,6 +378,16 @@ func (b *verBuilder) setCPU(cpu float64) *verBuilder {
 	return b
 }
 
+func (b *verBuilder) setGPU(gpu float64) *verBuilder {
+	b.GPUs = gpu
+	return b
+}
+
+func (b *verBuilder) setDisk(disk float64) *verBuilder {
+	b.Disk = disk
+	return b
+}
+
 func (b *verBuilder) setMem(mem float64) *verBuilder {
 	b.Mem = mem
 	return b
@@ -394,6 +404,7 @@ func demoVersion() *verBuilder {
 		Instances:   int32(1),
 		Command:     "",
 		CPUs:        0.01,
+		GPUs:        0,
 		Mem:         5,
 		Disk:        0,
 		RunAs:       "integration",

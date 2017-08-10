@@ -188,6 +188,22 @@ func (v *Version) Validate() error {
 		return errors.New("invalid instances: instances must be specified and should greater than 0")
 	}
 
+	if v.Mem < 0 {
+		return errors.New("memory can't be negative")
+	}
+
+	if v.CPUs < 0 {
+		return errors.New("cpus can't be negative")
+	}
+
+	if v.GPUs < 0 {
+		return errors.New("gpus can't be negative")
+	}
+
+	if v.Disk < 0 {
+		return errors.New("disk can't be negative")
+	}
+
 	// FIXME(nmg)
 	if len(v.Constraints) != 0 {
 		for _, cons := range v.Constraints {

@@ -135,4 +135,21 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	match, _ = regexp.MatchString("should greater than 0", string(body))
 	c.Assert(match, check.Equals, true)
 	fmt.Println("TestCreateInvalidApp() illegal app count verified")
+
+	// invalid resource values
+	var invalidResources = map[*types.Version]string{
+		demoVersion().setCPU(-1).Get():  "cpus can't be negative",
+		demoVersion().setGPU(-1).Get():  "gpus can't be negative",
+		demoVersion().setMem(-1).Get():  "memory can't be negative",
+		demoVersion().setDisk(-1).Get(): "disk can't be negative",
+	}
+	for ver, errmsg := range invalidResources {
+		code, body, err = s.rawCreateApp(ver)
+		c.Assert(err, check.IsNil)
+		c.Assert(code, check.Equals, http.StatusBadRequest)
+		c.Log(string(body))
+		match, _ = regexp.MatchString(errmsg, string(body))
+		c.Assert(match, check.Equals, true)
+	}
+	fmt.Println("TestCreateInvalidApp() illegal resources verified")
 }
