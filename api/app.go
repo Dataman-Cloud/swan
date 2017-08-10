@@ -1166,6 +1166,12 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 		newWeight = utils.ComputeWeight(float64(new), float64(total), value)
 	)
 
+	// mark app db status
+	if err := r.memoAppStatus(appId, types.OpStatusWeightUpdating, ""); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to weight-updating got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	go func() {
 		var (
 			errmsg   string
@@ -1173,9 +1179,7 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 		)
 
 		defer func() {
-			if errmsg != "" {
-				r.memoAppStatus(appId, opStatus, errmsg)
-			}
+			r.memoAppStatus(appId, opStatus, errmsg)
 		}()
 
 		for _, task := range pending {
