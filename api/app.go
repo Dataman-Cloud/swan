@@ -889,6 +889,11 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				}
 				// TODO notify proxy
 
+				log.Debugf("Sending task event to proxy for weight changed. taskId: %s weight: %.f", t.ID, newWeight)
+				if err := r.driver.SendEvent(appId, t); err != nil {
+					log.Errorf("Sending event got error: %v", err)
+				}
+
 				continue
 			}
 
@@ -945,8 +950,6 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 			}
-
-			// TODO notify proxy
 
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
@@ -1193,6 +1196,10 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 			}
 
 			// notify proxy
+			log.Debugf("Sending task event to proxy for weight changed. taskId: %s weight: %.f", task.ID, newWeight)
+			if err := r.driver.SendEvent(appId, task); err != nil {
+				log.Errorf("updateWeights(): sending task %s event failed: %v", task.ID, err)
+			}
 		}
 
 		// set the old task's weight to 0 if the new tasks want 100% traffics.
@@ -1209,6 +1216,11 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 				}
 
 				// notify proxy
+				log.Debugf("Sending task event to proxy for weight changed. taskId: %s weight: 0", task.ID)
+				if err := r.driver.SendEvent(appId, task); err != nil {
+					log.Errorf("updateWeights(): sending task %s event failed: %v", task.ID, err)
+				}
+
 			}
 		}
 	}()
