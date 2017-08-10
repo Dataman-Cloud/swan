@@ -13,6 +13,23 @@ func (s *JanitorServer) ListUpstreams(c *gin.Context) {
 	c.JSON(200, upstream.AllUpstreams())
 }
 
+func (s *JanitorServer) GetUpstream(c *gin.Context) {
+	var (
+		uid = c.Param("uid")
+		m   = upstream.AllUpstreams()
+		ret = new(upstream.Upstream)
+	)
+
+	for idx, u := range m {
+		if u.Name == uid {
+			ret = m[idx]
+			break
+		}
+	}
+
+	c.JSON(200, ret)
+}
+
 func (s *JanitorServer) UpsertUpstream(c *gin.Context) {
 	var cmb *upstream.BackendCombined
 	if err := c.BindJSON(&cmb); err != nil {
