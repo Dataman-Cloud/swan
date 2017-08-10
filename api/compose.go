@@ -56,6 +56,21 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	// ensure proxy uniq & not occupied
+	for _, service := range cmp.ServiceGroup {
+		// ensure proxy Listen & Alias uniq
+		if err := r.checkProxyDuplication(service.Extra.Proxy); err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+
+		// ensure os ports not in using
+		if err := r.checkPortListening(service.Extra.Proxy); err != nil {
+			http.Error(w, err.Error(), http.StatusConflict)
+			return
+		}
+	}
+
 	// get runas
 	var runAs = cmp.RunAs()
 
