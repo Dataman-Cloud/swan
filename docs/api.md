@@ -342,6 +342,8 @@ Content-Type: application/json
             "proxy":{
                 "enabled":false,
                 "alias":""
+				"listen": 99,
+				"sticky": false
             }
         }
     ],
@@ -464,6 +466,8 @@ Example request:
   "proxy": {
             "enabled": false,
             "alias": ""
+			"listen": 99,
+			"sticky": false
   },
   "update": {
       "delay": 5,

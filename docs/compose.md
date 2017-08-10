@@ -68,7 +68,7 @@ Request:
 	  "proxy": {
 		"enabled": true,
 		"alias": "g.cn",
-		"listen": ":99",
+		"listen": 99,
 		"sticky": false
 	  }
     },
