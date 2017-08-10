@@ -79,11 +79,13 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
+	if len(versions) == 0 {
+		return nil, fmt.Errorf("app %s versions temporary not ready", id)
+	}
+
 	if len(app.Version) == 0 {
-		if len(versions) > 0 {
-			types.VersionList(versions).Reverse()
-			app.Version = append(app.Version, versions[0].ID)
-		}
+		types.VersionList(versions).Reverse()
+		app.Version = append(app.Version, versions[0].ID)
 	}
 
 	app.VersionCount = len(versions)
