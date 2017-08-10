@@ -200,6 +200,7 @@ func (r *Resolver) Upsert(record *Record) error {
 	}
 
 	if idx >= 0 {
+		r.m[parent][idx] = record
 		return nil
 	}
 

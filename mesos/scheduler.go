@@ -992,3 +992,51 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		return
 	}
 }
+
+func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
+	ver, err := s.db.GetVersion(appId, task.Version)
+	if err != nil {
+		return fmt.Errorf("Shceduler.SendEvent() db GetVersion error:", err)
+	}
+
+	evType := types.EventTypeTaskUnhealthy
+	switch task.Healthy {
+	case types.TaskHealthy:
+		evType = types.EventTypeTaskHealthy
+	case types.TaskHealthyUnset:
+		if task.Status == "TASK_RUNNING" {
+			evType = types.EventTypeTaskHealthy
+		}
+	case types.TaskUnHealthy:
+	}
+
+	taskEv := &types.TaskEvent{
+		Type:   evType,
+		AppID:  appId,
+		TaskID: task.ID,
+		IP:     task.IP,
+		Weight: task.Weight,
+	}
+
+	if ver.Proxy != nil { // TODO validate
+		taskEv.GatewayEnabled = ver.Proxy.Enabled
+		taskEv.AppAlias = ver.Proxy.Alias
+		taskEv.AppListen = ver.Proxy.Listen
+		taskEv.AppSticky = ver.Proxy.Sticky
+	}
+
+	if len(task.Ports) > 0 {
+		taskEv.Port = task.Ports[0] // currently only support the first port within proxy & events
+	}
+
+	if err := s.eventmgr.broadcast(taskEv); err != nil {
+		return fmt.Errorf("Shceduler.SendEvent(): broadcast task event got error:", err)
+	}
+
+	if err := s.broadcastEventRecords(taskEv); err != nil {
+		return fmt.Errorf("Shceduler.SendEvent(): broadcast to sync proxy & dns records error:", err)
+		// TODO: memo db task errmsg
+	}
+
+	return nil
+}
