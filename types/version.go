@@ -88,6 +88,22 @@ type PortMapping struct {
 	Protocol      string `json:"protocol,omitempty"`
 }
 
+func (pm *PortMapping) Valid() error {
+	if pm.Name == "" {
+		return errors.New("port must be named")
+	}
+	if pm.HostPort < 0 || pm.HostPort > 65535 {
+		return errors.New("host port out of range")
+	}
+	if pm.ContainerPort < 0 || pm.ContainerPort > 65535 {
+		return errors.New("container port out of range")
+	}
+	if p := strings.ToLower(pm.Protocol); p != "tcp" && p != "udp" {
+		return errors.New("unsupported port protocol")
+	}
+	return nil
+}
+
 type Volume struct {
 	ContainerPath string `json:"containerPath,omitempty"`
 	HostPath      string `json:"hostPath,omitempty"`
@@ -108,12 +124,66 @@ type HealthCheck struct {
 	Protocol            string  `json:"protocol,omitempty"`
 	PortName            string  `json:"portName,omitempty"`
 	Path                string  `json:"path,omitempty"`
-	Command             string  `json:"cmd, omitempty"`
+	Command             string  `json:"cmd,omitempty"`
 	ConsecutiveFailures uint32  `json:"consecutiveFailures,omitempty"`
 	GracePeriodSeconds  float64 `json:"gracePeriodSeconds,omitempty"`
 	IntervalSeconds     float64 `json:"intervalSeconds,omitempty"`
 	TimeoutSeconds      float64 `json:"timeoutSeconds,omitempty"`
 	DelaySeconds        float64 `json:"delaySeconds,omitempty"`
+}
+
+func (h *HealthCheck) Valid() error {
+	if h == nil {
+		return nil
+	}
+
+	if h.IsEmpty() {
+		return nil
+	}
+
+	switch p := strings.ToLower(h.Protocol); p {
+	case "cmd":
+		if h.Command == "" {
+			return errors.New("command required for cmd health check")
+		}
+	case "tcp":
+		if h.PortName == "" {
+			return errors.New("port name required for tcp health check")
+		}
+
+	case "http":
+		if h.PortName == "" {
+			return errors.New("port name required for http health check")
+		}
+		if h.Path == "" {
+			return errors.New("path required for http health check")
+		}
+
+	default:
+		return errors.New("unsupported health check protocol")
+	}
+
+	if h.ConsecutiveFailures < 0 {
+		return errors.New("consecutiveFailures can't be negative")
+	}
+
+	if h.GracePeriodSeconds < 0 {
+		return errors.New("gracePeriodSeconds can't be negative")
+	}
+
+	if h.IntervalSeconds < 0 {
+		return errors.New("intervalSeconds can't be negative")
+	}
+
+	if h.TimeoutSeconds < 0 {
+		return errors.New("timeoutSeconds can't be negative")
+	}
+
+	if h.DelaySeconds < 0 {
+		return errors.New("delaySeconds can't be negative")
+	}
+
+	return nil
 }
 
 func (h *HealthCheck) IsEmpty() bool {
@@ -196,9 +266,6 @@ func (v *Version) EmptyLabels() *Version {
 	return v
 }
 
-// validate version
-// TODO fix these mess
-// TODO(nmg): use json schema validation replace latter.
 func (v *Version) Validate() error {
 	if v.Container == nil {
 		return errors.New("swan only support mesos docker containerization, no container found")
@@ -240,12 +307,9 @@ func (v *Version) Validate() error {
 		return errors.New("disk can't be negative")
 	}
 
-	// FIXME(nmg)
-	if len(v.Constraints) != 0 {
-		for _, cons := range v.Constraints {
-			if err := cons.validate(); err != nil {
-				return err
-			}
+	for _, cons := range v.Constraints {
+		if err := cons.validate(); err != nil {
+			return err
 		}
 	}
 
@@ -257,67 +321,46 @@ func (v *Version) Validate() error {
 		return err
 	}
 
-	network := strings.ToLower(v.Container.Docker.Network)
+	switch network := strings.ToLower(v.Container.Docker.Network); network {
 
-	if network != "host" && network != "bridge" {
-		if len(v.IPs) != int(v.Instances) {
-			return fmt.Errorf("Ip number must equal instance number. required: %d actual: %d", v.Instances, len(v.IPs))
+	case "host", "bridge":
+		// ensure port name uniq
+		seen := make(map[string]bool)
+		for _, pm := range v.Container.Docker.PortMappings {
+			if err := pm.Valid(); err != nil {
+				return err
+			}
+			if _, ok := seen[pm.Name]; ok {
+				return fmt.Errorf("port name %s conflict", pm.Name)
+			}
+			seen[pm.Name] = true
 		}
 
+		// health check validation
+		if err := v.HealthCheck.Valid(); err != nil {
+			return err
+		}
+
+	default:
+		if len(v.IPs) != int(v.Instances) {
+			return fmt.Errorf("IPs(%d) should match instances(%d)", len(v.IPs), v.Instances)
+		}
+
+		// ensure ip valid & uniq
+		seen := make(map[string]bool)
 		for _, ip := range v.IPs {
 			if addr := net.ParseIP(ip); addr == nil || addr.IsLoopback() {
 				return errors.New("invalid ip: " + ip)
 			}
+			if _, ok := seen[ip]; ok {
+				return fmt.Errorf("ip %s conflict", ip)
+			}
+			seen[ip] = true
 		}
 
-		if v.HealthCheck != nil {
-			protocol := v.HealthCheck.Protocol
-			v := strings.ToLower(utils.StripSpaces(protocol))
-			if v == "cmd" {
-				return fmt.Errorf("doesn't supported protocol %s for health check for fixed type app", protocol)
-			}
-		}
-	} else {
-		for _, portmapping := range v.Container.Docker.PortMappings {
-			if strings.TrimSpace(portmapping.Name) == "" {
-				return errors.New("each port mapping should have a unique identified name")
-			}
-		}
-
-		portNames := make([]string, 0)
-		for _, portmapping := range v.Container.Docker.PortMappings {
-			portNames = append(portNames, portmapping.Name)
-		}
-
-		if !utils.SliceUnique(portNames) {
-			return errors.New("each port mapping should have a uniquely identified name")
-		}
-
-		if v.HealthCheck != nil && !v.HealthCheck.IsEmpty() {
-			var (
-				protocol = strings.ToLower(v.HealthCheck.Protocol)
-				portName = v.HealthCheck.PortName
-				path     = strings.TrimSpace(v.HealthCheck.Path)
-				command  = strings.TrimSpace(v.HealthCheck.Command)
-			)
-			if protocol != "cmd" && !utils.SliceContains(portNames, portName) {
-				return fmt.Errorf("portname in healthCheck section should match that defined in portMappings")
-			}
-
-			if !utils.SliceContains([]string{"tcp", "http", "TCP", "HTTP", "cmd", "CMD"}, protocol) {
-				return fmt.Errorf("doesn't recoginized protocol %s for health check", protocol)
-			}
-
-			if protocol == "http" {
-				if path == "" {
-					return fmt.Errorf("no path provided for health check with %s protocol", protocol)
-				}
-			}
-
-			if protocol == "cmd" {
-				if command == "" {
-					return fmt.Errorf("no cmd provided for health check with %s protocol", protocol)
-				}
+		if v.IsHealthSet() {
+			if p := strings.ToLower(v.HealthCheck.Protocol); p == "cmd" {
+				return fmt.Errorf("can't use cmd health check on fixed type app")
 			}
 		}
 	}

@@ -398,6 +398,39 @@ func (b *verBuilder) setImage(image string) *verBuilder {
 	return b
 }
 
+func (b *verBuilder) setPortMap(name, proto string, cp, hp int32) *verBuilder {
+	b.Container.Docker.PortMappings = []*types.PortMapping{
+		{
+			Name:          name,
+			Protocol:      proto,
+			ContainerPort: cp,
+			HostPort:      hp,
+		},
+	}
+	return b
+}
+
+func (b *verBuilder) setConstraint(attr, op, val string) *verBuilder {
+	b.Constraints = []*types.Constraint{
+		{
+			Attribute: attr,
+			Operator:  op,
+			Value:     val,
+		},
+	}
+	return b
+}
+
+func (b *verBuilder) setNetwork(net string) *verBuilder {
+	b.Container.Docker.Network = net
+	return b
+}
+
+func (b *verBuilder) setIPs(ips []string) *verBuilder {
+	b.IPs = ips
+	return b
+}
+
 func demoVersion() *verBuilder {
 	return &verBuilder{
 		Name:        "demo",

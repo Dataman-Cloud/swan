@@ -152,4 +152,56 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 		c.Assert(match, check.Equals, true)
 	}
 	fmt.Println("TestCreateInvalidApp() illegal resources verified")
+
+	// invalid port mapping
+	var invalidPortMaps = map[*types.Version]string{
+		demoVersion().setPortMap("", "tcp", 10, 10).Get():       "port must be named",
+		demoVersion().setPortMap("web", "xxx", 10, 10).Get():    "unsupported port protocol",
+		demoVersion().setPortMap("web", "udp", -1, 10).Get():    "container port out of range",
+		demoVersion().setPortMap("web", "udp", 65536, 10).Get(): "container port out of range",
+		demoVersion().setPortMap("web", "udp", 10, -1).Get():    "host port out of range",
+		demoVersion().setPortMap("web", "udp", 10, 65536).Get(): "host port out of range",
+	}
+	for ver, errmsg := range invalidPortMaps {
+		code, body, err = s.rawCreateApp(ver)
+		c.Assert(err, check.IsNil)
+		c.Assert(code, check.Equals, http.StatusBadRequest)
+		c.Log(string(body))
+		match, _ = regexp.MatchString(errmsg, string(body))
+		c.Assert(match, check.Equals, true)
+	}
+	fmt.Println("TestCreateInvalidApp() illegal portmapping verified")
+
+	// invalid constraint
+	var invalidConstraints = map[*types.Version]string{
+		demoVersion().setConstraint("", "==", "").Get():     "attribute required for constraint",
+		demoVersion().setConstraint("xxx", "xxx", "").Get(): "Operator not supported",
+	}
+	for ver, errmsg := range invalidConstraints {
+		code, body, err = s.rawCreateApp(ver)
+		c.Assert(err, check.IsNil)
+		c.Assert(code, check.Equals, http.StatusBadRequest)
+		c.Log(string(body))
+		match, _ = regexp.MatchString(errmsg, string(body))
+		c.Assert(match, check.Equals, true)
+	}
+	fmt.Println("TestCreateInvalidApp() illegal constraint verified")
+
+	// invalid ips
+	var invalidIPs = map[*types.Version]string{
+		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{""}).Get():                           "invalid ip:",
+		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{"xx"}).Get():                         "invalid ip:",
+		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{"127.0.0.1"}).Get():                  "invalid ip:",
+		demoVersion().setNetwork("swan").setCount(2).setIPs([]string{"192.168.1.1", "192.168.1.1"}).Get(): "ip.*conflict",
+		demoVersion().setNetwork("swan").setCount(2).setIPs([]string{"192.168.1.1"}).Get():                "IPs.*should match instances",
+	}
+	for ver, errmsg := range invalidIPs {
+		code, body, err = s.rawCreateApp(ver)
+		c.Assert(err, check.IsNil)
+		c.Assert(code, check.Equals, http.StatusBadRequest)
+		c.Log(string(body))
+		match, _ = regexp.MatchString(errmsg, string(body))
+		c.Assert(match, check.Equals, true)
+	}
+	fmt.Println("TestCreateInvalidApp() illegal ips verified")
 }
