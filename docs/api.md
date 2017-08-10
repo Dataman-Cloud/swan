@@ -921,18 +921,12 @@ Example request:
  Content-Type: application/json
  
  {
-     Weights: {
-         "0": 10,
-         "1": 20,
-         "3": 30,
-     }
+     "Value": 0.2
  }
 ```
 Json parameters:
 ```
-Weights:
-    Key(string)  : task index, eg. 0, 1, 2...
-    Value(float) : weight of task. value is between (0, 100].
+Value: Percentage of traffic. Indicated how much traffics switched to new version.
 ```
 Example response:
 ```

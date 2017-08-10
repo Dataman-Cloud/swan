@@ -5,5 +5,5 @@ type UpdateWeightBody struct {
 }
 
 type UpdateWeightsBody struct {
-	Weights map[string]float64 `json:"weights"`
+	Value float64
 }

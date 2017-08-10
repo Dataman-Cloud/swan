@@ -15,6 +15,7 @@ const (
 	OpStatusUpdating         = "updating"
 	OpStatusCanaryUpdating   = "canary_updating"
 	OpStatusCanaryUnfinished = "canary_unfinished"
+	OpStatusWeightUpdating   = "weight_updating"
 	OpStatusStarting         = "starting"
 	OpStatusStopping         = "stopping"
 	OpStatusDeleting         = "deleting"
