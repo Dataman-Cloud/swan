@@ -3,6 +3,7 @@ package api
 import (
 	"net/http"
 
+	"github.com/Dataman-Cloud/swan/types"
 	log "github.com/Sirupsen/logrus"
 )
 
@@ -33,6 +34,11 @@ func (r *Server) purge(w http.ResponseWriter, req *http.Request) {
 			versions, err := r.db.ListVersions(appId)
 			if err != nil {
 				log.Errorf("Purge() list app %s versions error: %v", appId, err)
+				continue
+			}
+			// mark app op status
+			if err := r.memoAppStatus(appId, types.OpStatusDeleting, ""); err != nil {
+				log.Errorf("Purge() update app opstatus to deleting got error: %v", err)
 				continue
 			}
 
