@@ -1,6 +1,7 @@
 package types
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 )
@@ -14,6 +15,9 @@ type Constraint struct {
 }
 
 func (c *Constraint) validate() error {
+	if c.Attribute == "" {
+		return errors.New("attribute required for constraint")
+	}
 	for _, str := range supportedOperator {
 		if str == c.Operator {
 			return nil
