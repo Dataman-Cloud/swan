@@ -49,10 +49,10 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	// ensure proxy Listen & Alias uniq
-	//if err := r.checkProxyDuplication(version.Porxy); err != nil {
-	//http.Error(w, err.Error(), http.StatusConflict)
-	//return
-	//}
+	if err := r.checkProxyDuplication(version.Proxy); err != nil {
+		http.Error(w, err.Error(), http.StatusConflict)
+		return
+	}
 
 	// ensure os ports not in using
 	if err := r.checkPortListening(version.Proxy); err != nil {
@@ -1797,4 +1797,75 @@ func (r *Server) checkPortListening(p *types.Proxy) error {
 	}
 
 	return nil
+}
+
+func (r *Server) checkProxyDuplication(p *types.Proxy) error {
+	if p == nil {
+		return nil
+	}
+
+	if !p.Enabled {
+		return nil
+	}
+
+	proxies, err := r.dbProxies()
+	if err != nil {
+		return err
+	}
+
+	// check Listen
+	if v := p.Listen; v != "" {
+		for app, ps := range proxies {
+			for _, p := range ps {
+				if p.Listen == v {
+					return fmt.Errorf("proxy.Listen %s conflict to app %s", v, app)
+				}
+			}
+		}
+	}
+
+	// check Alias
+	if v := p.Alias; v != "" {
+		for app, ps := range proxies {
+			for _, p := range ps {
+				if p.Alias == v {
+					return fmt.Errorf("proxy.Alias %s conflict to app %s", v, app)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+// obtain all of db enabled proxy settings
+func (r *Server) dbProxies() (map[string][]*types.Proxy, error) {
+	m := make(map[string][]*types.Proxy) // app -> []proxy
+
+	apps, err := r.db.ListApps()
+	if err != nil {
+		return m, fmt.Errorf("dbProxies() error: %v", err)
+	}
+
+	for _, app := range apps {
+		m[app.ID] = make([]*types.Proxy, 0, 0)
+
+		for _, vid := range app.Version {
+			ver, err := r.db.GetVersion(app.ID, vid)
+			if err != nil {
+				continue
+			}
+
+			if ver.Proxy == nil {
+				continue
+			}
+			if !ver.Proxy.Enabled {
+				continue
+			}
+
+			m[app.ID] = append(m[app.ID], ver.Proxy)
+		}
+	}
+
+	return m, nil
 }
