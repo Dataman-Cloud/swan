@@ -845,6 +845,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 	newWeight := utils.ComputeWeight(float64(goal), float64(total), value)
 	pending := tasks[:goal]
+	oldTasks := tasks[goal:]
 
 	// mark app db status
 	if err := r.memoAppStatus(appId, types.OpStatusCanaryUpdating, ""); err != nil {
@@ -953,6 +954,27 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
+
+		// reset the rest of task's weight to 100.
+		for _, task := range oldTasks {
+			if task.Weight == 0 {
+				task.Weight = 100
+			}
+
+			log.Debugf("updating weight to 100 for task %s", task.ID)
+			if uerr := r.db.UpdateTask(appId, task); uerr != nil {
+				err = fmt.Errorf("update task %s weight got error: %v", task.ID, uerr)
+				return
+			}
+
+			// notify proxy
+			log.Debugf("Sending task event to proxy for weight changed. taskId: %s weight: 100", task.ID)
+			if err := r.driver.SendEvent(appId, task); err != nil {
+				log.Errorf("updateWeights(): sending task %s event failed: %v", task.ID, err)
+			}
+
+		}
+
 	}()
 
 	writeJSON(w, http.StatusAccepted, "accepted")
