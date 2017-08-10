@@ -84,11 +84,7 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 		s.enableCORS(w)
 
 		if s.cfg.Listen != s.GetLeader() {
-			if r.Method != "GET" {
-				s.forwardRequest(w, r)
-				return
-			}
-			handler(w, r)
+			s.forwardRequest(w, r)
 			return
 		}
 
