@@ -49,8 +49,8 @@ func (t *Task) GetStatus() chan *mesosproto.TaskStatus {
 	return t.updates
 }
 
-// IsDone check that if a task is done or not according by task status.
-func (t *Task) IsDone(status *mesosproto.TaskStatus) bool {
+// IsTaskDone check that if a task is done or not according by task status.
+func IsTaskDone(status *mesosproto.TaskStatus) bool {
 	state := status.GetState()
 
 	switch state {
@@ -72,7 +72,7 @@ func (t *Task) IsDone(status *mesosproto.TaskStatus) bool {
 	return false
 }
 
-func (t *Task) DetectError(status *mesosproto.TaskStatus) error {
+func DetectTaskError(status *mesosproto.TaskStatus) error {
 	var (
 		state = status.GetState()
 		//data  = status.GetData() // docker container inspect result

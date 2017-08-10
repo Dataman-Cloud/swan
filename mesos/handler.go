@@ -184,6 +184,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		return
 	}
 
+	// if task terminated
+	if IsTaskDone(status) && state != mesosproto.TaskState_TASK_RUNNING {
+		s.broadCastCleanupEvents(appId, taskId)
+	}
+
 	// if task healthy / status changed
 	var healthyChange bool
 	switch previousHealthy {

@@ -162,15 +162,26 @@ func (s *Scheduler) FrameworkId() *mesosproto.FrameworkID {
 	return s.framework.Id
 }
 
-// Send send mesos request against the mesos master's scheduler api endpoint.
-// NOTE it's the caller's responsibility to deal with the Send() error
-func (s *Scheduler) Send(call *mesosproto.Call) (*http.Response, error) {
+// SendCall send mesos request against the mesos master's scheduler api endpoint.
+// note it's the caller's responsibility to deal with the SendCall() error
+func (s *Scheduler) SendCall(call *mesosproto.Call, expectCode int) (*http.Response, error) {
 	payload, err := proto.Marshal(call)
 	if err != nil {
 		return nil, err
 	}
 
-	return s.http.send(payload)
+	resp, err := s.http.send(payload)
+	if err != nil {
+		return nil, err
+	}
+
+	if code := resp.StatusCode; code != expectCode {
+		bs, _ := ioutil.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, fmt.Errorf("sendCall() with unexpected response [%d] - [%s]", code, string(bs))
+	}
+
+	return resp, nil
 }
 
 func (s *Scheduler) connect() (*http.Response, error) {
@@ -205,15 +216,10 @@ func (s *Scheduler) connect() (*http.Response, error) {
 	}
 
 	log.Printf("Subscribing to mesos leader %s", l)
-	resp, err := s.Send(call)
+	resp, err := s.SendCall(call, http.StatusOK)
 	if err != nil {
+		log.Errorln("connect().SendCall() error:", err)
 		return nil, fmt.Errorf("subscribe to mesos leader [%s] error [%v]", l, err)
-	}
-
-	if code := resp.StatusCode; code != 200 {
-		bs, _ := ioutil.ReadAll(resp.Body)
-		resp.Body.Close()
-		return nil, fmt.Errorf("subscribe with unexpected response [%d] - [%s]", code, string(bs))
 	}
 
 	return resp, nil
@@ -370,17 +376,12 @@ func (s *Scheduler) declineOffers(offers []*Offer) error {
 
 	log.Debugf("Decline %d offer(s)", len(offers))
 
-	resp, err := s.Send(call)
-	if err != nil {
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("declineOffers().SendCall() error:", err)
 		return err
 	}
 
-	if resp.StatusCode != http.StatusAccepted {
-		return fmt.Errorf("%d", resp.StatusCode)
-	}
-
 	return nil
-
 }
 
 func (s *Scheduler) addAgent(agent *Agent) {
@@ -472,12 +473,12 @@ func (s *Scheduler) sendTaskStatus(taskID string, status *mesosproto.TaskStatus)
 }
 
 func (s *Scheduler) KillTask(taskId, agentId string) error {
+	log.Printf("Killing task %s with agentId %s", taskId, agentId)
+
 	if agentId == "" {
-		log.Debugf("agentId of task %s is empty, ignore", taskId)
+		log.Warnf("agentId of task %s is empty, ignore", taskId)
 		return nil
 	}
-
-	log.Debugf("Killing task %s with agentId %s", taskId, agentId)
 
 	t := NewTask(nil, taskId, taskId)
 
@@ -498,20 +499,16 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 	}
 
 	// send call
-	resp, err := s.Send(call)
-	if err != nil {
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("KillTask().SendCall() error:", err)
 		return err
-	}
-
-	if code := resp.StatusCode; code != http.StatusAccepted {
-		return fmt.Errorf("kill call send but the status code not 202 got %d", code)
 	}
 
 	log.Debugf("Waiting for task %s to be killed by mesos", taskId)
 	for status := range t.GetStatus() {
 		log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
-		if t.IsDone(status) {
-			log.Debugf("Task %s killed", taskId)
+		if IsTaskDone(status) {
+			log.Printf("Task %s killed", taskId)
 			break
 		}
 	}
@@ -562,13 +559,9 @@ func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.Agen
 		})
 	}
 
-	resp, err := s.Send(call)
-	if err != nil {
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("reconcileTasks().SendCall() error:", err)
 		return err
-	}
-
-	if code := resp.StatusCode; code != http.StatusAccepted {
-		return fmt.Errorf("send reconcile call got %d not 202", code)
 	}
 
 	return nil
@@ -585,13 +578,9 @@ func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 				Uuid:    status.GetUuid(),
 			},
 		}
-		resp, err := s.Send(call)
-		if err != nil {
+		if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+			log.Errorln("AckUpdateEvent().SendCall() error:", err)
 			return err
-		}
-
-		if code := resp.StatusCode; code != http.StatusAccepted {
-			return fmt.Errorf("send ack got %d not 202", code)
 		}
 	}
 
@@ -770,11 +759,14 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 				log.Debugf("Waiting for task %s to be running", task.ID())
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
-					if task.IsDone(status) {
-						if err := task.DetectError(status); err != nil {
+					if IsTaskDone(status) {
+						if err := DetectTaskError(status); err != nil {
+							log.Printf("Launch task %s failed: %v", task.ID(), err)
 							p.Lock()
 							errs = append(errs, err)
 							p.Unlock()
+						} else {
+							log.Errorf("Launch task %s succeed", task.ID())
 						}
 						s.removePendingTask(task.ID())
 						return
@@ -873,16 +865,12 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 		},
 	}
 
-	log.Debugf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
+	log.Printf("Launching %d task(s) on agent %s", len(tasks), offers[0].GetHostname())
 
 	// send call
-	resp, err := s.Send(call)
-	if err != nil {
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("launch().SendCall() error:", err)
 		return fmt.Errorf("send launch call got error: %v", err)
-	}
-
-	if code := resp.StatusCode; code != http.StatusAccepted {
-		return fmt.Errorf("launch call send but the status code not 202 got %d", code)
 	}
 
 	return nil
@@ -911,7 +899,7 @@ func (s *Scheduler) Load() map[string]interface{} {
 }
 
 func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
-	log.Debugln("Rescheduling task", task.Name)
+	log.Println("Rescheduling task:", task.Name)
 
 	var (
 		taskName = task.Name
@@ -973,20 +961,20 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	dbtask.Histories = append(dbtask.Histories, task)
 
 	if err := s.db.CreateTask(appId, dbtask); err != nil {
-		log.Errorf("rescheduleTask(): create task failed: %s", err)
+		log.Errorf("rescheduleTask(): create dbtask %s error: %v", dbtask.ID, err)
 		return
 	}
 
 	m := NewTask(cfg, dbtask.ID, dbtask.Name)
 
-	if launchErr := s.LaunchTasks([]*Task{m}); launchErr != nil {
-		log.Errorf("launch task %s got error: %v", dbtask.ID, launchErr)
+	if err := s.LaunchTasks([]*Task{m}); err != nil {
+		log.Errorf("rescheduleTask(): launch task %s error: %v", dbtask.ID, err)
 
 		dbtask.Status = "Failed"
-		dbtask.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
+		dbtask.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 
 		if err = s.db.UpdateTask(appId, dbtask); err != nil {
-			log.Errorf("update task %s got error: %v", dbtask.ID, err)
+			log.Errorf("rescheduleTask(): update dbtask %s error: %v", dbtask.ID, err)
 		}
 
 		return
@@ -1018,7 +1006,7 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 		Weight: task.Weight,
 	}
 
-	if ver.Proxy != nil { // TODO validate
+	if ver.Proxy != nil {
 		taskEv.GatewayEnabled = ver.Proxy.Enabled
 		taskEv.AppAlias = ver.Proxy.Alias
 		taskEv.AppListen = ver.Proxy.Listen

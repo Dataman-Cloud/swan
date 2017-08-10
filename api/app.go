@@ -104,6 +104,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 				log.Errorf("launch app %s error: %v", appId, err)
 				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err))
 			} else {
+				log.Printf("launch app %s succeed", appId)
 				r.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
@@ -281,8 +282,12 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Errorf("delete app %s error: %v", appId, err)
 				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("delete app error: %v", err))
+			} else {
+				log.Printf("delete app %s succeed", appId)
 			}
 		}()
+
+		log.Printf("Preparing to delete App %s with %d tasks %d versions", appId, len(tasks), len(versions))
 
 		err = r.delApp(appId, tasks, versions)
 	}()
@@ -363,8 +368,11 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 					r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale down app error: %v", err))
 				} else {
 					r.memoAppStatus(appId, types.OpStatusNoop, "")
+					log.Printf("scale down app %s succeed", appId)
 				}
 			}()
+
+			log.Printf("Preparing to scale down App %s", appId)
 
 			types.TaskList(tasks).Reverse() // TODO
 			var (
@@ -425,9 +433,12 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				log.Errorf("scale up app %s error: %v", appId, err)
 				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("scale up app error: %v", err))
 			} else {
+				log.Printf("scale up app %s succeed", appId)
 				r.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
+
+		log.Printf("Preparing to scale up App %s", appId)
 
 		var (
 			tasks = []*mesos.Task{}
@@ -540,19 +551,29 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 	pending := tasks
 
 	go func() {
+		var err error
+
 		defer func() {
-			r.memoAppStatus(appId, types.OpStatusNoop, "")
+			if err != nil {
+				log.Errorf("update app %s error: %v", appId, err)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("update app error: %v", err))
+			} else {
+				log.Printf("update app %s succeed", appId)
+				r.memoAppStatus(appId, types.OpStatusNoop, "")
+			}
 		}()
 
-		for i, t := range pending {
-			r.memoAppStatus(appId, types.OpStatusUpdating, "") // TODO should quit if error occured here.
+		log.Printf("Preparing to update App %s", appId)
 
-			if err := r.delTask(appId, t); err != nil {
+		for i, t := range pending {
+
+			// kill & remove old
+			if err = r.delTask(appId, t); err != nil {
+				err = fmt.Errorf("remove old task error: %v", err)
 				return
 			}
 
-			cfg := types.NewTaskConfig(newVer, i)
-
+			// db save new task
 			var (
 				name    = t.Name
 				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
@@ -579,21 +600,21 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				task.Healthy = types.TaskUnHealthy
 			}
 
-			if err := r.db.CreateTask(appId, task); err != nil {
-				log.Errorf("create task failed: %s", err)
+			if err = r.db.CreateTask(appId, task); err != nil {
+				err = fmt.Errorf("create new db task error: %v", err)
 				return
 			}
 
+			// launch runtime new task
+			cfg := types.NewTaskConfig(newVer, i)
 			m := mesos.NewTask(cfg, task.ID, task.Name)
-
 			tasks := []*mesos.Task{m}
 
-			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
-				log.Errorf("launch task %s got error: %v", id, launchErr)
+			if err = r.driver.LaunchTasks(tasks); err != nil {
+				err = fmt.Errorf("launch new runtime task error: %v", err)
 
 				task.Status = "Failed"
-				task.ErrMsg = launchErr.Error()
-
+				task.ErrMsg = err.Error()
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", id, err)
 				}
@@ -604,7 +625,6 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 			}
 
 			// notify proxy
-
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}()
@@ -653,12 +673,15 @@ func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
 		// defer to mark op status
 		defer func() {
 			if err != nil {
-				log.Errorf("launch app %s error: %v", appId, err)
-				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("launch app error: %v", err))
+				log.Errorf("start app %s error: %v", appId, err)
+				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("start app error: %v", err))
 			} else {
+				log.Printf("start app %s succeed", appId)
 				s.memoAppStatus(appId, types.OpStatusNoop, "")
 			}
 		}()
+
+		log.Printf("Preparing to start App %s", appId)
 
 		tasks := []*mesos.Task{}
 		for i := 0; i < count; i++ {
@@ -732,9 +755,20 @@ func (s *Server) stopApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	go func() {
+		var err error
+
 		defer func() {
-			s.memoAppStatus(appId, types.OpStatusNoop, "")
+			if err != nil {
+				log.Errorf("stop app %s error: %v", appId, err)
+				s.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("stop app error: %v", err))
+			} else {
+				log.Printf("stop app %s succeed", appId)
+				s.memoAppStatus(appId, types.OpStatusNoop, "")
+			}
 		}()
+
+		log.Printf("Preparing to stop App %s", appId)
+
 		var wg sync.WaitGroup
 		for _, task := range tasks {
 			wg.Add(1)
@@ -881,6 +915,8 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 			if err != nil {
 				log.Errorf("canary update app %s error: %v", appId, err)
 				errmsg = fmt.Sprintf("canary update error: %v", err)
+			} else {
+				log.Printf("canary update app %s succeed", appId)
 			}
 
 			if progress >= total {
@@ -889,6 +925,8 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 
 			r.memoAppStatus(appId, opStatus, errmsg)
 		}()
+
+		log.Printf("Preparing to canary update App %s", appId)
 
 		for i, t := range pending {
 			progress = i + 1
@@ -1023,11 +1061,6 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if err := r.memoAppStatus(appId, types.OpStatusRollback, ""); err != nil {
-		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
 	verId := req.Form.Get("version")
 
 	var desired *types.Version
@@ -1059,21 +1092,38 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 
+	if err := r.memoAppStatus(appId, types.OpStatusRollback, ""); err != nil {
+		http.Error(w, fmt.Sprintf("update app opstatus to rolling-back got error: %v", err), http.StatusInternalServerError)
+		return
+	}
+
 	// TODO
 	types.TaskList(tasks).Reverse()
 
 	go func() {
+		var err error
+
 		defer func() {
-			r.memoAppStatus(appId, types.OpStatusNoop, "")
+			if err != nil {
+				log.Errorf("rollback app %s error: %v", appId, err)
+				r.memoAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("rollback app error: %v", err))
+			} else {
+				log.Printf("rollback app %s succeed", appId)
+				r.memoAppStatus(appId, types.OpStatusNoop, "")
+			}
 		}()
 
+		log.Printf("Preparing to rollback App %s", appId)
+
 		for i, t := range tasks {
-			if err := r.delTask(appId, t); err != nil {
+
+			// remove old task
+			if err = r.delTask(appId, t); err != nil {
+				err = fmt.Errorf("remove old task error: %v", err)
 				return
 			}
 
-			cfg := types.NewTaskConfig(desired, i)
-
+			// save db task
 			var (
 				name    = t.Name
 				id      = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
@@ -1096,30 +1146,25 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 				Updated:    time.Now(),
 			}
 
-			if err := r.db.CreateTask(appId, task); err != nil {
-				log.Errorf("create task failed: %s", err)
+			if err = r.db.CreateTask(appId, task); err != nil {
+				err = fmt.Errorf("create db task error: %v", err)
 				return
 			}
 
+			// launch runtime task
+			cfg := types.NewTaskConfig(desired, i)
 			m := mesos.NewTask(cfg, task.ID, task.Name)
-
 			tasks := []*mesos.Task{m}
 
-			if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
-				log.Errorf("launch task %s got error: %v", task.ID, launchErr)
+			if err = r.driver.LaunchTasks(tasks); err != nil {
+				err = fmt.Errorf("launch runtime task %s error: %v", task.ID, err)
 
 				task.Status = "Failed"
-				task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
-
+				task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 				if err = r.db.UpdateTask(appId, task); err != nil {
 					log.Errorf("update task %s got error: %v", task.ID, err)
 				}
-
-				return
 			}
-
-			time.Sleep(2 * time.Second)
-
 		}
 	}()
 
@@ -1216,8 +1261,15 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 		)
 
 		defer func() {
+			if errmsg != "" {
+				log.Errorf("weight-updating app %s error: %v", appId, err)
+			} else {
+				log.Errorf("weight-updating app %s succeed", appId)
+			}
 			r.memoAppStatus(appId, opStatus, errmsg)
 		}()
+
+		log.Printf("Preparing to weight-updating App %s", appId)
 
 		for _, task := range pending {
 			task.Weight = newWeight
@@ -1535,11 +1587,11 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 	m := mesos.NewTask(cfg, task.ID, task.Name)
 	tasks := []*mesos.Task{m}
 
-	if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
-		log.Errorf("launch task %s got error: %v", task.ID, launchErr)
+	if err := r.driver.LaunchTasks(tasks); err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
@@ -1585,7 +1637,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	defer func() {
+	defer func() { // TODO format as above
 		r.memoAppStatus(appId, types.OpStatusNoop, "")
 	}()
 
@@ -1666,11 +1718,11 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 
 	tasks := []*mesos.Task{m}
 
-	if launchErr := r.driver.LaunchTasks(tasks); launchErr != nil {
-		log.Errorf("launch task %s got error: %v", task.ID, launchErr)
+	if err := r.driver.LaunchTasks(tasks); err != nil {
+		log.Errorf("launch task %s got error: %v", task.ID, err)
 
 		task.Status = "Failed"
-		task.ErrMsg = fmt.Sprintf("launch task failed: %v", launchErr)
+		task.ErrMsg = fmt.Sprintf("launch task failed: %v", err)
 
 		if err = r.db.UpdateTask(appId, task); err != nil {
 			log.Errorf("update task %s got error: %v", t.ID, err)
