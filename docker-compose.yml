@@ -21,6 +21,7 @@ services:
       - MESOS_LOGGING_LEVEL=WARNING
       - MESOS_CLUSTER=local
       - MESOS_HOSTNAME=localhost
+      - MESOS_WORK_DIR=/tmp/mesos-data
     depends_on:
       - zookeeper
     links:
@@ -43,14 +44,13 @@ services:
       - MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       - MESOS_ATTRIBUTES=vcluster:demo
       - MESOS_SYSTEMD_ENABLE_SUPPORT=false
-      - MESOS_WORK_DIR=/data/mesos
+      - MESOS_WORK_DIR=/tmp/mesos-data
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-      - MESOS_HOSTNAME=localhost
+      - MESOS_HOSTNAME=127.0.0.1
     volumes:
       - /var/lib/docker:/data/docker:rw
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /var/run/docker.sock:/var/run/docker.sock:rw
-      - /tmp/mesos-slave-data:/data/mesos:rw
     depends_on:
       - zookeeper
       - mesos-master

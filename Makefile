@@ -45,8 +45,8 @@ docker-image:
 	docker tag swan:$(shell git rev-parse --short HEAD) swan:latest
 
 local-cluster: docker-build docker-image
-	rm -rf /tmp/mesos-slave-data || true
-	mkdir -p /tmp/mesos-slave-data || true
+	rm -rf /tmp/mesos-data || true
+	mkdir -p /tmp/mesos-data || true
 	docker-compose up -d
 	docker-compose ps
 
