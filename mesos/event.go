@@ -44,7 +44,10 @@ func (em *eventManager) clients() map[string]*eventClient {
 // broadcast message to all event clients
 func (em *eventManager) broadcast(e event) error {
 	for _, c := range em.clients() {
-		c.recv <- e.Format()
+		select {
+		case c.recv <- e.Format():
+		default:
+		}
 	}
 	return nil
 }
