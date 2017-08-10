@@ -1,6 +1,7 @@
 package types
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -132,6 +133,41 @@ type Proxy struct {
 	Alias   string `json:"alias"`
 	Listen  string `json:"listen"`
 	Sticky  bool   `json:"sticky"`
+}
+
+// similiar as above, but `Listen` int type
+type ProxyAlias struct {
+	Enabled bool   `json:"enabled"`
+	Alias   string `json:"alias"`
+	Listen  int    `json:"listen"`
+	Sticky  bool   `json:"sticky"`
+}
+
+// hijack Marshaler & Unmarshaler to make fit with int type `Listen`
+func (p *Proxy) MarshalJSON() ([]byte, error) {
+	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+	if err != nil {
+		return nil, err
+	}
+	var pa = &ProxyAlias{
+		Enabled: p.Enabled,
+		Alias:   p.Alias,
+		Listen:  l,
+		Sticky:  p.Sticky,
+	}
+	return json.Marshal(pa)
+}
+
+func (p *Proxy) UnmarshalJSON(data []byte) error {
+	var pa ProxyAlias
+	if err := json.Unmarshal(data, &pa); err != nil {
+		return err
+	}
+	p.Enabled = pa.Enabled
+	p.Alias = pa.Alias
+	p.Listen = fmt.Sprintf(":%d", pa.Listen)
+	p.Sticky = pa.Sticky
+	return nil
 }
 
 type Gateway struct {
