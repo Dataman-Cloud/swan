@@ -7,11 +7,11 @@
   - [PUT /v1/apps/{app_id}](#rolling-update) *Rolling update a app*
   - [POST /v1/apps/{app_id}/rollback](#roll-back) *Roll back a app*
   - [PUT /v1/apps/{app_id}/canary](#canary-update-a-app) *Canary update a app*
-  - [PATCH /v1/apps/{app_id}/weights](#update-weights) *Update tasks's weights*
+  - [PUT /v1/apps/{app_id}/weights](#update-weights) *Update tasks's weights*
 + tasks
   - [GET /v1/apps/{app_id}/tasks](#list-all-tasks-for-a-app) *List all tasks for a app*
-  - [ GET /v1/apps/{app_id}/tasks/{task_id}](#inspect-a-app) *Inspect a task*
-  - [PATCH /v1/apps/{app_id}/tasks/{task_id}/weight](#update-weight) *Update task's weight*
+  - [GET /v1/apps/{app_id}/tasks/{task_id}](#inspect-a-app) *Inspect a task*
+  - [PUT /v1/apps/{app_id}/tasks/{task_id}/weight](#update-weight) *Update task's weight*
 
 + versions
   - [GET /v1/apps/{app_id}/versions](#list-all-versions-for-a-app) *List all versions for a app*
@@ -917,11 +917,11 @@ Example response:
 ```
 #### Update weights 
 ```
-PATCH /v1/apps/{app_id}/weights
+PUT /v1/apps/{app_id}/weights
 ```
 Example request:
 ```
- PATCH /v1/apps/nginx004.default.testuser.dataman/weights HTTP/1.1
+ PUT /v1/apps/nginx004.default.testuser.dataman/weights HTTP/1.1
  Content-Type: application/json
  
  {
@@ -939,11 +939,11 @@ HTTP/1.1 202 Accepted
 
 #### Update weight
 ```
-PATCH /v1/apps/{app_id}/tasks/{task_id}/weight
+PUT /v1/apps/{app_id}/tasks/{task_id}/weight
 ```
 Example request:
 ```
-PATCH /v1/apps/nginx004.default.testuser.dataman}/tasks/0.nginx004.default.testuser.dataman/weight HTTP/1.1
+PUT /v1/apps/nginx004.default.testuser.dataman}/tasks/0.nginx004.default.testuser.dataman/weight HTTP/1.1
 Content-Type: application/json
 {
     Weight: 50,

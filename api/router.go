@@ -17,7 +17,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("POST", "/v1/apps/{app_id}/stop", s.stopApp),
 		NewRoute("PUT", "/v1/apps/{app_id}/canary", s.canaryUpdate),
 		NewRoute("POST", "/v1/apps/{app_id}/rollback", s.rollback),
-		NewRoute("PATCH", "/v1/apps/{app_id}/weights", s.updateWeights),
+		NewRoute("PUT", "/v1/apps/{app_id}/weights", s.updateWeights),
 		NewRoute("POST", "/v1/apps/{app_id}/reset", s.resetStatus),
 
 		NewRoute("GET", "/v1/apps/{app_id}/tasks", s.getTasks),
@@ -26,7 +26,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("DELETE", "/v1/apps/{app_id}/tasks", s.deleteTasks),
 		NewRoute("PUT", "/v1/apps/{app_id}/tasks/{task_id}", s.updateTask),
 		NewRoute("POST", "/v1/apps/{app_id}/tasks/{task_id}", s.rollbackTask),
-		NewRoute("PATCH", "/v1/apps/{app_id}/tasks/{task_id}/weight", s.updateWeight),
+		NewRoute("PUT", "/v1/apps/{app_id}/tasks/{task_id}/weight", s.updateWeight),
 
 		NewRoute("GET", "/v1/apps/{app_id}/versions", s.getVersions),
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", s.getVersion),
