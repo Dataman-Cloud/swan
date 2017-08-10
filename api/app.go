@@ -1090,16 +1090,11 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
-	var body types.UpdateWeightsBody
-	if err := decode(req.Body, &body); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
 	var (
-		appId   = mux.Vars(req)["app_id"]
-		weights = body.Weights
+		appId = mux.Vars(req)["app_id"]
 	)
+
+	// check for operation permission.
 
 	app, err := r.db.GetApp(appId)
 	if err != nil {
@@ -1107,27 +1102,114 @@ func (r *Server) updateWeights(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if s := app.OpStatus; s != types.OpStatusCanaryUnfinished {
+		http.Error(w, fmt.Sprintf("app status is %s, operation not allowed.", s), http.StatusLocked)
+		return
+	}
+
+	var body types.UpdateWeightsBody
+	if err := decode(req.Body, &body); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	value := body.Value
+	if value <= 0 || value > 1 {
+		http.Error(w, "Invalid value. value must be between 0 and 1.(0 < value <= 1)", http.StatusBadRequest)
+		return
+	}
+
+	// check if the app has new version.
+	versions, err := r.db.ListVersions(app.ID)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("list versions got error for rollback app. %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	// app has no new version
+	if len(versions) < 2 {
+		http.Error(w, fmt.Sprintf("no more versions to update"), http.StatusInternalServerError)
+		return
+	}
+
+	types.VersionList(versions).Reverse()
+
+	var (
+		newVer = versions[0]
+	)
+
+	// get current new tasks
+
 	tasks, err := r.db.ListTasks(app.ID)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("list tasks got error for update weights. %v", err), http.StatusInternalServerError)
 		return
 	}
+	types.TaskList(tasks).Sort()
 
-	for n, weight := range weights {
-		for _, task := range tasks {
-			if task.Index() == n {
-				task.Weight = weight
-
-				if err := r.db.UpdateTask(appId, task); err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-			}
+	// current new tasks
+	new := 0
+	for _, task := range tasks {
+		if task.Version == newVer.ID {
+			new++
 		}
 	}
 
-	// notify proxy
+	if new == 0 {
+		http.Error(w, "no more new task to update weight", http.StatusInternalServerError)
+		return
+	}
 
+	var (
+		total     = len(tasks)
+		pending   = tasks[:new]
+		newWeight = utils.ComputeWeight(float64(new), float64(total), value)
+	)
+
+	go func() {
+		var (
+			errmsg   string
+			opStatus = types.OpStatusCanaryUnfinished
+		)
+
+		defer func() {
+			if errmsg != "" {
+				r.memoAppStatus(appId, opStatus, errmsg)
+			}
+		}()
+
+		for _, task := range pending {
+			task.Weight = newWeight
+
+			log.Debugf("updating weight to %f for task %s", newWeight, task.ID)
+			if err := r.db.UpdateTask(appId, task); err != nil {
+				errmsg = fmt.Sprintf("update task %s weight got error: %v", task.ID, err)
+				log.Error(errmsg)
+				return
+			}
+
+			// notify proxy
+		}
+
+		// set the old task's weight to 0 if the new tasks want 100% traffics.
+		if value == 1 {
+			oldTasks := tasks[new:]
+			for _, task := range oldTasks {
+				task.Weight = 0
+
+				log.Debugf("updating weight to 0 for task %s", task.ID)
+				if err := r.db.UpdateTask(appId, task); err != nil {
+					errmsg = fmt.Sprintf("update task %s weight got error: %v", task.ID, err)
+					log.Error(errmsg)
+					return
+				}
+
+				// notify proxy
+			}
+		}
+	}()
+
+	writeJSON(w, http.StatusAccepted, "accepted")
 }
 
 func (r *Server) getTasks(w http.ResponseWriter, req *http.Request) {
