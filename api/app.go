@@ -60,8 +60,13 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	cluster := r.driver.ClusterName()
+	if c := utils.StripSpaces(version.Cluster); c != "" {
+		cluster = c
+	}
+
 	var (
-		id      = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, r.driver.ClusterName())
+		id      = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, cluster)
 		count   = int(version.Instances)
 		restart = version.RestartPolicy
 		retries = 3

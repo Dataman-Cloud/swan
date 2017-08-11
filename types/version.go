@@ -48,6 +48,7 @@ type Version struct {
 	Disk          float64           `json:"disk"`
 	Instances     int32             `json:"instances"`
 	RunAs         string            `json:"runAs"`
+	Cluster       string            `json:"cluster"`
 	Container     *Container        `json:"container"`
 	Labels        map[string]string `json:"labels"`
 	HealthCheck   *HealthCheck      `json:"healthCheck"`

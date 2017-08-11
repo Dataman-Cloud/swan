@@ -180,6 +180,7 @@ Example request:
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
+  "cluster": "cctv",
   "instances": 10,
   "constraints": [],
   "container": {

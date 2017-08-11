@@ -9,6 +9,7 @@
   "mem": 32,
   "disk": 0,
   "runAs": "xcm",
+  "cluster": "cctv",
   "priority": 100,
   "instances": 10,
   "constraints": [],
