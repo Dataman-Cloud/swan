@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -472,7 +473,7 @@ func (s *Scheduler) sendTaskStatus(taskID string, status *mesosproto.TaskStatus)
 	t.updates <- status
 }
 
-func (s *Scheduler) KillTask(taskId, agentId string) error {
+func (s *Scheduler) KillTask(taskId, agentId string, gracePeriod int64) error {
 	log.Printf("Killing task %s with agentId %s", taskId, agentId)
 
 	if agentId == "" {
@@ -480,7 +481,7 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 		return nil
 	}
 
-	t := NewTask(nil, taskId, taskId)
+	t := NewTask(nil, taskId, "")
 
 	s.addPendingTask(t)
 	defer s.removePendingTask(taskId) // prevent leak
@@ -496,6 +497,14 @@ func (s *Scheduler) KillTask(taskId, agentId string) error {
 				Value: proto.String(agentId),
 			},
 		},
+	}
+
+	if gracePeriod > 0 {
+		call.Kill.KillPolicy = &mesosproto.KillPolicy{
+			GracePeriod: &mesosproto.DurationInfo{
+				Nanoseconds: proto.Int64(gracePeriod * 1000 * 1000),
+			},
+		}
 	}
 
 	// send call
@@ -587,7 +596,7 @@ func (s *Scheduler) AckUpdateEvent(status *mesosproto.TaskStatus) error {
 	return nil
 }
 
-func (s *Scheduler) SubscribeEvent(w http.ResponseWriter, remote string) error {
+func (s *Scheduler) SubscribeEvent(w io.Writer, remote string) error {
 	if s.eventmgr.Full() {
 		return fmt.Errorf("%s", "too many event clients")
 	}
@@ -919,7 +928,6 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	var (
 		name       = taskName
 		id         = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
-		healthSet  = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
 		restart    = ver.RestartPolicy
 		retries    = task.Retries
 		maxRetries = 3
@@ -942,7 +950,7 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		Updated:    time.Now(),
 	}
 
-	if healthSet {
+	if ver.IsHealthSet() {
 		dbtask.Healthy = types.TaskUnHealthy
 	}
 

@@ -37,10 +37,9 @@ func (t *Task) Build() {
 	t.Resources = t.cfg.BuildResources()
 	t.Command = t.cfg.BuildCommand()
 	t.Container = t.cfg.BuildContainer(t.ID(), t.GetName())
-	if t.cfg.HealthCheck != nil && !t.cfg.HealthCheck.IsEmpty() {
+	if t.cfg.HealthCheck != nil {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
 	}
-	//t.KillPolicy = t.cfg.BuildKillPolicy()
 	t.Labels = t.cfg.BuildLabels(t.ID(), t.GetName())
 }
 

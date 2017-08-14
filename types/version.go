@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"path"
 	"sort"
 	"strconv"
 	"strings"
@@ -68,6 +69,21 @@ type Container struct {
 	Volumes []*Volume `json:"volumes"`
 }
 
+func (c *Container) Valid() error {
+	if strings.ToLower(c.Type) != "docker" {
+		return errors.New("only support docker containerization")
+	}
+	if c.Docker == nil {
+		return errors.New("docker containerization settings required")
+	}
+	for _, v := range c.Volumes {
+		if err := v.Valid(); err != nil {
+			return err
+		}
+	}
+	return c.Docker.Valid()
+}
+
 type Docker struct {
 	ForcePullImage bool           `json:"forcePullImage,omitempty"`
 	Image          string         `json:"image"`
@@ -77,9 +93,41 @@ type Docker struct {
 	Privileged     bool           `json:"privileged,omitempty"`
 }
 
+func (d *Docker) Valid() error {
+	if d.Network == "" {
+		return errors.New("network required")
+	}
+	if d.Image == "" {
+		return errors.New("image required")
+	}
+	seen := make(map[string]bool)
+	for _, pm := range d.PortMappings {
+		if err := pm.Valid(); err != nil {
+			return err
+		}
+		if _, ok := seen[pm.Name]; ok {
+			return fmt.Errorf("port name %s conflict", pm.Name)
+		}
+		seen[pm.Name] = true
+	}
+	for _, p := range d.Parameters {
+		if err := p.Valid(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 type Parameter struct {
 	Key   string `json:"key,omitempty"`
 	Value string `json:"value,omitempty"`
+}
+
+func (p *Parameter) Valid() error {
+	if p.Key == "" {
+		return errors.New("Parameter.Key required")
+	}
+	return nil
 }
 
 type PortMapping struct {
@@ -111,14 +159,55 @@ type Volume struct {
 	Mode          string `json:"mode,omitempty"`
 }
 
+func (v *Volume) Valid() error {
+	if !path.IsAbs(v.HostPath) {
+		return errors.New("Volume.HostPath should be absolute path")
+	}
+	switch v.Mode {
+	case "RO", "RW":
+	default:
+		return errors.New("unsupported Volume.Mode, should be [RO,RW]")
+	}
+	return nil
+}
+
 type KillPolicy struct {
-	Duration int64 `json:"duration,omitempty"`
+	Duration int64 `json:"duration,omitempty"` // by seconds
+}
+
+func (p *KillPolicy) Valid() error {
+	if p.Duration < 0 {
+		return errors.New("KillPolicy.Duration can't be negative")
+	}
+	return nil
+}
+
+type RestartPolicy struct {
+	Retries int `json:"retries"`
+}
+
+func (p *RestartPolicy) Valid() error {
+	if p.Retries < 0 {
+		return errors.New("RestartPolicy.Retries can't be negative")
+	}
+	return nil
 }
 
 type UpdatePolicy struct {
-	Step      int64   `json:"step"` // TODO(nmg)
 	Delay     float64 `json:"delay"`
 	OnFailure string  `json:"onFailure,omitempty"`
+}
+
+func (p *UpdatePolicy) Valid() error {
+	if p.Delay < 0 {
+		return errors.New("UpdatePolicy.Delay can't be negative")
+	}
+	switch p.OnFailure {
+	case UpdateStop, UpdateContinue, UpdateRollback:
+	default:
+		return errors.New("unsupported OnFailure policy for update")
+	}
+	return nil
 }
 
 type HealthCheck struct {
@@ -134,14 +223,6 @@ type HealthCheck struct {
 }
 
 func (h *HealthCheck) Valid() error {
-	if h == nil {
-		return nil
-	}
-
-	if h.IsEmpty() {
-		return nil
-	}
-
 	switch p := strings.ToLower(h.Protocol); p {
 	case "cmd":
 		if h.Command == "" {
@@ -164,16 +245,12 @@ func (h *HealthCheck) Valid() error {
 		return errors.New("unsupported health check protocol")
 	}
 
-	if h.ConsecutiveFailures < 0 {
-		return errors.New("consecutiveFailures can't be negative")
-	}
-
 	if h.GracePeriodSeconds < 0 {
 		return errors.New("gracePeriodSeconds can't be negative")
 	}
 
-	if h.IntervalSeconds < 0 {
-		return errors.New("intervalSeconds can't be negative")
+	if h.IntervalSeconds <= 0 {
+		return errors.New("intervalSeconds should be positive")
 	}
 
 	if h.TimeoutSeconds < 0 {
@@ -185,18 +262,6 @@ func (h *HealthCheck) Valid() error {
 	}
 
 	return nil
-}
-
-func (h *HealthCheck) IsEmpty() bool {
-	return h.Protocol == "" &&
-		h.PortName == "" &&
-		h.Path == "" &&
-		h.Command == "" &&
-		h.ConsecutiveFailures == 0 &&
-		h.GracePeriodSeconds == 0 &&
-		h.IntervalSeconds == 0 &&
-		h.TimeoutSeconds == 0 &&
-		h.DelaySeconds == 0
 }
 
 type Proxy struct {
@@ -236,7 +301,12 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 	}
 	p.Enabled = pa.Enabled
 	p.Alias = pa.Alias
-	if pa.Listen > 0 {
+	switch {
+	case pa.Listen == 0:
+		p.Listen = ""
+	case pa.Listen < 0 || pa.Listen > 65535:
+		return errors.New("proxy.Listen out of range")
+	default: // (0, 65535]
 		p.Listen = fmt.Sprintf(":%d", pa.Listen)
 	}
 	p.Sticky = pa.Sticky
@@ -244,7 +314,7 @@ func (p *Proxy) UnmarshalJSON(data []byte) error {
 }
 
 func (v *Version) IsHealthSet() bool {
-	return v.HealthCheck != nil && !v.HealthCheck.IsEmpty()
+	return v.HealthCheck != nil
 }
 
 // AddLabel adds a label to the application
@@ -265,30 +335,16 @@ func (v *Version) EmptyLabels() *Version {
 }
 
 func (v *Version) Validate() error {
-	if v.Container == nil {
-		return errors.New("swan only support mesos docker containerization, no container found")
+	// verify name
+	if n := len(v.Name); n == 0 || n > 64 {
+		return errors.New("appName should between (0,64]")
 	}
 
-	if v.Container.Docker == nil {
-		return errors.New("swan only support mesos docker containerization, no container found")
+	if err := utils.LegalDomain(v.Name); err != nil {
+		return err
 	}
 
-	if v.Container.Docker.Image == "" {
-		return errors.New("image field required")
-	}
-
-	if n := len(v.Name); n == 0 || n > 63 {
-		return errors.New("invalid appName: appName empty or too long")
-	}
-
-	if len(v.RunAs) == 0 {
-		return errors.New("runAs should not empty")
-	}
-
-	if v.Instances <= 0 {
-		return errors.New("invalid instances: instances must be specified and should greater than 0")
-	}
-
+	// verify resources
 	if v.Mem < 0 {
 		return errors.New("memory can't be negative")
 	}
@@ -305,41 +361,77 @@ func (v *Version) Validate() error {
 		return errors.New("disk can't be negative")
 	}
 
-	for _, cons := range v.Constraints {
-		if err := cons.validate(); err != nil {
-			return err
-		}
+	if v.Instances <= 0 {
+		return errors.New("instance count must be positive")
 	}
 
-	if err := utils.LegalDomain(v.Name); err != nil {
-		return err
+	// verify runas
+	if n := len(v.RunAs); n == 0 || n > 64 {
+		return errors.New("runAs should between (0,64]")
 	}
 
 	if err := utils.LegalDomain(v.RunAs); err != nil {
 		return err
 	}
 
-	switch network := strings.ToLower(v.Container.Docker.Network); network {
+	// verify cluster
+	if n := len(v.Cluster); n > 64 {
+		return errors.New("cluster should between [0,64]")
+	}
 
-	case "host", "bridge":
-		// ensure port name uniq
-		seen := make(map[string]bool)
-		for _, pm := range v.Container.Docker.PortMappings {
-			if err := pm.Valid(); err != nil {
-				return err
-			}
-			if _, ok := seen[pm.Name]; ok {
-				return fmt.Errorf("port name %s conflict", pm.Name)
-			}
-			seen[pm.Name] = true
-		}
+	if err := utils.LegalDomain(v.Cluster); err != nil {
+		return err
+	}
 
-		// health check validation
+	// verify container
+	if v.Container == nil {
+		return errors.New("container settings required")
+	}
+
+	if err := v.Container.Valid(); err != nil {
+		return err
+	}
+
+	// verify healthcheck
+	if v.IsHealthSet() {
 		if err := v.HealthCheck.Valid(); err != nil {
 			return err
 		}
+	}
 
+	// verify killpolicy
+	if v.KillPolicy != nil {
+		if err := v.KillPolicy.Valid(); err != nil {
+			return err
+		}
+	}
+
+	// verify restartpolicy
+	if v.RestartPolicy != nil {
+		if err := v.RestartPolicy.Valid(); err != nil {
+			return err
+		}
+	}
+
+	// verify updatepolicy
+	if v.UpdatePolicy != nil {
+		if err := v.UpdatePolicy.Valid(); err != nil {
+			return err
+		}
+	}
+
+	// verify constraints
+	for _, cons := range v.Constraints {
+		if err := cons.validate(); err != nil {
+			return err
+		}
+	}
+
+	// verify static ip mode
+	switch network := strings.ToLower(v.Container.Docker.Network); network {
+	case "host", "bridge":
 	default:
+		// ensure ips matches instance count
 		if len(v.IPs) != int(v.Instances) {
 			return fmt.Errorf("IPs(%d) should match instances(%d)", len(v.IPs), v.Instances)
 		}
@@ -356,6 +448,7 @@ func (v *Version) Validate() error {
 			seen[ip] = true
 		}
 
+		// ensure not cmd healthcheck
 		if v.IsHealthSet() {
 			if p := strings.ToLower(v.HealthCheck.Protocol); p == "cmd" {
 				return fmt.Errorf("can't use cmd health check on fixed type app")

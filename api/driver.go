@@ -1,7 +1,7 @@
 package api
 
 import (
-	"net/http"
+	"io"
 
 	"github.com/Dataman-Cloud/swan/mesos"
 	"github.com/Dataman-Cloud/swan/mole"
@@ -9,12 +9,12 @@ import (
 )
 
 type Driver interface {
-	KillTask(string, string) error
+	KillTask(taskId string, agentId string, gradePeriod int64) error
 	LaunchTasks([]*mesos.Task) error
 
 	ClusterName() string
 
-	SubscribeEvent(http.ResponseWriter, string) error
+	SubscribeEvent(io.Writer, string) error
 	FullTaskEventsAndRecords() []*types.CombinedEvents
 	SendEvent(string, *types.Task) error
 

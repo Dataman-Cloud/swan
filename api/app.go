@@ -543,13 +543,13 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		delay     = float64(1)
-		onfailure = "stop"
+		onfailure = types.UpdateStop
 	)
 
-	update := newVer.UpdatePolicy
-	if update != nil {
-		delay = update.Delay
-		onfailure = update.OnFailure
+	policy := newVer.UpdatePolicy
+	if policy != nil {
+		delay = policy.Delay
+		onfailure = policy.OnFailure
 	}
 
 	types.TaskList(tasks).Sort()
@@ -1781,8 +1781,16 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	return nil
 }
 
+// delTask actually kill runtime task & remove db objects
 func (s *Server) delTask(appId string, task *types.Task) error {
-	if err := s.driver.KillTask(task.ID, task.AgentId); err != nil {
+	var gracePeriod int64
+	if ver, err := s.db.GetVersion(appId, task.Version); err == nil {
+		if ver.KillPolicy != nil {
+			gracePeriod = ver.KillPolicy.Duration
+		}
+	}
+
+	if err := s.driver.KillTask(task.ID, task.AgentId, gracePeriod); err != nil {
 		log.Errorf("Kill task %s got error: %v", task.ID, err)
 
 		task.OpStatus = fmt.Sprintf("kill task error: %v", err)

@@ -72,7 +72,7 @@ services:
       - SWAN_STORE_TYPE=zk
       - SWAN_MESOS_URL=zk://zookeeper:2181/mesos
       - SWAN_ZK_URL=zk://zookeeper:2181/swan
-      - SWAN_LOG_LEVEL=debug
+      - SWAN_LOG_LEVEL=info
     healthcheck:
       test: ["CMD", "wget", "-s", "-q", "http://127.0.0.1:9999/ping"]
       interval: 30s
@@ -94,6 +94,6 @@ services:
     environment:
       - SWAN_LISTEN_ADDR=0.0.0.0:10000
       - SWAN_JOIN_ADDRS=127.0.0.1:9999
-      - SWAN_LOG_LEVEL=debug
+      - SWAN_LOG_LEVEL=info
     depends_on:
       - swan-master

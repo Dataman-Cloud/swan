@@ -447,13 +447,6 @@ func (c *TaskConfig) BuildHealthCheck() *mesosproto.HealthCheck {
 	return health
 }
 
-func (c *TaskConfig) BuildKillPolicy() *mesosproto.KillPolicy {
-	return &mesosproto.KillPolicy{
-		GracePeriod: &mesosproto.DurationInfo{
-			Nanoseconds: proto.Int64(c.KillPolicy.Duration * 1000 * 1000),
-		},
-	}
-}
 func (c *TaskConfig) BuildLabels(id, name string) *mesosproto.Labels {
 	extraLabels := c.extra(id, name)
 
