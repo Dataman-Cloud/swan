@@ -928,7 +928,6 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 	var (
 		name       = taskName
 		id         = fmt.Sprintf("%s.%s", utils.RandomString(12), name)
-		healthSet  = ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
 		restart    = ver.RestartPolicy
 		retries    = task.Retries
 		maxRetries = 3
@@ -951,7 +950,7 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 		Updated:    time.Now(),
 	}
 
-	if healthSet {
+	if ver.IsHealthSet() {
 		dbtask.Healthy = types.TaskUnHealthy
 	}
 

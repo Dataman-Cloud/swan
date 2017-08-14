@@ -164,8 +164,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					Updated: time.Now(),
 				}
 
-				healthSet := ver.HealthCheck != nil && !ver.HealthCheck.IsEmpty()
-				if healthSet {
+				if ver.IsHealthSet() {
 					task.Healthy = types.TaskUnHealthy
 				}
 

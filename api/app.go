@@ -543,13 +543,13 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		delay     = float64(1)
-		onfailure = "stop"
+		onfailure = types.UpdateStop
 	)
 
-	update := newVer.UpdatePolicy
-	if update != nil {
-		delay = update.Delay
-		onfailure = update.OnFailure
+	policy := newVer.UpdatePolicy
+	if policy != nil {
+		delay = policy.Delay
+		onfailure = policy.OnFailure
 	}
 
 	types.TaskList(tasks).Sort()

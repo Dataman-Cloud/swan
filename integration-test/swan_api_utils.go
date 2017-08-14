@@ -363,6 +363,11 @@ func (b *verBuilder) setName(name string) *verBuilder {
 	return b
 }
 
+func (b *verBuilder) setCluster(cluster string) *verBuilder {
+	b.Cluster = cluster
+	return b
+}
+
 func (b *verBuilder) setRunAs(runas string) *verBuilder {
 	b.RunAs = runas
 	return b
@@ -399,12 +404,25 @@ func (b *verBuilder) setImage(image string) *verBuilder {
 }
 
 func (b *verBuilder) setPortMap(name, proto string, cp, hp int32) *verBuilder {
-	b.Container.Docker.PortMappings = []*types.PortMapping{
+	pm := &types.PortMapping{
+		Name:          name,
+		Protocol:      proto,
+		ContainerPort: cp,
+		HostPort:      hp,
+	}
+	if b.Container.Docker.PortMappings == nil {
+		b.Container.Docker.PortMappings = []*types.PortMapping{pm}
+	} else {
+		b.Container.Docker.PortMappings = append(b.Container.Docker.PortMappings, pm)
+	}
+	return b
+}
+
+func (b *verBuilder) setParameter(key, val string) *verBuilder {
+	b.Container.Docker.Parameters = []*types.Parameter{
 		{
-			Name:          name,
-			Protocol:      proto,
-			ContainerPort: cp,
-			HostPort:      hp,
+			Key:   key,
+			Value: val,
 		},
 	}
 	return b
@@ -417,6 +435,38 @@ func (b *verBuilder) setConstraint(attr, op, val string) *verBuilder {
 			Operator:  op,
 			Value:     val,
 		},
+	}
+	return b
+}
+
+func (b *verBuilder) setContainer(typ string, docker *types.Docker) *verBuilder {
+	b.Container.Type = typ
+	b.Container.Docker = docker
+	return b
+}
+
+func (b *verBuilder) setVolume(src, dst, mode string) *verBuilder {
+	b.Container.Volumes = []*types.Volume{
+		{
+			HostPath:      src,
+			ContainerPath: dst,
+			Mode:          mode,
+		},
+	}
+	return b
+}
+
+func (b *verBuilder) setHealthCheck(proto, pname, path, cmd string, c uint32, g, i, t, d float64) *verBuilder {
+	b.HealthCheck = &types.HealthCheck{
+		Protocol:            proto,
+		PortName:            pname,
+		Path:                path,
+		Command:             cmd,
+		ConsecutiveFailures: c,
+		GracePeriodSeconds:  g,
+		IntervalSeconds:     i,
+		TimeoutSeconds:      t,
+		DelaySeconds:        d,
 	}
 	return b
 }
@@ -441,6 +491,7 @@ func demoVersion() *verBuilder {
 		Mem:         5,
 		Disk:        0,
 		RunAs:       "integration",
+		Cluster:     "",
 		Constraints: nil,
 		Container: &types.Container{
 			Type: "docker",
@@ -452,7 +503,7 @@ func demoVersion() *verBuilder {
 				Privileged:     false,
 				PortMappings: []*types.PortMapping{
 					{
-						Name:          "web",
+						Name:          "http",
 						Protocol:      "tcp",
 						ContainerPort: 80,
 						HostPort:      80,
