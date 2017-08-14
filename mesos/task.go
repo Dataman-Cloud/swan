@@ -40,7 +40,6 @@ func (t *Task) Build() {
 	if t.cfg.HealthCheck != nil && !t.cfg.HealthCheck.IsEmpty() {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
 	}
-	//t.KillPolicy = t.cfg.BuildKillPolicy()
 	t.Labels = t.cfg.BuildLabels(t.ID(), t.GetName())
 }
 

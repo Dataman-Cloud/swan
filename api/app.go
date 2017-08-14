@@ -1781,8 +1781,16 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	return nil
 }
 
+// delTask actually kill runtime task & remove db objects
 func (s *Server) delTask(appId string, task *types.Task) error {
-	if err := s.driver.KillTask(task.ID, task.AgentId); err != nil {
+	var gracePeriod int64
+	if ver, err := s.db.GetVersion(appId, task.Version); err == nil {
+		if ver.KillPolicy != nil {
+			gracePeriod = ver.KillPolicy.Duration
+		}
+	}
+
+	if err := s.driver.KillTask(task.ID, task.AgentId, gracePeriod); err != nil {
 		log.Errorf("Kill task %s got error: %v", task.ID, err)
 
 		task.OpStatus = fmt.Sprintf("kill task error: %v", err)
