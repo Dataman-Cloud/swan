@@ -49,7 +49,7 @@ func NewServer(cfg *Config, l net.Listener, driver Driver, db store.Store) *Serv
 
 // createMux initializes the main router the server uses.
 func (s *Server) createMux() *mux.Router {
-	m := mux.NewRouter()
+	m := mux.NewRouter().StrictSlash(true)
 
 	s.setupRoutes(m)
 

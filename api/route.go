@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 )
 
 type HandlerFunc func(w http.ResponseWriter, r *http.Request)
@@ -31,7 +32,7 @@ func (r *Route) Handler() HandlerFunc {
 func NewRoute(method, path string, handler HandlerFunc) *Route {
 	return &Route{
 		method,
-		path,
+		strings.TrimSuffix(path, "/"),
 		handler,
 		false,
 	}
