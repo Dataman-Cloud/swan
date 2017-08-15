@@ -101,8 +101,8 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 		demoVersion().setRunAs("de..mo").Get():                "character.*not allowed",
 		demoVersion().setRunAs("<**$").Get():                  "character.*not allowed",
 		demoVersion().setRunAs("    ").Get():                  "character.*not allowed",
-		demoVersion().setRunAs(strings.Repeat("x", 65)).Get(): "runAs should between",
-		demoVersion().setRunAs("").Get():                      "runAs should between",
+		demoVersion().setRunAs(strings.Repeat("x", 65)).Get(): "runAs length should between",
+		demoVersion().setRunAs("").Get():                      "runAs length should between",
 	}
 	for ver, errmsg := range invalidRunAses {
 		code, body, err := s.rawCreateApp(ver)
@@ -119,7 +119,7 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 		demoVersion().setCluster("de..mo").Get():                "character.*not allowed",
 		demoVersion().setCluster("<**$").Get():                  "character.*not allowed",
 		demoVersion().setCluster("    ").Get():                  "character.*not allowed",
-		demoVersion().setCluster(strings.Repeat("x", 65)).Get(): "cluster should between",
+		demoVersion().setCluster(strings.Repeat("x", 65)).Get(): "cluster name length should between",
 	}
 	for ver, errmsg := range invalidClusters {
 		code, body, err := s.rawCreateApp(ver)
