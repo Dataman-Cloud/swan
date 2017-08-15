@@ -40,7 +40,7 @@ type GlobalCounter struct {
 	RxBytes  uint64 `json:"rx_bytes"`      // nb of received bytes
 	TxBytes  uint64 `json:"tx_bytes"`      // nb of transmitted bytes
 	Requests uint64 `json:"requests"`      // nb of client requests
-	Fails    uint64 `json:"fails"`         // nb of failed requesets
+	Fails    uint64 `json:"fails"`         // nb of failed requests
 	RxRate   uint   `json:"rx_rate"`       // received bytes / second
 	TxRate   uint   `json:"tx_rate"`       // transmitted bytes / second
 	ReqRate  uint   `json:"requests_rate"` // requests / second

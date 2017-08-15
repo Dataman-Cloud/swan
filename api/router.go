@@ -64,6 +64,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewPrefixRoute("ANY", "/v1/agents/{agent_id}/ipam", s.redirectAgentIPAM),
 
 		NewRoute("GET", "/v1/apps/{app_id}/dns", s.getAppDNS),
+		NewRoute("GET", "/v1/apps/{app_id}/dns/traffics", s.getAppDNSTraffics),
 		NewRoute("GET", "/v1/apps/{app_id}/proxy", s.getAppProxy),
 		NewRoute("GET", "/v1/apps/{app_id}/proxy/traffics", s.getAppTraffics),
 	}
