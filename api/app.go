@@ -80,7 +80,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		ID:        id,
 		Name:      version.Name,
 		RunAs:     version.RunAs,
-		Cluster:   r.driver.ClusterName(),
+		Cluster:   cluster,
 		OpStatus:  types.OpStatusCreating,
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
