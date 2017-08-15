@@ -3,6 +3,7 @@
 
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
 PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]')
+Compose := "https://github.com/docker/compose/releases/download/1.14.0/docker-compose"
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
@@ -44,13 +45,22 @@ docker-image:
 	docker build --tag swan:$(shell git rev-parse --short HEAD) --rm -f ./Dockerfile.legacy .
 	docker tag swan:$(shell git rev-parse --short HEAD) swan:latest
 
-local-cluster: docker-build docker-image
+prepare-docker-compose:
+	@if ! command -v docker-compose > /dev/null 2>&1; then \
+        echo "docker-compose downloading ..."; \
+        curl --progress-bar -L $(Compose)-$(shell uname -s)-$(shell uname -m) -o \
+            /usr/local/bin/docker-compose; \
+        chmod +x /usr/local/bin/docker-compose; \
+        echo "docker-compose downloaded!"; \
+    fi
+
+local-cluster: prepare-docker-compose docker-build docker-image
 	rm -rf /tmp/mesos-data || true
 	mkdir -p /tmp/mesos-data || true
 	docker-compose up -d
 	docker-compose ps
 
-rm-local-cluster:
+rm-local-cluster: prepare-docker-compose
 	docker-compose stop
 	docker-compose rm -f
 
