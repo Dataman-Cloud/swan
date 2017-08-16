@@ -43,9 +43,18 @@
   - [GET /v1/debug/load](#load)
 
 + agents
-  - [GET /v1/agents](#agents)
-  - [GET /v1/agents/{agent_id}]
-  - [DELETE /v1/agents/{agent_id}]
+  - [GET /v1/agents](#list-agents) *List all agents*
+  - [GET /v1/agents/{agent_id}](#get-agent) *Get specified agent*
+  - [DELETE /v1/agents/{agent_id}](#close-agent) *Disconnect specified agent*
+  - [GET /v1/agents/{agent_id}/dns](#get-agent-dns) *Get dns records on specified agent*
+  - [GET /v1/agents/{agent_id}/dns/stats](#get-agent-dns-stats) *Get dns traffics stats on specified agent*
+  - [GET /v1/agents/{agent_id}/proxy](#get-agent-proxy) *Get proxy records on specified agent*
+  - [GET /v1/agents/{agent_id}/proxy/stats](#get-agent-proxy-stats) *Get proxy traffics stats on specified agent*
+
++ ipam
+  - [PUT /v1/agents/{agent_id}/ipam/subnets](#set-ipam-pool-range) *Set ip pool range*
+  - [GET /v1/agents/{agent_id}/ipam/subnets](#get-ipam-pool-usage) *List ipam pool usage*
+
 
 + reset 
   - [POST /v1/apps/{app_id}/reset](#reset)
@@ -1289,6 +1298,92 @@ GET /v1/apps/{app_id}/proxy/traffics
 }
 ```
 
+### IPAM
+
+#### set ipam pool range
+```
+# by CLI
+./swan agent ipam  --ip-start=192.168.1.199/24 --ip-end=192.168.1.209/24
+
+# by HTTP API
+agent_id 为任意一个节点
+PUT /v1/agents/{agent_id}/ipam/subnets
+```
+
+```json
+{
+  "ip_start": "192.168.1.199/24",
+  "ip_end": "192.168.1.209/24"
+}
+```
+
+#### get ipam pool usage
+```
+agent_id 为任意一个节点
+GET /v1/agents/{agent_id}/ipam/subnets
+```
+
+```json
+{
+  "192.168.1.0": {
+    "ips": [
+      [
+        "192.168.1.208",
+        "false"
+      ],
+      [
+        "192.168.1.209",
+        "false"
+      ],
+      [
+        "192.168.1.206",
+        "false"
+      ],
+      [
+        "192.168.1.199",
+        "true"
+      ],
+      [
+        "192.168.1.207",
+        "false"
+      ],
+      [
+        "192.168.1.204",
+        "false"
+      ],
+      [
+        "192.168.1.205",
+        "false"
+      ],
+      [
+        "192.168.1.202",
+        "false"
+      ],
+      [
+        "192.168.1.203",
+        "false"
+      ],
+      [
+        "192.168.1.200",
+        "true"
+      ],
+      [
+        "192.168.1.201",
+        "false"
+      ]
+    ],
+    "subnet": {
+      "id": "192.168.1.0",
+      "cidr": "192.168.1.0/24",
+      "ipnet": "192.168.1.0/24",
+      "ip_start": "192.168.1.0",
+      "ip_end": "192.168.1.255",
+      "mask": 24
+    }
+  }
+}
+```
+
 #### Ping
 ```
 GET /ping
@@ -1351,11 +1446,9 @@ Example response:
 ```
 
 
-### agents
-
+#### list agents
 ```
 GET /v1/agents
-GET /v1/agents/{agent_id}
 ```
 
 ```json
@@ -1464,6 +1557,338 @@ GET /v1/agents/{agent_id}
       22,
       443
     ]
+  }
+}
+```
+
+#### get agent
+```
+GET /v1/agents/{agent_id}
+```
+
+```json
+{
+  "hostname": "master",
+  "os": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n",
+  "uptime": "25042.000000",
+  "unixtime": 1502877459,
+  "loadavg": 0.11,
+  "cpu": {
+    "processor": 4,
+    "physical": 4,
+    "used": 1.026625907152237
+  },
+  "memory": {
+    "total": 3975307264,
+    "used": 1297035264
+  },
+  "containers": {
+    "total": 0,
+    "running": 0,
+    "stopped": 0,
+    "killed": 0,
+    "paused": 0
+  },
+  "ips": {
+    "docker0": [
+      "172.17.0.1"
+    ],
+    "enp0s3": [
+      "192.168.1.117",
+      "192.168.1.196"
+    ]
+  },
+  "listenings": [
+    2379,
+    2380,
+    9999,
+    80,
+    10000,
+    10001,
+    22,
+    5050,
+    5051,
+    514,
+    9900,
+    22,
+    443,
+    35612,
+    9090,
+    514,
+    99,
+    2181
+  ]
+}
+```
+
+#### close agent
+```
+DELETE /v1/agents/{agent_id}
+```
+
+#### get agent dns
+```
+GET /v1/agents/{agent_id}/dns
+```
+
+```json
+{
+  "PROXY": [
+    {
+      "id": "local_proxy",
+      "parent": "PROXY",
+      "ip": "192.168.1.196",
+      "port": "80",
+      "weight": 0,
+      "proxy_record": true,
+      "clean_name": ""
+    }
+  ],
+  "demo.default.bbk.dataman-mesos": [
+    {
+      "id": "be0410cb4573.3.demo.default.bbk.dataman-mesos",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "port": "31006",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "3.demo.default.bbk.dataman-mesos.bbklab.net."
+    },
+    {
+      "id": "93af82d0ef07.2.demo.default.bbk.dataman-mesos",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "port": "31004",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "2.demo.default.bbk.dataman-mesos.bbklab.net."
+    },
+    {
+      "id": "0c97e734c2f4.4.demo.default.bbk.dataman-mesos",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "port": "31008",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "4.demo.default.bbk.dataman-mesos.bbklab.net."
+    },
+    {
+      "id": "94be53aa2c26.1.demo.default.bbk.dataman-mesos",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "port": "31002",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "1.demo.default.bbk.dataman-mesos.bbklab.net."
+    },
+    {
+      "id": "b8d3d1d49fe9.0.demo.default.bbk.dataman-mesos",
+      "parent": "demo.default.bbk.dataman-mesos",
+      "ip": "192.168.1.130",
+      "port": "31000",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "0.demo.default.bbk.dataman-mesos.bbklab.net."
+    }
+  ],
+  "static.default.bbk.dataman-mesos": [
+    {
+      "id": "83182b005e01.0.static.default.bbk.dataman-mesos",
+      "parent": "static.default.bbk.dataman-mesos",
+      "ip": "192.168.1.199",
+      "port": "0",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "0.static.default.bbk.dataman-mesos.bbklab.net."
+    },
+    {
+      "id": "881454606c0d.1.static.default.bbk.dataman-mesos",
+      "parent": "static.default.bbk.dataman-mesos",
+      "ip": "192.168.1.200",
+      "port": "0",
+      "weight": 100,
+      "proxy_record": false,
+      "clean_name": "1.static.default.bbk.dataman-mesos.bbklab.net."
+    }
+  ]
+}
+```
+
+#### get agent dns stats
+```
+GET /v1/agents/{agent_id}/dns/stats
+```
+
+```json
+{
+  "global": {
+    "requests": 19,
+    "fails": 0,
+    "authority": 18,
+    "forward": 1,
+    "type_a": 18,
+    "type_srv": 0
+  },
+  "parents": {
+    "demo.default.bbk.dataman-mesos": {
+      "requests": 8,
+      "fails": 0,
+      "authority": 8,
+      "forward": 0,
+      "type_a": 8,
+      "type_srv": 0
+    }
+  },
+  "uptime": "1h58m19.683359556s"
+}
+```
+
+#### get agent proxy
+```
+GET /v1/agents/{agent_id}/proxy
+```
+
+```json
+[
+  {
+    "name": "demo.default.bbk.dataman-mesos",
+    "alias": "g.cn",
+    "listen": ":99",
+    "sticky": false,
+    "backends": [
+      {
+        "id": "be0410cb4573.3.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31006,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100,
+        "clean_name": "3.demo.default.bbk.dataman-mesos"
+      },
+      {
+        "id": "93af82d0ef07.2.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31004,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100,
+        "clean_name": "2.demo.default.bbk.dataman-mesos"
+      },
+      {
+        "id": "0c97e734c2f4.4.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31008,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100,
+        "clean_name": "4.demo.default.bbk.dataman-mesos"
+      },
+      {
+        "id": "94be53aa2c26.1.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31002,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100,
+        "clean_name": "1.demo.default.bbk.dataman-mesos"
+      },
+      {
+        "id": "b8d3d1d49fe9.0.demo.default.bbk.dataman-mesos",
+        "ip": "192.168.1.130",
+        "port": 31000,
+        "scheme": "",
+        "version": "",
+        "weihgt": 100,
+        "clean_name": "0.demo.default.bbk.dataman-mesos"
+      }
+    ]
+  }
+]
+```
+
+#### get agent proxy stats
+```
+GET /v1/agents/{agent_id}/proxy/stats
+```
+
+```json
+{
+  "counter": {
+    "global": {
+      "rx_bytes": 1200,
+      "tx_bytes": 12765,
+      "requests": 15,
+      "fails": 0,
+      "rx_rate": 0,
+      "tx_rate": 0,
+      "requests_rate": 0,
+      "fails_rate": 0,
+      "uptime": "2h0m32.073628892s"
+    },
+    "upstream": {
+      "demo.default.bbk.dataman-mesos": {
+        "0c97e734c2f4.4.demo.default.bbk.dataman-mesos": {
+          "active_clients": 0,
+          "rx_bytes": 480,
+          "tx_bytes": 5106,
+          "requests": 6,
+          "rx_rate": 0,
+          "tx_rate": 0,
+          "requests_rate": 0,
+          "uptime": "53.861101038s"
+        },
+        "93af82d0ef07.2.demo.default.bbk.dataman-mesos": {
+          "active_clients": 0,
+          "rx_bytes": 80,
+          "tx_bytes": 851,
+          "requests": 1,
+          "rx_rate": 0,
+          "tx_rate": 0,
+          "requests_rate": 0,
+          "uptime": "36.96047377s"
+        },
+        "94be53aa2c26.1.demo.default.bbk.dataman-mesos": {
+          "active_clients": 0,
+          "rx_bytes": 160,
+          "tx_bytes": 1702,
+          "requests": 2,
+          "rx_rate": 0,
+          "tx_rate": 0,
+          "requests_rate": 0,
+          "uptime": "35.760768071s"
+        },
+        "b8d3d1d49fe9.0.demo.default.bbk.dataman-mesos": {
+          "active_clients": 0,
+          "rx_bytes": 80,
+          "tx_bytes": 851,
+          "requests": 1,
+          "rx_rate": 0,
+          "tx_rate": 0,
+          "requests_rate": 0,
+          "uptime": "36.148380693s"
+        },
+        "be0410cb4573.3.demo.default.bbk.dataman-mesos": {
+          "active_clients": 0,
+          "rx_bytes": 400,
+          "tx_bytes": 4255,
+          "requests": 5,
+          "rx_rate": 0,
+          "tx_rate": 0,
+          "requests_rate": 0,
+          "uptime": "52.731013333s"
+        }
+      }
+    }
+  },
+  "httpd": "192.168.1.130:80",
+  "httpdTLS": ":443",
+  "tcpd": {
+    ":99": {
+      "active_clients": 0,
+      "listen": ":99",
+      "serving": true,
+      "uptime": "11m55.39149628s"
+    }
   }
 }
 ```
