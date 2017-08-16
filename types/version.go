@@ -367,7 +367,7 @@ func (v *Version) Validate() error {
 
 	// verify runas
 	if n := len(v.RunAs); n == 0 || n > 64 {
-		return errors.New("runAs length should between (0,64]")
+		return errors.New("runAs should between (0,64]")
 	}
 
 	if err := utils.LegalDomain(v.RunAs); err != nil {
@@ -376,7 +376,7 @@ func (v *Version) Validate() error {
 
 	// verify cluster
 	if n := len(v.Cluster); n > 64 {
-		return errors.New("cluster name length should between [0,64]")
+		return errors.New("cluster should between [0,64]")
 	}
 
 	if err := utils.LegalDomain(v.Cluster); err != nil {
