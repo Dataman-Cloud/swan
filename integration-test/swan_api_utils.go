@@ -63,6 +63,13 @@ func (s *ApiSuite) rawRollBackApp(id string, versionID string) (int, []byte, err
 	return s.sendRequest("POST", uri, nil)
 }
 
+func (s *ApiSuite) canaryUpdate(id string, canary *types.CanaryUpdateBody, c *check.C) {
+	code, body, err := s.sendRequest("PUT", "/v1/apps/"+id+"/canary", canary)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusAccepted)
+}
+
 func (s *ApiSuite) createApp(ver *types.Version, c *check.C) string {
 	code, body, err := s.rawCreateApp(ver)
 	c.Assert(err, check.IsNil)
