@@ -571,17 +571,17 @@ type DockerService struct {
 	NetworkMode string
 }
 
-func demoYAML() (string, map[string]*types.YamlExtra) {
+func demoYAML(count int, image, cmd, network string) (string, map[string]*types.YamlExtra) {
 	buf := bytes.NewBufferString(dockerYAMLHeader)
 
 	exts := make(map[string]*types.YamlExtra)
-	for i := 1; i <= 3; i++ {
+	for i := 1; i <= count; i++ {
 		svrName := fmt.Sprintf("srv%d", i)
 		ds := &DockerService{
 			Name:        svrName,
-			Image:       "busybox",
-			Command:     "sleep 100d",
-			NetworkMode: "bridge",
+			Image:       image,
+			Command:     cmd,
+			NetworkMode: network,
 		}
 		exts[svrName] = &types.YamlExtra{
 			Resource: &types.Resource{0.01, 0, 10, 0, nil},
