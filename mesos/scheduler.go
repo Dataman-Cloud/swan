@@ -992,7 +992,7 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 	ver, err := s.db.GetVersion(appId, task.Version)
 	if err != nil {
-		return fmt.Errorf("Shceduler.SendEvent() db GetVersion error:", err)
+		return fmt.Errorf("Shceduler.SendEvent() db GetVersion error: %v", err)
 	}
 
 	evType := types.EventTypeTaskUnhealthy
@@ -1026,11 +1026,11 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 	}
 
 	if err := s.eventmgr.broadcast(taskEv); err != nil {
-		return fmt.Errorf("Shceduler.SendEvent(): broadcast task event got error:", err)
+		return fmt.Errorf("Shceduler.SendEvent(): broadcast task event got error: %v", err)
 	}
 
 	if err := s.broadcastEventRecords(taskEv); err != nil {
-		return fmt.Errorf("Shceduler.SendEvent(): broadcast to sync proxy & dns records error:", err)
+		return fmt.Errorf("Shceduler.SendEvent(): broadcast to sync proxy & dns records error: %v", err)
 		// TODO: memo db task errmsg
 	}
 
