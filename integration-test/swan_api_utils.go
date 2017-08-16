@@ -70,6 +70,13 @@ func (s *ApiSuite) canaryUpdate(id string, canary *types.CanaryUpdateBody, c *ch
 	c.Assert(code, check.Equals, http.StatusAccepted)
 }
 
+func (s *ApiSuite) updateWeights(id string, update *types.UpdateWeightsBody, c *check.C) {
+	code, body, err := s.sendRequest("PUT", "/v1/apps/"+id+"/weights", update)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusAccepted)
+}
+
 func (s *ApiSuite) createApp(ver *types.Version, c *check.C) string {
 	code, body, err := s.rawCreateApp(ver)
 	c.Assert(err, check.IsNil)
