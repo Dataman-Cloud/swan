@@ -98,6 +98,24 @@ func (r *Server) getAppDNS(w http.ResponseWriter, req *http.Request) {
 	writeJSON(w, http.StatusOK, ret)
 }
 
+func (r *Server) getAppDNSTraffics(w http.ResponseWriter, req *http.Request) {
+	var (
+		appId = mux.Vars(req)["app_id"]
+		ret   = make(map[string]interface{})
+	)
+
+	for id := range r.driver.ClusterAgents() {
+		info, err := r.getAppDNSTrafficInfo(id, appId)
+		if err != nil {
+			ret[id] = err.Error()
+		} else {
+			ret[id] = info
+		}
+	}
+
+	writeJSON(w, http.StatusOK, ret)
+}
+
 func (r *Server) getAppProxy(w http.ResponseWriter, req *http.Request) {
 	var (
 		appId = mux.Vars(req)["app_id"]
@@ -123,7 +141,7 @@ func (r *Server) getAppTraffics(w http.ResponseWriter, req *http.Request) {
 	)
 
 	for id := range r.driver.ClusterAgents() {
-		info, err := r.getAppTrafficInfo(id, appId)
+		info, err := r.getAppProxyTrafficInfo(id, appId)
 		if err != nil {
 			ret[id] = err.Error()
 		} else {
@@ -206,74 +224,52 @@ func (r *Server) getAgentsListenings() []int64 {
 	return ls[:len(seen)] // re-slice
 }
 
-func (r *Server) getAgentInfo(id string) (*types.SysInfo, error) {
-	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/sysinfo", id), nil)
-	resp, err := r.proxyAgent(id, agentReq)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if code := resp.StatusCode; code != 200 {
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%d - %s", code, string(bs))
-	}
-
+func (r *Server) getAgentInfo(agentId string) (*types.SysInfo, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/sysinfo", agentId), nil)
 	var info *types.SysInfo
-	err = json.NewDecoder(resp.Body).Decode(&info)
+	err := r.requestAgentResource(agentId, agentReq, 200, &info)
 	return info, err
 }
 
 func (r *Server) getAppDNSInfo(agentId, appId string) ([]interface{}, error) {
 	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/dns/records/%s", agentId, appId), nil)
-	resp, err := r.proxyAgent(agentId, agentReq)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if code := resp.StatusCode; code != 200 {
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%d - %s", code, string(bs))
-	}
-
 	var info []interface{}
-	err = json.NewDecoder(resp.Body).Decode(&info)
+	err := r.requestAgentResource(agentId, agentReq, 200, &info)
 	return info, err
 }
 
 func (r *Server) getAppProxyInfo(agentId, appId string) (map[string]interface{}, error) {
 	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/proxy/upstreams/%s", agentId, appId), nil)
-	resp, err := r.proxyAgent(agentId, agentReq)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if code := resp.StatusCode; code != 200 {
-		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%d - %s", code, string(bs))
-	}
-
 	var info map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&info)
+	err := r.requestAgentResource(agentId, agentReq, 200, &info)
 	return info, err
 }
 
-func (r *Server) getAppTrafficInfo(agentId, appId string) (map[string]interface{}, error) {
+func (r *Server) getAppProxyTrafficInfo(agentId, appId string) (map[string]interface{}, error) {
 	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/proxy/stats/%s", agentId, appId), nil)
-	resp, err := r.proxyAgent(agentId, agentReq)
+	var info map[string]interface{}
+	err := r.requestAgentResource(agentId, agentReq, 200, &info)
+	return info, err
+}
+
+func (r *Server) getAppDNSTrafficInfo(agentId, appId string) (map[string]interface{}, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/dns/stats/%s", agentId, appId), nil)
+	var info map[string]interface{}
+	err := r.requestAgentResource(agentId, agentReq, 200, &info)
+	return info, err
+}
+
+func (r *Server) requestAgentResource(id string, req *http.Request, expectCode int, data interface{}) error {
+	resp, err := r.proxyAgent(id, req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer resp.Body.Close()
 
-	if code := resp.StatusCode; code != 200 {
+	if code := resp.StatusCode; code != expectCode {
 		bs, _ := ioutil.ReadAll(resp.Body)
-		return nil, fmt.Errorf("%d - %s", code, string(bs))
+		return fmt.Errorf("%d - %s", code, string(bs))
 	}
 
-	var info map[string]interface{}
-	err = json.NewDecoder(resp.Body).Decode(&info)
-	return info, err
+	return json.NewDecoder(resp.Body).Decode(&data)
 }

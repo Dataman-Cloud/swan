@@ -19,8 +19,9 @@
 
 + dns/proxy/traffics
   - [GET /v1/apps/{app_id}/dns](#list-all-dns-for-a-app) *List all dns records for a app*
+  - [GET /v1/apps/{app_id}/dns/traffics](#list-dns-traffics-for-a-app) *List dns traffics for a app*
   - [GET /v1/apps/{app_id}/proxy](#list-all-proxy-for-a-app) *List all proxy records for a app*
-  - [GET /v1/apps/{app_id}/proxy/traffics](#list-all-traffics-for-a-app) *List all proxy traffics for a app*
+  - [GET /v1/apps/{app_id}/proxy/traffics](#list-proxy-traffics-for-a-app) *List proxy traffics for a app*
 
 + compose
   - [compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)
@@ -1178,8 +1179,33 @@ GET /v1/apps/{app_id}/proxy
   }
 }
 ```
+#### List dns traffics for a app
+```
+GET /v1/apps/{app_id}/dns/traffics
+```
 
-#### List all traffics for a app
+```json
+{
+  "3264208446845635": {
+    "authority": 9,
+    "fails": 0,
+    "forward": 0,
+    "requests": 9,
+    "type_a": 5,
+    "type_srv": 4
+  },
+  "3981314045636649": {
+    "authority": 17,
+    "fails": 0,
+    "forward": 0,
+    "requests": 17,
+    "type_a": 2,
+    "type_srv": 15
+  }
+}
+```
+
+#### List proxy traffics for a app
 ```
 GET /v1/apps/{app_id}/proxy/traffics
 ```

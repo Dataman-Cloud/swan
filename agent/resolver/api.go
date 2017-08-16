@@ -45,7 +45,9 @@ func (s *Resolver) DelRecord(c *gin.Context) {
 		return
 	}
 
-	s.remove(record)
+	if s.remove(record) {
+		s.stats.Del(record.Parent)
+	}
 	c.Writer.WriteHeader(204)
 }
 
@@ -54,4 +56,15 @@ func (s *Resolver) ShowConfigs(c *gin.Context) {
 }
 
 func (s *Resolver) ShowStats(c *gin.Context) {
+	c.JSON(200, s.stats.Get())
+}
+
+func (s *Resolver) ShowParentStats(c *gin.Context) {
+	pid := c.Param("id")
+	m := s.stats.Get()
+	if m, ok := m.Parents[pid]; ok {
+		c.JSON(200, m)
+		return
+	}
+	c.JSON(200, make(map[string]interface{}))
 }

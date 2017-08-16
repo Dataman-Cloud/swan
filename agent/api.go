@@ -44,6 +44,7 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 		r.DELETE("/records", resolver.DelRecord)
 		r.GET("/configs", resolver.ShowConfigs)
 		r.GET("/stats", resolver.ShowStats)
+		r.GET("/stats/:id", resolver.ShowParentStats)
 	}
 
 	// /ipam/**
