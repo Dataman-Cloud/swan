@@ -14,10 +14,6 @@ script:
   - make collect-cover-data
   - make test-cover-html
   - make test-cover-func
-  - make integration-test
-
-after_script:
-  - make rm-local-cluster
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -X fix
