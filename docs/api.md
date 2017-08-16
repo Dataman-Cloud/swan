@@ -55,6 +55,8 @@
   - [PUT /v1/agents/{agent_id}/ipam/subnets](#set-ipam-pool-range) *Set ip pool range*
   - [GET /v1/agents/{agent_id}/ipam/subnets](#get-ipam-pool-usage) *List ipam pool usage*
 
++ task-over-docker-remote-api
+  - [ANY /v1/agents/{agent_id}/docker/{standard_docker_remote_api}](#take-over-agent-docker-remote-api) *Redirect agent docker remote API through swan api*
 
 + reset 
   - [POST /v1/apps/{app_id}/reset](#reset)
@@ -1424,6 +1426,21 @@ Example response:
 {
     "leader": "192.168.1.92:5016"
 }
+```
+
+#### take over agent docker remote api
+swan上可以直接请求 节点上的 [Docker Remote API 1.21](https://docs.docker.com/engine/api/v1.21/)  
+而不需要节点上的docker 监听tcp端口, 不过需要swan agent部署的时候挂载/var/run/docker.sock:/var/run/docker.sock:rw  
+
+Example:
+```
+/v1/agents/3981314045636649/docker/containers/json
+
+/v1/agents/3981314045636649/docker/containers/54b701f325fe1f229dd9174fb90123057e933d2f564d4e5f90e0a69ee6461770/json
+
+/v1/agents/3981314045636649/docker/images/json
+
+/v1/agents/3981314045636649/docker/networks
 ```
 
 #### Reset
