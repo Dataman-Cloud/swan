@@ -100,9 +100,12 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				log.Errorf("launch compose %s error: %v", cmp.Name, err)
 				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, err.Error())
 			} else {
+				log.Printf("launch compose %s succeed", cmp.Name)
 				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, "")
 			}
 		}()
+
+		log.Printf("Preparing to launch compose %s", cmp.Name)
 
 		// create each App by order
 		for _, name := range srvOrders {
@@ -111,7 +114,10 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				ver, _  = service.ToVersion(cmp.Name, r.driver.ClusterName())
 				cluster = r.driver.ClusterName()
 				appId   = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
+				count   = int(ver.Instances)
 			)
+
+			log.Printf("launching compose app %s with %d tasks", appId, count)
 
 			app := &types.Application{
 				ID:        appId,
@@ -130,11 +136,9 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 
 			if err = r.db.CreateVersion(appId, ver); err != nil {
 				err = fmt.Errorf("create App %s db Version error: %v", appId, err)
+				r.memoAppStatus(appId, types.OpStatusNoop, err.Error())
 				return
 			}
-
-			count := int(ver.Instances)
-			log.Debugf("Preparing to launch %d App %s tasks", count, appId)
 
 			for i := 0; i < count; i++ {
 				var (
@@ -142,17 +146,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					taskId   = fmt.Sprintf("%s.%s", utils.RandomString(12), taskName)
 				)
 
-				cfg := types.NewTaskConfig(ver, i)
-
-				if cfg.Network != "host" && cfg.Network != "bridge" {
-					cfg.Parameters = append(cfg.Parameters, &types.Parameter{
-						Key:   "ip",
-						Value: ver.IPs[i],
-					})
-
-					cfg.IP = ver.IPs[i]
-				}
-
+				// db task
 				task := &types.Task{
 					ID:      taskId,
 					Name:    taskName,
@@ -171,10 +165,13 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				log.Debugf("Create task %s in db", taskId)
 				if err = r.db.CreateTask(appId, task); err != nil {
 					err = fmt.Errorf("create db task failed: %s", err)
+					r.memoAppStatus(appId, types.OpStatusNoop, err.Error())
 					return
 				}
 
+				// runtime task
 				var (
+					cfg   = types.NewTaskConfig(ver, i)
 					t     = mesos.NewTask(cfg, taskId, taskName)
 					tasks = []*mesos.Task{t}
 				)
@@ -182,17 +179,20 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				err = r.driver.LaunchTasks(tasks)
 				if err != nil {
 					err = fmt.Errorf("launch compose tasks %s error: %v", taskName, err)
+					r.memoAppStatus(appId, types.OpStatusNoop, err.Error())
 					return
 				}
 			}
 
 			// max wait for 5 seconds to confirm the preivous app get normal
 			if err = r.ensureAppReady(appId, time.Second*5); err != nil {
+				r.memoAppStatus(appId, types.OpStatusNoop, err.Error())
 				return
 			}
 
 			// mark app status
 			r.memoAppStatus(appId, types.OpStatusNoop, "")
+			log.Printf("compose app %s launch succeed", appId)
 		}
 	}()
 
@@ -302,16 +302,27 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 		// defer mark db status
 		defer func() {
 			if err != nil {
-				log.Errorf("remove compose %s error: %v", cmp.Name, err)
+				err = fmt.Errorf("remove compose %s error: %v", cmp.Name, err)
+				log.Errorln(err)
 				r.memoComposeStatus(cmp.ID, types.OpStatusNoop, err.Error())
+			} else {
+				log.Printf("compose %s remove succeed", cmp.Name)
 			}
 		}()
+
+		log.Printf("Preparing to remove compose %s", cmp.Name)
 
 		// remove each of app
 		for name := range cmp.ServiceGroup {
 			appId := fmt.Sprintf("%s.%s.%s.%s", name, cmp.Name, cmp.RunAs(), r.driver.ClusterName())
 
-			if _, err := r.db.GetApp(appId); err != nil {
+			log.Printf("removing compose app %s ...", appId)
+
+			if _, err = r.db.GetApp(appId); err != nil {
+				if r.db.IsErrNotFound(err) {
+					log.Printf("removing skip non-exists compose app %s ...", appId)
+					continue
+				}
 				err = fmt.Errorf("get App %s error: %v", appId, err)
 				return
 			}
@@ -331,6 +342,8 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 			if err = r.delApp(appId, tasks, versions); err != nil {
 				return
 			}
+
+			log.Printf("removed compose app %s", appId)
 		}
 
 		// remove db compose

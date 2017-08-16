@@ -1775,7 +1775,7 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 
 	// remove db app
 	if err := r.db.DeleteApp(appId); err != nil {
-		log.Errorf("Delete app %s got error: %v", appId, err)
+		return fmt.Errorf("Delete app %s got error: %v", appId, err)
 	}
 
 	return nil
