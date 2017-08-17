@@ -13,6 +13,8 @@ import (
 
 	"gopkg.in/check.v1"
 
+	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
+	"github.com/Dataman-Cloud/swan/agent/resolver"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -135,6 +137,42 @@ func (s *ApiSuite) listAppTasks(id string, c *check.C) []*types.Task {
 	c.Assert(err, check.IsNil)
 
 	return tasks
+}
+
+func (s *ApiSuite) listAppProxies(id string, c *check.C) *upstream.Upstream {
+	code, body, err := s.sendRequest("GET", "/v1/apps/"+id+"/proxy", nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	var rc map[string]*upstream.Upstream
+	err = s.bind(body, &rc)
+	c.Assert(err, check.IsNil)
+
+	var up *upstream.Upstream
+	for _, v := range rc {
+		up = v
+	}
+
+	return up
+}
+
+func (s *ApiSuite) listAppDNS(id string, c *check.C) []*resolver.Record {
+	code, body, err := s.sendRequest("GET", "/v1/apps/"+id+"/dns", nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	var rc map[string][]*resolver.Record
+	err = s.bind(body, &rc)
+	c.Assert(err, check.IsNil)
+
+	var dns []*resolver.Record
+	for _, v := range rc {
+		dns = v
+	}
+
+	return dns
 }
 
 func (s *ApiSuite) inspectApp(id string, c *check.C) *types.Application {
@@ -492,6 +530,17 @@ func (b *verBuilder) setNetwork(net string) *verBuilder {
 
 func (b *verBuilder) setIPs(ips []string) *verBuilder {
 	b.IPs = ips
+	return b
+}
+
+func (b *verBuilder) setProxy(enabled bool, alias, listen string, sticky bool) *verBuilder {
+	b.Proxy = &types.Proxy{
+		Enabled: enabled,
+		Alias:   alias,
+		Listen:  listen,
+		Sticky:  sticky,
+	}
+
 	return b
 }
 
