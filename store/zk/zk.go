@@ -20,13 +20,14 @@ var (
 	errAppNotFound          = errors.New("app not found")
 	errAppAlreadyExists     = errors.New("app already exists")
 	errVersionAlreadyExists = errors.New("version already exists")
-	errInstanceNotFound     = errors.New("instance not found")
+	errComposeNotFound      = errors.New("compose app not found")
 	errNotExists            = zk.ErrNoNode
 )
 
 const (
 	keyApp         = "/apps"        // single app
-	keyCompose     = "/composes"    // compose instance (group apps)
+	keyCompose     = "/composes"    // compose instance legacy (group apps), deprecated
+	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
 )
 
@@ -51,7 +52,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyFrameworkID} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID} {
 		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}
@@ -64,7 +65,12 @@ func (zs *ZKStore) IsErrNotFound(err error) bool {
 	if err == nil {
 		return false
 	}
-	return strings.Contains(err.Error(), "node does not exist")
+	switch err {
+	case errComposeNotFound, errAppNotFound, errNotExists, zk.ErrNoNode:
+		return true
+	default:
+		return strings.Contains(err.Error(), "node does not exist")
+	}
 }
 
 func (zs *ZKStore) initConnection() error {

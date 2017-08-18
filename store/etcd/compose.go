@@ -1,8 +1,6 @@
 package etcd
 
 import (
-	"errors"
-
 	log "github.com/Sirupsen/logrus"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -20,7 +18,7 @@ func (s *EtcdStore) CreateCompose(cps *types.Compose) error {
 
 func (s *EtcdStore) UpdateCompose(cps *types.Compose) error {
 	if i, _ := s.GetCompose(cps.ID); i == nil {
-		return errInstanceNotFound
+		return errComposeNotFound
 	}
 
 	bs, err := encode(cps)
@@ -55,7 +53,7 @@ func (s *EtcdStore) GetCompose(idOrName string) (*types.Compose, error) {
 		}
 	}
 
-	return nil, errors.New("no such compose")
+	return nil, errComposeNotFound
 }
 
 func (s *EtcdStore) ListComposes() ([]*types.Compose, error) {

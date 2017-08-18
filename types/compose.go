@@ -1,3 +1,4 @@
+// Deprecated, Remove Later
 package types
 
 import (
@@ -162,11 +163,10 @@ type YamlExtra struct {
 }
 
 type Resource struct {
-	CPUs  float64  `json:"cpus"`
-	GPUs  float64  `json:"gpus"`
-	Mem   float64  `json:"mem"`
-	Disk  float64  `json:"disk"`
-	Ports []uint64 `json:"ports"`
+	CPUs float64 `json:"cpus" yaml:"cpus"`
+	GPUs float64 `json:"gpus" yaml:"gpus"`
+	Mem  float64 `json:"mem" yaml:"mem"`
+	Disk float64 `json:"disk" yaml:"disk"`
 }
 
 // ServiceGroup  (-> map[name]App Version)
