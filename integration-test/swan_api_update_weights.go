@@ -17,7 +17,7 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	fmt.Println("TestUpdateWeights() purged")
 
 	// create app
-	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).Get()
+	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
 	c.Assert(err, check.IsNil)
@@ -31,9 +31,28 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(len(app.Version), check.Equals, 1)
 	fmt.Println("TestUpdateWeights() verified")
 
+	// verify proxy record
+	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	for _, b := range proxy.Backends {
+		c.Assert(b.Weight, check.Equals, float64(100))
+	}
+
+	// verify dns records
+	dns := s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		c.Assert(d.Weight, check.Equals, float64(100))
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+
 	// do canay update first
 	body := &types.CanaryUpdateBody{
-		Version:   demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(10).Get(),
+		Version:   demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(10).setProxy(true, "www.xxx.com", "", false).Get(),
 		Instances: 3,
 		Value:     0.5,
 		OnFailure: "continue",
@@ -86,7 +105,37 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(counter[vers[0].ID], check.Equals, 3)
 	c.Assert(counter[vers[1].ID], check.Equals, 2)
 
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	var y int
+	for _, b := range proxy.Backends {
+		if b.Weight == 67 {
+			y++
+		}
+	}
+	c.Assert(y, check.Equals, 3)
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+
+	var x int
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		if d.Weight == 67 {
+			x++
+		}
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+	c.Assert(x, check.Equals, 3)
+
 	fmt.Println("TestUpdateWeights() canaried")
+
+	// Update weights again
 
 	s.updateWeights(id, &types.UpdateWeightsBody{
 		Value: 0.8,
@@ -116,6 +165,34 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	}
 
 	c.Assert(new, check.Equals, 3)
+
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	var y1 int
+	for _, b := range proxy.Backends {
+		if b.Weight == 267 {
+			y1++
+		}
+	}
+	c.Assert(y1, check.Equals, 3)
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+
+	var x1 int
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		if d.Weight == 267 {
+			x1++
+		}
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+	c.Assert(x1, check.Equals, 3)
 
 	// switch all traffics
 	s.updateWeights(id, &types.UpdateWeightsBody{
@@ -151,6 +228,46 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 
 	c.Assert(new, check.Equals, 3)
 	c.Assert(old, check.Equals, 2)
+
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	var m1, n1 int
+	for _, b := range proxy.Backends {
+		if b.Weight == 100 {
+			m1++
+		}
+
+		if b.Weight == 0 {
+			n1++
+		}
+	}
+	c.Assert(m1, check.Equals, 3)
+	c.Assert(n1, check.Equals, 2)
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+
+	var x2, y2 int
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		if d.Weight == 100 {
+			x2++
+		}
+
+		if d.Weight == 0 {
+			y2++
+		}
+
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+	c.Assert(x2, check.Equals, 3)
+	c.Assert(y2, check.Equals, 2)
+
 	// clean up
 
 	err = s.removeApp(id, time.Second*10, c)
