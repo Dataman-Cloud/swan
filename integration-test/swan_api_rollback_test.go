@@ -18,7 +18,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 
 	// New Create App
 	//
-	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).Get()
+	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
 	c.Assert(err, check.IsNil)
@@ -46,9 +46,28 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
 	}
 
+	// verify proxy record
+	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 3)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	for _, b := range proxy.Backends {
+		c.Assert(b.Weight, check.Equals, float64(100))
+	}
+
+	// verify dns records
+	dns := s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 3)
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		c.Assert(d.Weight, check.Equals, float64(100))
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+
 	// Update App
 	//
-	newVer := demoVersion().setName("demo").setCount(3).setCPU(0.02).setMem(10).Get()
+	newVer := demoVersion().setName("demo").setCount(3).setCPU(0.02).setMem(10).setProxy(true, "www.xxx.com", "", false).Get()
 	s.updateApp(id, newVer, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*120, c)
 	c.Assert(err, check.IsNil)
@@ -76,10 +95,29 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
 	}
 
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 3)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	for _, b := range proxy.Backends {
+		c.Assert(b.Weight, check.Equals, float64(100))
+	}
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 3)
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		c.Assert(d.Weight, check.Equals, float64(100))
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+
 	// Roll Back App
 	//
 	s.rollbackApp(id, "", c) // rollback to previous version
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*120, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*200, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRollBackApp() rolled back")
 
@@ -103,6 +141,25 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(len(tasks), check.Equals, 3)
 	for _, task := range tasks {
 		c.Assert(task.Version, check.Equals, vers[1].ID)
+	}
+
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 3)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	for _, b := range proxy.Backends {
+		c.Assert(b.Weight, check.Equals, float64(100))
+	}
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 3)
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		c.Assert(d.Weight, check.Equals, float64(100))
+		c.Assert(d.Port, check.Not(check.Equals), "")
 	}
 
 	// Remove
