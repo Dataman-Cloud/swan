@@ -1146,9 +1146,14 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 				Weight:     100,
 				Status:     "updating",
 				Version:    desired.ID,
+				Healthy:    types.TaskHealthyUnset,
 				MaxRetries: retries,
 				Created:    t.Created,
 				Updated:    time.Now(),
+			}
+
+			if desired.IsHealthSet() {
+				task.Healthy = types.TaskUnHealthy
 			}
 
 			if err = r.db.CreateTask(appId, task); err != nil {
