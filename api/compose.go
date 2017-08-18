@@ -110,11 +110,12 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 		// create each App by order
 		for _, name := range srvOrders {
 			var (
-				service = cmp.ServiceGroup[name]
-				ver, _  = service.ToVersion(cmp.Name, r.driver.ClusterName())
-				cluster = r.driver.ClusterName()
-				appId   = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
-				count   = int(ver.Instances)
+				service   = cmp.ServiceGroup[name]
+				ver, _    = service.ToVersion(cmp.Name, r.driver.ClusterName())
+				waitDelay = service.Extra.WaitDelay
+				cluster   = r.driver.ClusterName()
+				appId     = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
+				count     = int(ver.Instances)
 			)
 
 			log.Printf("launching compose app %s with %d tasks", appId, count)
@@ -193,6 +194,11 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 			// mark app status
 			r.memoAppStatus(appId, types.OpStatusNoop, "")
 			log.Printf("compose app %s launch succeed", appId)
+
+			// wait delay before next service
+			if waitDelay > 0 {
+				time.Sleep(time.Second * time.Duration(waitDelay))
+			}
 		}
 	}()
 
