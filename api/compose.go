@@ -50,7 +50,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 
 	// ensure all settings could be converted to App Version
 	for name, service := range cmp.ServiceGroup {
-		if _, err := service.ToVersion(cmp.Name, r.driver.ClusterName()); err != nil {
+		if _, err := service.ToVersion(cmp.Name, "whatever"); err != nil {
 			http.Error(w, fmt.Sprintf("%s: version convert error: %v", name, err), http.StatusBadRequest)
 			return
 		}
@@ -74,9 +74,15 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 	// get runas
 	var runAs = cmp.RunAs()
 
+	// get cluster
+	var cluster = cmp.Cluster()
+	if cluster == "" {
+		cluster = r.driver.ClusterName()
+	}
+
 	// db save
 	cmp.ID = utils.RandomString(16)
-	cmp.DisplayName = fmt.Sprintf("%s.%s.%s", cmp.Name, runAs, r.driver.ClusterName())
+	cmp.DisplayName = fmt.Sprintf("%s.%s.%s", cmp.Name, runAs, cluster)
 	cmp.OpStatus = types.OpStatusCreating
 	cmp.CreatedAt = time.Now()
 
@@ -111,9 +117,8 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 		for _, name := range srvOrders {
 			var (
 				service   = cmp.ServiceGroup[name]
-				ver, _    = service.ToVersion(cmp.Name, r.driver.ClusterName())
+				ver, _    = service.ToVersion(cmp.Name, cluster)
 				waitDelay = service.Extra.WaitDelay
-				cluster   = r.driver.ClusterName()
 				appId     = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
 				count     = int(ver.Instances)
 			)
@@ -318,9 +323,14 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 
 		log.Printf("Preparing to remove compose %s", cmp.Name)
 
+		var cluster = cmp.Cluster()
+		if cluster == "" {
+			cluster = r.driver.ClusterName()
+		}
+
 		// remove each of app
 		for name := range cmp.ServiceGroup {
-			appId := fmt.Sprintf("%s.%s.%s.%s", name, cmp.Name, cmp.RunAs(), r.driver.ClusterName())
+			appId := fmt.Sprintf("%s.%s.%s.%s", name, cmp.Name, cmp.RunAs(), cluster)
 
 			log.Printf("removing compose app %s ...", appId)
 

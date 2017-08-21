@@ -81,6 +81,15 @@ func (c *Compose) RunAs() string {
 	return ""
 }
 
+func (c *Compose) Cluster() string {
+	for _, ext := range c.YAMLExtra {
+		if ext != nil && ext.Cluster != "" {
+			return ext.Cluster
+		}
+	}
+	return ""
+}
+
 // conver raw yaml to docker service group
 func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 	cfg, err := utils.YamlServices([]byte(c.YAMLRaw), c.YAMLEnv)
@@ -140,6 +149,7 @@ func (c *Compose) ToServiceGroup() (ServiceGroup, error) {
 // YamlExtra
 //
 type YamlExtra struct {
+	Cluster     string            `json:"cluster"`
 	WaitDelay   uint              `json:"wait_delay"` // by second
 	PullAlways  bool              `json:"pull_always"`
 	Resource    *Resource         `json:"resource"`
@@ -181,6 +191,22 @@ func (sg ServiceGroup) Valid() error {
 		}
 		if err := srv.Valid(); err != nil {
 			return fmt.Errorf("validate service %s error: %v", name, err)
+		}
+	}
+
+	// ensure same runas & cluster
+	var cluster, runas string
+	for _, srv := range sg {
+		if cluster == "" {
+			cluster = srv.Extra.Cluster
+			runas = srv.Extra.RunAs
+			continue
+		}
+		if srv.Extra.Cluster != cluster {
+			return errors.New("all clusters should be the same")
+		}
+		if srv.Extra.RunAs != runas {
+			return errors.New("all runas should be the same")
 		}
 	}
 
