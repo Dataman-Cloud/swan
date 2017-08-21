@@ -53,6 +53,7 @@ Request:
   },
   "yaml_extra": {
     "web": {
+      "cluster": "xxx",
       "runas": "bbk",
       "wait_delay": 1,
       "pull_always": false,
@@ -73,6 +74,7 @@ Request:
 	  }
     },
     "cache": {
+      "cluster": "xxx",
       "runas": "bbk",
       "wait_delay": 1,
       "pull_always": false,
@@ -90,6 +92,7 @@ Request:
 	  }
     },
     "dbmaster": {
+      "cluster": "xxx",
       "runas": "bbk",
       "wait_delay": 1,
       "pull_always": false,
@@ -106,6 +109,7 @@ Request:
 	  }
     },
     "dbslave": {
+      "cluster": "xxx",
       "runas": "bbk",
       "wait_delay": 1,
       "pull_always": false,
