@@ -245,6 +245,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 			GatewayEnabled: proxyEnabled,
 		}
 
+		log.Debugln("sending task changed event", taskId)
 		if err := s.eventmgr.broadcast(taskEv); err != nil {
 			log.Errorln("broadcast task event got error:", err)
 		}

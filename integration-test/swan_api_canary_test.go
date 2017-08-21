@@ -17,7 +17,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	fmt.Println("TestCanaryUpdate() purged")
 
 	// create app
-	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).Get()
+	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
 	c.Assert(err, check.IsNil)
@@ -30,10 +30,29 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
 
+	// verify proxy record
+	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	for _, b := range proxy.Backends {
+		c.Assert(b.Weight, check.Equals, float64(100))
+	}
+
+	// verify dns records
+	dns := s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		c.Assert(d.Weight, check.Equals, float64(100))
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+
 	// do canary update
 
 	body := &types.CanaryUpdateBody{
-		Version:   demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(10).Get(),
+		Version:   demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(10).setProxy(true, "www.xxx.com", "", false).Get(),
 		Instances: 3,
 		Value:     0.5,
 		OnFailure: "continue",
@@ -87,6 +106,43 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(counter[vers[0].ID], check.Equals, 3)
 	c.Assert(counter[vers[1].ID], check.Equals, 2)
 
+	// verify proxy record
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	var x, y int
+	for _, b := range proxy.Backends {
+		if b.Weight == 67 {
+			x++
+		}
+
+		if b.Weight == 100 {
+			y++
+		}
+	}
+
+	c.Assert(x, check.Equals, 3)
+	c.Assert(y, check.Equals, 2)
+
+	// verify dns records
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+	var e, f int
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		if d.Weight == 67 {
+			e++
+		}
+		if d.Weight == 100 {
+			f++
+		}
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+	c.Assert(e, check.Equals, 3)
+	c.Assert(f, check.Equals, 2)
+
 	// canary continue
 	body = &types.CanaryUpdateBody{
 		Instances: 5,
@@ -110,14 +166,14 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
 
-	var y int
+	var y1 int
 	for _, task := range tasks {
 		if task.Weight == 100 {
-			y++
+			y1++
 		}
 	}
 
-	c.Assert(y, check.Equals, 5)
+	c.Assert(y1, check.Equals, 5)
 
 	// verify app versions
 	vers = s.listAppVersions(id, c)
@@ -135,6 +191,34 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	}
 
 	c.Assert(counter[vers[0].ID], check.Equals, 5)
+
+	// verify proxy record again
+	proxy = s.listAppProxies(id, c)
+	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
+	c.Assert(len(proxy.Backends), check.Equals, 5)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+	var x1 int
+	for _, b := range proxy.Backends {
+		if b.Weight == 100 {
+			x1++
+		}
+	}
+
+	c.Assert(x1, check.Equals, 5)
+
+	// verify dns records again
+	dns = s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 5)
+	var f1 int
+	for _, d := range dns {
+		c.Assert(d.IP, check.Equals, "127.0.0.1")
+		if d.Weight == 100 {
+			f1++
+		}
+		c.Assert(d.Port, check.Not(check.Equals), "")
+	}
+	c.Assert(f1, check.Equals, 5)
 
 	// clean up
 
