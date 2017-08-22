@@ -118,10 +118,16 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 			var (
 				service   = cmp.ServiceGroup[name]
 				ver, _    = service.ToVersion(cmp.Name, cluster)
+				restart   = ver.RestartPolicy
 				waitDelay = service.Extra.WaitDelay
 				appId     = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmp.Name, ver.RunAs, cluster)
 				count     = int(ver.Instances)
+				retries   = 3
 			)
+
+			if restart != nil && restart.Retries > retries {
+				retries = restart.Retries
+			}
 
 			log.Printf("launching compose app %s with %d tasks", appId, count)
 
@@ -154,14 +160,15 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 
 				// db task
 				task := &types.Task{
-					ID:      taskId,
-					Name:    taskName,
-					Weight:  100,
-					Status:  "pending",
-					Healthy: types.TaskHealthyUnset,
-					Version: ver.ID,
-					Created: time.Now(),
-					Updated: time.Now(),
+					ID:         taskId,
+					Name:       taskName,
+					Weight:     100,
+					Status:     "pending",
+					Healthy:    types.TaskHealthyUnset,
+					Version:    ver.ID,
+					MaxRetries: retries,
+					Created:    time.Now(),
+					Updated:    time.Now(),
 				}
 
 				if ver.IsHealthSet() {
