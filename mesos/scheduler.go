@@ -987,6 +987,8 @@ func (s *Scheduler) rescheduleTask(appId string, task *types.Task) {
 
 		return
 	}
+
+	log.Printf("Reschedule task %s succeed", task.Name)
 }
 
 func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
