@@ -431,11 +431,6 @@ func (v *Version) Validate() error {
 	switch network := strings.ToLower(v.Container.Docker.Network); network {
 	case "host", "bridge":
 	default:
-		// ensure ips matches instance count
-		if len(v.IPs) != int(v.Instances) {
-			return fmt.Errorf("IPs(%d) should match instances(%d)", len(v.IPs), v.Instances)
-		}
-
 		// ensure ip valid & uniq
 		seen := make(map[string]bool)
 		for _, ip := range v.IPs {

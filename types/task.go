@@ -110,6 +110,10 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 
 	// with user specified ip address
 	if cfg.Network != "host" && cfg.Network != "bridge" {
+		if idx > len(spec.IPs)-1 {
+			return cfg
+		}
+
 		cfg.Parameters = append(cfg.Parameters, &Parameter{
 			Key:   "ip",
 			Value: spec.IPs[idx],

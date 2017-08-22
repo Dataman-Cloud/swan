@@ -7,6 +7,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
+	dockertypes "github.com/docker/docker/api/types"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -127,19 +128,33 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		return
 	}
 
-	// get container id & name
-	var cinfos []struct {
-		ID   string `json:"Id"`
-		Name string `json:"Name"`
-	}
-	json.Unmarshal(data, &cinfos)
-
-	if len(cinfos) > 0 {
-		if cid := cinfos[0].ID; cid != "" {
-			task.ContainerID = cid
+	// issue: https://issues.apache.org/jira/browse/MESOS-7906
+	if task.ContainerID == "" && state == mesosproto.TaskState_TASK_RUNNING {
+		// get container id & name & ip
+		var cinfos []struct {
+			ID              string                       `json:"Id"`
+			Name            string                       `json:"Name"`
+			NetworkSettings *dockertypes.NetworkSettings `json:"NetworkSettings"`
 		}
-		if cname := cinfos[0].Name; cname != "" {
-			task.ContainerName = cname
+		json.Unmarshal(data, &cinfos)
+
+		if len(cinfos) > 0 {
+			if cid := cinfos[0].ID; cid != "" {
+				task.ContainerID = cid
+			}
+
+			if cname := cinfos[0].Name; cname != "" {
+				task.ContainerName = cname
+			}
+
+			if settings := cinfos[0].NetworkSettings; settings != nil {
+				if net := settings.Networks; net != nil && len(net) > 0 {
+					for _, cfg := range net {
+						task.IP = cfg.IPAMConfig.IPv4Address
+						break
+					}
+				}
+			}
 		}
 	}
 
