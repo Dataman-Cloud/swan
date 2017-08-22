@@ -13,8 +13,8 @@ import (
 
 func TestNewServer(t *testing.T) {
 	fakeCfg := &Config{
-		Listen:   "hello",
-		LogLevel: "debug",
+		Advertise: "hello",
+		LogLevel:  "debug",
 	}
 	type args struct {
 		cfg    *Config

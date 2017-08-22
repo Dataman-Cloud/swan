@@ -19,6 +19,7 @@ func ManagerCmd() cli.Command {
 
 	cmd.Flags = []cli.Flag{
 		FlagListenAddr(),
+		FlagAdvertiseAddr(),
 		FlagMesosURL(),
 		FlagStoreType(),
 		FlagZKURL(),

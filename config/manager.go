@@ -12,6 +12,7 @@ import (
 type ManagerConfig struct {
 	LogLevel   string `json:"logLevel"`
 	Listen     string `json:"listenAddr"`
+	Advertise  string `json:"advertise_addr"`
 	EnableCORS bool
 
 	MesosURL *url.URL `json:"mesosURL"` // mesos zk url
@@ -58,6 +59,12 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 
 	if c.String("listen") != "" {
 		cfg.Listen = c.String("listen")
+	}
+
+	if c.String("advertise") != "" {
+		cfg.Advertise = c.String("advertise")
+	} else {
+		cfg.Advertise = cfg.Listen
 	}
 
 	if c.String("log-level") != "" {

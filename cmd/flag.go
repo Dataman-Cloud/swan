@@ -13,6 +13,15 @@ func FlagListenAddr() cli.Flag {
 	}
 }
 
+func FlagAdvertiseAddr() cli.Flag {
+	return cli.StringFlag{
+		Name:   "advertise",
+		Usage:  "http advertise address",
+		EnvVar: "SWAN_ADVERTISE_ADDR",
+		Value:  "",
+	}
+}
+
 func FlagStoreType() cli.Flag {
 	return cli.StringFlag{
 		Name:   "store-type",

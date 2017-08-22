@@ -16,8 +16,8 @@ import (
 )
 
 type Config struct {
-	Listen   string
-	LogLevel string
+	Advertise string
+	LogLevel  string
 }
 
 type Server struct {
@@ -83,7 +83,7 @@ func (s *Server) makeHTTPHandler(handler HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s.enableCORS(w)
 
-		if s.cfg.Listen != s.GetLeader() {
+		if s.cfg.Advertise != s.GetLeader() {
 			s.forwardRequest(w, r)
 			return
 		}

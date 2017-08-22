@@ -88,12 +88,10 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 
 	// api server
 	srvcfg := api.Config{
-		Listen:   cfg.Listen,
-		LogLevel: cfg.LogLevel,
+		Advertise: cfg.Advertise,
+		LogLevel:  cfg.LogLevel,
 	}
 	srv := api.NewServer(&srvcfg, hl, sched, db)
-	// router := api.NewRouter(sched, db)
-	// srv.InstallRouter(router)
 
 	// final
 	return &Manager{
