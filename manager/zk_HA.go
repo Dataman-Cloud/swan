@@ -53,7 +53,7 @@ func connect(addrs []string) (*zk.Conn, error) {
 
 func (m *Manager) setLeader(path string) {
 	p := filepath.Join(m.electRootPath, path)
-	_, err := m.ZKClient.Set(p, []byte(m.cfg.Listen), -1)
+	_, err := m.ZKClient.Set(p, []byte(m.cfg.Advertise), -1)
 	if err != nil {
 		log.Infof("Update leader address error %s", err.Error())
 	}
@@ -96,7 +96,7 @@ func (m *Manager) elect() (string, error) {
 	}
 	if leader {
 		log.Info("Electing leader success.")
-		m.leader = m.cfg.Listen
+		m.leader = m.cfg.Advertise
 		m.setLeader(p)
 		m.leadershipChangeCh <- LeadershipLeader
 
