@@ -44,6 +44,9 @@ type ComposeApp struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 
+	// Extra Labels
+	Labels map[string]string `json:"labels"`
+
 	// YAML request data
 	YAMLRaw string            `json:"yaml_raw"`
 	YAMLEnv map[string]string `json:"yaml_env"`
@@ -121,10 +124,11 @@ func (cmpApp *ComposeApp) ParseComposeToVersions() (map[string]*Version, error) 
 		cmpName = cmpApp.Name
 		runAs   = cmpApp.RunAs
 		cluster = cmpApp.Cluster
+		labels  = cmpApp.Labels // Extra Labels
 	)
 
 	for svrName := range cmp.Services {
-		ver, err := cmp.ConvertServiceToVersion(svrName, cmpName, runAs, cluster)
+		ver, err := cmp.ConvertServiceToVersion(svrName, cmpName, runAs, cluster, labels)
 		if err != nil {
 			return nil, fmt.Errorf("convert [%s] error: %v", svrName, err)
 		}
@@ -281,7 +285,7 @@ func (c *ComposeV3) DependMap() (map[string][]string, error) {
 }
 
 // convert specified Compose Service to App Version
-func (c *ComposeV3) ConvertServiceToVersion(svrName, cmpName, runAs, cluster string) (*Version, error) {
+func (c *ComposeV3) ConvertServiceToVersion(svrName, cmpName, runAs, cluster string, extLabels map[string]string) (*Version, error) {
 	svr, ok := c.Services[svrName]
 	if !ok {
 		return nil, fmt.Errorf("no such compose service: %s", svrName)
@@ -309,7 +313,7 @@ func (c *ComposeV3) ConvertServiceToVersion(svrName, cmpName, runAs, cluster str
 	var err error
 
 	// container
-	ver.Container, err = svr.container(dnsSearch, cmpName)
+	ver.Container, err = svr.container(dnsSearch, cmpName, extLabels)
 	if err != nil {
 		return nil, err
 	}
@@ -319,7 +323,10 @@ func (c *ComposeV3) ConvertServiceToVersion(svrName, cmpName, runAs, cluster str
 	for k, v := range svr.Labels {
 		lbs[k] = v
 	}
-	lbs["DM_COMPOSE_NAME"] = cmpName
+	for k, v := range extLabels {
+		lbs[k] = v
+	}
+	lbs["SWAN_COMPOSE_NAME"] = cmpName
 	ver.Labels = lbs
 
 	// resouces
@@ -452,13 +459,13 @@ func (s *ComposeService) healthCheck() *HealthCheck {
 	return ret
 }
 
-func (s *ComposeService) container(dnsSearch, cName string) (*Container, error) {
+func (s *ComposeService) container(dnsSearch, cName string, extLabels map[string]string) (*Container, error) {
 	var (
 		network    = strings.ToLower(s.NetworkMode)
 		image      = s.Image
 		forcePull  = s.PullAlways
 		privileged = s.Privileged
-		parameters = s.parameters(dnsSearch, cName)
+		parameters = s.parameters(dnsSearch, cName, extLabels)
 	)
 
 	portMap, err := s.portMappings()
@@ -482,7 +489,7 @@ func (s *ComposeService) container(dnsSearch, cName string) (*Container, error) 
 
 // mesos's default supportting for docker container options is so lazy tricky,
 // so we have to convert docker container configs to CLI key-value parameter pairs.
-func (s *ComposeService) parameters(dnsSearch, cName string) []*Parameter {
+func (s *ComposeService) parameters(dnsSearch, cName string, extLabels map[string]string) []*Parameter {
 	var (
 		m1 = make(map[string]string)   // key-value  params
 		m2 = make(map[string][]string) // key-list params
@@ -592,8 +599,11 @@ func (s *ComposeService) parameters(dnsSearch, cName string) []*Parameter {
 		fset("tmpfs", v)
 	}
 	// labels
-	lbs := []string{"DM_COMPOSE_NAME=" + cName}
+	lbs := []string{"SWAN_COMPOSE_NAME=" + cName}
 	for key, val := range s.Labels {
+		lbs = append(lbs, fmt.Sprintf("%s=%s", key, val))
+	}
+	for key, val := range extLabels {
 		lbs = append(lbs, fmt.Sprintf("%s=%s", key, val))
 	}
 	fset("label", lbs)

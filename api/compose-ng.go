@@ -26,7 +26,8 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 		cluster = req.Form.Get("cluster")
 		runAs   = req.Form.Get("runas")
 		desc    = req.Form.Get("desc")
-		envs    = req.Form.Get("envs") // k1=v1,k2=v2,k3=v3
+		envs    = req.Form.Get("envs")   // k1=v1,k2=v2,k3=v3
+		labels  = req.Form.Get("labels") // k1=v1,k2=v2,k3=v3
 	)
 	if cluster == "" {
 		cluster = r.driver.ClusterName()
@@ -36,6 +37,14 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 	if cmp, _ := r.db.GetComposeNG(name); cmp != nil {
 		http.Error(w, fmt.Sprintf("compose %s already exists", name), http.StatusConflict)
 		return
+	}
+
+	// obtain extra labels
+	extLabels := make(map[string]string)
+	for _, pair := range strings.Split(labels, ",") {
+		if kv := strings.SplitN(pair, "=", 2); len(kv) == 2 {
+			extLabels[kv[0]] = kv[1]
+		}
 	}
 
 	// new compose app
@@ -48,6 +57,7 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 		Desc:        desc,
 		OpStatus:    types.OpStatusCreating,
 		CreatedAt:   time.Now(),
+		Labels:      extLabels,
 	}
 
 	// obtain yaml text
