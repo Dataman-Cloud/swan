@@ -7,7 +7,6 @@ import (
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
-	dockertypes "github.com/docker/docker/api/types"
 
 	log "github.com/Sirupsen/logrus"
 )
@@ -132,9 +131,9 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	if task.ContainerID == "" && state == mesosproto.TaskState_TASK_RUNNING {
 		// get container id & name & ip
 		var cinfos []struct {
-			ID              string                       `json:"Id"`
-			Name            string                       `json:"Name"`
-			NetworkSettings *dockertypes.NetworkSettings `json:"NetworkSettings"`
+			ID              string                 `json:"Id"`
+			Name            string                 `json:"Name"`
+			NetworkSettings *types.NetworkSettings `json:"NetworkSettings"`
 		}
 		json.Unmarshal(data, &cinfos)
 
