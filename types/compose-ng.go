@@ -27,8 +27,8 @@ func (s ComposeAppSorter) Less(i, j int) bool { return s[i].UpdatedAt.After(s[j]
 
 // wrap ComposeApp with related apps
 type ComposeAppWrapper struct {
-	ComposeApp *ComposeApp
-	Apps       []*Application `json:"apps"`
+	*ComposeApp
+	Apps []*Application `json:"apps"`
 }
 
 // ComposeApp represents a db compose app

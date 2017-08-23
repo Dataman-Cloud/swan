@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -272,6 +273,9 @@ func (r *Server) listComposesNG(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	req.ParseForm()
+	cs = r.filterComposeNG(cs, req.Form)
+
 	sort.Sort(types.ComposeAppSorter(cs))
 	writeJSON(w, http.StatusOK, cs)
 }
@@ -457,4 +461,34 @@ func (r *Server) wrapComposeNG(cmpApp *types.ComposeApp) (*types.ComposeAppWrapp
 		}
 	}
 	return wrapper, nil
+}
+
+// filter compose apps according by labels
+func (r *Server) filterComposeNG(cmpApps []*types.ComposeApp, filter url.Values) []*types.ComposeApp {
+	var idx int
+
+	for _, cmpApp := range cmpApps {
+		labels := cmpApp.Labels
+		if len(labels) == 0 {
+			continue
+		}
+
+		var n int
+		for k, v := range filter {
+			for key, val := range labels {
+				if key == k && val == v[0] {
+					n++
+					break
+				}
+			}
+		}
+
+		// if matched all filters
+		if n == len(filter) {
+			cmpApps[idx] = cmpApp
+			idx++
+		}
+	}
+
+	return cmpApps[0:idx]
 }
