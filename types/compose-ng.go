@@ -48,7 +48,7 @@ type ComposeApp struct {
 	YAMLRaw string            `json:"yaml_raw"`
 	YAMLEnv map[string]string `json:"yaml_env"`
 
-	// held temporary struct convert from YAML and will be converted to App Version
+	// held temporary struct convert from YAMLRaw & YAMLEnv and will be converted to App Version
 	ComposeV3 *ComposeV3
 }
 
@@ -71,12 +71,43 @@ func (cmpApp *ComposeApp) Valid() error {
 	return cmpApp.ComposeV3.Valid()
 }
 
-func ParseComposeV3(data []byte) (*ComposeV3, error) {
-	var cmp *ComposeV3
-	if err := yaml.Unmarshal(data, &cmp); err != nil {
+func ParseComposeV3(data []byte, envMap map[string]string) (*ComposeV3, error) {
+	// first use a RawServiceMap to receive yaml bytes
+	var rawComposeV3 = new(RawComposeV3)
+	if err := yaml.Unmarshal(data, &rawComposeV3); err != nil {
 		return nil, err
 	}
-	return cmp, nil
+
+	// recursive replace all variables
+	if err := InterpolateRawServiceMap(&rawComposeV3.Services, envMap); err != nil {
+		return nil, err
+	}
+
+	// converted RawServiceMap to expected struct object
+	var composeV3 *ComposeV3
+	if err := Convert(rawComposeV3, &composeV3); err != nil {
+		return nil, err
+	}
+
+	// set parsed variable definations
+	composeV3.Variables = utils.YamlVariables(data)
+
+	return composeV3, nil
+}
+
+// Convert converts a struct (src) to another one (target) using yaml marshalling/unmarshalling.
+// If the structure are not compatible, this will throw an error as the unmarshalling will fail.
+func Convert(src, target interface{}) error {
+	newBytes, err := yaml.Marshal(src)
+	if err != nil {
+		return fmt.Errorf("Convert.Marshal() yaml error: %v", err)
+	}
+
+	err = yaml.Unmarshal(newBytes, target)
+	if err != nil {
+		return fmt.Errorf("Convert.Unmarshal() yaml error: %v", err)
+	}
+	return err
 }
 
 func (cmpApp *ComposeApp) ParseComposeToVersions() (map[string]*Version, error) {
@@ -103,12 +134,41 @@ func (cmpApp *ComposeApp) ParseComposeToVersions() (map[string]*Version, error) 
 	return m, nil
 }
 
+// Raw Definations to receive raw YAML bytes
+//
+
+// RawComposeV3 represent a ComposeV3 struct unparsed
+type RawComposeV3 struct {
+	Version  string        `yaml:"version"`
+	Services RawServiceMap `yaml:"services"`
+}
+
+// RawServiceMap a collection of RawServices
+type RawServiceMap map[string]RawService
+
+// RawService represent a Service in map form unparsed
+type RawService map[string]interface{}
+
+// InterpolateRawServiceMap replaces varialbse in raw service map struct based on environment lookup
+func InterpolateRawServiceMap(baseRawServices *RawServiceMap, envMap map[string]string) error {
+	for k, v := range *baseRawServices {
+		for k2, v2 := range v {
+			if err := utils.Interpolate(k2, &v2, envMap); err != nil {
+				return err
+			}
+			(*baseRawServices)[k][k2] = v2
+		}
+	}
+	return nil
+}
+
 // ComposeV3 represents parsed docker compose v3 object
 // Services (-> map[name]App Version)
 // note: do NOT support naming volumes & networks currently
 type ComposeV3 struct {
-	Version  string                     `yaml:"version"`
-	Services map[string]*ComposeService `yaml:"services"`
+	Version   string                     `yaml:"version"`
+	Variables []string                   `yaml:"-"`
+	Services  map[string]*ComposeService `yaml:"services"`
 }
 
 type ComposeV3Alias ComposeV3 // prevent oom
@@ -124,6 +184,18 @@ func (c *ComposeV3) UnmarshalYAML(unmarshal func(interface{}) error) error {
 		svr.Name = name
 	}
 	return nil
+}
+
+func (c *ComposeV3) GetServices() []string {
+	var srvs = []string{}
+	for name := range c.Services {
+		srvs = append(srvs, name)
+	}
+	return srvs
+}
+
+func (c *ComposeV3) GetVariables() []string {
+	return c.Variables
 }
 
 func (c *ComposeV3) Valid() error {

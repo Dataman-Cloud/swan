@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/mesos"
@@ -25,6 +26,7 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 		cluster = req.Form.Get("cluster")
 		runAs   = req.Form.Get("runas")
 		desc    = req.Form.Get("desc")
+		envs    = req.Form.Get("envs") // k1=v1,k2=v2,k3=v3
 	)
 	if cluster == "" {
 		cluster = r.driver.ClusterName()
@@ -48,17 +50,25 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 		CreatedAt:   time.Now(),
 	}
 
-	// obtian yaml text
+	// obtain yaml text
 	yaml, err := ioutil.ReadAll(req.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 	cmpApp.YAMLRaw = string(yaml)
-	// cmpApp.YAMLEnv = map[string]string{} // TODO
+
+	// obtain yaml envs
+	envMap := make(map[string]string)
+	for _, pair := range strings.Split(envs, ",") {
+		if kv := strings.SplitN(pair, "=", 2); len(kv) == 2 {
+			envMap[kv[0]] = kv[1]
+		}
+	}
+	cmpApp.YAMLEnv = envMap
 
 	// parse yaml text to types.ComposeV3
-	cmp, err := types.ParseComposeV3(yaml)
+	cmp, err := types.ParseComposeV3(yaml, envMap)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
@@ -233,29 +243,15 @@ func (r *Server) parseYAMLNG(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	cmp, err := types.ParseComposeV3(yaml)
+	cmp, err := types.ParseComposeV3(yaml, nil)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	var (
-		vars []string
-		srvs = []string{} // TODO
-	)
-
-	for name := range cmp.Services {
-		srvs = append(srvs, name)
-	}
-
-	if len(srvs) == 0 {
-		http.Error(w, "at least one of docker service definition required", http.StatusBadRequest)
-		return
-	}
-
 	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"services":  srvs,
-		"variables": vars,
+		"services":  cmp.GetServices(),
+		"variables": cmp.GetVariables(),
 	})
 }
 
