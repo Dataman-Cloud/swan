@@ -149,7 +149,11 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 			if settings := cinfos[0].NetworkSettings; settings != nil {
 				if net := settings.Networks; net != nil && len(net) > 0 {
 					for _, cfg := range net {
-						task.IP = cfg.IPAMConfig.IPv4Address
+						if cfg.IPAMConfig != nil {
+							task.IP = cfg.IPAMConfig.IPv4Address
+						} else {
+							task.IP = cfg.IPAddress
+						}
 						break
 					}
 				}
