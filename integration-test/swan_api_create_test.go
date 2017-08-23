@@ -234,12 +234,11 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 
 	// invalid ips
 	var invalidIPs = map[*types.Version]string{
-		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{""}).Get():                           "invalid ip:",
 		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{"xx"}).Get():                         "invalid ip:",
 		demoVersion().setNetwork("swan").setCount(1).setIPs([]string{"127.0.0.1"}).Get():                  "invalid ip:",
 		demoVersion().setNetwork("swan").setCount(2).setIPs([]string{"192.168.1.1", "192.168.1.1"}).Get(): "ip.*conflict",
-		demoVersion().setNetwork("swan").setCount(2).setIPs([]string{"192.168.1.1"}).Get():                "IPs.*should match instances",
 	}
+
 	for ver, errmsg := range invalidIPs {
 		code, body, err = s.rawCreateApp(ver)
 		c.Assert(err, check.IsNil)
