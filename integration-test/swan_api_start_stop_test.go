@@ -60,7 +60,6 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	dns := s.listAppDNS(id, c)
 	c.Assert(len(dns), check.Equals, 10)
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		c.Assert(d.Weight, check.Equals, float64(100))
 		c.Assert(d.Port, check.Not(check.Equals), "")
 	}
@@ -116,7 +115,6 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	dns = s.listAppDNS(id, c)
 	c.Assert(len(dns), check.Equals, 10)
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		c.Assert(d.Weight, check.Equals, float64(100))
 		c.Assert(d.Port, check.Not(check.Equals), "")
 	}
@@ -172,7 +170,6 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	dns = s.listAppDNS(id, c)
 	c.Assert(len(dns), check.Equals, 10)
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		c.Assert(d.Weight, check.Equals, float64(100))
 		c.Assert(d.Port, check.Not(check.Equals), "")
 	}

@@ -337,9 +337,10 @@ func (s *ApiSuite) rawRunCompose(cmp *types.Compose) (int, []byte, error) {
 // purge
 //
 func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
-	code, _, err := s.sendRequest("POST", "/v1/purge", nil)
+	code, body, err := s.sendRequest("POST", "/v1/purge", nil)
 	c.Assert(err, check.IsNil)
 	c.Assert(code, check.Equals, http.StatusNoContent)
+	c.Log(string(body))
 
 	for goesby := int64(0); goesby <= int64(maxWait); goesby += int64(time.Second) {
 		time.Sleep(time.Second)

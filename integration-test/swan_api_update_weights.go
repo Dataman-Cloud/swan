@@ -45,7 +45,6 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	dns := s.listAppDNS(id, c)
 	c.Assert(len(dns), check.Equals, 5)
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		c.Assert(d.Weight, check.Equals, float64(100))
 		c.Assert(d.Port, check.Not(check.Equals), "")
 	}
@@ -125,7 +124,6 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 
 	var x int
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		if d.Weight == 67 {
 			x++
 		}
@@ -186,7 +184,6 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 
 	var x1 int
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		if d.Weight == 267 {
 			x1++
 		}
@@ -254,7 +251,6 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 
 	var x2, y2 int
 	for _, d := range dns {
-		c.Assert(d.IP, check.Equals, "127.0.0.1")
 		if d.Weight == 100 {
 			x2++
 		}

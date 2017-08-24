@@ -770,12 +770,12 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
 					if IsTaskDone(status) {
 						if err := DetectTaskError(status); err != nil {
-							log.Printf("Launch task %s failed: %v", task.ID(), err)
+							log.Errorf("Launch task %s failed: %v", task.ID(), err)
 							p.Lock()
 							errs = append(errs, err)
 							p.Unlock()
 						} else {
-							log.Errorf("Launch task %s succeed", task.ID())
+							log.Printf("Launch task %s succeed", task.ID())
 						}
 						s.removePendingTask(task.ID())
 						return
@@ -815,7 +815,7 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 		}
 
 		// Set IP for build. Host or Bridge mode use mesos agent IP.
-		if task.cfg.IP == "" {
+		if task.cfg.Network == "host" || task.cfg.Network == "bridge" {
 			task.cfg.IP = offers[0].GetHostname()
 		}
 
