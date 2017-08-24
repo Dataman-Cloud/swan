@@ -350,6 +350,13 @@ func (r *Server) deleteCompose(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			// mark app op status
+			if err := r.memoAppStatus(appId, types.OpStatusDeleting, ""); err != nil {
+				err = fmt.Errorf("update app opstatus to deleting got error: %v", err)
+				log.Errorf("deleteCompose(): %v", err)
+				return
+			}
+
 			tasks, err := r.db.ListTasks(appId)
 			if err != nil {
 				err = fmt.Errorf("get App %s tasks error: %v", appId, err)
