@@ -392,6 +392,12 @@ func (r *Server) deleteComposeNG(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			// mark app op status to prevent rescheduling
+			if err := r.memoAppStatus(appId, types.OpStatusDeleting, ""); err != nil {
+				err = fmt.Errorf("update App %s opstatus to deleting got error: %v", appId, err)
+				return
+			}
+
 			tasks, err := r.db.ListTasks(appId)
 			if err != nil {
 				err = fmt.Errorf("get App %s tasks error: %v", appId, err)
