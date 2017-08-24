@@ -15,7 +15,8 @@ import (
 )
 
 var DefaultDeployConfig = DeployConfig{
-	Replicas: 1,
+	WaitDelay: 1,
+	Replicas:  1,
 }
 
 // ComposeApp sorter
@@ -416,20 +417,13 @@ type ComposeService struct {
 	Proxy      *Proxy        `yaml:"proxy"`
 	URIs       StrSlice      `yaml:"uris"`
 	IPs        StrSlice      `yaml:"ips"`
-	WaitDelay  int           `yaml:"wait_delay"`
 
 	// do NOT support attributes
 	// Networks        StrSlice           `yaml:"networks"`
 }
 
 func (s *ComposeService) Valid() error {
-	if err := utils.LegalDomain(s.Name); err != nil {
-		return err
-	}
-	if s.WaitDelay < 0 {
-		return errors.New("wait delay can't be negative")
-	}
-	return nil
+	return utils.LegalDomain(s.Name)
 }
 
 func (s *ComposeService) healthCheck() *HealthCheck {
@@ -667,6 +661,7 @@ type LoggingConfig struct {
 
 type DeployConfig struct {
 	Replicas    int           `yaml:"replicas"`
+	WaitDelay   int           `yaml:"wait_delay"`
 	Constraints []*Constraint `yaml:"constraints"`
 }
 

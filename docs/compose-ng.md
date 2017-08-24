@@ -119,6 +119,7 @@ services:
     network_mode: "bridge"
     deploy:
       replicas: 1
+      wait_delay: 5
       constraints:
         - attribute: "hostname"
           operator: "~="
@@ -130,13 +131,13 @@ services:
       - dbmaster
     dns:
       - 192.168.1.196  # swan dns server
-    wait_delay: 5
 
   dbmaster:
     image: "nginx:latest"
     network_mode: "bridge"
     deploy:
       replicas: 1
+      wait_delay: 10
       constraints:
         - attribute: "hostname"
           operator: "~="
@@ -146,7 +147,6 @@ services:
       - "443/tcp"
     dns:
       - 192.168.1.196  # swan dns server
-    wait_delay: 10
 
   admin:
     image: "busybox:latest"
@@ -228,6 +228,7 @@ services:
     network_mode: "bridge"
     deploy:
       replicas: 1
+      wait_delay: 20
       constraints:
         - attribute: "hostname"
           operator: "~="
@@ -238,7 +239,6 @@ services:
       - 3306
     dns:
       - 192.168.1.196  # swan dns server
-    wait_delay: 20
     proxy:
       enabled: true
       alias: "i.cn"
@@ -269,7 +269,7 @@ filter by any labels key-val
             "GID": "2",
             "UID": "1"
         },
-        "yaml_raw": "version: \"3\"\n\nservices:\n  wordpress:\n    image: \"wordpress\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - WORDPRESS_DB_HOST=mariadb:3306\n      - WORDPRESS_DB_PASSWORD=Password\n    ports:\n      - \"80/tcp\"\n    depends_on:\n      - mariadb\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"x.cn\"\n      listen: 8888\n      sticky: false\n\n  mariadb:\n    image: \"mariadb\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - MYSQL_ROOT_PASSWORD=Password\n    ports:\n      - 3306\n    dns:\n      - 192.168.1.196  # swan dns server\n    wait_delay: 20\n    proxy:\n      enabled: true\n      alias: \"i.cn\"\n      listen: 3306\n      sticky: false",
+        "yaml_raw": "version: \"3\"\n\nservices:\n  wordpress:\n    image: \"wordpress\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - WORDPRESS_DB_HOST=mariadb:3306\n      - WORDPRESS_DB_PASSWORD=Password\n    ports:\n      - \"80/tcp\"\n    depends_on:\n      - mariadb\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"x.cn\"\n      listen: 8888\n      sticky: false\n\n  mariadb:\n    image: \"mariadb\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - MYSQL_ROOT_PASSWORD=Password\n    ports:\n      - 3306\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"i.cn\"\n      listen: 3306\n      sticky: false",
         "yaml_env": {},
         "ComposeV3": {
             "Version": "3",
@@ -445,7 +445,7 @@ Response
         "GID": "2",
         "UID": "1"
     },
-    "yaml_raw": "version: \"3\"\n\nservices:\n  wordpress:\n    image: \"wordpress\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - WORDPRESS_DB_HOST=mariadb:3306\n      - WORDPRESS_DB_PASSWORD=Password\n    ports:\n      - \"80/tcp\"\n    depends_on:\n      - mariadb\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"x.cn\"\n      listen: 8888\n      sticky: false\n\n  mariadb:\n    image: \"mariadb\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - MYSQL_ROOT_PASSWORD=Password\n    ports:\n      - 3306\n    dns:\n      - 192.168.1.196  # swan dns server\n    wait_delay: 20\n    proxy:\n      enabled: true\n      alias: \"i.cn\"\n      listen: 3306\n      sticky: false",
+    "yaml_raw": "version: \"3\"\n\nservices:\n  wordpress:\n    image: \"wordpress\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - WORDPRESS_DB_HOST=mariadb:3306\n      - WORDPRESS_DB_PASSWORD=Password\n    ports:\n      - \"80/tcp\"\n    depends_on:\n      - mariadb\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"x.cn\"\n      listen: 8888\n      sticky: false\n\n  mariadb:\n    image: \"mariadb\"\n    network_mode: \"bridge\"\n    deploy:\n      replicas: 1\n      constraints:\n        - attribute: \"hostname\"\n          operator: \"~=\"\n          value: \"130\"\n    environment:\n      - MYSQL_ROOT_PASSWORD=Password\n    ports:\n      - 3306\n    dns:\n      - 192.168.1.196  # swan dns server\n    proxy:\n      enabled: true\n      alias: \"i.cn\"\n      listen: 3306\n      sticky: false",
     "yaml_env": {},
     "ComposeV3": {
         "Version": "3",
@@ -743,8 +743,9 @@ Response:
 #### deploy
 ```yaml
   deploy:
-    replicas: 1   # 部署实例数量
-    constraints:  # 选择部署节点的约束条件
+    replicas: 1      # 部署实例数量
+    wait_delay: 20   # 部署该服务后等待时间，单位秒
+    constraints:     # 选择部署节点的约束条件
       - attribute: "hostname"
         operator: "~="
         value: "130"
@@ -780,10 +781,6 @@ Response:
   ips:
     - 192.168.1.101
     - 192.168.1.102
-```
-#### wait_delay
-```yaml
-  wait_delay: 20   # 部署该服务后等待时间，单位秒
 ```
 
 
@@ -823,6 +820,7 @@ services:
     network_mode: "bridge"
     deploy:
       replicas: 1
+      wait_delay: 20
       constraints:
         - attribute: "hostname"
           operator: "~="
@@ -833,7 +831,6 @@ services:
       - 3306
     dns:
       - 192.168.1.196  # swan dns server
-    wait_delay: 20
     proxy:
       enabled: true
       alias: "i.cn"

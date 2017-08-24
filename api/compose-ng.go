@@ -149,10 +149,14 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 			var (
 				service   = cmp.Services[name]
 				ver       = convertedVers[name]
-				waitDelay = service.WaitDelay
+				waitDelay = 1
 				appId     = fmt.Sprintf("%s.%s.%s.%s", ver.Name, cmpApp.Name, ver.RunAs, cluster)
 				count     = int(ver.Instances)
 			)
+
+			if d := service.Deploy; d != nil && d.WaitDelay > 0 {
+				waitDelay = d.WaitDelay
+			}
 
 			if ver == nil {
 				err = fmt.Errorf("converted app version not found for %s", name)
@@ -227,9 +231,7 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 			}
 
 			// wait delay before next service
-			if waitDelay > 0 {
-				time.Sleep(time.Second * time.Duration(waitDelay))
-			}
+			time.Sleep(time.Second * time.Duration(waitDelay))
 
 			// max wait for 5 seconds to confirm the preivous app get normal
 			if err = r.ensureAppReady(appId, time.Second*5); err != nil {
