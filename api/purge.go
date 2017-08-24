@@ -32,7 +32,7 @@ func (r *Server) purge(w http.ResponseWriter, req *http.Request) {
 			}
 
 			versions, err := r.db.ListVersions(appId)
-			if err != nil {
+			if err != nil && !r.db.IsErrNotFound(err) {
 				log.Errorf("Purge() list app %s versions error: %v", appId, err)
 				continue
 			}

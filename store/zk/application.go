@@ -74,7 +74,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	app.Progress, app.ProgressDetails = zk.progress(tasks)
 
 	versions, err := zk.versions(p, id)
-	if err != nil {
+	if err != nil && !zk.IsErrNotFound(err) {
 		log.Errorf("get app %s versions got error: %v", id, err)
 		return nil, err
 	}
