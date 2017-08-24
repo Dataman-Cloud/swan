@@ -24,7 +24,8 @@
   - [GET /v1/apps/{app_id}/proxy/traffics](#list-proxy-traffics-for-a-app) *List proxy traffics for a app*
 
 + compose
-  - [compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)
+  - ~[compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)~ **Deprecated**
+  - [compose-ng](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose-ng.md)
 
 + events
   - [GET /v1/events](#) *Event Subscription*
