@@ -32,12 +32,21 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", s.getVersion),
 		NewRoute("POST", "/v1/apps/{app_id}/versions", s.createVersion),
 
+		// Deprecated, Remove Later
 		NewRoute("POST", "/v1/compose", s.runCompose),
 		NewRoute("POST", "/v1/compose/parse", s.parseYAML),
 		NewRoute("GET", "/v1/compose", s.listComposes),
 		NewRoute("GET", "/v1/compose/{compose_id}", s.getCompose),
 		NewRoute("GET", "/v1/compose/{compose_id}/dependency", s.getComposeDependency),
 		NewRoute("DELETE", "/v1/compose/{compose_id}", s.deleteCompose),
+
+		NewRoute("POST", "/v1/compose-ng", s.runComposeNG),
+		NewRoute("POST", "/v1/compose-ng/parse", s.parseYAMLNG),
+		NewRoute("GET", "/v1/compose-ng", s.listComposesNG),
+		NewRoute("GET", "/v1/compose-ng/{compose_id}", s.getComposeNG),
+		NewRoute("GET", "/v1/compose-ng/{compose_id}/dependency", s.getComposeDependencyNG),
+		NewRoute("GET", "/v1/compose-ng/{compose_id}/debug/versions", s.parseComposeToVersions),
+		NewRoute("DELETE", "/v1/compose-ng/{compose_id}", s.deleteComposeNG),
 
 		NewRoute("GET", "/ping", s.ping),
 		NewRoute("GET", "/v1/events", s.events),

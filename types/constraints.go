@@ -9,9 +9,9 @@ import (
 var supportedOperator = []string{"==", "!=", "~="}
 
 type Constraint struct {
-	Attribute string `json:"attribute"`
-	Operator  string `json:"operator"`
-	Value     string `json:"value"`
+	Attribute string `yaml:"attribute" json:"attribute"`
+	Operator  string `yaml:"operator" json:"operator"`
+	Value     string `yaml:"value" json:"value"`
 }
 
 func (c *Constraint) validate() error {

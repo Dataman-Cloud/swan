@@ -21,7 +21,7 @@ func (zk *ZKStore) CreateCompose(cps *types.Compose) error {
 
 func (zk *ZKStore) UpdateCompose(cps *types.Compose) error {
 	if i, _ := zk.GetCompose(cps.ID); i == nil {
-		return errInstanceNotFound
+		return errComposeNotFound
 	}
 
 	bs, err := encode(cps)

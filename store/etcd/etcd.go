@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	keyApp         = "/apps"      // single app
-	keyCompose     = "/composes"  // compose instance (group apps)
-	keyFrameworkID = "/framework" // framework id
+	keyApp         = "/apps"        // single app
+	keyCompose     = "/composes"    // legacy compose instance (group apps), deprecated
+	keyComposeNG   = "/composes-ng" // compose instance (group apps)
+	keyFrameworkID = "/framework"   // framework id
 
 	keyTasks    = "tasks"    // sub key of keyApp
 	keyVersions = "versions" // sub key of keyApp
@@ -27,7 +28,7 @@ var (
 	errAppNotFound          = errors.New("app not found")
 	errAppAlreadyExists     = errors.New("app already exists")
 	errVersionAlreadyExists = errors.New("version already exists")
-	errInstanceNotFound     = errors.New("instance not found")
+	errComposeNotFound      = errors.New("compose app not found")
 
 	errInvalidGet  = errors.New("Get() on directory node make no sense")
 	errInvalidList = errors.New("can't List() on key Node")
@@ -58,7 +59,7 @@ func NewEtcdStore(addrs []string) (*EtcdStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG} {
 		store.ensureDir(node)
 	}
 
@@ -199,7 +200,15 @@ type MemberWrapper struct {
 }
 
 func (s *EtcdStore) IsErrNotFound(err error) bool {
-	return isEtcdKeyNotFound(err)
+	if err == nil {
+		return false
+	}
+	switch err {
+	case errComposeNotFound, errAppNotFound:
+		return true
+	default:
+		return isEtcdKeyNotFound(err)
+	}
 }
 
 func (s *EtcdStore) ClusterInfo() (EtcdClusterInfo, error) {

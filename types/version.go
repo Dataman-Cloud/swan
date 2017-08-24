@@ -265,10 +265,10 @@ func (h *HealthCheck) Valid() error {
 }
 
 type Proxy struct {
-	Enabled bool   `json:"enabled"`
-	Alias   string `json:"alias"`
-	Listen  string `json:"listen"`
-	Sticky  bool   `json:"sticky"`
+	Enabled bool   `json:"enabled" yaml:"enabled"`
+	Alias   string `json:"alias" yaml:"alias"`
+	Listen  string `json:"listen" yaml:"listen"`
+	Sticky  bool   `json:"sticky" yaml:"sticky"`
 }
 
 // similiar as above, but `Listen` int type
@@ -277,6 +277,20 @@ type ProxyAlias struct {
 	Alias   string `json:"alias"`
 	Listen  int    `json:"listen"`
 	Sticky  bool   `json:"sticky"`
+}
+
+func (p *Proxy) Valid() error {
+	if !p.Enabled {
+		return nil
+	}
+	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+	if err != nil {
+		return err
+	}
+	if l < 0 || l > 65535 {
+		return errors.New("proxy.Listen out of range")
+	}
+	return nil
 }
 
 // hijack Marshaler & Unmarshaler to make fit with int type `Listen`
@@ -423,6 +437,13 @@ func (v *Version) Validate() error {
 	// verify constraints
 	for _, cons := range v.Constraints {
 		if err := cons.validate(); err != nil {
+			return err
+		}
+	}
+
+	// verify proxy
+	if v.Proxy != nil {
+		if err := v.Proxy.Valid(); err != nil {
 			return err
 		}
 	}

@@ -31,11 +31,19 @@ type Store interface {
 	UpdateFrameworkId(frameworkId string) error
 	GetFrameworkId() (string, int64)
 
+	// compose legacy, Deprecated.
 	CreateCompose(ins *types.Compose) error
 	DeleteCompose(id string) error
 	UpdateCompose(ins *types.Compose) error // status, errmsg, updateAt
 	GetCompose(id string) (*types.Compose, error)
 	ListComposes() ([]*types.Compose, error)
+
+	// compose ng
+	CreateComposeNG(cmpApp *types.ComposeApp) error
+	DeleteComposeNG(idOrName string) error
+	UpdateComposeNG(cmpApp *types.ComposeApp) error // status, errmsg, updateAt
+	GetComposeNG(idOrName string) (*types.ComposeApp, error)
+	ListComposesNG() ([]*types.ComposeApp, error)
 
 	IsErrNotFound(err error) bool
 }
