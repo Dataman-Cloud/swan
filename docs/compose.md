@@ -1,4 +1,9 @@
 
+**Deprecated**  
+
+See: [compose-ng](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose-ng.md)
+
+
 - [compose api](#compose-API)
   + [parse](#parse)
   + [create](#create)
