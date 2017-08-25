@@ -202,16 +202,27 @@ func (r *Server) listApps(w http.ResponseWriter, req *http.Request) {
 	for _, app := range rets {
 		ver, err := r.db.GetVersion(app.ID, app.Version[0])
 		if err != nil {
+			if r.db.IsErrNotFound(err) {
+				if filters.LabelsSelector == nil && filters.FieldsSelector == nil {
+					apps = append(apps, app)
+				}
+				continue
+			}
+
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		if !filterByLabelsSelectors(filters.LabelsSelector, ver.Labels) {
-			continue
+		if filters.LabelsSelector != nil {
+			if !filterByLabelsSelectors(filters.LabelsSelector, ver.Labels) {
+				continue
+			}
 		}
 
-		if !filterByFieldsSelectors(filters.FieldsSelector, ver) {
-			continue
+		if filters.FieldsSelector != nil {
+			if !filterByFieldsSelectors(filters.FieldsSelector, ver) {
+				continue
+			}
 		}
 
 		apps = append(apps, app)
@@ -266,7 +277,7 @@ func (r *Server) deleteApp(w http.ResponseWriter, req *http.Request) {
 
 	// get app versions
 	versions, err := r.db.ListVersions(appId)
-	if err != nil {
+	if err != nil && !r.db.IsErrNotFound(err) {
 		http.Error(w, fmt.Sprintf("list tasks versions error for delete app. %v", err), http.StatusInternalServerError)
 		return
 	}
