@@ -802,13 +802,16 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 
 	var idx int
 	for _, task := range tasks {
-		num := len(task.cfg.PortMappings)
-		if idx+num > len(ports) {
-			return errors.New("no enough ports avaliable")
-		}
+		// port allocated only on bridge network.
+		if task.cfg.Network == "bridge" {
+			num := len(task.cfg.PortMappings)
+			if idx+num > len(ports) {
+				return errors.New("no enough ports avaliable")
+			}
 
-		task.cfg.Ports = ports[idx : idx+num]
-		idx += num
+			task.cfg.Ports = ports[idx : idx+num]
+			idx += num
+		}
 
 		task.AgentId = &mesosproto.AgentID{
 			Value: proto.String(offers[0].GetAgentId()),
@@ -834,6 +837,10 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 
 		dbtask.AgentId = t.AgentId.GetValue()
 		dbtask.IP = t.cfg.IP
+		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
+			dbtask.IP = offers[0].GetHostname()
+		}
+
 		dbtask.Ports = t.cfg.Ports
 
 		if err := s.db.UpdateTask(appId, dbtask); err != nil {

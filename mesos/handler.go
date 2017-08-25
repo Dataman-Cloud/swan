@@ -146,15 +146,17 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 				task.ContainerName = cname
 			}
 
-			if settings := cinfos[0].NetworkSettings; settings != nil {
-				if net := settings.Networks; net != nil && len(net) > 0 {
-					for _, cfg := range net {
-						if cfg.IPAMConfig != nil {
-							task.IP = cfg.IPAMConfig.IPv4Address
-						} else {
-							task.IP = cfg.IPAddress
+			if task.IP == "" {
+				if settings := cinfos[0].NetworkSettings; settings != nil {
+					if net := settings.Networks; net != nil && len(net) > 0 {
+						for _, cfg := range net {
+							if cfg.IPAMConfig != nil {
+								task.IP = cfg.IPAMConfig.IPv4Address
+							} else {
+								task.IP = cfg.IPAddress
+							}
+							break
 						}
-						break
 					}
 				}
 			}

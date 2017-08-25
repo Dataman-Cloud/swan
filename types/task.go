@@ -121,6 +121,13 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 		cfg.IP = spec.IPs[idx]
 	}
 
+	// port is specified on host & user network mode.
+	if cfg.Network != "bridge" { // none ?
+		for _, pm := range cfg.PortMappings {
+			cfg.Ports = append(cfg.Ports, uint64(pm.ContainerPort))
+		}
+	}
+
 	return cfg
 }
 
