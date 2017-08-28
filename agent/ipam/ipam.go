@@ -6,10 +6,12 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/config"
 	log "github.com/Sirupsen/logrus"
 	"github.com/docker/go-plugins-helpers/ipam"
+	"github.com/docker/libkv/store"
 	"github.com/docker/libnetwork/netlabel"
 )
 
@@ -152,8 +154,17 @@ func (m *IPAM) RequestAddress(req *ipam.RequestAddressRequest) (*ipam.RequestAdd
 	}
 
 	// request on docker container start up
-	respAddr, err = m.store.RequestIP(subnetID, preferAddr)
-	if err != nil {
+	for {
+		respAddr, err = m.store.RequestIP(subnetID, preferAddr)
+		if err == nil {
+			break
+		}
+		// random assigned ip is occupied by other racer, retry ..
+		if err == store.ErrKeyModified {
+			log.Warnln("IPAM RequestAddress retry another random assignment ...")
+			time.Sleep(time.Millisecond * 100)
+			continue
+		}
 		log.Errorln("IPAM RequestAddress error:", subnetID, err)
 		return nil, err
 	}
