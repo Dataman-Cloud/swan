@@ -176,13 +176,16 @@ func (s *kvStore) ListIPs(subnetID string) ([][2]string, error) {
 		return nil, err
 	}
 
-	ret := make([][2]string, len(kvPairs))
-	for idx, kvPair := range kvPairs {
+	ret := make([][2]string, 0, 0)
+	for _, kvPair := range kvPairs {
+		if len(kvPair.Value) == 0 { // maybe temporary store lock
+			continue
+		}
 		var (
 			ipAddr   = filepath.Base(kvPair.Key)
 			assigned = strconv.FormatBool(kvPair.Value[0] == '1')
 		)
-		ret[idx] = [2]string{ipAddr, assigned}
+		ret = append(ret, [2]string{ipAddr, assigned})
 	}
 	return ret, nil
 }
@@ -297,16 +300,28 @@ func (s *kvStore) checkIP(subnetID, ip string) (assigned bool, err error) {
 }
 
 func (s *kvStore) getRandomIP(subnetID string) (string, error) {
-	kvPairs, err := s.kv.List(s.normalize(subnetID, keyPool))
+	lock, err := s.kv.NewLock(
+		s.normalize(subnetID, keyPool, "_lock"),
+		&store.LockOptions{TTL: time.Second * 120},
+	)
+	if err != nil {
+		return "", fmt.Errorf("store.NewLock() on pool error: %v", err)
+	}
+
+	if _, err := lock.Lock(nil); err != nil {
+		return "", fmt.Errorf("store.Lock() on pool error: %v", err)
+	}
+	defer lock.Unlock()
+
+	infos, err := s.ListIPs(subnetID)
 	if err != nil {
 		return "", err
 	}
 
-	for _, kvPair := range kvPairs {
-		if kvPair.Value[0] == '1' {
-			continue
+	for _, info := range infos {
+		if assigned, _ := strconv.ParseBool(info[1]); !assigned {
+			return info[0], nil
 		}
-		return filepath.Base(kvPair.Key), nil
 	}
 
 	return "", errNoAvaliableIP
