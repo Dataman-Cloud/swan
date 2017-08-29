@@ -67,12 +67,10 @@ func (s *ApiSuite) TestRemoveCompose(c *check.C) {
 	wrapper := s.inspectCompose(id, c)
 	c.Assert(wrapper.Name, check.Equals, "demo")
 	c.Assert(wrapper.Desc, check.Equals, "failure")
-	c.Assert(wrapper.ErrMsg, check.Not(check.Equals), "")
 	for _, app := range wrapper.Apps {
 		c.Assert(strings.HasSuffix(app.ID, wrapper.DisplayName), check.Equals, true)
 		c.Assert(app.OpStatus, check.Equals, types.OpStatusNoop)
 		c.Assert(app.VersionCount, check.Equals, 1)
-		c.Assert(app.ErrMsg, check.Not(check.Equals), "")
 	}
 
 	// Remove
