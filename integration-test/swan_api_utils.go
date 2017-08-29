@@ -648,7 +648,7 @@ func demoYAML(count int, image, cmd, network string) (string, map[string]*types.
 			NetworkMode: network,
 		}
 		exts[svrName] = &types.YamlExtra{
-			Resource: &types.Resource{0.01, 0, 10, 0, nil},
+			Resource: &types.Resource{0.01, 0, 10, 0},
 			RunAs:    "bbk",
 			Labels:   map[string]string{"service_name": svrName},
 		}

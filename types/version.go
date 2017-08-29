@@ -283,13 +283,17 @@ func (p *Proxy) Valid() error {
 	if !p.Enabled {
 		return nil
 	}
-	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
-	if err != nil {
-		return err
+
+	if p.Listen != "" {
+		l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+		if err != nil {
+			return err
+		}
+		if l < 0 || l > 65535 {
+			return errors.New("proxy.Listen out of range")
+		}
 	}
-	if l < 0 || l > 65535 {
-		return errors.New("proxy.Listen out of range")
-	}
+
 	return nil
 }
 
