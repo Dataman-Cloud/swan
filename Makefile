@@ -4,6 +4,7 @@
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
 PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]')
 Compose := "https://github.com/docker/compose/releases/download/1.14.0/docker-compose"
+RamDisk := "/tmp/swan-ramdisk"
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
@@ -15,13 +16,13 @@ GIT_COMMIT=$(gitCommit)
 ifneq ($(gitDirty),"")
 GIT_COMMIT=$(gitCommit)-dirty
 endif
-GO_LDFLAGS=-X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.gitCommit=$(GIT_COMMIT) -X $(PKG)/version.buildTime=$(BUILD_TIME) -w
+GO_LDFLAGS=-X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.gitCommit=$(GIT_COMMIT) -X $(PKG)/version.buildTime=$(BUILD_TIME) -w -s
 
 
 default: build
 
 build: clean
-	go build -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
+	CGO_ENABLED=0 go build -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
 
 # multi-stage builds, require docker >= 17.05
 docker:
@@ -54,9 +55,18 @@ prepare-docker-compose:
         echo "docker-compose downloaded!"; \
     fi
 
-local-cluster: prepare-docker-compose docker-build docker-image
-	rm -rf /tmp/mesos-data || true
-	mkdir -p /tmp/mesos-data || true
+ramdisk:
+	@if uname | grep -q "Linux" >/dev/null 2>&1; then \
+        if mountpoint -q $(RamDisk); then \
+            umount $(RamDisk); \
+        fi; \
+        mkdir -p $(RamDisk); \
+        mount -t tmpfs -o size=256m tmpfs $(RamDisk); \
+    else \
+        mkdir -p $(RamDisk); \
+    fi
+
+local-cluster: prepare-docker-compose docker-build docker-image ramdisk
 	docker-compose up -d
 	docker-compose ps
 
@@ -64,16 +74,29 @@ rm-local-cluster: prepare-docker-compose
 	docker-compose stop
 	docker-compose rm -f
 
-integration-prepare: rm-local-cluster local-cluster
+check-local-cluster:
+	@sleep 20;
+	@docker-compose ps | awk '(/swan-[agent|master]/) {print $$1}' | while read cname; \
+	do \
+		if ! (docker inspect  -f "{{.State.Health.Status}}" $$cname | grep "healthy") > /dev/null 2>&1; then \
+			echo $$cname not ready! ; \
+			exit 1; \
+		fi; \
+	done
+	@echo "local cluster ready!"
 
-integration-test: integration-prepare
+integration-prepare: rm-local-cluster local-cluster check-local-cluster
+
+integration-test: integration-prepare run-integration-test
+
+run-integration-test:
 	docker run --name=testswan --rm \
 		-w /go/src/github.com/Dataman-Cloud/swan/integration-test \
 		-e SWAN_HOST=$(shell docker inspect -f "{{.NetworkSettings.IPAddress}}" ${PRJNAME}_swan-master_1):9999 \
+		-e "TESTON=" \
 		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
 		golang:1.8.1-alpine \
-		sh -c 'go test -check.v github.com/Dataman-Cloud/swan/integration-test'
-
+		sh -c 'go test -check.v -test.timeout=10m github.com/Dataman-Cloud/swan/integration-test'
 clean:
 	rm -rfv bin/*
 

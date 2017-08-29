@@ -140,6 +140,8 @@ func (s *ApiSuite) listAppTasks(id string, c *check.C) []*types.Task {
 }
 
 func (s *ApiSuite) listAppProxies(id string, c *check.C) *upstream.Upstream {
+	// wait for a little while to wait records broadcasted to nodes
+	time.Sleep(time.Second)
 	code, body, err := s.sendRequest("GET", "/v1/apps/"+id+"/proxy", nil)
 	c.Assert(err, check.IsNil)
 	c.Log(string(body))
@@ -158,6 +160,8 @@ func (s *ApiSuite) listAppProxies(id string, c *check.C) *upstream.Upstream {
 }
 
 func (s *ApiSuite) listAppDNS(id string, c *check.C) []*resolver.Record {
+	// wait for a little while to wait records broadcasted to nodes
+	time.Sleep(time.Second)
 	code, body, err := s.sendRequest("GET", "/v1/apps/"+id+"/dns", nil)
 	c.Assert(err, check.IsNil)
 	c.Log(string(body))
@@ -339,8 +343,8 @@ func (s *ApiSuite) rawRunCompose(cmp *types.Compose) (int, []byte, error) {
 func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
 	code, body, err := s.sendRequest("POST", "/v1/purge", nil)
 	c.Assert(err, check.IsNil)
-	c.Assert(code, check.Equals, http.StatusNoContent)
 	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusNoContent)
 
 	for goesby := int64(0); goesby <= int64(maxWait); goesby += int64(time.Second) {
 		time.Sleep(time.Second)
@@ -545,6 +549,11 @@ func (b *verBuilder) setProxy(enabled bool, alias, listen string, sticky bool) *
 	return b
 }
 
+func (b *verBuilder) setRetry(n int) *verBuilder {
+	b.RestartPolicy.Retries = n
+	return b
+}
+
 func demoVersion() *verBuilder {
 	return &verBuilder{
 		Name:        "demo",
@@ -574,6 +583,9 @@ func demoVersion() *verBuilder {
 					},
 				},
 			},
+		},
+		RestartPolicy: &types.RestartPolicy{
+			Retries: 0,
 		},
 	}
 }
@@ -648,7 +660,7 @@ func demoYAML(count int, image, cmd, network string) (string, map[string]*types.
 			NetworkMode: network,
 		}
 		exts[svrName] = &types.YamlExtra{
-			Resource: &types.Resource{0.01, 0, 10, 0, nil},
+			Resource: &types.Resource{0.01, 0, 10, 0},
 			RunAs:    "bbk",
 			Labels:   map[string]string{"service_name": svrName},
 		}

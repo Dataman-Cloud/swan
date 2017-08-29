@@ -126,7 +126,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 				retries   = 3
 			)
 
-			if restart != nil && restart.Retries > retries {
+			if restart != nil && restart.Retries >= 0 {
 				retries = restart.Retries
 			}
 
@@ -197,6 +197,8 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 					return
 				}
 			}
+
+			time.Sleep(time.Millisecond * 500)
 
 			// max wait for 5 seconds to confirm the preivous app get normal
 			if err = r.ensureAppReady(appId, time.Second*5); err != nil {

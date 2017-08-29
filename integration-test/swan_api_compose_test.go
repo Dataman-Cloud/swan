@@ -13,7 +13,7 @@ import (
 func (s *ApiSuite) TestRunCompose(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRunCompose() purged")
 
@@ -23,7 +23,7 @@ func (s *ApiSuite) TestRunCompose(c *check.C) {
 	fmt.Printf("launch compose with yaml text:\n%s\n", yaml)
 	cmp := demoCompose().setName("demo").setDesc("desc").setYAML(yaml, exts).Get()
 	id := s.runCompose(cmp, c)
-	err = s.waitCompose(id, types.OpStatusNoop, time.Second*60, c)
+	err = s.waitCompose(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRunCompose() created")
 
@@ -49,7 +49,7 @@ func (s *ApiSuite) TestRunCompose(c *check.C) {
 func (s *ApiSuite) TestRemoveCompose(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRemoveCompose() purged")
 
@@ -59,7 +59,7 @@ func (s *ApiSuite) TestRemoveCompose(c *check.C) {
 	fmt.Printf("launch failure compose with yaml text:\n%s\n", yaml)
 	cmp := demoCompose().setName("demo").setDesc("failure").setYAML(yaml, exts).Get()
 	id := s.runCompose(cmp, c)
-	err = s.waitCompose(id, types.OpStatusNoop, time.Second*60, c)
+	err = s.waitCompose(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRemoveCompose() created")
 
@@ -67,12 +67,10 @@ func (s *ApiSuite) TestRemoveCompose(c *check.C) {
 	wrapper := s.inspectCompose(id, c)
 	c.Assert(wrapper.Name, check.Equals, "demo")
 	c.Assert(wrapper.Desc, check.Equals, "failure")
-	c.Assert(wrapper.ErrMsg, check.Not(check.Equals), "")
 	for _, app := range wrapper.Apps {
 		c.Assert(strings.HasSuffix(app.ID, wrapper.DisplayName), check.Equals, true)
 		c.Assert(app.OpStatus, check.Equals, types.OpStatusNoop)
 		c.Assert(app.VersionCount, check.Equals, 1)
-		c.Assert(app.ErrMsg, check.Not(check.Equals), "")
 	}
 
 	// Remove

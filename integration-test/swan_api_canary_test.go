@@ -12,14 +12,14 @@ import (
 func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	// purge
 
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCanaryUpdate() purged")
 
 	// create app
 	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCanaryUpdate() created")
 
@@ -29,6 +29,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 5)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify proxy record
 	proxy := s.listAppProxies(id, c)
@@ -106,6 +107,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(counter[vers[1].ID], check.Equals, 2)
 
 	// verify proxy record
+	time.Sleep(time.Millisecond * 500)
 	proxy = s.listAppProxies(id, c)
 	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
 	c.Assert(len(proxy.Backends), check.Equals, 5)
