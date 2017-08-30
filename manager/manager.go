@@ -69,7 +69,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		return nil, err
 	}
 
-	// api server setup
+	// api server
 	srvcfg := api.Config{
 		Advertise: cfg.Advertise,
 		LogLevel:  cfg.LogLevel,

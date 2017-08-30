@@ -48,6 +48,13 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/compose-ng/{compose_id}/debug/versions", s.parseComposeToVersions),
 		NewRoute("DELETE", "/v1/compose-ng/{compose_id}", s.deleteComposeNG),
 
+		// mesos agent
+		NewRoute("GET", "/v1/mesos/agents", s.listMesosAgents),
+		NewRoute("GET", "/v1/mesos/agents/{agent_ip}", s.getAgentLabels),
+		NewRoute("POST", "/v1/mesos/agents/{agent_ip}", s.createAgentLabel),
+		NewRoute("PATCH", "/v1/mesos/agents/{agent_ip}", s.updateAgentLabel),
+		NewRoute("DELETE", "/v1/mesos/agents/{agent_ip}", s.deleteAgentLabel),
+
 		NewRoute("GET", "/ping", s.ping),
 		NewRoute("GET", "/v1/events", s.events),
 		NewRoute("GET", "/v1/stats", s.stats),

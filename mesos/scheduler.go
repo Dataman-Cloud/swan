@@ -1058,3 +1058,33 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 
 	return nil
 }
+
+func (s *Scheduler) ListAgents() []*types.MesosAgent {
+	s.RLock()
+	defer s.RUnlock()
+
+	agents := []*types.MesosAgent{}
+
+	for _, agent := range s.agents {
+		a := &types.MesosAgent{
+			ID: agent.id,
+			//		IP: s.hostname,
+		}
+
+		agn, _ := s.db.GetMesosAgent(agent.id)
+		if agn != nil {
+			a.Attrs = agn.Attrs
+		}
+
+		//	cpus, mem, disk, ports := s.Resources()
+		//	a.CPUs = cpus
+		//	a.Mem = mem
+		//	a.Disk = disk
+		//	a.Ports = int64(len(ports))
+		//	a.Attrs = s.Attributes()
+
+		agents = append(agents, a)
+	}
+
+	return agents
+}
