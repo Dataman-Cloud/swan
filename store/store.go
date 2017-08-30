@@ -46,6 +46,11 @@ type Store interface {
 	ListComposesNG() ([]*types.ComposeApp, error)
 
 	IsErrNotFound(err error) bool
+
+	// mesos agent labels
+	CreateMesosAgent(*types.MesosAgent) error
+	GetMesosAgent(string) (*types.MesosAgent, error)
+	UpdateMesosAgent(*types.MesosAgent) error
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

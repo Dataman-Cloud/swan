@@ -22,6 +22,8 @@ type Driver interface {
 	ClusterAgent(id string) *mole.ClusterAgent
 	CloseClusterAgent(id string)
 
+	ListAgents() []*types.MesosAgent
+
 	// for debug convenience
 	Dump() interface{}
 	Load() map[string]interface{}

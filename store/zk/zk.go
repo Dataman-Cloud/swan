@@ -29,6 +29,7 @@ const (
 	keyCompose     = "/composes"    // compose instance legacy (group apps), deprecated
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
+	keyAgent       = "/agents"      // mesos agent with attributes
 )
 
 type ZKStore struct {
@@ -52,7 +53,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID, keyAgent} {
 		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}
@@ -69,7 +70,7 @@ func (zs *ZKStore) IsErrNotFound(err error) bool {
 	case errComposeNotFound, errAppNotFound, errNotExists, zk.ErrNoNode:
 		return true
 	default:
-		return strings.Contains(err.Error(), "node does not exist")
+		return strings.Contains(err.Error(), "not exist")
 	}
 }
 
