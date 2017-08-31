@@ -63,7 +63,6 @@ func (s *Server) newMesosAgent(agentId string, label *types.MesosLabel) (*types.
 	agent.Attrs[label.Key] = label.Value
 
 	if err := s.db.CreateMesosAgent(agent); err != nil {
-		fmt.Println("======", err)
 		return nil, err
 	}
 

@@ -51,6 +51,12 @@ type Store interface {
 	CreateMesosAgent(*types.MesosAgent) error
 	GetMesosAgent(string) (*types.MesosAgent, error)
 	UpdateMesosAgent(*types.MesosAgent) error
+
+	// mesos virtual cluster
+	ListVClusters() ([]*types.VCluster, error)
+	CreateVCluster(*types.VCluster) error
+	GetVCluster(string) (*types.VCluster, error)
+	VClusterExists(string) bool
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

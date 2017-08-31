@@ -30,7 +30,17 @@ const (
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
 	keyAgent       = "/agents"      // mesos agent with attributes
+	keyVCluster    = "/vclusters"   // mesos virtual cluster
 )
+
+var baseKeys = []string{
+	keyApp,
+	keyCompose,
+	keyComposeNG,
+	keyFrameworkID,
+	keyAgent,
+	keyVCluster,
+}
 
 type ZKStore struct {
 	url  *url.URL
@@ -53,7 +63,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID, keyAgent} {
+	for _, node := range baseKeys {
 		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}
