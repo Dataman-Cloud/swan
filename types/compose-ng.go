@@ -529,27 +529,26 @@ func (s *ComposeService) parameters(dnsSearch, cName string, extLabels map[strin
 	if e != "" {
 		m1["entrypoint"] = e
 	}
-	// logging
+	// log driver
 	if v := s.Logging; v != nil {
 		if d := v.Driver; d != "" {
 			m1["log-driver"] = d
-		}
-		var opts string
-		for key, val := range v.Options {
-			if len(opts) > 0 {
-				opts += " " + key + "=" + val
-			} else {
-				opts += key + "=" + val
-			}
-		}
-		if opts != "" {
-			m1["log-opt"] = opts
 		}
 	}
 
 	// m2
 	fset := func(k string, vs []string) {
 		m2[k] = append(m2[k], vs...)
+	}
+	// log-opt
+	if v := s.Logging; v != nil {
+		opts := make([]string, 0, 0)
+		for key, val := range v.Options {
+			opts = append(opts, key+"="+val)
+		}
+		if len(opts) > 0 {
+			fset("log-opt", opts)
+		}
 	}
 	if v := s.CapAdd; len(v) > 0 {
 		fset("cap-add", v)
