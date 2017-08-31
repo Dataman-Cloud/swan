@@ -42,6 +42,13 @@ func (zk *ZKStore) GetVCluster(clusterId string) (*types.VCluster, error) {
 		return nil, err
 	}
 
+	nodes, err := zk.getNodes(p, clusterId)
+	if err != nil {
+		return nil, err
+	}
+
+	vcluster.Nodes = nodes
+
 	return vcluster, nil
 }
 
@@ -66,4 +73,51 @@ func (zk *ZKStore) VClusterExists(name string) bool {
 	}
 
 	return false
+}
+
+func (zk *ZKStore) DeleteVCluster(vclusterId string) error {
+	p := path.Join(keyVCluster, vclusterId)
+
+	if err := zk.del(p); err != nil {
+		log.Errorf("delete vcluster %s got error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func (zk *ZKStore) UpdateVCluster(vcluster *types.VCluster) error {
+	bs, err := encode(vcluster)
+	if err != nil {
+		return err
+	}
+
+	p := path.Join(keyVCluster, vcluster.ID)
+
+	return zk.set(p, bs)
+}
+
+func (zk *ZKStore) getNodes(p, vclusterId string) ([]*types.Node, error) {
+	children, err := zk.list(path.Join(p, "nodes"))
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := make([]*types.Node, 0)
+	for _, child := range children {
+		p := path.Join(keyVCluster, vclusterId, "nodes", child)
+		data, _, err := zk.get(p)
+		if err != nil {
+			continue
+		}
+
+		node := new(types.Node)
+		if err := decode(data, node); err != nil {
+			return nil, err
+		}
+
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
 }

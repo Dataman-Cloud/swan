@@ -21,3 +21,8 @@ type Node struct {
 type CreateVClusterBody struct {
 	Name string `json:"name"`
 }
+
+type CreateNodeBody struct {
+	ID string `json:"id"`
+	IP string `json:"ip"`
+}

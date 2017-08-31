@@ -19,3 +19,11 @@ func (etcd *EtcdStore) GetVCluster(vclusterId string) (*types.VCluster, error) {
 func (etcd *EtcdStore) VClusterExists(name string) bool {
 	return false
 }
+
+func (etcd *EtcdStore) DeleteVCluster(vclusterId string) error {
+	return nil
+}
+
+func (etcd *EtcdStore) UpdateVCluster(*types.VCluster) error {
+	return nil
+}

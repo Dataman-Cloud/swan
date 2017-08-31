@@ -51,6 +51,9 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		// mesos virtual cluster
 		NewRoute("GET", "/v1/vclusters", s.listVClusters),
 		NewRoute("POST", "/v1/vclusters", s.createVCluster),
+		NewRoute("DELETE", "/v1/vclusters/{vcluster_id}", s.deleteVCluster),
+		NewRoute("POST", "/v1/vclusters/{vcluster_id}/nodes", s.addNode),
+		NewRoute("PATCH", "/v1/vclusters/{vcluster_id}/nodes/{node_id}", s.updateNode),
 
 		NewRoute("GET", "/v1/mesos/agents", s.listMesosAgents),
 		NewRoute("PATCH", "/v1/mesos/agents/{agent_id}", s.updateMesosAgent),

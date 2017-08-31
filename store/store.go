@@ -57,6 +57,13 @@ type Store interface {
 	CreateVCluster(*types.VCluster) error
 	GetVCluster(string) (*types.VCluster, error)
 	VClusterExists(string) bool
+	DeleteVCluster(string) error
+	UpdateVCluster(*types.VCluster) error
+
+	// node for virtaul cluster
+	CreateNode(string, *types.Node) error
+	GetNode(string, string) (*types.Node, error)
+	UpdateNode(string, *types.Node) error
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {
