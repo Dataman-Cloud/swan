@@ -110,6 +110,15 @@ func FlagEnableCapabilityKilling() cli.Flag {
 	}
 }
 
+func FlagEnableCheckPoint() cli.Flag {
+	return cli.StringFlag{
+		Name:   "enable-checkpoint",
+		Usage:  "To enable check point mechanism on mesos",
+		EnvVar: "SWAN_ENABLE_CHECK_POINT",
+		Value:  "false",
+	}
+}
+
 func FlagJoinAddrs() cli.Flag {
 	return cli.StringFlag{
 		Name:   "join-addrs",

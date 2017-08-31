@@ -33,6 +33,7 @@ func ManagerCmd() cli.Command {
 		FlagHeartbeatTimeout(),
 		FlagMaxTasksPerOffer(),
 		FlagEnableCapabilityKilling(),
+		FlagEnableCheckPoint(),
 	}
 
 	return cmd

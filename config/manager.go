@@ -29,6 +29,7 @@ type ManagerConfig struct {
 	HeartbeatTimeout        float64 `json:"heartbeatTimeout"`
 	MaxTasksPerOffer        int     `json:"maxTasksPerOffer"`
 	EnableCapabilityKilling bool    `json:"enableCapabilityKilling"`
+	EnableCheckPoint        bool    `json:"enableCheckPoint"`
 }
 
 func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
@@ -97,6 +98,10 @@ func NewManagerConfig(c *cli.Context) (*ManagerConfig, error) {
 
 	if killing := c.String("enable-capability-killing"); killing != "" {
 		cfg.EnableCapabilityKilling, _ = strconv.ParseBool(killing)
+	}
+
+	if ckpoint := c.String("enable-checkpoint"); ckpoint != "" {
+		cfg.EnableCheckPoint, _ = strconv.ParseBool(ckpoint)
 	}
 
 	if err := cfg.validate(); err != nil {
