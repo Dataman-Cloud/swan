@@ -56,7 +56,9 @@ prepare-docker-compose:
     fi
 
 ramdisk:
-	@if uname | grep -q "Linux" >/dev/null 2>&1; then \
+	@if env | grep -q -w "TRAVIS_BUILD_DIR" >/dev/null 2>&1; then \
+		mkdir -p $(RamDisk); \
+	elif uname | grep -q "Linux" >/dev/null 2>&1; then \
         if mountpoint -q $(RamDisk); then \
             umount $(RamDisk); \
         fi; \
@@ -87,7 +89,7 @@ check-local-cluster:
 
 integration-prepare: rm-local-cluster local-cluster check-local-cluster
 
-integration-test: integration-prepare run-integration-test
+integration-test: integration-prepare run-integration-test rm-local-cluster
 
 run-integration-test:
 	docker run --name=testswan --rm \
