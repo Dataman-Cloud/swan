@@ -15,7 +15,6 @@ var (
 	defaultFrameworkName            = "swan"
 	defaultFrameworkPrincipal       = "swan"
 	defaultFrameworkFailoverTimeout = float64(DefaultFrameworkFailoverTimeout)
-	defaultFrameworkCheckpoint      = false
 )
 
 func (s *Scheduler) buildFramework() *mesosproto.FrameworkInfo {
@@ -30,7 +29,7 @@ func (s *Scheduler) buildFramework() *mesosproto.FrameworkInfo {
 		Name:            proto.String(defaultFrameworkName),
 		Principal:       proto.String(defaultFrameworkPrincipal),
 		FailoverTimeout: proto.Float64(defaultFrameworkFailoverTimeout),
-		Checkpoint:      proto.Bool(defaultFrameworkCheckpoint),
+		Checkpoint:      proto.Bool(s.cfg.EnableCheckPoint),
 		Hostname:        proto.String(hostName),
 		Capabilities: []*mesosproto.FrameworkInfo_Capability{
 			{Type: mesosproto.FrameworkInfo_Capability_PARTITION_AWARE.Enum()},

@@ -53,6 +53,7 @@ type SchedulerConfig struct {
 	HeartbeatTimeout        float64
 	MaxTasksPerOffer        int
 	EnableCapabilityKilling bool
+	EnableCheckPoint        bool
 }
 
 // Scheduler represents a client interacting with mesos master via x-protobuf

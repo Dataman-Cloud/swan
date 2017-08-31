@@ -62,6 +62,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		HeartbeatTimeout:        cfg.HeartbeatTimeout,
 		MaxTasksPerOffer:        cfg.MaxTasksPerOffer,
 		EnableCapabilityKilling: cfg.EnableCapabilityKilling,
+		EnableCheckPoint:        cfg.EnableCheckPoint,
 	}
 
 	var s mesos.Strategy
