@@ -12,7 +12,7 @@ import (
 func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestUpdateApp() purged")
 
@@ -20,7 +20,7 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	//
 	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestUpdateApp() created")
 
@@ -30,6 +30,7 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers := s.listAppVersions(id, c)
@@ -78,6 +79,7 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers = s.listAppVersions(id, c)
@@ -126,6 +128,7 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 3)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers = s.listAppVersions(id, c)

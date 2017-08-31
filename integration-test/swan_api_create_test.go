@@ -16,7 +16,7 @@ import (
 func (s *ApiSuite) TestCreateApp(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCreateApp() purged")
 
@@ -24,7 +24,7 @@ func (s *ApiSuite) TestCreateApp(c *check.C) {
 	//
 	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).Get()
 	id := s.createApp(ver, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCreateApp() created")
 
@@ -34,6 +34,7 @@ func (s *ApiSuite) TestCreateApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 10)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers := s.listAppVersions(id, c)
@@ -60,7 +61,7 @@ func (s *ApiSuite) TestCreateApp(c *check.C) {
 func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCreateInvalidApp() purged")
 

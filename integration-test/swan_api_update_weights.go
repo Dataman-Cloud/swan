@@ -12,14 +12,14 @@ import (
 func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	// purge
 
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestUpdateWeights() purged")
 
 	// create app
 	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestUpdateWeights() created")
 
@@ -29,6 +29,7 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 5)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 	fmt.Println("TestUpdateWeights() verified")
 
 	// verify proxy record
@@ -67,6 +68,7 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 2)
 	c.Assert(app.OpStatus, check.Equals, types.OpStatusCanaryUnfinished)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app tasks
 	tasks := s.listAppTasks(id, c)
@@ -148,6 +150,7 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 2)
 	c.Assert(app.OpStatus, check.Equals, types.OpStatusCanaryUnfinished)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app tasks
 	tasks = s.listAppTasks(id, c)
@@ -205,6 +208,7 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 2)
 	c.Assert(app.OpStatus, check.Equals, types.OpStatusCanaryUnfinished)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app tasks
 	tasks = s.listAppTasks(id, c)

@@ -72,7 +72,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		retries = 3
 	)
 
-	if restart != nil && restart.Retries > retries {
+	if restart != nil && restart.Retries >= 0 {
 		retries = restart.Retries
 	}
 
@@ -469,7 +469,7 @@ func (r *Server) scaleApp(w http.ResponseWriter, req *http.Request) {
 				retries = 3
 			)
 
-			if restart != nil && restart.Retries > retries {
+			if restart != nil && restart.Retries >= 0 {
 				retries = restart.Retries
 			}
 
@@ -597,7 +597,7 @@ func (r *Server) updateApp(w http.ResponseWriter, req *http.Request) {
 				retries = 3
 			)
 
-			if restart != nil && restart.Retries > retries {
+			if restart != nil && restart.Retries >= 0 {
 				retries = restart.Retries
 			}
 
@@ -679,7 +679,7 @@ func (s *Server) startApp(w http.ResponseWriter, req *http.Request) {
 		retries = 3
 	)
 
-	if restart != nil && restart.Retries > retries {
+	if restart != nil && restart.Retries >= 0 {
 		retries = restart.Retries
 	}
 
@@ -977,7 +977,7 @@ func (r *Server) canaryUpdate(w http.ResponseWriter, req *http.Request) {
 				retries = 3
 			)
 
-			if restart != nil && restart.Retries > retries {
+			if restart != nil && restart.Retries >= 0 {
 				retries = restart.Retries
 			}
 
@@ -1147,7 +1147,7 @@ func (r *Server) rollback(w http.ResponseWriter, req *http.Request) {
 				retries = 3
 			)
 
-			if restart != nil && restart.Retries > retries {
+			if restart != nil && restart.Retries >= 0 {
 				retries = restart.Retries
 			}
 
@@ -1585,7 +1585,7 @@ func (r *Server) updateTask(w http.ResponseWriter, req *http.Request) {
 		retries = 3
 	)
 
-	if restart != nil && restart.Retries > retries {
+	if restart != nil && restart.Retries >= 0 {
 		retries = restart.Retries
 	}
 
@@ -1715,7 +1715,7 @@ func (r *Server) rollbackTask(w http.ResponseWriter, req *http.Request) {
 		retries = 3
 	)
 
-	if restart != nil && restart.Retries > retries {
+	if restart != nil && restart.Retries >= 0 {
 		retries = restart.Retries
 	}
 

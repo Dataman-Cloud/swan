@@ -16,11 +16,22 @@ func init() {
 		log.Fatal(err)
 	}
 
-	check.Suite(s)
+	check.Suite(s) // register the test suit
 }
 
+// make fit with go test mechanism
 func Test(t *testing.T) {
-	check.TestingT(t)
+	// run all test cases
+	// check.TestingT(t)
+
+	// run regexp matched test cases
+	result := check.RunAll(&check.RunConf{
+		Filter: os.Getenv("TESTON"),
+	})
+	if !result.Passed() {
+		log.Fatal(result.String())
+	}
+	log.Println(result.String())
 }
 
 type ApiSuite struct {

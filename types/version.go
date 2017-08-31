@@ -283,6 +283,9 @@ func (p *Proxy) Valid() error {
 	if !p.Enabled {
 		return nil
 	}
+	if p.Listen == "" {
+		return nil
+	}
 	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
 	if err != nil {
 		return err

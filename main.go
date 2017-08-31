@@ -1,6 +1,10 @@
 package main
 
 import (
+	"os"
+	"strconv"
+	"time"
+
 	"github.com/urfave/cli"
 
 	"github.com/Dataman-Cloud/swan/cmd"
@@ -19,6 +23,12 @@ func main() {
 		cmd.ManagerCmd(),
 		cmd.AgentCmd(),
 		cmd.VersionCmd(),
+	}
+
+	if delay := os.Getenv("SWAN_START_DELAY"); delay != "" {
+		if n, _ := strconv.Atoi(delay); n > 0 {
+			time.Sleep(time.Second * time.Duration(n))
+		}
 	}
 
 	app.RunAndExitOnError()

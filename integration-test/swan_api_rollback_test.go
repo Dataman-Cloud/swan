@@ -12,7 +12,7 @@ import (
 func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	// Purge
 	//
-	err := s.purge(time.Second*30, c)
+	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRollBackApp() purged")
 
@@ -20,7 +20,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	//
 	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*30, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRollBackApp() created")
 
@@ -30,6 +30,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers := s.listAppVersions(id, c)
@@ -68,7 +69,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	//
 	newVer := demoVersion().setName("demo").setCount(3).setCPU(0.02).setMem(10).setProxy(true, "www.xxx.com", "", false).Get()
 	s.updateApp(id, newVer, c)
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*120, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRollBackApp() updated")
 
@@ -78,6 +79,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers = s.listAppVersions(id, c)
@@ -115,7 +117,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	// Roll Back App
 	//
 	s.rollbackApp(id, "", c) // rollback to previous version
-	err = s.waitApp(id, types.OpStatusNoop, time.Second*200, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*360, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestRollBackApp() rolled back")
 
@@ -125,6 +127,7 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(app.TaskCount, check.Equals, 3)
 	c.Assert(app.VersionCount, check.Equals, 2)
 	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Equals, "")
 
 	// verify app versions
 	vers = s.listAppVersions(id, c)

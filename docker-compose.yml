@@ -9,6 +9,8 @@ services:
       - MYID=1
     ports:
       - 2181:2181
+    volumes:
+      - /tmp/swan-ramdisk/zookeeper:/tmp/zookeeper:rw
 
   mesos-master:
     image: "mesosphere/mesos-master:1.2.1"
@@ -21,7 +23,9 @@ services:
       - MESOS_LOGGING_LEVEL=WARNING
       - MESOS_CLUSTER=local
       - MESOS_HOSTNAME=localhost
-      - MESOS_WORK_DIR=/tmp/mesos-data
+      - MESOS_WORK_DIR=/data/mesos
+    volumes:
+      - /tmp/swan-ramdisk/mesos-master-data:/data/mesos:rw
     depends_on:
       - zookeeper
     links:
@@ -40,17 +44,19 @@ services:
       - MESOS_LOGGING_LEVEL=WARNING
       - MESOS_PORT=5051
       - MESOS_CONTAINERIZERS=docker,mesos
-      - MESOS_DOCKER_REMOVE_DELAY=5mins
+      - MESOS_DOCKER_REMOVE_DELAY=1secs
       - MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       - MESOS_ATTRIBUTES=vcluster:demo
       - MESOS_SYSTEMD_ENABLE_SUPPORT=false
-      - MESOS_WORK_DIR=/tmp/mesos-data
+      - MESOS_WORK_DIR=/data/mesos
       - PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
       - MESOS_HOSTNAME=127.0.0.1
+      - MESOS_RESOURCES=ports:[41000-42000]
     volumes:
       - /var/lib/docker:/data/docker:rw
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /var/run/docker.sock:/var/run/docker.sock:rw
+      - /tmp/swan-ramdisk/mesos-slave-data:/data/mesos:rw
     depends_on:
       - zookeeper
       - mesos-master
@@ -72,11 +78,12 @@ services:
       - SWAN_STORE_TYPE=zk
       - SWAN_MESOS_URL=zk://zookeeper:2181/mesos
       - SWAN_ZK_URL=zk://zookeeper:2181/swan
-      - SWAN_LOG_LEVEL=info
+      - SWAN_LOG_LEVEL=debug
+      - SWAN_START_DELAY=2
     healthcheck:
       test: ["CMD", "wget", "-s", "-q", "http://127.0.0.1:9999/ping"]
-      interval: 30s
-      timeout: 10s
+      interval: 5s
+      timeout: 5s
       retries: 3
     depends_on:
       - zookeeper
@@ -94,6 +101,12 @@ services:
     environment:
       - SWAN_LISTEN_ADDR=0.0.0.0:10000
       - SWAN_JOIN_ADDRS=127.0.0.1:9999
-      - SWAN_LOG_LEVEL=info
+      - SWAN_LOG_LEVEL=debug
+      - SWAN_START_DELAY=5
+    healthcheck:
+      test: ["CMD", "wget", "-s", "-q", "http://127.0.0.1:10000/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 3
     depends_on:
       - swan-master
