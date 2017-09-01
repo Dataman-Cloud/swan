@@ -86,6 +86,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 	cmp.DisplayName = fmt.Sprintf("%s.%s.%s", cmp.Name, runAs, cluster)
 	cmp.OpStatus = types.OpStatusCreating
 	cmp.CreatedAt = time.Now()
+	cmp.UpdatedAt = time.Now()
 
 	if err := r.db.CreateCompose(&cmp); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
