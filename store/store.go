@@ -64,6 +64,7 @@ type Store interface {
 	CreateNode(string, *types.Node) error
 	GetNode(string, string) (*types.Node, error)
 	UpdateNode(string, *types.Node) error
+	ListNodes(string) ([]*types.Node, error)
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

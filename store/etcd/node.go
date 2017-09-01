@@ -15,3 +15,7 @@ func (s *EtcdStore) GetNode(vId, nodeId string) (*types.Node, error) {
 func (s *EtcdStore) UpdateNode(vId string, node *types.Node) error {
 	return nil
 }
+
+func (s *EtcdStore) ListNodes(vId string) ([]*types.Node, error) {
+	return nil, nil
+}

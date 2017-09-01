@@ -5,6 +5,8 @@ import (
 	"path"
 
 	"github.com/Dataman-Cloud/swan/types"
+
+	log "github.com/Sirupsen/logrus"
 )
 
 func (zk *ZKStore) CreateNode(vclusterId string, node *types.Node) error {
@@ -13,7 +15,7 @@ func (zk *ZKStore) CreateNode(vclusterId string, node *types.Node) error {
 		return err
 	}
 
-	p := path.Join(keyVCluster, vclusterId, "nodes", node.ID)
+	p := path.Join(keyVCluster, vclusterId, "nodes", node.IP)
 
 	return zk.createAll(p, bs)
 }
@@ -44,7 +46,29 @@ func (zk *ZKStore) UpdateNode(vId string, node *types.Node) error {
 		return err
 	}
 
-	p := path.Join(keyVCluster, vId, "nodes", node.ID)
+	p := path.Join(keyVCluster, vId, "nodes", node.IP)
 
 	return zk.set(p, bs)
+}
+
+func (zk *ZKStore) ListNodes(vId string) ([]*types.Node, error) {
+	p := path.Join(keyVCluster, vId, "nodes")
+
+	children, err := zk.list(p)
+	if err != nil {
+		return nil, err
+	}
+
+	nodes := make([]*types.Node, 0)
+	for _, child := range children {
+		node, err := zk.GetNode(vId, child)
+		if err != nil {
+			log.Errorf("ListNodes.GetNode error: %v", err)
+			continue
+		}
+
+		nodes = append(nodes, node)
+	}
+
+	return nodes, nil
 }

@@ -121,11 +121,6 @@ func (s *Server) updateNode(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if utils.LabelExists(node.Attrs, label.Key) {
-		http.Error(w, fmt.Sprintf("label %s=%s already exists", label.Key, label.Value), http.StatusConflict)
-		return
-	}
-
 	node.Attrs[label.Key] = label.Value
 
 	if err := s.db.UpdateNode(vclusterId, node); err != nil {
@@ -134,6 +129,22 @@ func (s *Server) updateNode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, node)
+}
+
+func (s *Server) listNodes(w http.ResponseWriter, r *http.Request) {
+	vclusterId := mux.Vars(r)["vcluster_id"]
+
+	nodes, err := s.db.ListNodes(vclusterId)
+	if err != nil {
+		if s.db.IsErrNotFound(err) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+
+	writeJSON(w, http.StatusOK, nodes)
 }
 
 // func (s *Server) labelExists(labels map[string]string, key string) bool {
