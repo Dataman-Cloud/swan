@@ -17,3 +17,6 @@ script:
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -X fix
+  
+notifications:
+   webhooks: https://oapi.dingtalk.com/robot/send?access_token=097145956683f97d99854f5287482f1c5520fffd7be65c986e43e70c481f6322
