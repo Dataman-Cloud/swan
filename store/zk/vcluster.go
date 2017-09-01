@@ -44,7 +44,9 @@ func (zk *ZKStore) GetVCluster(clusterId string) (*types.VCluster, error) {
 
 	nodes, err := zk.getNodes(p, clusterId)
 	if err != nil {
-		return nil, err
+		if err != errNotExists {
+			return nil, err
+		}
 	}
 
 	vcluster.Nodes = nodes
@@ -53,7 +55,7 @@ func (zk *ZKStore) GetVCluster(clusterId string) (*types.VCluster, error) {
 }
 
 func (zk *ZKStore) CreateVCluster(vcluster *types.VCluster) error {
-	p := path.Join(keyVCluster, vcluster.ID)
+	p := path.Join(keyVCluster, vcluster.Name)
 
 	bs, err := encode(vcluster)
 	if err != nil {
@@ -64,22 +66,41 @@ func (zk *ZKStore) CreateVCluster(vcluster *types.VCluster) error {
 }
 
 func (zk *ZKStore) VClusterExists(name string) bool {
-	vclusters, _ := zk.ListVClusters()
+	p := path.Join(keyVCluster, name)
 
-	for _, vcluster := range vclusters {
-		if vcluster.Name == name {
-			return true
-		}
+	exists, err := zk.exist(p)
+	if err != nil {
+		return false
 	}
 
-	return false
+	return exists
 }
 
 func (zk *ZKStore) DeleteVCluster(vclusterId string) error {
 	p := path.Join(keyVCluster, vclusterId)
 
+	children, err := zk.list(path.Join(p, "nodes"))
+	if err != nil {
+		log.Errorf("ZKStore.DeleteVCluster.zk.list: %v", err)
+		return err
+	}
+
+	for _, child := range children {
+		cp := path.Join(p, "nodes", child)
+
+		if err := zk.del(cp); err != nil {
+			log.Errorf("ZKStore.DeleteVCluster.children.del: %v", err)
+			return err
+		}
+	}
+
+	if err := zk.del(path.Join(p, "nodes")); err != nil {
+		log.Errorf("delete vcluster %s nodes got error: %v", vclusterId, err)
+		return err
+	}
+
 	if err := zk.del(p); err != nil {
-		log.Errorf("delete vcluster %s got error: %v", err)
+		log.Errorf("delete vcluster %s got error: %v", vclusterId, err)
 		return err
 	}
 
