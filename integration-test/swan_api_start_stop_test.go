@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,17 +11,19 @@ import (
 func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() purged")
+	costPrintln("TestStartStopApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() created")
+	costPrintln("TestStartStopApp() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -67,10 +68,11 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	// Stop App
 	//
+	startAt = time.Now()
 	s.stopApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() stopped")
+	costPrintln("TestStartStopApp() stopped", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 1)
@@ -92,10 +94,11 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	// Start App
 	//
+	startAt = time.Now()
 	s.startApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() started")
+	costPrintln("TestStartStopApp() started", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 1)
@@ -124,10 +127,11 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	// Stop App Again
 	//
+	startAt = time.Now()
 	s.stopApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() stopped")
+	costPrintln("TestStartStopApp() stopped", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 1)
@@ -149,10 +153,11 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	// Start App Again
 	//
+	startAt = time.Now()
 	s.startApp(id, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() started")
+	costPrintln("TestStartStopApp() started", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 1)
@@ -181,7 +186,8 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestStartStopApp() removed")
+	costPrintln("TestStartStopApp() removed", startAt)
 }

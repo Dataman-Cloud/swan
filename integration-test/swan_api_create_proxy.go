@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,17 +11,19 @@ import (
 func (s *ApiSuite) TestCreateAppProxy(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() purged")
+	costPrintln("TestCreateApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() created")
+	costPrintln("TestCreateApp() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -67,7 +68,8 @@ func (s *ApiSuite) TestCreateAppProxy(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() removed")
+	costPrintln("TestCreateApp() removed", startAt)
 }

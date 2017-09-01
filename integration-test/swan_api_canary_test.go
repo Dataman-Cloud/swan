@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,16 +11,18 @@ import (
 func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	// purge
 
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() purged")
+	costPrintln("TestCanaryUpdate() purged", startAt)
 
 	// create app
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() created")
+	costPrintln("TestCanaryUpdate() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -50,7 +51,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	}
 
 	// do canary update
-
+	startAt = time.Now()
 	body := &types.CanaryUpdateBody{
 		Version:   demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(10).setProxy(true, "www.xxx.com", "", false).Get(),
 		Instances: 3,
@@ -61,7 +62,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	s.canaryUpdate(id, body, c)
 	err = s.waitApp(id, types.OpStatusCanaryUnfinished, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() updated")
+	costPrintln("TestCanaryUpdate() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -144,6 +145,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(f, check.Equals, 2)
 
 	// canary continue
+	startAt = time.Now()
 	body = &types.CanaryUpdateBody{
 		Instances: 5,
 		Value:     0.5,
@@ -153,7 +155,7 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	s.canaryUpdate(id, body, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() continued")
+	costPrintln("TestCanaryUpdate() continued", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -220,8 +222,8 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	c.Assert(f1, check.Equals, 5)
 
 	// clean up
-
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() removed")
+	costPrintln("TestCanaryUpdate() removed", startAt)
 }

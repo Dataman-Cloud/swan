@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,17 +11,19 @@ import (
 func (s *ApiSuite) TestScaleApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() purged")
+	costPrintln("TestScaleApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() created")
+	costPrintln("TestScaleApp() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -67,10 +68,11 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 
 	// Scale Up App
 	//
+	startAt = time.Now()
 	s.scaleApp(id, 10, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled up")
+	costPrintln("TestScaleApp() scaled up", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 2)
@@ -99,10 +101,11 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 
 	// Scale Down App
 	//
+	startAt = time.Now()
 	s.scaleApp(id, 1, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled down")
+	costPrintln("TestScaleApp() scaled down", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 3)
@@ -131,10 +134,11 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 
 	// Scale Up App Again
 	//
+	startAt = time.Now()
 	s.scaleApp(id, 5, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled up")
+	costPrintln("TestScaleApp() scaled up", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 4)
@@ -163,10 +167,11 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 
 	// Scale Down App Again
 	//
+	startAt = time.Now()
 	s.scaleApp(id, 0, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() scaled down")
+	costPrintln("TestScaleApp() scaled down", startAt)
 
 	app = s.inspectApp(id, c)
 	c.Assert(app.VersionCount, check.Equals, 5)
@@ -188,7 +193,8 @@ func (s *ApiSuite) TestScaleApp(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestScaleApp() removed")
+	costPrintln("TestScaleApp() removed", startAt)
 }

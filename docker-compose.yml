@@ -98,6 +98,8 @@ services:
     command: "agent"
     network_mode: "service:swan-master" # share with swan-master to make use of 127.0.0.1
     restart: "unless-stopped"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:rw
     environment:
       - SWAN_LISTEN_ADDR=0.0.0.0:10000
       - SWAN_JOIN_ADDRS=127.0.0.1:9999

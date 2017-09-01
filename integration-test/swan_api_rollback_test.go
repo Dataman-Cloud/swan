@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,19 +11,22 @@ import (
 func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestRollBackApp() purged")
+	costPrintln("TestRollBackApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestRollBackApp() created")
+	costPrintln("TestRollBackApp() created", startAt)
 
 	// verify app
+	startAt = time.Now()
 	app := s.inspectApp(id, c)
 	c.Assert(app.Name, check.Equals, "demo")
 	c.Assert(app.TaskCount, check.Equals, 3)
@@ -67,11 +69,12 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 
 	// Update App
 	//
+	startAt = time.Now()
 	newVer := demoVersion().setName("demo").setCount(3).setCPU(0.02).setMem(10).setProxy(true, "www.xxx.com", "", false).Get()
 	s.updateApp(id, newVer, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestRollBackApp() updated")
+	costPrintln("TestRollBackApp() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -116,10 +119,11 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 
 	// Roll Back App
 	//
+	startAt = time.Now()
 	s.rollbackApp(id, "", c) // rollback to previous version
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*360, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestRollBackApp() rolled back")
+	costPrintln("TestRollBackApp() rolled back", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -164,7 +168,8 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestRollBackApp() removed")
+	costPrintln("TestRollBackApp() removed", startAt)
 }
