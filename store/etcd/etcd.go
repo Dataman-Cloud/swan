@@ -19,6 +19,8 @@ const (
 	keyCompose     = "/composes"    // legacy compose instance (group apps), deprecated
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/framework"   // framework id
+	keyAgent       = "/mesos/agents"
+	keyVCluster    = "/vclusters"
 
 	keyTasks    = "tasks"    // sub key of keyApp
 	keyVersions = "versions" // sub key of keyApp
@@ -59,7 +61,7 @@ func NewEtcdStore(addrs []string) (*EtcdStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyComposeNG} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyAgent, keyVCluster} {
 		store.ensureDir(node)
 	}
 

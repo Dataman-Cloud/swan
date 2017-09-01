@@ -46,6 +46,26 @@ type Store interface {
 	ListComposesNG() ([]*types.ComposeApp, error)
 
 	IsErrNotFound(err error) bool
+
+	// mesos agent labels
+	CreateMesosAgent(*types.MesosAgent) error
+	GetMesosAgent(string) (*types.MesosAgent, error)
+	UpdateMesosAgent(*types.MesosAgent) error
+
+	// mesos virtual cluster
+	ListVClusters() ([]*types.VCluster, error)
+	CreateVCluster(*types.VCluster) error
+	GetVCluster(string) (*types.VCluster, error)
+	VClusterExists(string) bool
+	DeleteVCluster(string) error
+	UpdateVCluster(*types.VCluster) error
+
+	// node for virtaul cluster
+	CreateNode(string, *types.Node) error
+	GetNode(string, string) (*types.Node, error)
+	UpdateNode(string, *types.Node) error
+	ListNodes(string) ([]*types.Node, error)
+	DeleteNode(string, string) error
 }
 
 func Setup(typ string, zkURL *url.URL, etcdAddrs []string) (Store, error) {

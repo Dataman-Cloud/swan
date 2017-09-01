@@ -48,6 +48,20 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/compose-ng/{compose_id}/debug/versions", s.parseComposeToVersions),
 		NewRoute("DELETE", "/v1/compose-ng/{compose_id}", s.deleteComposeNG),
 
+		// mesos virtual cluster
+		NewRoute("GET", "/v1/vclusters", s.listVClusters),
+		NewRoute("POST", "/v1/vclusters", s.createVCluster),
+		NewRoute("GET", "/v1/vclusters/{vcluster_name}", s.getVCluster),
+		NewRoute("DELETE", "/v1/vclusters/{vcluster_name}", s.deleteVCluster),
+		NewRoute("POST", "/v1/vclusters/{vcluster_name}/nodes", s.addNode),
+		NewRoute("PATCH", "/v1/vclusters/{vcluster_name}/nodes/{node_ip}", s.updateNode),
+		NewRoute("GET", "/v1/vclusters/{vcluster_name}/nodes", s.listNodes),
+		NewRoute("GET", "/v1/vclusters/{vcluster_name}/nodes/{node_ip}", s.getNode),
+		NewRoute("DELETE", "/v1/vclusters/{vcluster_name}/nodes/{node_ip}", s.delNode),
+
+		NewRoute("GET", "/v1/mesos/agents", s.listMesosAgents),
+		NewRoute("PATCH", "/v1/mesos/agents/{agent_id}", s.updateMesosAgent),
+
 		NewRoute("GET", "/ping", s.ping),
 		NewRoute("GET", "/v1/events", s.events),
 		NewRoute("GET", "/v1/stats", s.stats),

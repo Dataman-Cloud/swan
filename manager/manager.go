@@ -83,7 +83,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	}
 
 	filters := []mesos.Filter{
-		filter.NewConstraintsFilter(),
+		filter.NewConstraintsFilter(db),
 	}
 	sched.InitFilters(filters)
 
