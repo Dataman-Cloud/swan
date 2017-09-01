@@ -1,5 +1,4 @@
 sudo: required
-dist: trusty
 
 services:
   - docker
@@ -14,6 +13,7 @@ script:
   - make collect-cover-data
   - make test-cover-html
   - make test-cover-func
+  - make integration-test
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -X fix

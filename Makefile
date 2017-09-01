@@ -2,7 +2,7 @@
 .PHONY: build image docker docker-centos clean
 
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
-PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]')
+PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]' | tr -d '-')
 Compose := "https://github.com/docker/compose/releases/download/1.14.0/docker-compose"
 RamDisk := "/tmp/swan-ramdisk"
 
@@ -55,8 +55,19 @@ prepare-docker-compose:
         echo "docker-compose downloaded!"; \
     fi
 
+build-binary:
+	@if env | grep -q -w "JENKINS_HOME" >/dev/null 2>&1; then \
+		$(MAKE) build; \
+	else \
+		$(MAKE) docker-build; \
+	fi
+
 ramdisk:
-	@if uname | grep -q "Linux" >/dev/null 2>&1; then \
+	@if env | grep -q -w "TRAVIS_BUILD_DIR" >/dev/null 2>&1; then \
+		mkdir -p $(RamDisk); \
+	elif env | grep -q -w "JENKINS_HOME" > /dev/null 2>&1; then \
+		mkdir -p $(RamDisk); \
+	elif uname | grep -q "Linux" >/dev/null 2>&1; then \
         if mountpoint -q $(RamDisk); then \
             umount $(RamDisk); \
         fi; \
@@ -66,7 +77,7 @@ ramdisk:
         mkdir -p $(RamDisk); \
     fi
 
-local-cluster: prepare-docker-compose docker-build docker-image ramdisk
+local-cluster: prepare-docker-compose build-binary docker-image ramdisk
 	docker-compose up -d
 	docker-compose ps
 
@@ -87,7 +98,7 @@ check-local-cluster:
 
 integration-prepare: rm-local-cluster local-cluster check-local-cluster
 
-integration-test: integration-prepare run-integration-test
+integration-test: integration-prepare run-integration-test rm-local-cluster
 
 run-integration-test:
 	docker run --name=testswan --rm \
