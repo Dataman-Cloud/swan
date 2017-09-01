@@ -27,6 +27,9 @@
   - ~[compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)~ **Deprecated**
   - [compose-ng](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose-ng.md)
 
++ vcluster
+  - [vcluster](https://github.com/Dataman-Cloud/swan/tree/master/docs/vcluster.md)
+
 + events
   - [GET /v1/events](#) *Event Subscription*
 
