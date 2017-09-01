@@ -72,3 +72,9 @@ func (zk *ZKStore) ListNodes(vId string) ([]*types.Node, error) {
 
 	return nodes, nil
 }
+
+func (zk *ZKStore) DeleteNode(name, nodeIp string) error {
+	p := path.Join(keyVCluster, name, "nodes", nodeIp)
+
+	return zk.del(p)
+}

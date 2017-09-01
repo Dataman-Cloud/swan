@@ -11,6 +11,21 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func (s *Server) getVCluster(w http.ResponseWriter, r *http.Request) {
+	v, err := s.db.GetVCluster(mux.Vars(r)["vcluster_name"])
+	if err != nil {
+		if s.db.IsErrNotFound(err) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, v)
+}
+
 func (s *Server) listVClusters(w http.ResponseWriter, r *http.Request) {
 	vcs, err := s.db.ListVClusters()
 	if err != nil {
@@ -50,7 +65,7 @@ func (s *Server) createVCluster(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"ID": vcluster.ID})
+	writeJSON(w, http.StatusCreated, vcluster)
 }
 
 func (s *Server) deleteVCluster(w http.ResponseWriter, r *http.Request) {
@@ -67,9 +82,9 @@ func (s *Server) deleteVCluster(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) addNode(w http.ResponseWriter, r *http.Request) {
-	vclusterId := mux.Vars(r)["vcluster_id"]
+	name := mux.Vars(r)["vcluster_name"]
 
-	_, err := s.db.GetVCluster(vclusterId)
+	_, err := s.db.GetVCluster(name)
 	if err != nil {
 		if s.db.IsErrNotFound(err) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -84,27 +99,29 @@ func (s *Server) addNode(w http.ResponseWriter, r *http.Request) {
 	}
 
 	node := &types.Node{
-		ID:    body.ID,
+		ID:    utils.RandomString(32),
 		IP:    body.IP,
 		Attrs: make(map[string]string),
 	}
 
-	if err := s.db.CreateNode(vclusterId, node); err != nil {
+	node.Attrs["cluster"] = name
+
+	if err := s.db.CreateNode(name, node); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, node.ID)
+	writeJSON(w, http.StatusCreated, node)
 }
 
 func (s *Server) updateNode(w http.ResponseWriter, r *http.Request) {
 	var (
-		vars       = mux.Vars(r)
-		vclusterId = vars["vcluster_id"]
-		nodeId     = vars["node_id"]
+		vars   = mux.Vars(r)
+		name   = vars["vcluster_name"]
+		nodeIp = vars["node_ip"]
 	)
 
-	node, err := s.db.GetNode(vclusterId, nodeId)
+	node, err := s.db.GetNode(name, nodeIp)
 	if err != nil {
 		if s.db.IsErrNotFound(err) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -123,7 +140,7 @@ func (s *Server) updateNode(w http.ResponseWriter, r *http.Request) {
 
 	node.Attrs[label.Key] = label.Value
 
-	if err := s.db.UpdateNode(vclusterId, node); err != nil {
+	if err := s.db.UpdateNode(name, node); err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -132,9 +149,9 @@ func (s *Server) updateNode(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) listNodes(w http.ResponseWriter, r *http.Request) {
-	vclusterId := mux.Vars(r)["vcluster_id"]
+	name := mux.Vars(r)["vcluster_name"]
 
-	nodes, err := s.db.ListNodes(vclusterId)
+	nodes, err := s.db.ListNodes(name)
 	if err != nil {
 		if s.db.IsErrNotFound(err) {
 			http.Error(w, err.Error(), http.StatusNotFound)
@@ -147,12 +164,40 @@ func (s *Server) listNodes(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, nodes)
 }
 
-// func (s *Server) labelExists(labels map[string]string, key string) bool {
-// 	for k := range labels {
-// 		if k == key {
-// 			return true
-// 		}
-// 	}
-//
-// 	return false
-// }
+func (s *Server) getNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		vars   = mux.Vars(r)
+		name   = vars["vcluster_name"]
+		nodeIp = vars["node_ip"]
+	)
+
+	node, err := s.db.GetNode(name, nodeIp)
+	if err != nil {
+		if s.db.IsErrNotFound(err) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, node)
+}
+
+func (s *Server) delNode(w http.ResponseWriter, r *http.Request) {
+	var (
+		vars   = mux.Vars(r)
+		name   = vars["vcluster_name"]
+		nodeIp = vars["node_ip"]
+	)
+
+	if err := s.db.DeleteNode(name, nodeIp); err != nil {
+		if !s.db.IsErrNotFound(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
+	writeJSON(w, http.StatusNoContent, "")
+}
