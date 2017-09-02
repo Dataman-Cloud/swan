@@ -6,6 +6,7 @@ import (
 	"github.com/golang/protobuf/proto"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
+	"github.com/Dataman-Cloud/swan/types"
 )
 
 const DefaultFrameworkFailoverTimeout = 7 * 24 * 60 * 60
@@ -44,4 +45,10 @@ func (s *Scheduler) buildFramework() *mesosproto.FrameworkInfo {
 	}
 
 	return fw
+}
+
+func (s *Scheduler) FrameworkInfo() *types.FrameworkInfo {
+	return &types.FrameworkInfo{
+		ID: s.framework.Id.GetValue(),
+	}
 }

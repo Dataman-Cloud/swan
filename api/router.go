@@ -55,6 +55,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/leader", s.getLeader),
 		NewRoute("POST", "/v1/purge", s.purge),
 
+		NewRoute("GET", "/v1/framework", s.getFrameworkInfo),
 		NewRoute("GET", "/v1/debug/dump", s.dump),
 		NewRoute("GET", "/v1/debug/load", s.load),
 		NewRoute("GET", "/v1/fullsync", s.fullEventsAndRecords),

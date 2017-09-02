@@ -27,6 +27,9 @@
   - ~[compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)~ **Deprecated**
   - [compose-ng](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose-ng.md)
 
++ framework
+  - [GET /v1/framework](#framework) *Framework Info*
+
 + events
   - [GET /v1/events](#) *Event Subscription*
 
@@ -1384,6 +1387,16 @@ GET /v1/agents/{agent_id}/ipam/subnets
       "mask": 24
     }
   }
+}
+```
+#### framework
+```
+GET /v1/framework
+```
+
+```json
+{
+	"ID": "fe9f9429-e17c-4aad-9689-3ba8f5a11e30-0000"
 }
 ```
 
