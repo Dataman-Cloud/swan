@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	check "gopkg.in/check.v1"
 )
@@ -21,6 +22,7 @@ func init() {
 
 // make fit with go test mechanism
 func Test(t *testing.T) {
+	startAt := time.Now()
 	// run all test cases
 	// check.TestingT(t)
 
@@ -29,8 +31,10 @@ func Test(t *testing.T) {
 		Filter: os.Getenv("TESTON"),
 	})
 	if !result.Passed() {
+		costPrintln("All Test Finished", startAt)
 		log.Fatal(result.String())
 	}
+	costPrintln("All Test Finished", startAt)
 	log.Println(result.String())
 }
 

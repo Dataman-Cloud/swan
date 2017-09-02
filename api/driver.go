@@ -25,4 +25,5 @@ type Driver interface {
 	// for debug convenience
 	Dump() interface{}
 	Load() map[string]interface{}
+	FrameworkInfo() *types.FrameworkInfo
 }

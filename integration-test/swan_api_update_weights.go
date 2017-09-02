@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -11,17 +10,18 @@ import (
 
 func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	// purge
-
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateWeights() purged")
+	costPrintln("TestUpdateWeights() purged", startAt)
 
 	// create app
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(5).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateWeights() created")
+	costPrintln("TestUpdateWeights() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -30,7 +30,6 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
 	c.Assert(app.ErrMsg, check.Equals, "")
-	fmt.Println("TestUpdateWeights() verified")
 
 	// verify proxy record
 	proxy := s.listAppProxies(id, c)
@@ -133,16 +132,14 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	}
 	c.Assert(x, check.Equals, 3)
 
-	fmt.Println("TestUpdateWeights() canaried")
-
 	// Update weights again
-
+	startAt = time.Now()
 	s.updateWeights(id, &types.UpdateWeightsBody{
 		Value: 0.8,
 	}, c)
 	err = s.waitApp(id, types.OpStatusCanaryUnfinished, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateWeights() updated")
+	costPrintln("TestUpdateWeights() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -195,12 +192,13 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(x1, check.Equals, 3)
 
 	// switch all traffics
+	startAt = time.Now()
 	s.updateWeights(id, &types.UpdateWeightsBody{
 		Value: 1.0,
 	}, c)
 	err = s.waitApp(id, types.OpStatusCanaryUnfinished, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateWeights() updated")
+	costPrintln("TestUpdateWeights() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -269,8 +267,8 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	c.Assert(y2, check.Equals, 2)
 
 	// clean up
-
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCanaryUpdate() removed")
+	costPrintln("TestCanaryUpdate() removed", startAt)
 }

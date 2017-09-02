@@ -16,17 +16,19 @@ import (
 func (s *ApiSuite) TestCreateApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() purged")
+	costPrintln("TestCreateApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() created")
+	costPrintln("TestCreateApp() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -53,14 +55,16 @@ func (s *ApiSuite) TestCreateApp(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateApp() removed")
+	costPrintln("TestCreateApp() removed", startAt)
 }
 
 func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
 	fmt.Println("TestCreateInvalidApp() purged")
@@ -69,6 +73,7 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	//
 
 	// invalid Content-Type
+	startAt = time.Now()
 	req, err := s.newRawReq("POST", "/v1/apps", "....")
 	c.Assert(err, check.IsNil)
 	code, body, err := s.sendRawRequest(req)
@@ -321,4 +326,6 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 		c.Assert(match, check.Equals, true)
 	}
 	fmt.Println("TestCreateInvalidApp() illegal volumes verified")
+
+	costPrintln("TestCreateInvalidApp() all verified", startAt)
 }

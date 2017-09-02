@@ -179,6 +179,20 @@ func (s *ApiSuite) listAppDNS(id string, c *check.C) []*resolver.Record {
 	return dns
 }
 
+// TODO make swan agent id same as mesos slave id
+func (s *ApiSuite) inspectNodeDockerContainer(agentID, idOrName string, c *check.C) map[string]interface{} {
+	code, body, err := s.sendRequest("GET", "/v1/agents/"+agentID+"/docker/containers/"+idOrName+"/json", nil)
+	c.Assert(err, check.IsNil)
+	c.Log(string(body))
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	var ret map[string]interface{}
+	err = s.bind(body, &ret)
+	c.Assert(err, check.IsNil)
+
+	return ret
+}
+
 func (s *ApiSuite) inspectApp(id string, c *check.C) *types.Application {
 	code, body, err := s.sendRequest("GET", "/v1/apps/"+id, nil)
 	c.Assert(err, check.IsNil)
@@ -669,4 +683,8 @@ func demoYAML(count int, image, cmd, network string) (string, map[string]*types.
 	}
 
 	return buf.String(), exts
+}
+
+func costPrintln(msg string, startAt time.Time) {
+	fmt.Printf("%s  -  [%s]\n", msg, time.Since(startAt))
 }

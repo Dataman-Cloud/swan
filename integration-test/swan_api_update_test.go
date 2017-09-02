@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"time"
 
 	check "gopkg.in/check.v1"
@@ -12,17 +11,19 @@ import (
 func (s *ApiSuite) TestUpdateApp(c *check.C) {
 	// Purge
 	//
+	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() purged")
+	costPrintln("TestUpdateApp() purged", startAt)
 
 	// New Create App
 	//
+	startAt = time.Now()
 	ver := demoVersion().setName("demo").setCount(3).setCPU(0.01).setMem(5).setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() created")
+	costPrintln("TestUpdateApp() created", startAt)
 
 	// verify app
 	app := s.inspectApp(id, c)
@@ -67,11 +68,12 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 
 	// Update App
 	//
+	startAt = time.Now()
 	newVer := demoVersion().setName("demo").setCount(3).setCPU(0.02).setMem(10).setProxy(true, "www.xxx.com", "", false).Get()
 	s.updateApp(id, newVer, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() updated")
+	costPrintln("TestUpdateApp() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -116,11 +118,12 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 
 	// Update App Again
 	//
+	startAt = time.Now()
 	newVer = demoVersion().setName("demo").setCount(3).setCPU(0.03).setMem(7).setProxy(true, "www.xxx.com", "", false).Get()
 	s.updateApp(id, newVer, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() updated")
+	costPrintln("TestUpdateApp() updated", startAt)
 
 	// verify app
 	app = s.inspectApp(id, c)
@@ -165,7 +168,8 @@ func (s *ApiSuite) TestUpdateApp(c *check.C) {
 
 	// Remove
 	//
+	startAt = time.Now()
 	err = s.removeApp(id, time.Second*10, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestUpdateApp() removed")
+	costPrintln("TestUpdateApp() removed", startAt)
 }
