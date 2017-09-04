@@ -3,10 +3,11 @@ package zk
 import (
 	"encoding/binary"
 	"errors"
-	"log"
 	"reflect"
 	"runtime"
 	"time"
+
+	"github.com/Sirupsen/logrus"
 )
 
 var (
@@ -18,7 +19,7 @@ var (
 type defaultLogger struct{}
 
 func (defaultLogger) Printf(format string, a ...interface{}) {
-	log.Printf(format, a...)
+	logrus.Printf(format, a...)
 }
 
 type ACL struct {

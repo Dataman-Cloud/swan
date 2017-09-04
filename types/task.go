@@ -134,10 +134,9 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 func (c *TaskConfig) BuildCommand() *mesosproto.CommandInfo {
 	if cmd := c.Command; len(cmd) > 0 {
 		return &mesosproto.CommandInfo{
-			Uris:        c.uris(),
-			Environment: c.envs(),
-			Shell:       proto.Bool(true), // sh -c "cmd"
-			Value:       proto.String(cmd),
+			Uris:  c.uris(),
+			Shell: proto.Bool(true), // sh -c "cmd"
+			Value: proto.String(cmd),
 		}
 	}
 
@@ -154,21 +153,6 @@ func (c *TaskConfig) uris() []*mesosproto.CommandInfo_URI {
 	}
 
 	return uris
-}
-
-func (c *TaskConfig) envs() *mesosproto.Environment {
-	vars := make([]*mesosproto.Environment_Variable, 0)
-
-	for k, v := range c.Env {
-		vars = append(vars, &mesosproto.Environment_Variable{
-			Name:  proto.String(k),
-			Value: proto.String(v),
-		})
-	}
-
-	return &mesosproto.Environment{
-		Variables: vars,
-	}
 }
 
 func (c *TaskConfig) volumes() []*mesosproto.Volume {
@@ -280,6 +264,15 @@ func (c *TaskConfig) parameters(id, name string) []*mesosproto.Parameter {
 	// add extra envs
 	extraEnvs := c.extra(id, name)
 	for k, v := range extraEnvs {
+		env := fmt.Sprintf("%s=%s", k, v)
+		mps = append(mps, &mesosproto.Parameter{
+			Key:   proto.String("env"),
+			Value: proto.String(env),
+		})
+	}
+
+	// explicit set environment variables regardless of whether the cmd is empty or not
+	for k, v := range c.Env {
 		env := fmt.Sprintf("%s=%s", k, v)
 		mps = append(mps, &mesosproto.Parameter{
 			Key:   proto.String("env"),
