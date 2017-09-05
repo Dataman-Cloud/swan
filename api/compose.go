@@ -218,7 +218,7 @@ func (r *Server) runCompose(w http.ResponseWriter, req *http.Request) {
 		}
 	}()
 
-	writeJSON(w, http.StatusCreated, map[string]string{"Id": cmp.ID})
+	writeJSON(w, http.StatusCreated, map[string]string{"id": cmp.ID})
 }
 
 func (r *Server) parseYAML(w http.ResponseWriter, req *http.Request) {
