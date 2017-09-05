@@ -55,6 +55,41 @@ func (s *Scheduler) offersHandler(event *mesosproto.Event) {
 		}
 
 		s.addOffer(offer)
+
+	}
+
+	go s.updateMesosAgent()
+}
+
+func (s *Scheduler) updateMesosAgent() {
+	s.RLock()
+	defer s.RUnlock()
+
+	for _, agent := range s.agents {
+		a := &types.MesosAgent{
+			ID: agent.id,
+			IP: agent.hostname,
+		}
+
+		cpus, mem, disk, ports := agent.Resources()
+		a.CPUs = cpus
+		a.Mem = mem
+		a.Disk = disk
+		a.Ports = int64(len(ports))
+
+		agn, err := s.db.GetMesosAgent(a.IP)
+		if err != nil {
+			a.Attrs = make(map[string]string)
+			if err := s.db.CreateMesosAgent(a); err != nil {
+				log.Printf("init new agents failed: %v", err)
+			}
+			continue
+		}
+
+		a.Attrs = agn.Attrs
+		if err := s.db.UpdateMesosAgent(a); err != nil {
+			log.Errorf("update mesos agents failed: %v", err)
+		}
 	}
 }
 
