@@ -40,10 +40,6 @@ services:
       - cache
       - dbmaster
       - dbslave
-    dns:
-      - 192.168.1.196  # swan dns server
-      - 114.114.114.114
-      - 8.8.8.8
     dns_search:
       - swan.local 
     tmpfs:
@@ -111,8 +107,6 @@ services:
     ports:
       - "80/tcp"
       - "443/tcp"
-    dns:
-      - 192.168.1.196  # swan dns server
 
   dbslave:
     image: "nginx:latest"
@@ -129,8 +123,6 @@ services:
       - "443/tcp"
     depends_on:
       - dbmaster
-    dns:
-      - 192.168.1.196  # swan dns server
 
   dbmaster:
     image: "nginx:latest"
@@ -145,8 +137,6 @@ services:
     ports:
       - "80/tcp"
       - "443/tcp"
-    dns:
-      - 192.168.1.196  # swan dns server
 
   admin:
     image: "busybox:latest"
@@ -158,8 +148,6 @@ services:
         - attribute: "hostname"
           operator: "~="
           value: "130"    
-    dns:
-      - 192.168.1.196  # swan dns server
     resource:
       cpus: 0.01
       mem: 10
@@ -215,8 +203,6 @@ services:
       - "80/tcp"
     depends_on:
       - mariadb
-    dns:
-      - 192.168.1.196  # swan dns server
     proxy:
       enabled: true
       alias: "x.cn"
@@ -237,8 +223,6 @@ services:
       - MYSQL_ROOT_PASSWORD=Password
     ports:
       - 3306
-    dns:
-      - 192.168.1.196  # swan dns server
     proxy:
       enabled: true
       alias: "i.cn"
@@ -807,8 +791,6 @@ services:
       - "80/tcp"
     depends_on:
       - mariadb
-    dns:
-      - 192.168.1.196  # swan dns server
     proxy:
       enabled: true
       alias: "x.cn"
@@ -829,8 +811,6 @@ services:
       - MYSQL_ROOT_PASSWORD=Password
     ports:
       - 3306
-    dns:
-      - 192.168.1.196  # swan dns server
     proxy:
       enabled: true
       alias: "i.cn"

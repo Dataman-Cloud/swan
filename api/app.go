@@ -160,7 +160,7 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 		}
 	}(app.ID)
 
-	writeJSON(w, http.StatusCreated, map[string]string{"Id": app.ID})
+	writeJSON(w, http.StatusCreated, map[string]string{"id": app.ID})
 }
 
 func (r *Server) listApps(w http.ResponseWriter, req *http.Request) {
@@ -1462,7 +1462,7 @@ func (r *Server) createVersion(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"Id": version.ID})
+	writeJSON(w, http.StatusOK, map[string]string{"id": version.ID})
 }
 
 func filterByLabelsSelectors(labelsSelector labels.Selector, appLabels map[string]string) bool {

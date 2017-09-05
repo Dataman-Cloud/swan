@@ -246,7 +246,7 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 
 	}()
 
-	writeJSON(w, http.StatusCreated, map[string]string{"Id": cmpApp.ID})
+	writeJSON(w, http.StatusCreated, map[string]string{"id": cmpApp.ID})
 }
 
 func (r *Server) parseYAMLNG(w http.ResponseWriter, req *http.Request) {

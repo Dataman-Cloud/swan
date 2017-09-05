@@ -261,7 +261,7 @@ Example response:
   Content-Type: application/json
 
   {
-       "Id":"nginx0r1.default.xcm.dataman"
+       "id":"nginx0r1.default.xcm.dataman"
   }
 ```
 #### Inspect a app
@@ -929,7 +929,7 @@ Example response:
   Content-Type: application/json
 
   {
-      "Id":"1498791358276219465"
+      "id":"1498791358276219465"
   }
 ```
 #### Update weights 
