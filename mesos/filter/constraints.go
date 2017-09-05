@@ -31,10 +31,7 @@ func (f *constraintsFilter) Filter(config *types.TaskConfig, replicas int, agent
 	for _, agent := range agents {
 		match := true
 		for _, constraint := range constraints {
-			attrs := merge(
-				f.getAttrs(config.Cluster, agent.IP()),
-				agent.Attributes(),
-			)
+			attrs := f.getAttrs(agent.IP())
 			if constraint.Match(attrs) {
 				continue
 			}
@@ -53,8 +50,8 @@ func (f *constraintsFilter) Filter(config *types.TaskConfig, replicas int, agent
 	return candidates, nil
 }
 
-func (f *constraintsFilter) getAttrs(clusterId, agentIp string) map[string]string {
-	s, err := f.db.GetNode(clusterId, agentIp)
+func (f *constraintsFilter) getAttrs(agentIp string) map[string]string {
+	s, err := f.db.GetMesosAgent(agentIp)
 	if err != nil {
 		return nil
 	}
