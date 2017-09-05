@@ -5,26 +5,27 @@ import (
 	"path"
 
 	"github.com/Dataman-Cloud/swan/types"
+	log "github.com/Sirupsen/logrus"
 )
 
-func (zk *EtcdStore) CreateMesosAgent(agent *types.MesosAgent) error {
-	p := path.Join(keyAgent, agent.ID)
+func (es *EtcdStore) CreateMesosAgent(agent *types.MesosAgent) error {
+	p := path.Join(keyAgent, agent.IP)
 
 	bs, err := encode(agent)
 	if err != nil {
 		return err
 	}
 
-	return zk.create(p, bs)
+	return es.create(p, bs)
 }
 
-func (zk *EtcdStore) GetMesosAgent(agentId string) (*types.MesosAgent, error) {
-	p := path.Join(keyAgent, agentId)
+func (es *EtcdStore) GetMesosAgent(agentIp string) (*types.MesosAgent, error) {
+	p := path.Join(keyAgent, agentIp)
 
-	data, err := zk.get(p)
+	data, err := es.get(p)
 	if err != nil {
-		if zk.IsErrNotFound(err) {
-			return nil, fmt.Errorf("agent %s not found", agentId)
+		if es.IsErrNotFound(err) {
+			return nil, fmt.Errorf("agent %s not found", agentIp)
 		}
 
 		return nil, err
@@ -38,17 +39,34 @@ func (zk *EtcdStore) GetMesosAgent(agentId string) (*types.MesosAgent, error) {
 	return &agent, nil
 }
 
-func (zk *EtcdStore) UpdateMesosAgent(agent *types.MesosAgent) error {
+func (es *EtcdStore) UpdateMesosAgent(agent *types.MesosAgent) error {
 	bs, err := encode(agent)
 	if err != nil {
 		return err
 	}
 
-	p := path.Join(keyAgent, agent.ID, "value")
+	p := path.Join(keyAgent, agent.IP, "value")
 
-	return zk.update(p, bs)
+	return es.update(p, bs)
 }
 
-func (zk *EtcdStore) ListMesosAgents() ([]*types.MesosAgent, error) {
-	return nil, nil
+func (es *EtcdStore) ListMesosAgents() ([]*types.MesosAgent, error) {
+	nodes, err := es.list(keyAgent)
+	if err != nil {
+		log.Errorln("etcd ListMesosAgents error:", err)
+		return nil, err
+	}
+
+	agents := make([]*types.MesosAgent, 0)
+	for node := range nodes {
+		agent, err := es.GetMesosAgent(node)
+		if err != nil {
+			log.Errorf("get agent error: %v", err)
+			continue
+		}
+
+		agents = append(agents, agent)
+	}
+
+	return agents, nil
 }
