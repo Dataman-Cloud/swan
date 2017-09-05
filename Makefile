@@ -10,19 +10,27 @@ RamDisk := "/tmp/swan-ramdisk"
 VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
 PKG := "github.com/Dataman-Cloud/swan"
+
 gitCommit=$(shell git describe --tags)
 gitDirty=$(shell git status --porcelain --untracked-files=no)
 GIT_COMMIT=$(gitCommit)
 ifneq ($(gitDirty),"")
 GIT_COMMIT=$(gitCommit)-dirty
 endif
+
 GO_LDFLAGS=-X $(PKG)/version.version=$(VERSION) -X $(PKG)/version.gitCommit=$(GIT_COMMIT) -X $(PKG)/version.buildTime=$(BUILD_TIME) -w -s
+
+UNAME=$(shell uname -s)
+CGO_ENABLED=0
+ifeq ($(UNAME),Darwin)
+CGO_ENABLED=1
+endif
 
 
 default: build
 
 build: clean
-	CGO_ENABLED=0 go build -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
+	CGO_ENABLED=${CGO_ENABLED} go build -v -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
 
 # multi-stage builds, require docker >= 17.05
 docker:
