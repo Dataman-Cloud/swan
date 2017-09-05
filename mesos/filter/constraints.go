@@ -58,19 +58,3 @@ func (f *constraintsFilter) getAttrs(agentIp string) map[string]string {
 
 	return s.Attrs
 }
-
-func merge(a map[string]string, b map[string]string) map[string]string {
-	c := make(map[string]string)
-
-	for k, v := range a {
-		c[k] = v
-	}
-
-	for k, v := range b {
-		if _, ok := c[k]; !ok {
-			c[k] = v
-		}
-	}
-
-	return c
-}

@@ -30,7 +30,6 @@ const (
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
 	keyAgent       = "/agents"      // mesos agent with attributes
-	keyVCluster    = "/vclusters"   // mesos virtual cluster
 )
 
 var baseKeys = []string{
@@ -39,7 +38,6 @@ var baseKeys = []string{
 	keyComposeNG,
 	keyFrameworkID,
 	keyAgent,
-	keyVCluster,
 }
 
 type ZKStore struct {

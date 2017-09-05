@@ -81,7 +81,6 @@ type TaskConfig struct {
 	Constraints    []*Constraint     `json:"constraints"`
 	Proxy          *Proxy            `json:"proxy"`
 	Version        string            `json:"version"`
-	Cluster        string            `json:"cluster"`
 }
 
 func NewTaskConfig(spec *Version, idx int) *TaskConfig {
@@ -107,7 +106,6 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 		Constraints:    spec.Constraints,
 		Proxy:          spec.Proxy,
 		Version:        spec.ID,
-		Cluster:        spec.Cluster,
 	}
 
 	// with user specified ip address
