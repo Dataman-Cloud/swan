@@ -48,6 +48,7 @@
 
 + agents
   - [GET /v1/agents](#list-agents) *List all agents*
+  - [GET /v1/agents/query_id](#query-agent-id) *Query mesos slave id by ip addresses (internal use)*
   - [GET /v1/agents/{agent_id}](#get-agent) *Get specified agent*
   - [DELETE /v1/agents/{agent_id}](#close-agent) *Disconnect specified agent*
   - [GET /v1/agents/{agent_id}/dns](#get-agent-dns) *Get dns records on specified agent*
@@ -1448,13 +1449,13 @@ swan上可以直接请求 节点上的 [Docker Remote API 1.21](https://docs.doc
 
 Example:
 ```
-/v1/agents/3981314045636649/docker/containers/json
+/v1/agents/212c92eb-f594-43d5-89da-7820a56e8570-S0/docker/containers/json
 
-/v1/agents/3981314045636649/docker/containers/54b701f325fe1f229dd9174fb90123057e933d2f564d4e5f90e0a69ee6461770/json
+/v1/agents/212c92eb-f594-43d5-89da-7820a56e8570-S0/docker/containers/54b701f325fe1f229dd9174fb90123057e933d2f564d4e5f90e0a69ee6461770/json
 
-/v1/agents/3981314045636649/docker/images/json
+/v1/agents/212c92eb-f594-43d5-89da-7820a56e8570-S0/docker/images/json
 
-/v1/agents/3981314045636649/docker/networks
+/v1/agents/212c92eb-f594-43d5-89da-7820a56e8570-S0/docker/networks
 ```
 
 #### Reset
@@ -1476,7 +1477,6 @@ Example response:
 }
 ```
 
-
 #### list agents
 ```
 GET /v1/agents
@@ -1484,7 +1484,7 @@ GET /v1/agents
 
 ```json
 {
-  "3264208446845635": {
+  "212c92eb-f594-43d5-89da-7820a56e8570-S0": {
     "hostname": "master",
     "os": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n",
     "uptime": "34909.000000",
@@ -1550,7 +1550,7 @@ GET /v1/agents
       2181
     ]
   },
-  "3981314045636649": {
+  "212c92eb-f594-43d5-89da-7820a56e8570-S1": {
     "hostname": "node1",
     "os": "NAME=\"CentOS Linux\"\nVERSION=\"7 (Core)\"\nID=\"centos\"\nID_LIKE=\"rhel fedora\"\nVERSION_ID=\"7\"\nPRETTY_NAME=\"CentOS Linux 7 (Core)\"\nANSI_COLOR=\"0;31\"\nCPE_NAME=\"cpe:/o:centos:centos:7\"\nHOME_URL=\"https://www.centos.org/\"\nBUG_REPORT_URL=\"https://bugs.centos.org/\"\n\nCENTOS_MANTISBT_PROJECT=\"CentOS-7\"\nCENTOS_MANTISBT_PROJECT_VERSION=\"7\"\nREDHAT_SUPPORT_PRODUCT=\"centos\"\nREDHAT_SUPPORT_PRODUCT_VERSION=\"7\"\n\n",
     "uptime": "34906.000000",
@@ -1590,6 +1590,15 @@ GET /v1/agents
     ]
   }
 }
+```
+
+#### query agent id
+```
+GET /v1/agents/query_id?ips=192.168.1.196,192.168.1.130,xxx
+```
+
+```plain
+212c92eb-f594-43d5-89da-7820a56e8570-S0
 ```
 
 #### get agent

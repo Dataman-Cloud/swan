@@ -64,6 +64,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("DELETE", "/v1/debug", s.disableDebug),
 
 		NewRoute("GET", "/v1/agents", s.listAgents),
+		NewRoute("GET", "/v1/agents/query_id", s.queryAgentID),
 		NewRoute("GET", "/v1/agents/{agent_id}", s.getAgent),
 		NewRoute("DELETE", "/v1/agents/{agent_id}", s.closeAgent),
 		NewRoute("GET", "/v1/agents/{agent_id}/sysinfo", s.getAgent),

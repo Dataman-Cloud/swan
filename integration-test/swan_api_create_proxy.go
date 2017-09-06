@@ -50,6 +50,7 @@ func (s *ApiSuite) TestCreateAppProxy(c *check.C) {
 
 	// verify proxy record
 	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy, check.Not(check.IsNil))
 	c.Assert(proxy.Alias, check.Equals, "www.xxx.com")
 	c.Assert(len(proxy.Backends), check.Equals, 10)
 	c.Assert(proxy.Listen, check.Equals, "")

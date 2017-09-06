@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strings"
 
 	"github.com/Dataman-Cloud/swan/types"
 	log "github.com/Sirupsen/logrus"
@@ -24,6 +25,38 @@ func (r *Server) listAgents(w http.ResponseWriter, req *http.Request) {
 		}
 	}
 	writeJSON(w, http.StatusOK, ret)
+}
+
+func (r *Server) queryAgentID(w http.ResponseWriter, req *http.Request) {
+	if err := req.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var (
+		ips = req.Form.Get("ips")
+	)
+	if ips == "" {
+		http.Error(w, "query parameter ips required", http.StatusBadRequest)
+		return
+	}
+
+	state, err := r.driver.MesosState()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, slave := range state.Slaves {
+		for _, ip := range strings.Split(ips, ",") {
+			if ip == slave.Hostname {
+				w.Write([]byte(slave.ID))
+				return
+			}
+		}
+	}
+
+	http.Error(w, "not found matched mesos slaves", http.StatusNotFound)
 }
 
 func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
@@ -61,22 +94,22 @@ func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/docker/`) + 16
+	n := len(`/v1/agents/docker/`) + 39 // FIX LATER
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 16
+	n := len(`/v1/agents/`) + 39
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 16
+	n := len(`/v1/agents/`) + 39
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentIPAM(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 16
+	n := len(`/v1/agents/`) + 39
 	r.redirectAgent(n, w, req)
 }
 

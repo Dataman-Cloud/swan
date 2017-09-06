@@ -157,5 +157,6 @@ func (m *Manager) watchLeader(path string) error {
 			}
 			m.watchLeader(p)
 		}
+		time.Sleep(time.Millisecond * 100)
 	}
 }
