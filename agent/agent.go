@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/Sirupsen/logrus"
@@ -171,11 +173,14 @@ func (agent *Agent) Join() error {
 		return err
 	}
 
+	// detect mesos slave id
+	id, err := agent.detectMesosSlaveID(masterURL)
+	if err != nil {
+		return err
+	}
+
 	// setup & join
-	agent.clusterNode = mole.NewAgent(&mole.Config{
-		Role:   mole.RoleAgent,
-		Master: masterURL,
-	})
+	agent.clusterNode = mole.NewAgent(id, masterURL)
 
 	return agent.clusterNode.Join()
 }
@@ -256,4 +261,56 @@ func (agent *Agent) detectLeaderAddr() (string, error) {
 	}
 
 	return "", errors.New("all of swan manager unavailable")
+}
+
+// try best to detect the mesos slave id running on the same host
+// by querying against to the swan master
+func (agent *Agent) detectMesosSlaveID(masterAddr *url.URL) (string, error) {
+	// obtian from env
+	if env := os.Getenv("MESOS_SALVE_ID"); env != "" {
+		return env, nil
+	}
+
+	// obtain from remote swan master by query ip addresses
+
+	var (
+		queryIPs []string
+		queryURL = masterAddr.String() + "/v1/agents/query_id?ips="
+	)
+
+	if env := os.Getenv("MESOS_SLAVE_IPS"); env != "" {
+		// obtain local ips from env
+		queryIPs = strings.Split(env, ",")
+
+	} else {
+		// obtain local ips from sysinfo
+		info, err := Gather()
+		if err != nil {
+			return "", err
+		}
+		for inet, ips := range info.IPs {
+			if inet == "docker0" {
+				continue
+			}
+			queryIPs = append(queryIPs, ips...)
+		}
+	}
+
+	// query id against swan master
+	resp, err := http.Get(queryURL + strings.Join(queryIPs, ","))
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode == http.StatusOK {
+		return string(body), nil
+	}
+
+	return "", fmt.Errorf("query id against master got %d - %s", resp.StatusCode, string(body))
 }

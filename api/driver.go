@@ -6,6 +6,7 @@ import (
 	"github.com/Dataman-Cloud/swan/mesos"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/types"
+	"github.com/andygrunwald/megos"
 )
 
 type Driver interface {
@@ -21,6 +22,8 @@ type Driver interface {
 	ClusterAgents() map[string]*mole.ClusterAgent
 	ClusterAgent(id string) *mole.ClusterAgent
 	CloseClusterAgent(id string)
+
+	MesosState() (*megos.State, error)
 
 	// for debug convenience
 	Dump() interface{}

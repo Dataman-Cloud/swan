@@ -105,6 +105,7 @@ services:
       - SWAN_JOIN_ADDRS=127.0.0.1:9999
       - SWAN_LOG_LEVEL=debug
       - SWAN_START_DELAY=5
+      - MESOS_SLAVE_IPS=127.0.0.1   # should keep same as mesos-slave.MESOS_HOSTNAME
     healthcheck:
       test: ["CMD", "wget", "-s", "-q", "http://127.0.0.1:10000/ping"]
       interval: 5s
