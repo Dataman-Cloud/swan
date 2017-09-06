@@ -2,6 +2,7 @@ package manager
 
 import (
 	"fmt"
+	"os"
 	"path/filepath"
 	"sort"
 	"time"
@@ -55,7 +56,7 @@ func (m *Manager) setLeader(path string) {
 	p := filepath.Join(m.electRootPath, path)
 	_, err := m.ZKClient.Set(p, []byte(m.cfg.Advertise), -1)
 	if err != nil {
-		log.Infof("Update leader address error %s", err.Error())
+		log.Errorf("Update leader address error %s", err.Error())
 	}
 }
 
@@ -69,6 +70,7 @@ func (m *Manager) getLeader(path string) (string, error) {
 		}
 
 		if len(b) > 0 {
+			log.Debugln("Get leader succeed. leader:", string(b))
 			return string(b), nil
 		}
 
@@ -84,6 +86,10 @@ func (m *Manager) isLeader(path string) (bool, error, string) {
 
 	sort.Strings(children)
 
+	if len(children) == 0 {
+		return false, nil, ""
+	}
+
 	p := children[0]
 
 	return path == p, nil, p
@@ -94,6 +100,7 @@ func (m *Manager) elect() (string, error) {
 	if err != nil {
 		return "", err
 	}
+
 	if leader {
 		log.Info("Electing leader success.")
 		m.leader = m.cfg.Advertise
@@ -125,8 +132,7 @@ func (m *Manager) elect() (string, error) {
 }
 
 func (m *Manager) electLeader() (string, error) {
-	p := filepath.Join(m.electRootPath, "0")
-	path, err := m.ZKClient.Create(p, nil, zk.FlagEphemeral|zk.FlagSequence, ZKDefaultACL)
+	path, err := m.createPath()
 	if err != nil {
 		return "", err
 	}
@@ -136,27 +142,56 @@ func (m *Manager) electLeader() (string, error) {
 	return m.elect()
 }
 
+func (m *Manager) createPath() (string, error) {
+	p := filepath.Join(m.electRootPath, "0")
+	path, err := m.ZKClient.Create(p, nil, zk.FlagEphemeral|zk.FlagSequence, ZKDefaultACL)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
+}
+
 func (m *Manager) watchLeader(path string) error {
 	p := filepath.Join(m.electRootPath, path)
 	_, _, childCh, err := m.ZKClient.ChildrenW(p)
 	if err != nil {
-		log.Infof("Watch children error %s", err)
+		log.Errorf("Watch path %s error %v", path, err)
 		return err
 	}
 
-	for {
-		childEvent := <-childCh
-		if childEvent.Type == zk.EventNodeDeleted {
-			log.Info("Lost leading manager. Start electing new leader...")
-			// If it is better to run following steps in a seprated goroutine?
-			// (memory leak maybe)
-			p, err := m.elect()
-			if err != nil {
-				log.Infof("Electing new leader error %s", err.Error())
-				return err
+	for event := range childCh {
+		if event.Type == zk.EventNodeDeleted {
+			if m.iscurrentNode(event.Path) {
+				m.suicide()
 			}
-			m.watchLeader(p)
+
+			log.Info("Lost leading manager. Start electing new leader...")
+			go func() {
+				p, err := m.elect()
+				if err != nil {
+					log.Errorf("Electing new leader error %v", err)
+					return
+				}
+
+				m.watchLeader(p)
+			}()
+
+			// break // auto break
 		}
 		time.Sleep(time.Millisecond * 100)
 	}
+
+	return nil
+}
+
+func (m *Manager) suicide() {
+	log.Println("suicide...")
+	os.Exit(1)
+}
+
+func (m *Manager) iscurrentNode(path string) bool {
+	p := filepath.Join(m.electRootPath, m.myid)
+
+	return path == p
 }
