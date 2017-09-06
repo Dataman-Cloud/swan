@@ -144,8 +144,8 @@ func (m *Manager) watchLeader(path string) error {
 		return err
 	}
 
-	for {
-		childEvent := <-childCh
+	for childEvent := range childCh {
+		log.Infof("Got zk event [%v] ...", childEvent)
 		if childEvent.Type == zk.EventNodeDeleted {
 			log.Info("Lost leading manager. Start electing new leader...")
 			// If it is better to run following steps in a seprated goroutine?
