@@ -75,13 +75,16 @@ type Scheduler struct {
 // NewScheduler...
 func NewScheduler(cfg *SchedulerConfig, db store.Store, clusterMaster *mole.Master) (*Scheduler, error) {
 	s := &Scheduler{
-		cfg:           cfg,
-		quit:          make(chan struct{}),
-		agents:        make(map[string]*magent.Agent),
-		pendingTasks:  make(map[string]*Task),
-		db:            db,
-		strategy:      strategy.NewBinPackStrategy(), // default strategy
-		filters:       []filter.Filter{filter.NewConstraintsFilter(), filter.NewResourceFilter()},
+		cfg:          cfg,
+		quit:         make(chan struct{}),
+		agents:       make(map[string]*magent.Agent),
+		pendingTasks: make(map[string]*Task),
+		db:           db,
+		strategy:     strategy.NewBinPackStrategy(), // default strategy
+		filters: []filter.Filter{
+			filter.NewConstraintsFilter(db),
+			filter.NewResourceFilter(),
+		},
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
 		sem:           make(chan struct{}, 1), // allow only one offer acquirement at one time

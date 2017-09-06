@@ -67,8 +67,8 @@ func (s *Scheduler) updateMesosAgent() {
 
 	for _, agent := range s.agents {
 		a := &types.MesosAgent{
-			ID: agent.id,
-			IP: agent.hostname,
+			ID: agent.ID(),
+			IP: agent.IP(),
 		}
 
 		cpus, mem, disk, ports := agent.Resources()

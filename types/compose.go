@@ -62,6 +62,7 @@ func (c *Compose) Valid() error {
 	if err := utils.LegalDomain(c.Name); err != nil {
 		return err
 	}
+
 	if c.Name == "default" {
 		return errors.New("compose name `default` is reserved")
 	}

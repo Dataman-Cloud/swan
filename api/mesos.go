@@ -17,7 +17,14 @@ func (s *Server) listMesosAgents(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, agents)
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	filtered := s.filter(agents, r.Form)
+
+	writeJSON(w, http.StatusOK, filtered)
 }
 
 func (s *Server) getAgentLabels(w http.ResponseWriter, r *http.Request) {
@@ -197,7 +204,6 @@ func (s *Server) canOperated(label *types.MesosLabel) bool {
 		}
 
 		constraints := ver.Constraints
-		log.Println("===", constraints)
 		if len(constraints) == 0 {
 			continue
 		}
@@ -210,4 +216,16 @@ func (s *Server) canOperated(label *types.MesosLabel) bool {
 	}
 
 	return true
+}
+
+func (s *Server) filter(agents []*types.MesosAgent, filter map[string][]string) []*types.MesosAgent {
+	filtered := make([]*types.MesosAgent, 0)
+
+	for _, agent := range agents {
+		if agent.Match(filter) {
+			filtered = append(filtered, agent)
+		}
+	}
+
+	return filtered
 }
