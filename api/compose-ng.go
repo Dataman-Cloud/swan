@@ -477,9 +477,6 @@ func (r *Server) filterComposeNG(cmpApps []*types.ComposeApp, filter url.Values)
 
 	for _, cmpApp := range cmpApps {
 		labels := cmpApp.Labels
-		if len(labels) == 0 {
-			continue
-		}
 
 		var n int
 		for k, v := range filter {
