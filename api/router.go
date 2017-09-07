@@ -65,6 +65,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 
 		NewRoute("GET", "/v1/agents", s.listAgents),
 		NewRoute("GET", "/v1/agents/query_id", s.queryAgentID),
+		NewRoute("GET", "/v1/agents/networks", s.listAgentNetworks),
 		NewRoute("GET", "/v1/agents/{agent_id}", s.getAgent),
 		NewRoute("DELETE", "/v1/agents/{agent_id}", s.closeAgent),
 		NewRoute("GET", "/v1/agents/{agent_id}/sysinfo", s.getAgent),
