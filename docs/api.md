@@ -8,6 +8,7 @@
   - [POST /v1/apps/{app_id}/rollback](#roll-back) *Roll back a app*
   - [PUT /v1/apps/{app_id}/canary](#canary-update-a-app) *Canary update a app*
   - [PUT /v1/apps/{app_id}/weights](#update-weights) *Update tasks's weights*
+
 + tasks
   - [GET /v1/apps/{app_id}/tasks](#list-all-tasks-for-a-app) *List all tasks for a app*
   - [GET /v1/apps/{app_id}/tasks/{task_id}](#inspect-a-app) *Inspect a task*
@@ -59,6 +60,9 @@
 + ipam
   - [PUT /v1/agents/{agent_id}/ipam/subnets](#set-ipam-pool-range) *Set ip pool range*
   - [GET /v1/agents/{agent_id}/ipam/subnets](#get-ipam-pool-usage) *List ipam pool usage*
+
++ networks
+  - [GET /v1/agents/networks](#swan-driven-networks) *List swan ipam driven docker networks*
 
 + task-over-docker-remote-api
   - [ANY /v1/agents/{agent_id}/docker/{standard_docker_remote_api}](#take-over-agent-docker-remote-api) *Redirect agent docker remote API through swan api*
@@ -1390,6 +1394,336 @@ GET /v1/agents/{agent_id}/ipam/subnets
   }
 }
 ```
+
+### Networks
+
+#### swan driven networks
+```
+GET /v1/agents/networks
+```
+
+```json
+{
+  "swan": "192.168.1.0/24",
+  "test": "172.16.0.0/16"
+}
+```
+
+Debug: 列出节点上所有的容器网络，包括docker内置网络
+```
+GET /v1/agents/networks?debug=true
+```
+
+```json
+{
+  "1c086812-09c0-4c16-811c-85da2c903016-S0": [
+    {
+      "Name": "swan",
+      "Id": "399ff028420252a2050dcd951f68ecc9a8f45ea8e27844d156786490d0126644",
+      "Scope": "local",
+      "Driver": "macvlan",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "swan",
+        "Options": {
+          
+        },
+        "Config": [
+          {
+            "Subnet": "192.168.1.0/24",
+            "Gateway": "192.168.1.1"
+          }
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        "parent": "enp0s3"
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "bridge",
+      "Id": "cc8153b8865ff8985708943b2075a55e8038512b1b86c6bba4fdfbbcec1ee67d",
+      "Scope": "local",
+      "Driver": "bridge",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          {
+            "Subnet": "172.17.0.0/16",
+            "Gateway": "172.17.0.1"
+          }
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        "com.docker.network.bridge.default_bridge": "true",
+        "com.docker.network.bridge.enable_icc": "true",
+        "com.docker.network.bridge.enable_ip_masquerade": "true",
+        "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+        "com.docker.network.bridge.name": "docker0",
+        "com.docker.network.driver.mtu": "1500"
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "host",
+      "Id": "fce292794513294b4f8244f9133c584852961f4b8ec74130837e8bb8e619bb1b",
+      "Scope": "local",
+      "Driver": "host",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        "1c4b4b05852d9b04ac100f8c6f126c6a932d56004426d350cec7e7496432c855": {
+          "Name": "mesos-slave",
+          "EndpointID": "811ec0cbe973ad2cee774a7ca382098f967cc3616066e7f4a5c236d132fe9c0b",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "22193beac2d0c322c242d4e0344ba25b352947e675c0a2122bd9e04591c16f46": {
+          "Name": "swan-manager-2",
+          "EndpointID": "878aed535b0ff2763f08420e69b64d50b47c26d5f38375e56226b49af70f0484",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "4d79ef21dc164107d50f4396e7fa560be6c771e5b0601d0ce7cb7c9085ee4534": {
+          "Name": "etcd",
+          "EndpointID": "4e546c99cd7add3826ce995480c26743787c645f641d09e5db156d4223748ef8",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "77ebef1b711eb278134f93ca06a41a155139f0ee0e7aa1588c7650f7f30fee1a": {
+          "Name": "swan-agent",
+          "EndpointID": "37b37dfbe9da7d39d70f754ff7ba51f3de60223c76d693f3698885f0b90dcb6f",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "8a44de714be1331f6ad351cb3ee0db30fa78a3efd7bd7d67f3a0caa0d211b85a": {
+          "Name": "mesos-master",
+          "EndpointID": "7a83118125735271ad987c8e71292f8c32ec789b6892315a28abd4cb737786ca",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "91b983e66a6f3d6593af106f5db00c2419da2cf8d1d75d37e59465d8f45d0632": {
+          "Name": "zkui",
+          "EndpointID": "1308daaf9b9dc9f4ef8fc930cf8affe2a4798b942d162091a99b90cc1cc3311d",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "a58aa0c61463805a37b829cc9acf9d1ae6bc30ad1f075841feab15f0e12ec544": {
+          "Name": "swan-manager-1",
+          "EndpointID": "29b7e6f00cc936cc5a4a8838650b0075ac1c78bc9e3cae1af26d3bf351553066",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "ddfa3c29c0fa2550fd9d2c7885798b52784504e071dba30688e5383d26f1e230": {
+          "Name": "zookeeper",
+          "EndpointID": "bc4e0c83101d70045ee5c4cf0511f5d8d9c7f07816c49c9a6d3e9c971242c411",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "f3ca0793745d7f10cb28b3f3f6b44c775c65aed591d4d167371335eba9cd8204": {
+          "Name": "swan-manager-3",
+          "EndpointID": "e99b89442567a312fba1e0f22be6203f131896ac8ff89ebeb6f4122bde9b3d16",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        }
+      },
+      "Options": {
+        
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "none",
+      "Id": "32c5e63659f780200bdc170f294839c694b112fcf6835c0f29a484ca49c13544",
+      "Scope": "local",
+      "Driver": "null",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        
+      },
+      "Labels": {
+        
+      }
+    }
+  ],
+  "212c92eb-f594-43d5-89da-7820a56e8570-S1": [
+    {
+      "Name": "none",
+      "Id": "351fc1de17d0a8105c5414e3443cd304028e897cd655744f9885380a7c2521c9",
+      "Scope": "local",
+      "Driver": "null",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "host",
+      "Id": "856419edd231111b462fe8eb6bcc34f455fff1c0cee48eb9e6b8c2add47219fd",
+      "Scope": "local",
+      "Driver": "host",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        "2f1a874daac54a39b03acc907f6f9c58e4848aca86803f70da1109d267a8f254": {
+          "Name": "swan-agent",
+          "EndpointID": "ae78e4416c153958cbc21459a420bbd58198463fc2fb0bcc33b176143778632b",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        },
+        "d26b7f6e9937586d072e328b90b328567c32f357b97d3057376e12835743626e": {
+          "Name": "mesos-slave",
+          "EndpointID": "b4c7e8d69922b7b7bfbbad3031efae3e439f2ad515a1e022b9600b6d8129f597",
+          "MacAddress": "",
+          "IPv4Address": "",
+          "IPv6Address": ""
+        }
+      },
+      "Options": {
+        
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "swan",
+      "Id": "901cf0b20c96fef77631bd7af46f8a8d63286c3b9e672e2ba7c2bd9412cda842",
+      "Scope": "local",
+      "Driver": "macvlan",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "swan",
+        "Options": {
+          
+        },
+        "Config": [
+          {
+            "Subnet": "192.168.1.0/24",
+            "Gateway": "192.168.1.1"
+          }
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        "parent": "enp0s3"
+      },
+      "Labels": {
+        
+      }
+    },
+    {
+      "Name": "bridge",
+      "Id": "e4bf109efd8440fd6a077cfea8486b70b9355471d728ab4a74e5b4cb2ebee6cf",
+      "Scope": "local",
+      "Driver": "bridge",
+      "EnableIPv6": false,
+      "IPAM": {
+        "Driver": "default",
+        "Options": null,
+        "Config": [
+          {
+            "Subnet": "172.17.0.0/16",
+            "Gateway": "172.17.0.1"
+          }
+        ]
+      },
+      "Internal": false,
+      "Attachable": false,
+      "Containers": {
+        
+      },
+      "Options": {
+        "com.docker.network.bridge.default_bridge": "true",
+        "com.docker.network.bridge.enable_icc": "true",
+        "com.docker.network.bridge.enable_ip_masquerade": "true",
+        "com.docker.network.bridge.host_binding_ipv4": "0.0.0.0",
+        "com.docker.network.bridge.name": "docker0",
+        "com.docker.network.driver.mtu": "1500"
+      },
+      "Labels": {
+        
+      }
+    }
+  ]
+}
+```
+
 #### framework
 ```
 GET /v1/framework

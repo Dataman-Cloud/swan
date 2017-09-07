@@ -7,6 +7,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/Dataman-Cloud/swan/types"
@@ -57,6 +58,61 @@ func (r *Server) queryAgentID(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Error(w, "not found matched mesos slaves", http.StatusNotFound)
+}
+
+func (r *Server) listAgentNetworks(w http.ResponseWriter, req *http.Request) {
+	req.ParseForm()
+
+	var (
+		agentNetworks = make(map[string][]*types.NetworkResource) // agent id -> docker networks
+		debug, _      = strconv.ParseBool(req.Form.Get("debug"))
+	)
+
+	for id := range r.driver.ClusterAgents() {
+		networks, err := r.getAgentDockerNetworks(id)
+		if err != nil {
+			continue
+		}
+		agentNetworks[id] = networks
+	}
+
+	if debug {
+		writeJSON(w, http.StatusOK, agentNetworks)
+		return
+	}
+
+	// check if the network exists on all of nodes
+	var m = len(agentNetworks)
+	existsAll := func(name string) bool {
+		var n int
+		for _, networks := range agentNetworks {
+			for _, network := range networks {
+				if network.Name == name {
+					n++
+					break
+				}
+			}
+		}
+		return m == n
+	}
+
+	// obtain `swan` ipam driven networks
+	swanNets := make(map[string]string) // network name -> network.ipam.config.subnet
+	for _, networks := range agentNetworks {
+		for _, network := range networks {
+			var (
+				name = network.Name
+				ipam = network.IPAM
+			)
+			if ipam.Driver == "swan" && len(ipam.Config) > 0 {
+				if _, ok := swanNets[name]; !ok && existsAll(name) {
+					swanNets[name] = ipam.Config[0].Subnet
+				}
+			}
+		}
+	}
+
+	writeJSON(w, http.StatusOK, swanNets)
 }
 
 func (r *Server) getAgent(w http.ResponseWriter, req *http.Request) {
@@ -290,6 +346,13 @@ func (r *Server) getAppDNSTrafficInfo(agentId, appId string) (map[string]interfa
 	var info map[string]interface{}
 	err := r.requestAgentResource(agentId, agentReq, 200, &info)
 	return info, err
+}
+
+func (r *Server) getAgentDockerNetworks(agentId string) ([]*types.NetworkResource, error) {
+	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/networks", agentId), nil)
+	var infos []*types.NetworkResource
+	err := r.requestAgentResource(agentId, agentReq, 200, &infos)
+	return infos, err
 }
 
 func (r *Server) requestAgentResource(id string, req *http.Request, expectCode int, data interface{}) error {
