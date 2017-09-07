@@ -179,7 +179,6 @@ func (s *ApiSuite) listAppDNS(id string, c *check.C) []*resolver.Record {
 	return dns
 }
 
-// TODO make swan agent id same as mesos slave id
 func (s *ApiSuite) inspectNodeDockerContainer(agentID, idOrName string, c *check.C) map[string]interface{} {
 	code, body, err := s.sendRequest("GET", "/v1/agents/"+agentID+"/docker/containers/"+idOrName+"/json", nil)
 	c.Assert(err, check.IsNil)

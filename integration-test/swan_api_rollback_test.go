@@ -47,6 +47,8 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(len(tasks), check.Equals, 3)
 	for _, task := range tasks {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
 	}
 
 	// verify proxy record
@@ -98,6 +100,8 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(len(tasks), check.Equals, 3)
 	for _, task := range tasks {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
 	}
 
 	// verify proxy record
@@ -148,6 +152,8 @@ func (s *ApiSuite) TestRollBackApp(c *check.C) {
 	c.Assert(len(tasks), check.Equals, 3)
 	for _, task := range tasks {
 		c.Assert(task.Version, check.Equals, vers[1].ID)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
 	}
 
 	// verify proxy record

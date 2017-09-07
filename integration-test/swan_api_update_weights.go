@@ -73,6 +73,10 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	// verify app tasks
 	tasks := s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	var n, m int
 	for _, task := range tasks {
@@ -154,6 +158,10 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	// verify app tasks
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	new := 0
 	for _, task := range tasks {
@@ -214,6 +222,10 @@ func (s *ApiSuite) TestUpdateWeights(c *check.C) {
 	// verify app tasks
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	new, old := 0, 0
 	for _, task := range tasks {

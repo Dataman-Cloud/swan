@@ -75,6 +75,10 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	// verify app tasks
 	tasks := s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	var n, m int
 	for _, task := range tasks {
@@ -169,6 +173,10 @@ func (s *ApiSuite) TestCanaryUpdate(c *check.C) {
 	// verify app tasks
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 5)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	var y1 int
 	for _, task := range tasks {

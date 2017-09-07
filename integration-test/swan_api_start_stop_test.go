@@ -46,6 +46,8 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 	c.Assert(len(tasks), check.Equals, 10)
 	for _, task := range tasks {
 		c.Assert(task.Version, check.Equals, vers[0].ID)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
 	}
 
 	// verify proxy record
@@ -80,6 +82,10 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 0)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	// verify proxy record
 	proxy = s.listAppProxies(id, c)
@@ -106,6 +112,10 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 10)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	// verify proxy record
 	proxy = s.listAppProxies(id, c)
@@ -139,6 +149,10 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 0)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	// verify proxy record
 	proxy = s.listAppProxies(id, c)
@@ -165,6 +179,10 @@ func (s *ApiSuite) TestStartStopApp(c *check.C) {
 
 	tasks = s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 10)
+	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
+	}
 
 	// verify proxy record
 	proxy = s.listAppProxies(id, c)
