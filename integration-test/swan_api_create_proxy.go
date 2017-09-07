@@ -45,6 +45,8 @@ func (s *ApiSuite) TestCreateAppProxy(c *check.C) {
 	tasks := s.listAppTasks(id, c)
 	c.Assert(len(tasks), check.Equals, 10)
 	for _, task := range tasks {
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerID, c)
+		s.inspectNodeDockerContainer(task.AgentId, task.ContainerName, c)
 		c.Assert(task.Version, check.Equals, vers[0].ID)
 	}
 
