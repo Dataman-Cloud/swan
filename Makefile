@@ -4,7 +4,7 @@
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
 PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]' | tr -d '-')
 Compose := "https://github.com/docker/compose/releases/download/1.14.0/docker-compose"
-RamDisk := "/tmp/swan-ramdisk"
+TmpDataDir := "/tmp/swan-tmp-data"
 
 # Used to populate version variable in main package.
 VERSION=$(shell git describe --always --tags --abbre=0)
@@ -70,39 +70,20 @@ build-binary:
 		$(MAKE) docker-build; \
 	fi
 
-ramdisk:
-	@if env | grep -q -w "TRAVIS_BUILD_DIR" >/dev/null 2>&1; then \
-		mkdir -p $(RamDisk); \
-	elif env | grep -q -w "JENKINS_HOME" > /dev/null 2>&1; then \
-		mkdir -p $(RamDisk); \
-	elif uname | grep -q "Linux" >/dev/null 2>&1; then \
-        if mountpoint -q $(RamDisk); then \
-            umount $(RamDisk); \
-        fi; \
-        mkdir -p $(RamDisk); \
-        mount -t tmpfs -o size=256m tmpfs $(RamDisk); \
-    else \
-        mkdir -p $(RamDisk); \
-    fi
+tmpdir:
+	mkdir -p $(TmpDataDir)
 
-local-cluster: prepare-docker-compose build-binary docker-image ramdisk
+local-cluster: prepare-docker-compose build-binary docker-image tmpdir
 	docker-compose up -d
 	docker-compose ps
 
 rm-local-cluster: prepare-docker-compose
 	docker-compose stop
 	docker-compose rm -f
+	rm -rf $(TmpDataDir)
 
 check-local-cluster:
-	@sleep 20;
-	@docker-compose ps | awk '(/swan-[agent|master]/) {print $$1}' | while read cname; \
-	do \
-		if ! (docker inspect  -f "{{.State.Health.Status}}" $$cname | grep "healthy") > /dev/null 2>&1; then \
-			echo $$cname not ready! ; \
-			exit 1; \
-		fi; \
-	done
-	@echo "local cluster ready!"
+	@./contrib/check-local-cluster.sh
 
 integration-prepare: rm-local-cluster local-cluster check-local-cluster
 
