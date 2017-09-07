@@ -69,15 +69,17 @@ func (m *tcpMux) dispatch(conn net.Conn) {
 	m.poolHTTP <- bc
 }
 
-func (m *tcpMux) NewHTTPListener() net.Listener {
+func (m *tcpMux) NewHTTPListener(activate chan struct{}) net.Listener {
 	return &muxListener{
-		pool: m.poolHTTP,
+		pool:     m.poolHTTP,
+		activate: activate,
 	}
 }
 
-func (m *tcpMux) NewMoleListener() net.Listener {
+func (m *tcpMux) NewMoleListener(activate chan struct{}) net.Listener {
 	return &muxListener{
-		pool: m.poolMole,
+		pool:     m.poolMole,
+		activate: activate,
 	}
 }
 
@@ -87,14 +89,22 @@ type muxListener struct {
 	sync.Mutex               // protect flag closed
 	closed     bool          // flag on pool closed
 	pool       chan net.Conn // connection pool
+	ready      bool
+	activate   chan struct{}
 }
 
 func (l *muxListener) Accept() (net.Conn, error) {
-	conn, ok := <-l.pool
-	if !ok {
-		return nil, errors.New("listener closed")
+	if l.ready {
+		conn, ok := <-l.pool
+		if !ok {
+			return nil, errors.New("listener closed")
+		}
+		return conn, nil
 	}
-	return conn, nil
+
+	<-l.activate
+	l.ready = true
+	return l.Accept()
 }
 
 func (l *muxListener) Close() error {
