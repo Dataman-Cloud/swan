@@ -94,7 +94,7 @@ rm-local-cluster: prepare-docker-compose
 	docker-compose rm -f
 
 check-local-cluster:
-	@sleep 20;
+	@sleep 50;
 	@docker-compose ps | awk '(/swan-[agent|master]/) {print $$1}' | while read cname; \
 	do \
 		if ! (docker inspect  -f "{{.State.Health.Status}}" $$cname | grep "healthy") > /dev/null 2>&1; then \
