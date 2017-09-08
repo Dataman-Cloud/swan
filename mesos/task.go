@@ -35,7 +35,11 @@ func (t *Task) ID() string {
 
 func (t *Task) Build() {
 	t.Resources = t.cfg.BuildResources()
-	t.Command = t.cfg.BuildCommand()
+	if true {
+		t.Executor = t.cfg.BuildCustomExecutor()
+	} else {
+		t.Command = t.cfg.BuildCommand()
+	}
 	t.Container = t.cfg.BuildContainer(t.ID(), t.GetName())
 	if t.cfg.HealthCheck != nil {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
