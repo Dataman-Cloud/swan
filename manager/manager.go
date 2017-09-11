@@ -1,8 +1,11 @@
 package manager
 
 import (
+	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/config"
@@ -107,6 +110,11 @@ func (m *Manager) Start() error {
 }
 
 func (m *Manager) start() error {
+	defer func() {
+		log.Println("close connection with zookeeper")
+		m.ZKClient.Close()
+	}()
+
 	go func() {
 		p, err := m.electLeader()
 		if err != nil {
@@ -143,24 +151,40 @@ func (m *Manager) start() error {
 		}
 	}()
 
+	go func() {
+		for {
+			select {
+			case c := <-m.leadershipChangeCh:
+				switch c {
+				case LeadershipLeader:
+					if err := m.sched.Subscribe(); err != nil {
+						log.Errorf("subscribe to mesos leader error: %v", err)
+						m.errCh <- err
+					}
+
+					m.apiserver.UpdateLeader(m.leader)
+
+				case LeadershipFollower:
+					log.Warnln("became follower, closing all agents ...")
+					m.clusterMaster.CloseAllAgents()
+					m.apiserver.UpdateLeader(m.leader)
+				}
+			}
+		}
+	}()
+
+	// wait signal
+	sigChan := make(chan os.Signal)
+	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGUSR1)
 	for {
 		select {
-		case c := <-m.leadershipChangeCh:
-			switch c {
-			case LeadershipLeader:
-				if err := m.sched.Subscribe(); err != nil {
-					log.Errorf("subscribe to mesos leader error: %v", err)
-					m.errCh <- err
-				}
-
-				m.apiserver.UpdateLeader(m.leader)
-
-			case LeadershipFollower:
-				log.Warnln("became follower, closing all agents ...")
-				m.clusterMaster.CloseAllAgents()
-				m.apiserver.UpdateLeader(m.leader)
+		case sig := <-sigChan:
+			switch sig {
+			case syscall.SIGUSR1:
+				continue
 			}
 
+			return nil
 		case err := <-m.errCh:
 			return err
 		}
