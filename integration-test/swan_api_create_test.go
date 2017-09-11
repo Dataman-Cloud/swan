@@ -115,6 +115,58 @@ func (s *ApiSuite) TestCreateNoMatchedAgentsApp(c *check.C) {
 	costPrintln("TestCreateNoMatchedAgentsApp() removed", startAt)
 }
 
+func (s *ApiSuite) TestCreateOverQuotaResourceApp(c *check.C) {
+	// Purge
+	//
+	startAt := time.Now()
+	err := s.purge(time.Second*60, c)
+	c.Assert(err, check.IsNil)
+	fmt.Println("TestCreateOverQuotaResourceApp() purged")
+
+	// New Create App
+	//
+	startAt = time.Now()
+	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(500000).Get()
+	id := s.createApp(ver, c)
+	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
+	c.Assert(err, check.IsNil)
+	costPrintln("TestCreateOverQuotaResourceApp() created", startAt)
+
+	// verify app
+	app := s.inspectApp(id, c)
+	c.Assert(app.Name, check.Equals, "demo")
+	c.Assert(app.TaskCount, check.Equals, 10)
+	c.Assert(app.VersionCount, check.Equals, 1)
+	c.Assert(len(app.Version), check.Equals, 1)
+	c.Assert(app.ErrMsg, check.Not(check.Equals), "")
+	match, _ := regexp.MatchString("resource not enough", app.ErrMsg)
+	c.Assert(match, check.Equals, true)
+
+	// verify app versions
+	vers := s.listAppVersions(id, c)
+	c.Assert(len(vers), check.Equals, 1)
+	c.Assert(vers[0].CPUs, check.Equals, 0.01)
+	c.Assert(vers[0].Mem, check.Equals, float64(500000))
+	c.Assert(vers[0].Instances, check.Equals, int32(10))
+	c.Assert(vers[0].RunAs, check.Equals, app.RunAs)
+
+	// verify app tasks
+	tasks := s.listAppTasks(id, c)
+	c.Assert(len(tasks), check.Equals, 10)
+	for _, task := range tasks {
+		c.Assert(task.Status, check.Equals, "pending")
+	}
+
+	costPrintln("TestCreateOverQuotaResourceApp() failure stats verified", startAt)
+
+	// Remove
+	//
+	startAt = time.Now()
+	err = s.removeApp(id, time.Second*10, c)
+	c.Assert(err, check.IsNil)
+	costPrintln("TestCreateOverQuotaResourceApp() removed", startAt)
+}
+
 func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	// Purge
 	//

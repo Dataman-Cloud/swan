@@ -18,7 +18,6 @@ func ApplyFilters(filters []Filter, config *types.TaskConfig, replicas int, agen
 		if err != nil {
 			return nil, err
 		}
-
 	}
 
 	return accepted, nil
