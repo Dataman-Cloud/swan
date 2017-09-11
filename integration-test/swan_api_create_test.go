@@ -74,13 +74,15 @@ func (s *ApiSuite) TestCreateNoMatchedAgentsApp(c *check.C) {
 	// New Create App
 	//
 	startAt = time.Now()
-	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).setConstraint("vcluster", "==", "xxxxx").Get()
+	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(5).setConstraint("vcluster", "==", "xxxxx").
+		setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	costPrintln("TestCreateNoMatchedAgentsApp() created", startAt)
 
 	// verify app
+	startAt = time.Now()
 	app := s.inspectApp(id, c)
 	c.Assert(app.Name, check.Equals, "demo")
 	c.Assert(app.TaskCount, check.Equals, 10)
@@ -105,6 +107,18 @@ func (s *ApiSuite) TestCreateNoMatchedAgentsApp(c *check.C) {
 		c.Assert(task.Status, check.Equals, "pending")
 	}
 
+	// verify proxy record
+	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy, check.Not(check.IsNil))
+	c.Assert(proxy.Alias, check.Equals, "")
+	c.Assert(len(proxy.Backends), check.Equals, 0)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+
+	// verify dns records
+	dns := s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 0)
+
 	costPrintln("TestCreateNoMatchedAgentsApp() failure stats verified", startAt)
 
 	// Remove
@@ -126,13 +140,15 @@ func (s *ApiSuite) TestCreateOverQuotaResourceApp(c *check.C) {
 	// New Create App
 	//
 	startAt = time.Now()
-	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(500000).Get()
+	ver := demoVersion().setName("demo").setCount(10).setCPU(0.01).setMem(500000).
+		setProxy(true, "www.xxx.com", "", false).Get()
 	id := s.createApp(ver, c)
 	err = s.waitApp(id, types.OpStatusNoop, time.Second*180, c)
 	c.Assert(err, check.IsNil)
 	costPrintln("TestCreateOverQuotaResourceApp() created", startAt)
 
 	// verify app
+	startAt = time.Now()
 	app := s.inspectApp(id, c)
 	c.Assert(app.Name, check.Equals, "demo")
 	c.Assert(app.TaskCount, check.Equals, 10)
@@ -157,6 +173,18 @@ func (s *ApiSuite) TestCreateOverQuotaResourceApp(c *check.C) {
 		c.Assert(task.Status, check.Equals, "pending")
 	}
 
+	// verify proxy record
+	proxy := s.listAppProxies(id, c)
+	c.Assert(proxy, check.Not(check.IsNil))
+	c.Assert(proxy.Alias, check.Equals, "")
+	c.Assert(len(proxy.Backends), check.Equals, 0)
+	c.Assert(proxy.Listen, check.Equals, "")
+	c.Assert(proxy.Sticky, check.Equals, false)
+
+	// verify dns records
+	dns := s.listAppDNS(id, c)
+	c.Assert(len(dns), check.Equals, 0)
+
 	costPrintln("TestCreateOverQuotaResourceApp() failure stats verified", startAt)
 
 	// Remove
@@ -173,7 +201,7 @@ func (s *ApiSuite) TestCreateInvalidApp(c *check.C) {
 	startAt := time.Now()
 	err := s.purge(time.Second*60, c)
 	c.Assert(err, check.IsNil)
-	fmt.Println("TestCreateInvalidApp() purged")
+	costPrintln("TestCreateInvalidApp() purged", startAt)
 
 	// Invalid Create Request
 	//
