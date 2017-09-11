@@ -90,94 +90,33 @@ GET /v1/apps
 Example response:
 ```
 [
-  {
-    "id": "nginx0r1.default.xcm.dataman",
-    "name": "nginx0r1",
-    "alias": "",
-    "runAs": "xcm",
-    "cluster": "dataman",
-    "operationStatus": "noop",
-    "tasks": [
-      {
-        "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-        "name": "0.nginx0r1.default.xcm.dataman",
-        "ip": "192.168.1.102",
-        "port": 31008,
-        "healthy": "unset",
-        "weight": 100,
-        "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-        "version": "1498029948754163146",
-        "status": "TASK_RUNNING",
-        "errmsg": ""
-        "created": "2017-06-21T15:25:48.78944685+08:00",
-        "updated": "2017-06-21T15:25:48.78944688+08:00"
-      }
-    ],
-    "currentVersion": [
-      "1498029948754163146"
-    ],
-    "versions": [
-      {
-        "id": "1498029948754163146",
-        "name": "nginx0r1",
-        "cmd": "",
-        "cpus": 0.01,
-        "mem": 32,
-        "disk": 0,
-        "instances": 1,
-        "runAs": "xcm",
-        "container": {
-          "type": "DOCKER",
-          "docker": {
-            "image": "nginx",
-            "network": "bridge",
-            "parameters": [
-              {
-                "key": "label",
-                "value": "APP_ID=wordpress"
-              }
-            ],
-            "portMappings": [
-              {
-                "containerPort": 80,
-                "hostPort": 80,
-                "name": "web",
-                "protocol": "tcp"
-              }
-            ],
-            "privileged": true
-          },
-          "volumes": [
-            {
-              "containerPath": "/data",
-              "hostPath": "/home",
-              "mode": "RW"
-            }
-          ]
+    {
+        "cluster": "dataman2",
+        "created": "2017-09-06T10:39:17.784738187+08:00",
+        "currentVersion": [
+            "1504665557784509256"
+        ],
+        "errmsg": "",
+        "health": {
+            "healthy": 0,
+            "total": 10,
+            "unhealthy": 0,
+            "unset": 10
         },
-        "labels": null,
-        "healthCheck": null,
-        "env": {},
-        "killPolicy": null,
-        "updatPolicy": null,
-        "constraints": [],
-        "uris": [],
-        "ips": null,
-        "proxy": {
-          "enabled": false,
-          "alias": ""
-        }
-      }
-    ],
-    "status": "available",
-    "health": {
-      "healthy": 0,
-      "unhealthy": 0,
-      "unset": 1
-    },
-    "created": "2017-06-21T15:25:48.754164732+08:00",
-    "updated": "2017-06-21T15:25:48.754164753+08:00"
-  }
+        "id": "nginx15.default.xcm.dataman2",
+        "name": "nginx15",
+        "operationStatus": "noop",
+        "progress": -1,
+        "progress_details": null,
+        "runAs": "xcm",
+        "status": "available",
+        "task_count": 10,
+        "tasks_status": {
+            "TASK_RUNNING": 10
+        },
+        "updated": "2017-09-06T10:39:24.049790305+08:00",
+        "version_count": 1
+    }
 ]
 ```
 Query parameters:
@@ -283,101 +222,33 @@ HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-    "id":"nginx0r2.default.xcm.dataman",
-    "name":"nginx0r2",
-    "alias":"",
-    "runAs":"xcm",
-    "cluster":"dataman",
-    "operationStatus":"noop",
-    "tasks":[
-        {
-            "id":"731ea4512976.0.nginx0r2.default.xcm.dataman",
-            "name":"0.nginx0r2.default.xcm.dataman",
-            "ip":"192.168.1.102",
-            "port":31010,
-            "healthy":"unset",
-            "weight":100,
-            "agentId":"7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-            "version":"1498030396211326306",
-            "status":"TASK_RUNNING",
-            "errmsg":"",
-            "created":"2017-06-21T15:33:16.238348516+08:00",
-            "updated":"2017-06-21T15:33:16.238348626+08:00"
-        }
+    "cluster": "dataman2",
+    "created": "2017-09-06T10:39:17.784738187+08:00",
+    "currentVersion": [
+        "1504665557784509256"
     ],
-    "currentVersion":[
-        "1498030396211326306"
-    ],
-    "versions":[
-        {
-            "id":"1498030396211326306",
-            "name":"nginx0r2",
-            "cmd":"",
-            "cpus":0.01,
-            "mem":32,
-            "disk":0,
-            "instances":1,
-            "runAs":"xcm",
-            "container":{
-                "type":"DOCKER",
-                "docker":{
-                    "image":"nginx",
-                    "network":"bridge",
-                    "parameters":[
-                        {
-                            "key":"label",
-                            "value":"APP_ID=wordpress"
-                        }
-                    ],
-                    "portMappings":[
-                        {
-                            "containerPort":80,
-                            "hostPort":80,
-                            "name":"web",
-                            "protocol":"tcp"
-                        }
-                    ],
-                    "privileged":true
-                },
-                "volumes":[
-                    {
-                        "containerPath":"/data",
-                        "hostPath":"/home",
-                        "mode":"RW"
-                    }
-                ]
-            },
-            "labels":null,
-            "healthCheck":null,
-            "env":{
-
-            },
-            "killPolicy":null,
-            "updatPolicy":null,
-            "constraints":[
-
-            ],
-            "uris":[
-
-            ],
-            "ips":null,
-            "proxy":{
-                "enabled":false,
-                "alias":""
-				"listen": 99,
-				"sticky": false
-            }
-        }
-    ],
-    "status":"available",
-    "health":{
-        "healthy":0,
-        "unhealthy":0,
-        "unset":1
+    "errmsg": "",
+    "health": {
+        "healthy": 0,
+        "total": 10,
+        "unhealthy": 0,
+        "unset": 10
     },
-    "created":"2017-06-21T15:33:16.211327705+08:00",
-    "updated":"2017-06-21T15:33:16.211327722+08:00"
+    "id": "nginx15.default.xcm.dataman2",
+    "name": "nginx15",
+    "operationStatus": "noop",
+    "progress": -1,
+    "progress_details": null,
+    "runAs": "xcm",
+    "status": "available",
+    "task_count": 10,
+    "tasks_status": {
+        "TASK_RUNNING": 10
+    },
+    "updated": "2017-09-06T10:39:24.049790305+08:00",
+    "version_count": 1
 }
+
 ```
 
 #### Delete a app
@@ -532,23 +403,30 @@ Example response:
 HTTP/1.1 200 OK
 Content-Type: application/json
 [
-  {
-    "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-    "name": "0.nginx0r1.default.xcm.dataman",
-    "ip": "192.168.1.102",
-    "port": 31008,
-    "healthy": "unset",
-    "weight": 100,
-    "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-    "version": "1498029948754163146",
-    "status": "TASK_RUNNING",
-    "errmsg": "",
-    "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
-    "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
-    "created": "2017-06-21T15:25:48.78944685+08:00",
-    "updated": "2017-06-21T15:25:48.78944688+08:00"
-  }
+    {
+        "agentId": "07239dfa-2982-4046-8f1c-f8f3c14d4649-S4",
+        "container_id": "69a08b075328ce380b4f9b3668294d0af0a52ca02606ae1026479425e7668257",
+        "container_name": "/mesos-07239dfa-2982-4046-8f1c-f8f3c14d4649-S4.5b9bf6ea-4f7b-4aef-b08b-fd980ebf7e06",
+        "created": "2017-09-06T10:39:17.872672561+08:00",
+        "errmsg": "",
+        "healthy": "unset",
+        "histories": null,
+        "id": "31defd3cf9f2.4.nginx15.default.xcm.dataman2",
+        "ip": "172.16.1.18",
+        "maxRetries": 0,
+        "name": "4.nginx15.default.xcm.dataman2",
+        "opstatus": "",
+        "ports": [
+            31004
+        ],
+        "retries": 0,
+        "status": "TASK_RUNNING",
+        "updated": "2017-09-06T10:39:17.872672595+08:00",
+        "version": "1504665557784509256",
+        "weight": 100
+    }
 ]
+
 ```
 
 #### Canary update a app
@@ -703,58 +581,79 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 [
-  {
-    "id": "1498029948754163146",
-    "name": "nginx0r1",
-    "cmd": "",
-    "cpus": 0.01,
-    "mem": 32,
-    "disk": 0,
-    "instances": 1,
-    "runAs": "xcm",
-    "container": {
-      "type": "DOCKER",
-      "docker": {
-        "image": "nginx",
-        "network": "bridge",
-        "parameters": [
-          {
-            "key": "label",
-            "value": "APP_ID=wordpress"
-          }
+    {
+        "cluster": "dataman2",
+        "cmd": "",
+        "constraints": [
+            {
+                "attribute": "disk",
+                "operator": "==",
+                "value": "ssd"
+            }
         ],
-        "portMappings": [
-          {
-            "containerPort": 80,
-            "hostPort": 80,
-            "name": "web",
-            "protocol": "tcp"
-          }
-        ],
-        "privileged": true
-      },
-      "volumes": [
-        {
-          "containerPath": "/data",
-          "hostPath": "/home",
-          "mode": "RW"
-        }
-      ]
-    },
-    "labels": null,
-    "healthCheck": null,
-    "env": {},
-    "killPolicy": null,
-    "updatPolicy": null,
-    "constraints": [],
-    "uris": [],
-    "ips": null,
-    "proxy": {
-      "enabled": false,
-      "alias": ""
+        "container": {
+            "docker": {
+                "image": "nginx",
+                "network": "bridge",
+                "parameters": [
+                    {
+                        "key": "ipc",
+                        "value": "host"
+                    },
+                    {
+                        "key": "workdir",
+                        "value": "/data"
+                    }
+                ],
+                "portMappings": [
+                    {
+                        "containerPort": 80,
+                        "hostPort": 80,
+                        "name": "web",
+                        "protocol": "tcp"
+                    }
+                ],
+                "privileged": true
+            },
+            "type": "DOCKER",
+            "volumes": [
+                {
+                    "containerPath": "/data",
+                    "hostPath": "/home",
+                    "mode": "RW"
+                }
+            ]
+        },
+        "cpus": 0.01,
+        "disk": 0,
+        "env": {
+            "WORDPRESS_DB_HOST": "dbhost",
+            "WORDPRESS_DB_PASSWORD": "password"
+        },
+        "gpus": 0,
+        "healthCheck": null,
+        "id": "1504665557784509256",
+        "instances": 10,
+        "ips": null,
+        "kill": null,
+        "labels": null,
+        "mem": 10,
+        "name": "nginx15",
+        "proxy": {
+            "alias": "",
+            "enabled": false,
+            "listen": 0,
+            "sticky": false
+        },
+        "restart": {
+            "retries": 0
+        },
+        "runAs": "xcm",
+        "update": null,
+        "uris": []
     }
-  }
 ]
 ```
 
@@ -771,22 +670,30 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 {
-  "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-  "name": "0.nginx0r1.default.xcm.dataman",
-  "ip": "192.168.1.102",
-  "port": 31008,
-  "healthy": "unset",
-  "weight": 100,
-  "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-  "version": "1498029948754163146",
-  "status": "TASK_RUNNING",
-  "errmsg": "",
-  "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
-  "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
-  "created": "2017-06-21T15:25:48.78944685+08:00",
-  "updated": "2017-06-21T15:25:48.78944688+08:00"
+    "agentId": "07239dfa-2982-4046-8f1c-f8f3c14d4649-S4",
+    "container_id": "7d3c4d4e62b0696f5ee0ed7ccabdc17f83716c6eaedd9e5cc51a3eca3e6a8b05",
+    "container_name": "/mesos-07239dfa-2982-4046-8f1c-f8f3c14d4649-S4.7978406a-bb81-4a0c-a182-31abc4f483f9",
+    "created": "2017-09-06T10:39:17.848361457+08:00",
+    "errmsg": "",
+    "healthy": "unset",
+    "histories": null,
+    "id": "9a3adf023c4c.2.nginx15.default.xcm.dataman2",
+    "ip": "172.16.1.18",
+    "maxRetries": 0,
+    "name": "2.nginx15.default.xcm.dataman2",
+    "opstatus": "",
+    "ports": [
+        31002
+    ],
+    "retries": 0,
+    "status": "TASK_RUNNING",
+    "updated": "2017-09-06T10:39:17.848361519+08:00",
+    "version": "1504665557784509256",
+    "weight": 100
 }
+
 ```
 
 #### Inspect a version 
@@ -801,57 +708,79 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 {
-  "id": "1498029948754163146",
-  "name": "nginx0r1",
-  "cmd": "",
-  "cpus": 0.01,
-  "mem": 32,
-  "disk": 0,
-  "instances": 1,
-  "runAs": "xcm",
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "nginx",
-      "network": "bridge",
-      "parameters": [
+    "cluster": "dataman2",
+    "cmd": "",
+    "constraints": [
         {
-          "key": "label",
-          "value": "APP_ID=wordpress"
+            "attribute": "disk",
+            "operator": "==",
+            "value": "ssd"
         }
-      ],
-      "portMappings": [
-        {
-          "containerPort": 80,
-          "hostPort": 80,
-          "name": "web",
-          "protocol": "tcp"
-        }
-      ],
-      "privileged": true
+    ],
+    "container": {
+        "docker": {
+            "image": "nginx",
+            "network": "bridge",
+            "parameters": [
+                {
+                    "key": "ipc",
+                    "value": "host"
+                },
+                {
+                    "key": "workdir",
+                    "value": "/data"
+                }
+            ],
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "name": "web",
+                    "protocol": "tcp"
+                }
+            ],
+            "privileged": true
+        },
+        "type": "DOCKER",
+        "volumes": [
+            {
+                "containerPath": "/data",
+                "hostPath": "/home",
+                "mode": "RW"
+            }
+        ]
     },
-    "volumes": [
-      {
-        "containerPath": "/data",
-        "hostPath": "/home",
-        "mode": "RW"
-      }
-    ]
-  },
-  "labels": null,
-  "healthCheck": null,
-  "env": {},
-  "killPolicy": null,
-  "updatPolicy": null,
-  "constraints": [],
-  "uris": [],
-  "ips": null,
-  "proxy": {
-    "enabled": false,
-    "alias": ""
-  }
+    "cpus": 0.01,
+    "disk": 0,
+    "env": {
+        "WORDPRESS_DB_HOST": "dbhost",
+        "WORDPRESS_DB_PASSWORD": "password"
+    },
+    "gpus": 0,
+    "healthCheck": null,
+    "id": "1504665557784509256",
+    "instances": 10,
+    "ips": null,
+    "kill": null,
+    "labels": null,
+    "mem": 10,
+    "name": "nginx15",
+    "proxy": {
+        "alias": "",
+        "enabled": false,
+        "listen": 0,
+        "sticky": false
+    },
+    "restart": {
+        "retries": 0
+    },
+    "runAs": "xcm",
+    "update": null,
+    "uris": []
 }
+
 ```
 #### Create a version 
 ```
@@ -947,12 +876,12 @@ Example request:
  Content-Type: application/json
  
  {
-     "Value": 0.2
+	"value": 0.1
  }
 ```
 Json parameters:
 ```
-Value: Percentage of traffic. Indicated how much traffics switched to new version.
+Value(float) : traffic for new version relative to all versions. 
 ```
 Example response:
 ```
