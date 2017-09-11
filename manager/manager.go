@@ -29,6 +29,9 @@ type Manager struct {
 	electRootPath      string
 	leader             string
 	myid               string
+	chLeader           chan struct{}
+	chFollower         chan struct{}
+	notify             chan struct{}
 }
 
 func New(cfg *config.ManagerConfig) (*Manager, error) {
@@ -46,7 +49,11 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 
 	// tcpMux setup
 	tcpMux := newTCPMux(cfg.Listen)
-	hl := tcpMux.NewHTTPListener()
+	var (
+		chLeader   = make(chan struct{}) // notify listener to start accept
+		chFollower = make(chan struct{})
+	)
+	hl := tcpMux.NewHTTPListener(chLeader, chFollower)
 	ml := tcpMux.NewMoleListener()
 
 	// mole protocol master
@@ -77,7 +84,8 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		s = strategy.NewBinPackStrategy()
 	}
 
-	sched, err := mesos.NewScheduler(&scfg, db, s, clusterMaster)
+	notify := make(chan struct{}) // notify mannager after sheduler finished first task reconcile.
+	sched, err := mesos.NewScheduler(&scfg, db, s, clusterMaster, notify)
 	if err != nil {
 		return nil, err
 	}
@@ -105,6 +113,9 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		leadershipChangeCh: make(chan Leadership),
 		errCh:              make(chan error, 1),
 		electRootPath:      filepath.Join(cfg.ZKURL.Path, LeaderElectionPath),
+		chLeader:           chLeader,
+		chFollower:         chFollower,
+		notify:             notify,
 	}, nil
 }
 
@@ -173,10 +184,15 @@ func (m *Manager) start() error {
 
 				m.apiserver.UpdateLeader(m.leader)
 
+				<-m.notify // scheudler tasks first reconsile finished.
+
+				close(m.chLeader) // notify apiserver to serve
 			case LeadershipFollower:
 				log.Warnln("became follower, closing all agents ...")
 				m.clusterMaster.CloseAllAgents()
 				m.apiserver.UpdateLeader(m.leader)
+
+				close(m.chFollower)
 			}
 
 		case err := <-m.errCh:

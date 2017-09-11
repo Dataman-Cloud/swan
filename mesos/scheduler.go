@@ -86,11 +86,18 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	sem chan struct{}
+	sem        chan struct{}
+	httpNotify chan struct{} // used to notify apiserver to start serve after fisrt reconsile
 }
 
 // NewScheduler...
-func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clusterMaster *mole.Master) (*Scheduler, error) {
+func NewScheduler(
+	cfg *SchedulerConfig,
+	db store.Store,
+	strategy Strategy,
+	clusterMaster *mole.Master,
+	notify chan struct{},
+) (*Scheduler, error) {
 	s := &Scheduler{
 		cfg:           cfg,
 		quit:          make(chan struct{}),
@@ -103,6 +110,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
 		sem:           make(chan struct{}, 1),
+		httpNotify:    notify,
 	}
 
 	if err := s.init(); err != nil {
@@ -670,6 +678,9 @@ func (s *Scheduler) startReconcileLoop() {
 
 	go func() {
 		s.runReconcile() // run reconcile once immediately on start up
+
+		// notify apiserver to start serve
+		close(s.httpNotify)
 
 		for range s.reconcileTimer.C {
 			s.runReconcile()
