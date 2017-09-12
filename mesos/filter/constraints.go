@@ -3,7 +3,7 @@ package filter
 import (
 	"errors"
 
-	"github.com/Dataman-Cloud/swan/mesos"
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -17,10 +17,10 @@ func NewConstraintsFilter() *constraintsFilter {
 	return &constraintsFilter{}
 }
 
-func (f *constraintsFilter) Filter(config *types.TaskConfig, replicas int, agents []*mesos.Agent) ([]*mesos.Agent, error) {
+func (f *constraintsFilter) Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
 	var (
 		constraints = config.Constraints
-		candidates  = make([]*mesos.Agent, 0)
+		candidates  = make([]*magent.Agent, 0)
 	)
 
 	for _, agent := range agents {

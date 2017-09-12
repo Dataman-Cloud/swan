@@ -1,11 +1,11 @@
 package strategy
 
 import (
-	"github.com/Dataman-Cloud/swan/mesos"
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 )
 
 type weightedAgent struct {
-	agent  *mesos.Agent
+	agent  *magent.Agent
 	weight float64
 }
 
@@ -23,7 +23,7 @@ func (w weightedAgents) Less(i, j int) bool {
 	return w[i].weight < w[j].weight
 }
 
-func weight(agents []*mesos.Agent) weightedAgents {
+func weight(agents []*magent.Agent) weightedAgents {
 	weightedList := make([]*weightedAgent, 0)
 
 	for _, agent := range agents {

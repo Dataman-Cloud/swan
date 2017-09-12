@@ -7,8 +7,6 @@ import (
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/config"
 	"github.com/Dataman-Cloud/swan/mesos"
-	"github.com/Dataman-Cloud/swan/mesos/filter"
-	"github.com/Dataman-Cloud/swan/mesos/strategy"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
 
@@ -56,6 +54,7 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 	scfg := mesos.SchedulerConfig{
 		ZKHost:                  strings.Split(cfg.MesosURL.Host, ","),
 		ZKPath:                  cfg.MesosURL.Path,
+		Strategy:                cfg.Strategy,
 		ReconciliationInterval:  cfg.ReconciliationInterval,
 		ReconciliationStep:      cfg.ReconciliationStep,
 		ReconciliationStepDelay: cfg.ReconciliationStepDelay,
@@ -65,30 +64,12 @@ func New(cfg *config.ManagerConfig) (*Manager, error) {
 		EnableCheckPoint:        cfg.EnableCheckPoint,
 	}
 
-	var s mesos.Strategy
-	switch cfg.Strategy {
-	case "random":
-		s = strategy.NewRandomStrategy()
-	case "binpack", "binpacking":
-		s = strategy.NewBinPackStrategy()
-	case "spread":
-		s = strategy.NewSpreadStrategy()
-	default:
-		s = strategy.NewBinPackStrategy()
-	}
-
-	sched, err := mesos.NewScheduler(&scfg, db, s, clusterMaster)
+	sched, err := mesos.NewScheduler(&scfg, db, clusterMaster)
 	if err != nil {
 		return nil, err
 	}
 
-	filters := []mesos.Filter{
-		filter.NewConstraintsFilter(),
-		filter.NewResourceFilter(),
-	}
-	sched.InitFilters(filters)
-
-	// api server
+	// api server setup
 	srvcfg := api.Config{
 		Advertise: cfg.Advertise,
 		LogLevel:  cfg.LogLevel,

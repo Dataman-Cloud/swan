@@ -15,6 +15,9 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"github.com/golang/protobuf/proto"
 
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
+	"github.com/Dataman-Cloud/swan/mesos/filter"
+	"github.com/Dataman-Cloud/swan/mesos/strategy"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/mole"
 	"github.com/Dataman-Cloud/swan/store"
@@ -25,6 +28,8 @@ import (
 type SchedulerConfig struct {
 	ZKHost []string
 	ZKPath string
+
+	Strategy string
 
 	ReconciliationInterval  float64
 	ReconciliationStep      int64
@@ -51,14 +56,14 @@ type Scheduler struct {
 
 	handlers map[mesosproto.Event_Type]eventHandler
 
-	sync.RWMutex                   // protect followings two
-	agents       map[string]*Agent // holding offers (agents)
+	sync.RWMutex                          // protect followings two
+	agents       map[string]*magent.Agent // holding offers (agents)
 	pendingTasks map[string]*Task
 
 	reconcileTimer *time.Ticker
 
-	strategy Strategy
-	filters  []Filter
+	strategy strategy.Strategy
+	filters  []filter.Filter
 
 	eventmgr *eventManager
 
@@ -68,18 +73,27 @@ type Scheduler struct {
 }
 
 // NewScheduler...
-func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clusterMaster *mole.Master) (*Scheduler, error) {
+func NewScheduler(cfg *SchedulerConfig, db store.Store, clusterMaster *mole.Master) (*Scheduler, error) {
 	s := &Scheduler{
 		cfg:           cfg,
 		quit:          make(chan struct{}),
-		agents:        make(map[string]*Agent),
+		agents:        make(map[string]*magent.Agent),
 		pendingTasks:  make(map[string]*Task),
 		db:            db,
-		strategy:      strategy,
-		filters:       make([]Filter, 0),
+		strategy:      strategy.NewBinPackStrategy(), // default strategy
+		filters:       []filter.Filter{filter.NewConstraintsFilter(), filter.NewResourceFilter()},
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
 		sem:           make(chan struct{}, 1), // allow only one offer acquirement at one time
+	}
+
+	switch cfg.Strategy {
+	case "random":
+		s.strategy = strategy.NewRandomStrategy()
+	case "binpack", "binpacking":
+		s.strategy = strategy.NewBinPackStrategy()
+	case "spread":
+		s.strategy = strategy.NewSpreadStrategy()
 	}
 
 	if err := s.init(); err != nil {
@@ -126,10 +140,6 @@ func (s *Scheduler) detectMesosState() (string, string, error) {
 	}
 
 	return state.Leader, state.Cluster, nil
-}
-
-func (s *Scheduler) InitFilters(filters []Filter) {
-	s.filters = filters
 }
 
 // Cluster return current mesos cluster's name
@@ -304,20 +314,20 @@ func (s *Scheduler) addOffer(offer *mesosproto.Offer) {
 		return
 	}
 
-	f := newOffer(offer)
+	f := magent.NewOffer(offer)
 
 	log.Debugf("Received offer %s with resource cpus:[%.2f] mem:[%.2fG] disk:[%.2fG] ports:%v from agent %s",
 		f.GetId(), f.GetCpus(), f.GetMem()/1024, f.GetDisk()/1024, f.GetPortRange(), f.GetHostname())
 
-	a.addOffer(f)
+	a.AddOffer(f)
 	time.AfterFunc(time.Second*5, func() { // release the offer later
 		if s.removeOffer(f) {
-			s.declineOffers([]*Offer{f})
+			s.declineOffers([]*magent.Offer{f})
 		}
 	})
 }
 
-func (s *Scheduler) removeOffer(offer *Offer) bool {
+func (s *Scheduler) removeOffer(offer *magent.Offer) bool {
 	log.Debugln("Removing offer ", offer.GetId())
 
 	a := s.getAgent(offer.GetAgentId())
@@ -325,15 +335,15 @@ func (s *Scheduler) removeOffer(offer *Offer) bool {
 		return false
 	}
 
-	found := a.removeOffer(offer.GetId())
-	if a.empty() {
+	found := a.RemoveOffer(offer.GetId())
+	if a.Empty() {
 		s.removeAgent(offer.GetAgentId())
 	}
 
 	return found
 }
 
-func (s *Scheduler) declineOffers(offers []*Offer) error {
+func (s *Scheduler) declineOffers(offers []*magent.Offer) error {
 	call := &mesosproto.Call{
 		FrameworkId: s.FrameworkId(),
 		Type:        mesosproto.Call_DECLINE.Enum(),
@@ -363,14 +373,14 @@ func (s *Scheduler) declineOffers(offers []*Offer) error {
 	return nil
 }
 
-func (s *Scheduler) addAgent(agent *Agent) {
+func (s *Scheduler) addAgent(agent *magent.Agent) {
 	s.Lock()
 	defer s.Unlock()
 
-	s.agents[agent.id] = agent
+	s.agents[agent.ID()] = agent
 }
 
-func (s *Scheduler) getAgent(agentId string) *Agent {
+func (s *Scheduler) getAgent(agentId string) *magent.Agent {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -389,11 +399,11 @@ func (s *Scheduler) removeAgent(agentId string) {
 	delete(s.agents, agentId)
 }
 
-func (s *Scheduler) getAgents() []*Agent {
+func (s *Scheduler) getAgents() []*magent.Agent {
 	s.RLock()
 	defer s.RUnlock()
 
-	agents := make([]*Agent, 0)
+	agents := make([]*magent.Agent, 0)
 	for _, agent := range s.agents {
 		agents = append(agents, agent)
 	}
@@ -652,15 +662,15 @@ func (s *Scheduler) Dump() interface{} {
 }
 
 // wait proper offers according by grouped-task's constraints & resources requirments
-func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*Offer, error) {
+func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.Offer, error) {
 	log.Debugln("Finding suitable agent to run tasks")
 
 	var (
-		offers         = make([]*Offer, 0, 0)
+		offers         = make([]*magent.Offer, 0, 0)
 		maxWait        = time.Second * 5
 		waitTimeout    = time.After(maxWait)
 		err            error // global final error
-		filteredAgents []*Agent
+		filteredAgents []*magent.Agent
 	)
 
 	for {
@@ -673,12 +683,12 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*Offer, e
 			return nil, fmt.Errorf("without proper agents: %s", err.Error())
 
 		default:
-			filteredAgents, err = ApplyFilters(s.filters, cfg, replicas, s.getAgents())
+			filteredAgents, err = filter.ApplyFilters(s.filters, cfg, replicas, s.getAgents())
 			if err != nil {
 				goto RETRY
 			}
 
-			offers = filteredAgents[0].getOffers()
+			offers = filteredAgents[0].GetOffers()
 			log.Debugf("Found %d agents with %d offers avaliable", len(filteredAgents), len(offers))
 
 			// we got proper offers
@@ -785,7 +795,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 }
 
 // launch grouped runtime tasks with specified mesos offers
-func (s *Scheduler) launchGroupTasksWithOffers(offers []*Offer, tasks []*Task) error {
+func (s *Scheduler) launchGroupTasksWithOffers(offers []*magent.Offer, tasks []*Task) error {
 	ports := make([]uint64, 0)
 	for _, offer := range offers {
 		ports = append(ports, offer.GetPorts()...)

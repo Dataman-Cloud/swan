@@ -3,7 +3,7 @@ package filter
 import (
 	"errors"
 
-	"github.com/Dataman-Cloud/swan/mesos"
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
@@ -19,8 +19,8 @@ func NewResourceFilter() *resourceFilter {
 }
 
 // multiplicate with replicas to calculate total resource requirments
-func (f *resourceFilter) Filter(config *types.TaskConfig, replicas int, agents []*mesos.Agent) ([]*mesos.Agent, error) {
-	candidates := make([]*mesos.Agent, 0)
+func (f *resourceFilter) Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
+	candidates := make([]*magent.Agent, 0)
 
 	for _, agent := range agents {
 		var (
@@ -28,7 +28,7 @@ func (f *resourceFilter) Filter(config *types.TaskConfig, replicas int, agents [
 			cpusReq                = config.CPUs * float64(replicas) // total resources requirements ...
 			memReq                 = config.Mem * float64(replicas)
 			diskReq                = config.Disk * float64(replicas)
-			portsReq               = len(config.PortMappings) * replicas // FIXME LATER
+			portsReq               = len(config.PortMappings) * replicas // FIXME LATER, this is maybe not exact
 		)
 		if cpus >= cpusReq && mem >= memReq && disk >= diskReq && len(ports) >= portsReq {
 			candidates = append(candidates, agent)
