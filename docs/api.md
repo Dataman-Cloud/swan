@@ -79,6 +79,9 @@
 + [update policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/update.md)
 
 + [port mapping](https://github.com/Dataman-Cloud/swan/tree/master/docs/port-mapping.md)
+
++ [status](https://github.com/Dataman-Cloud/swan/tree/master/docs/status.md)
+
 #### List all apps
 ```
 GET /v1/apps 
