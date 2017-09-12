@@ -86,17 +86,6 @@ func (s *Agent) getOffers() []*Offer {
 	return offers
 }
 
-func (s *Agent) offer() *Offer {
-	s.RLock()
-	defer s.RUnlock()
-
-	for _, offer := range s.offers {
-		return offer
-	}
-
-	return nil
-}
-
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
 	for _, offer := range s.getOffers() {
 		cpus += offer.GetCpus()

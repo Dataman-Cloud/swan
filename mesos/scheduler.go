@@ -22,23 +22,6 @@ import (
 	"github.com/Dataman-Cloud/swan/utils"
 )
 
-const (
-	reconnectDuration = time.Duration(20 * time.Second)
-	resourceTimeout   = time.Duration(5 * time.Second)
-	filterTimeout     = time.Duration(5 * time.Second)
-	creationTimeout   = time.Duration(360000 * time.Second)
-	deleteTimeout     = time.Duration(360000 * time.Second)
-	reconcileInterval = time.Duration(24 * time.Hour)
-
-	statusConnecting = "connecting"
-	statusConnected  = "connected"
-)
-
-var (
-	errCreationTimeout = errors.New("task create timeout")
-	errDeletingTimeout = errors.New("task delete timeout")
-)
-
 type SchedulerConfig struct {
 	ZKHost []string
 	ZKPath string
@@ -59,7 +42,7 @@ type Scheduler struct {
 	cfg       *SchedulerConfig
 	framework *mesosproto.FrameworkInfo
 
-	quit chan struct{}
+	quit chan struct{} // TODO on followers
 
 	leader  string
 	cluster string // name of mesos cluster
@@ -71,8 +54,6 @@ type Scheduler struct {
 	sync.RWMutex                   // protect followings two
 	agents       map[string]*Agent // holding offers (agents)
 	pendingTasks map[string]*Task
-
-	offerTimeout time.Duration
 
 	reconcileTimer *time.Ticker
 
@@ -93,7 +74,6 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		quit:          make(chan struct{}),
 		agents:        make(map[string]*Agent),
 		pendingTasks:  make(map[string]*Task),
-		offerTimeout:  time.Duration(10 * time.Second),
 		db:            db,
 		strategy:      strategy,
 		filters:       make([]Filter, 0),
