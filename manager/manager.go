@@ -109,12 +109,34 @@ func (m *Manager) Start() error {
 	return m.start()
 }
 
-func (m *Manager) start() error {
-	defer func() {
-		log.Println("close connection with zookeeper")
-		m.ZKClient.Close()
-	}()
+func (m *Manager) stop() {
+	log.Println("close connection with zookeeper")
+	m.ZKClient.Close()
+	close(m.leadershipChangeCh)
+	close(m.errCh)
+}
 
+func (m *Manager) start() error {
+	// start leader election
+	m.startElection()
+
+	// start tcp mux
+	m.startTCPMux()
+
+	// start api server
+	m.startAPIServer()
+
+	// start cluster master
+	m.startClusterMaster()
+
+	// process leader change event
+	m.processLeaderEvent()
+
+	// wait signal or error occured
+	return m.wait()
+}
+
+func (m *Manager) startElection() {
 	go func() {
 		p, err := m.electLeader()
 		if err != nil {
@@ -129,65 +151,74 @@ func (m *Manager) start() error {
 			return
 		}
 	}()
+}
 
+func (m *Manager) startTCPMux() {
 	go func() {
 		if err := m.tcpMux.ListenAndServe(); err != nil {
 			log.Errorf("start tcpMux error: %v", err)
 			m.errCh <- err
 		}
 	}()
+}
 
+func (m *Manager) startAPIServer() {
 	go func() {
 		if err := m.apiserver.Run(); err != nil {
 			log.Errorf("start apiserver error: %v", err)
 			m.errCh <- err
 		}
 	}()
+}
 
+func (m *Manager) startClusterMaster() {
 	go func() {
 		if err := m.clusterMaster.Serve(); err != nil {
 			log.Errorf("start mole master error: %v", err)
 			m.errCh <- err
 		}
 	}()
+}
 
-	go func() {
-		for {
-			select {
-			case c := <-m.leadershipChangeCh:
-				switch c {
-				case LeadershipLeader:
-					if err := m.sched.Subscribe(); err != nil {
-						log.Errorf("subscribe to mesos leader error: %v", err)
-						m.errCh <- err
-					}
+// wait signal or error occured.
+func (m *Manager) wait() error {
+	c := make(chan os.Signal)
+	defer close(c)
 
-					m.apiserver.UpdateLeader(m.leader)
+	signal.Notify(c, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGKILL)
 
-				case LeadershipFollower:
-					log.Warnln("became follower, closing all agents ...")
-					m.clusterMaster.CloseAllAgents()
-					m.apiserver.UpdateLeader(m.leader)
-				}
-			}
-		}
-	}()
-
-	// wait signal
-	sigChan := make(chan os.Signal)
-	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM, syscall.SIGUSR1)
 	for {
 		select {
-		case sig := <-sigChan:
-			switch sig {
-			case syscall.SIGUSR1:
-				continue
-			}
-
-			return nil
+		case sig := <-c:
+			log.Printf("Got %s signal. aborting...", sig)
+			m.stop()
 		case err := <-m.errCh:
+			log.Errorf("Error: %v", err)
 			return err
 		}
 	}
 
+	return nil
+}
+
+// process event for leader change
+func (m *Manager) processLeaderEvent() {
+	go func() {
+		for c := range m.leadershipChangeCh {
+			switch c {
+			case LeadershipLeader:
+				if err := m.sched.Subscribe(); err != nil {
+					log.Errorf("subscribe to mesos leader error: %v", err)
+					m.errCh <- err
+				}
+
+				m.apiserver.UpdateLeader(m.leader)
+
+			case LeadershipFollower:
+				log.Warnln("became follower, closing all agents ...")
+				m.clusterMaster.CloseAllAgents()
+				m.apiserver.UpdateLeader(m.leader)
+			}
+		}
+	}()
 }
