@@ -680,18 +680,31 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.O
 		select {
 		case <-waitTimeout:
 			s.unlockOffer() // make other launchers avaliable to mesos offers
-			return nil, fmt.Errorf("without proper agents: %s", err.Error())
+			if err != nil {
+				return nil, fmt.Errorf("without proper agents: %s", err.Error())
+			} else {
+				return nil, fmt.Errorf("wait offer timeout in %s", maxWait)
+			}
 
 		default:
-			filteredAgents, err = filter.ApplyFilters(s.filters, cfg, replicas, s.getAgents())
+			// ensure we have at least one agent avaliable
+			agents := s.getAgents()
+			if len(agents) == 0 {
+				log.Warnf("without proper offers, no agents avaliable, retrying ...")
+				goto RETRY
+			}
+
+			// filter agents by resources & constraints
+			filteredAgents, err = filter.ApplyFilters(s.filters, cfg, replicas, agents)
 			if err != nil {
+				log.Warnf("without proper offers: [%v], retrying ...", err)
 				goto RETRY
 			}
 
 			offers = filteredAgents[0].GetOffers()
 			log.Debugf("Found %d agents with %d offers avaliable", len(filteredAgents), len(offers))
 
-			// we got proper offers
+			// now we got proper offers
 			if len(offers) > 0 {
 				for _, offer := range offers {
 					s.removeOffer(offer)
@@ -702,7 +715,6 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.O
 
 		RETRY:
 			// no proper offers, delay for a while and try again ...
-			log.Debugln("without proper offers, retrying ...")
 			s.unlockOffer()
 			time.Sleep(time.Millisecond * 500)
 		}
