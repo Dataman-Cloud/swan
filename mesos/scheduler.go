@@ -35,11 +35,8 @@ const (
 )
 
 var (
-	errResourceNotEnough = errors.New("resource not enough")
-	errCreationTimeout   = errors.New("task create timeout")
-	errDeletingTimeout   = errors.New("task delete timeout")
-	errNoSatisfiedAgent  = errors.New("no satisfied agent")
-	errLaunchFailed      = errors.New("launch task failed")
+	errCreationTimeout = errors.New("task create timeout")
+	errDeletingTimeout = errors.New("task delete timeout")
 )
 
 type SchedulerConfig struct {
@@ -86,7 +83,7 @@ type Scheduler struct {
 
 	clusterMaster *mole.Master
 
-	sem chan struct{}
+	sem chan struct{} // to order the mesos offer acquirement by multi app launching
 }
 
 // NewScheduler...
@@ -102,7 +99,7 @@ func NewScheduler(cfg *SchedulerConfig, db store.Store, strategy Strategy, clust
 		filters:       make([]Filter, 0),
 		eventmgr:      NewEventManager(),
 		clusterMaster: clusterMaster,
-		sem:           make(chan struct{}, 1),
+		sem:           make(chan struct{}, 1), // allow only one offer acquirement at one time
 	}
 
 	if err := s.init(); err != nil {
@@ -533,25 +530,6 @@ func (s *Scheduler) KillTask(taskId, agentId string, gracePeriod int64) error {
 	return nil
 }
 
-func (s *Scheduler) applyFilters(config *types.TaskConfig) ([]*Agent, error) {
-	filtered := make([]*Agent, 0)
-
-	timeout := time.After(filterTimeout)
-	for {
-		select {
-		case <-timeout:
-			return nil, errNoSatisfiedAgent
-		default:
-			filtered = ApplyFilters(s.filters, config, s.getAgents())
-			if len(filtered) > 0 {
-				return filtered, nil
-			}
-			log.Debugln("No satisfied node to run tasks. waiting...")
-			time.Sleep(1 * time.Second)
-		}
-	}
-}
-
 func (s *Scheduler) reconcileTasks(tasks map[*mesosproto.TaskID]*mesosproto.AgentID) error {
 	log.Printf("reconcile %d tasks", len(tasks))
 	call := &mesosproto.Call{
@@ -693,18 +671,71 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
-func (s *Scheduler) LaunchTasks(tasks []*Task) error {
-	var (
-		wg   sync.WaitGroup
-		p    sync.RWMutex
-		errs = []error{}
+// wait proper offers according by grouped-task's constraints & resources requirments
+func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*Offer, error) {
+	log.Debugln("Finding suitable agent to run tasks")
 
+	var (
+		offers         = make([]*Offer, 0, 0)
+		maxWait        = time.Second * 5
+		waitTimeout    = time.After(maxWait)
+		err            error // global final error
+		filteredAgents []*Agent
+	)
+
+	for {
+		// make the offer exclusively
+		s.lockOffer()
+
+		select {
+		case <-waitTimeout:
+			s.unlockOffer() // make other launchers avaliable to mesos offers
+			return nil, fmt.Errorf("without proper agents: %s", err.Error())
+
+		default:
+			filteredAgents, err = ApplyFilters(s.filters, cfg, replicas, s.getAgents())
+			if err != nil {
+				goto RETRY
+			}
+
+			offers = filteredAgents[0].getOffers()
+			log.Debugf("Found %d agents with %d offers avaliable", len(filteredAgents), len(offers))
+
+			// we got proper offers
+			if len(offers) > 0 {
+				for _, offer := range offers {
+					s.removeOffer(offer)
+				}
+				s.unlockOffer()
+				return offers, nil
+			}
+
+		RETRY:
+			// no proper offers, delay for a while and try again ...
+			log.Debugln("without proper offers, retrying ...")
+			s.unlockOffer()
+			time.Sleep(time.Millisecond * 500)
+		}
+	}
+}
+
+func (s *Scheduler) LaunchTasks(tasks []*Task) error {
+
+	var (
+		wg     sync.WaitGroup
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
-		filter = tasks[0].cfg
+		cfg    = tasks[0].cfg
 	)
 
+	var errs struct {
+		m []error
+		sync.Mutex
+	}
+	errs.m = make([]error, 0, 0)
+
+	// cut all tasks into sub pieces
 	for i := 0; i < count; i = i + step {
 		m := i + step
 		if m > count {
@@ -713,52 +744,27 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		groups = append(groups, tasks[i:m])
 	}
 
+	// launch each sub-pieces of tasks
 	for _, group := range groups {
-		offers := []*Offer{}
-		for {
-			s.lock()
-			log.Debugln("Finding suitable agent to run tasks")
-			filtered, err := s.applyFilters(filter)
-			if err != nil {
-				s.unlock()
-				return err
-			}
-			log.Debugln("Find", len(filtered), "agent(s) satisfied the constraints")
 
-			log.Debugln("Weighting resource to find the richest agent")
-			candidates := s.strategy.RankAndSort(filtered)
-			if len(candidates) <= 0 {
-				s.unlock()
-				log.Debugln("No enough agent to run tasks, waiting...")
-				time.Sleep(10 * time.Millisecond)
-				continue
-			}
-
-			agent := candidates[0]
-			offers = agent.getOffers()
-
-			if len(offers) <= 0 { //?
-				s.unlock()
-				log.Debugln("No enough resource to run tasks, waiting...")
-				time.Sleep(10 * time.Millisecond)
-				continue
-			}
-
-			// got proper offers
-			for _, task := range group {
-				s.addPendingTask(task) // TODO prevent leaks
-			}
-
-			for _, offer := range offers {
-				s.removeOffer(offer)
-			}
-
-			s.unlock()
-			break
+		// try obtain proper offers
+		offers, err := s.waitOffers(cfg, len(group))
+		if err != nil {
+			return err
 		}
 
-		if err := s.launch(offers, group); err != nil {
-			// TODO:handler error
+		// add penging tasks before actually launching the mesos tasks
+		for _, task := range group {
+			s.addPendingTask(task)
+		}
+
+		// launch group tasks with specified offers
+		if err := s.launchGroupTasksWithOffers(offers, group); err != nil {
+			// NOTE: required to prevent memory leaks if tasks not emited to mesos master.
+			for _, task := range group {
+				s.removePendingTask(task.ID())
+			}
+			return err
 		}
 
 		// wait grouped-tasks status in background
@@ -767,20 +773,24 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 			go func(task *Task) {
 				defer wg.Done()
 				log.Debugf("Waiting for task %s to be running", task.ID())
+
 				for status := range task.GetStatus() {
 					log.Debugf("Receiving status %s for task %s", status.GetState().String(), task.ID())
-					if IsTaskDone(status) {
-						if err := DetectTaskError(status); err != nil {
-							log.Errorf("Launch task %s failed: %v", task.ID(), err)
-							p.Lock()
-							errs = append(errs, err)
-							p.Unlock()
-						} else {
-							log.Printf("Launch task %s succeed", task.ID())
-						}
-						s.removePendingTask(task.ID())
-						return
+
+					if !IsTaskDone(status) {
+						continue
 					}
+
+					if err := DetectTaskError(status); err != nil {
+						log.Errorf("Launch task %s failed: %v", task.ID(), err)
+						errs.Lock()
+						errs.m = append(errs.m, err)
+						errs.Unlock()
+					} else {
+						log.Printf("Launch task %s succeed", task.ID())
+					}
+					s.removePendingTask(task.ID())
+					return
 				}
 			}(task)
 		}
@@ -788,14 +798,14 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 	wg.Wait()
 
-	if len(errs) <= 0 {
+	if len(errs.m) == 0 {
 		return nil
 	}
-
-	return errLaunchFailed
+	return fmt.Errorf("%d tasks launch failed", len(errs.m))
 }
 
-func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
+// launch grouped runtime tasks with specified mesos offers
+func (s *Scheduler) launchGroupTasksWithOffers(offers []*Offer, tasks []*Task) error {
 	ports := make([]uint64, 0)
 	for _, offer := range offers {
 		ports = append(ports, offer.GetPorts()...)
@@ -893,11 +903,11 @@ func (s *Scheduler) launch(offers []*Offer, tasks []*Task) error {
 	return nil
 }
 
-func (s *Scheduler) lock() {
+func (s *Scheduler) lockOffer() {
 	s.sem <- struct{}{}
 }
 
-func (s *Scheduler) unlock() {
+func (s *Scheduler) unlockOffer() {
 	<-s.sem
 }
 
