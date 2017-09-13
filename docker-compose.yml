@@ -10,7 +10,7 @@ services:
     ports:
       - 2181:2181
     volumes:
-      - /tmp/swan-ramdisk/zookeeper:/tmp/zookeeper:rw
+      - /tmp/swan-tmp-data/zookeeper:/tmp/zookeeper:rw
 
   mesos-master:
     image: "mesosphere/mesos-master:1.2.1"
@@ -25,7 +25,7 @@ services:
       - MESOS_HOSTNAME=localhost
       - MESOS_WORK_DIR=/data/mesos
     volumes:
-      - /tmp/swan-ramdisk/mesos-master-data:/data/mesos:rw
+      - /tmp/swan-tmp-data/mesos-master-data:/data/mesos:rw
     depends_on:
       - zookeeper
     links:
@@ -56,7 +56,7 @@ services:
       - /var/lib/docker:/data/docker:rw
       - /sys/fs/cgroup:/sys/fs/cgroup:rw
       - /var/run/docker.sock:/var/run/docker.sock:rw
-      - /tmp/swan-ramdisk/mesos-slave-data:/data/mesos:rw
+      - /tmp/swan-tmp-data/mesos-slave-data:/data/mesos:rw
     depends_on:
       - zookeeper
       - mesos-master
