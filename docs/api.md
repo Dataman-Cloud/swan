@@ -79,6 +79,9 @@
 + [update policy](https://github.com/Dataman-Cloud/swan/tree/master/docs/update.md)
 
 + [port mapping](https://github.com/Dataman-Cloud/swan/tree/master/docs/port-mapping.md)
+
++ [status](https://github.com/Dataman-Cloud/swan/tree/master/docs/status.md)
+
 #### List all apps
 ```
 GET /v1/apps 
@@ -90,94 +93,33 @@ GET /v1/apps
 Example response:
 ```
 [
-  {
-    "id": "nginx0r1.default.xcm.dataman",
-    "name": "nginx0r1",
-    "alias": "",
-    "runAs": "xcm",
-    "cluster": "dataman",
-    "operationStatus": "noop",
-    "tasks": [
-      {
-        "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-        "name": "0.nginx0r1.default.xcm.dataman",
-        "ip": "192.168.1.102",
-        "port": 31008,
-        "healthy": "unset",
-        "weight": 100,
-        "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-        "version": "1498029948754163146",
-        "status": "TASK_RUNNING",
-        "errmsg": ""
-        "created": "2017-06-21T15:25:48.78944685+08:00",
-        "updated": "2017-06-21T15:25:48.78944688+08:00"
-      }
-    ],
-    "currentVersion": [
-      "1498029948754163146"
-    ],
-    "versions": [
-      {
-        "id": "1498029948754163146",
-        "name": "nginx0r1",
-        "cmd": "",
-        "cpus": 0.01,
-        "mem": 32,
-        "disk": 0,
-        "instances": 1,
-        "runAs": "xcm",
-        "container": {
-          "type": "DOCKER",
-          "docker": {
-            "image": "nginx",
-            "network": "bridge",
-            "parameters": [
-              {
-                "key": "label",
-                "value": "APP_ID=wordpress"
-              }
-            ],
-            "portMappings": [
-              {
-                "containerPort": 80,
-                "hostPort": 80,
-                "name": "web",
-                "protocol": "tcp"
-              }
-            ],
-            "privileged": true
-          },
-          "volumes": [
-            {
-              "containerPath": "/data",
-              "hostPath": "/home",
-              "mode": "RW"
-            }
-          ]
+    {
+        "cluster": "dataman2",
+        "created": "2017-09-06T10:39:17.784738187+08:00",
+        "currentVersion": [
+            "1504665557784509256"
+        ],
+        "errmsg": "",
+        "health": {
+            "healthy": 0,
+            "total": 10,
+            "unhealthy": 0,
+            "unset": 10
         },
-        "labels": null,
-        "healthCheck": null,
-        "env": {},
-        "killPolicy": null,
-        "updatPolicy": null,
-        "constraints": [],
-        "uris": [],
-        "ips": null,
-        "proxy": {
-          "enabled": false,
-          "alias": ""
-        }
-      }
-    ],
-    "status": "available",
-    "health": {
-      "healthy": 0,
-      "unhealthy": 0,
-      "unset": 1
-    },
-    "created": "2017-06-21T15:25:48.754164732+08:00",
-    "updated": "2017-06-21T15:25:48.754164753+08:00"
-  }
+        "id": "nginx15.default.xcm.dataman2",
+        "name": "nginx15",
+        "operationStatus": "noop",
+        "progress": -1,
+        "progress_details": null,
+        "runAs": "xcm",
+        "status": "available",
+        "task_count": 10,
+        "tasks_status": {
+            "TASK_RUNNING": 10
+        },
+        "updated": "2017-09-06T10:39:24.049790305+08:00",
+        "version_count": 1
+    }
 ]
 ```
 Query parameters:
@@ -255,11 +197,44 @@ Example request:
       "consecutiveFailures": 5
     },
   "proxy": {
-            "enabled": false,
-            "alias": ""
+      "enabled": false,
+      "alias": "www.example.com",
+      "listen": 9999,
+      "sticky": false
   }
 }
 ```
+Json Parameters:
+
++ **name**(required): the name of the appliation.
++ **runAs**(required): the user or group the app belong to.
++ **cluster**(optional): the virtaul cluster name app run in, if not set, the real physic mesos cluster name will be used. 
++ **cpus**(required): the cpus used for each container.
++ **mem**(required): the memory used for each container.
++ **disk**(optional): the disk space allcated to each container.
++ **instances**(required): the container count for this application.
++ **cmd**(optional): the command to be launched.
++ **args**(optional): the arguments for the command.
++ **container**(required): the container related configuration.
++ **image**(required): the image to used for run container.
++ **network**(required): the network mode used for container. possible values are:
+```
+bridge
+host
+custom network name, eg. swan
+```
++ **forcePullImage**(optional): whether to pull image force or not event it exists. default is false.
++ **privileged**(optional): whether to give extended privileges to container. default is false.
++ **parameters**(optional): docker parameters inject in container at runtime.
++ **portMappings**(required): the mapping between host port and container port. see https://github.com/Dataman-Cloud/swan/tree/master/docs/port-mapping.md
++ **type**(required): the containerizer used for container. possible values are `DOCKER` and `MESOS`, currently support `DOCKER`. 
++ **volume**(optional): the volume mounted to container. values for `mode` are `RW` or `RO`.
++ **env**(optional): the enviroment inject in container at runtime.
++ **uris**(optional): the resource willed be downloaded in container sandbox befor run.
++ **labels**(optinal): the container labels
++ **healthCheck**(optional): the health check configuration for container. see https://github.com/Dataman-Cloud/swan/tree/master/docs/health-check.md.
++ **proxy**(optional): the proxy configuration for app. see https://github.com/Dataman-Cloud/swan/tree/master/docs/proxy.md
+
 Example response:
 ```
   HTTP/1.1 201 Created
@@ -274,110 +249,89 @@ Example response:
 GET /v1/apps/{app_id}
 ```
 Example request:
-``
+```
 GET /v1/apps/nginx0r2.default.xcm.dataman
 ```
 Example response:
-```json
+```
 HTTP/1.1 200 OK
 Content-Type: application/json
 
 {
-    "id":"nginx0r2.default.xcm.dataman",
-    "name":"nginx0r2",
-    "alias":"",
-    "runAs":"xcm",
-    "cluster":"dataman",
-    "operationStatus":"noop",
-    "tasks":[
-        {
-            "id":"731ea4512976.0.nginx0r2.default.xcm.dataman",
-            "name":"0.nginx0r2.default.xcm.dataman",
-            "ip":"192.168.1.102",
-            "port":31010,
-            "healthy":"unset",
-            "weight":100,
-            "agentId":"7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-            "version":"1498030396211326306",
-            "status":"TASK_RUNNING",
-            "errmsg":"",
-            "created":"2017-06-21T15:33:16.238348516+08:00",
-            "updated":"2017-06-21T15:33:16.238348626+08:00"
-        }
+    "cluster": "dataman2",
+    "created": "2017-09-06T10:39:17.784738187+08:00",
+    "currentVersion": [
+        "1504665557784509256"
     ],
-    "currentVersion":[
-        "1498030396211326306"
-    ],
-    "versions":[
-        {
-            "id":"1498030396211326306",
-            "name":"nginx0r2",
-            "cmd":"",
-            "cpus":0.01,
-            "mem":32,
-            "disk":0,
-            "instances":1,
-            "runAs":"xcm",
-            "container":{
-                "type":"DOCKER",
-                "docker":{
-                    "image":"nginx",
-                    "network":"bridge",
-                    "parameters":[
-                        {
-                            "key":"label",
-                            "value":"APP_ID=wordpress"
-                        }
-                    ],
-                    "portMappings":[
-                        {
-                            "containerPort":80,
-                            "hostPort":80,
-                            "name":"web",
-                            "protocol":"tcp"
-                        }
-                    ],
-                    "privileged":true
-                },
-                "volumes":[
-                    {
-                        "containerPath":"/data",
-                        "hostPath":"/home",
-                        "mode":"RW"
-                    }
-                ]
-            },
-            "labels":null,
-            "healthCheck":null,
-            "env":{
-
-            },
-            "killPolicy":null,
-            "updatPolicy":null,
-            "constraints":[
-
-            ],
-            "uris":[
-
-            ],
-            "ips":null,
-            "proxy":{
-                "enabled":false,
-                "alias":""
-				"listen": 99,
-				"sticky": false
-            }
-        }
-    ],
-    "status":"available",
-    "health":{
-        "healthy":0,
-        "unhealthy":0,
-        "unset":1
+    "errmsg": "",
+    "health": {
+        "healthy": 0,
+        "total": 10,
+        "unhealthy": 0,
+        "unset": 10
     },
-    "created":"2017-06-21T15:33:16.211327705+08:00",
-    "updated":"2017-06-21T15:33:16.211327722+08:00"
+    "id": "nginx15.default.xcm.dataman2",
+    "name": "nginx15",
+    "operationStatus": "noop",
+    "progress": -1,
+    "progress_details": null,
+    "runAs": "xcm",
+    "status": "available",
+    "task_count": 10,
+    "tasks_status": {
+        "TASK_RUNNING": 10
+    },
+    "updated": "2017-09-06T10:39:24.049790305+08:00",
+    "version_count": 1
 }
+
+```
+Json Parameters:
+
++ **currentVersion**: the current version for application. If app is in updating, this field will be has mutiple value. 
++ **errmsg**: the error message while application deployment.
++ **health**: the health status summary of all the tasks for the application
++ **operationStatus**: current operation for app. possible values are:
+```
+noop
+creating
+scaling_up
+scaling_down
+updating
+canary_updating
+canary_unfinished
+weight_updating
+starting
+stopping
+deleting
+rollbacking
+```
++ **progress**: the tasks count has been updated. this field only meaningful in application updating.
++ **progress_details**: indicated the task has been updated or not. this field only meaningful in application updating. 
++ **task_status**: the status summary of all the tasks for the application. possiable values are:
+```
+pending
+TASK_STAGING
+TASK_STARTING
+TASK_RUNNING
+TASK_KILLING
+TASK_FINISHED
+TASK_FAILED
+TASK_KILLED
+TASK_ERROR
+TASK_LOST
+TASK_DROPPED
+TASK_UNREACHABLE
+TASK_GONE
+TASK_GONE_BY_OPERATOR
+TASK_UNKNOWN
+```
+see https://github.com/Dataman-Cloud/swan/tree/master/docs/status.md for detail. 
+
++ **status**: application status, possible values are:
+```
+available
+unavailable
 ```
 
 #### Delete a app
@@ -408,7 +362,7 @@ Content-Type: application/json
 Json parameters:
 ```
 instances     : the goal to scale up/down
-ips(optional) : ip list for static ip(brige or host or scale down ignore)
+ips(optional) : ip list for static ip(brige or host or scale down ignore). if this field is not set or empty, the ip address will be auto-allcated from ipam.
 ```
 Example response:
 ```
@@ -474,8 +428,7 @@ Example request:
   "labels": {
     "USER_ID": "1"
   },
-  "healthCheck":
-    {
+  "healthCheck": {
       "protocol": "http",
       "path": "/",
       "delaySeconds": 2,
@@ -484,12 +437,12 @@ Example request:
       "portName": "web",
       "timeoutSeconds": 1,
       "consecutiveFailures": 5
-    },
+  },
   "proxy": {
-            "enabled": false,
-            "alias": ""
-			"listen": 99,
-			"sticky": false
+       "enabled": false,
+       "alias": ""
+       "listen": 99,
+       "sticky": false
   },
   "update": {
       "delay": 5,
@@ -497,6 +450,15 @@ Example request:
   }
 }
 ```
+Json Parameters:
++ **delay**: the delay seconds between two updates.
++ **onfailure**: the action while updating failure, possible values are:
+```
+stop
+continue
+```
+more details see https://github.com/Dataman-Cloud/swan/tree/master/docs/update.md
+
 Example response:
 ```
   HTTP/1.1 202 Accepted 
@@ -532,23 +494,30 @@ Example response:
 HTTP/1.1 200 OK
 Content-Type: application/json
 [
-  {
-    "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-    "name": "0.nginx0r1.default.xcm.dataman",
-    "ip": "192.168.1.102",
-    "port": 31008,
-    "healthy": "unset",
-    "weight": 100,
-    "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-    "version": "1498029948754163146",
-    "status": "TASK_RUNNING",
-    "errmsg": "",
-    "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
-    "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
-    "created": "2017-06-21T15:25:48.78944685+08:00",
-    "updated": "2017-06-21T15:25:48.78944688+08:00"
-  }
+    {
+        "agentId": "07239dfa-2982-4046-8f1c-f8f3c14d4649-S4",
+        "container_id": "69a08b075328ce380b4f9b3668294d0af0a52ca02606ae1026479425e7668257",
+        "container_name": "/mesos-07239dfa-2982-4046-8f1c-f8f3c14d4649-S4.5b9bf6ea-4f7b-4aef-b08b-fd980ebf7e06",
+        "created": "2017-09-06T10:39:17.872672561+08:00",
+        "errmsg": "",
+        "healthy": "unset",
+        "histories": null,
+        "id": "31defd3cf9f2.4.nginx15.default.xcm.dataman2",
+        "ip": "172.16.1.18",
+        "maxRetries": 0,
+        "name": "4.nginx15.default.xcm.dataman2",
+        "opstatus": "",
+        "ports": [
+            31004
+        ],
+        "retries": 0,
+        "status": "TASK_RUNNING",
+        "updated": "2017-09-06T10:39:17.872672595+08:00",
+        "version": "1504665557784509256",
+        "weight": 100
+    }
 ]
+
 ```
 
 #### Canary update a app
@@ -703,58 +672,79 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 [
-  {
-    "id": "1498029948754163146",
-    "name": "nginx0r1",
-    "cmd": "",
-    "cpus": 0.01,
-    "mem": 32,
-    "disk": 0,
-    "instances": 1,
-    "runAs": "xcm",
-    "container": {
-      "type": "DOCKER",
-      "docker": {
-        "image": "nginx",
-        "network": "bridge",
-        "parameters": [
-          {
-            "key": "label",
-            "value": "APP_ID=wordpress"
-          }
+    {
+        "cluster": "dataman2",
+        "cmd": "",
+        "constraints": [
+            {
+                "attribute": "disk",
+                "operator": "==",
+                "value": "ssd"
+            }
         ],
-        "portMappings": [
-          {
-            "containerPort": 80,
-            "hostPort": 80,
-            "name": "web",
-            "protocol": "tcp"
-          }
-        ],
-        "privileged": true
-      },
-      "volumes": [
-        {
-          "containerPath": "/data",
-          "hostPath": "/home",
-          "mode": "RW"
-        }
-      ]
-    },
-    "labels": null,
-    "healthCheck": null,
-    "env": {},
-    "killPolicy": null,
-    "updatPolicy": null,
-    "constraints": [],
-    "uris": [],
-    "ips": null,
-    "proxy": {
-      "enabled": false,
-      "alias": ""
+        "container": {
+            "docker": {
+                "image": "nginx",
+                "network": "bridge",
+                "parameters": [
+                    {
+                        "key": "ipc",
+                        "value": "host"
+                    },
+                    {
+                        "key": "workdir",
+                        "value": "/data"
+                    }
+                ],
+                "portMappings": [
+                    {
+                        "containerPort": 80,
+                        "hostPort": 80,
+                        "name": "web",
+                        "protocol": "tcp"
+                    }
+                ],
+                "privileged": true
+            },
+            "type": "DOCKER",
+            "volumes": [
+                {
+                    "containerPath": "/data",
+                    "hostPath": "/home",
+                    "mode": "RW"
+                }
+            ]
+        },
+        "cpus": 0.01,
+        "disk": 0,
+        "env": {
+            "WORDPRESS_DB_HOST": "dbhost",
+            "WORDPRESS_DB_PASSWORD": "password"
+        },
+        "gpus": 0,
+        "healthCheck": null,
+        "id": "1504665557784509256",
+        "instances": 10,
+        "ips": null,
+        "kill": null,
+        "labels": null,
+        "mem": 10,
+        "name": "nginx15",
+        "proxy": {
+            "alias": "",
+            "enabled": false,
+            "listen": 0,
+            "sticky": false
+        },
+        "restart": {
+            "retries": 0
+        },
+        "runAs": "xcm",
+        "update": null,
+        "uris": []
     }
-  }
 ]
 ```
 
@@ -771,22 +761,30 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 {
-  "id": "e6404f0324d2.0.nginx0r1.default.xcm.dataman",
-  "name": "0.nginx0r1.default.xcm.dataman",
-  "ip": "192.168.1.102",
-  "port": 31008,
-  "healthy": "unset",
-  "weight": 100,
-  "agentId": "7a40294e-b16b-4ac3-bbe4-1865df4a4705-S6",
-  "version": "1498029948754163146",
-  "status": "TASK_RUNNING",
-  "errmsg": "",
-  "container_id": "5dc2ae2bb5901c0f7aa5a24ffdba34166fb3f7730d88a93021c019c43c194b4d",
-  "container_name": "/mesos-77cd3fe3-ead4-42e4-aff2-6b77f3697b1c-S0.088f44db-11d1-407a-9649-2811bf1b0d69",
-  "created": "2017-06-21T15:25:48.78944685+08:00",
-  "updated": "2017-06-21T15:25:48.78944688+08:00"
+    "agentId": "07239dfa-2982-4046-8f1c-f8f3c14d4649-S4",
+    "container_id": "7d3c4d4e62b0696f5ee0ed7ccabdc17f83716c6eaedd9e5cc51a3eca3e6a8b05",
+    "container_name": "/mesos-07239dfa-2982-4046-8f1c-f8f3c14d4649-S4.7978406a-bb81-4a0c-a182-31abc4f483f9",
+    "created": "2017-09-06T10:39:17.848361457+08:00",
+    "errmsg": "",
+    "healthy": "unset",
+    "histories": null,
+    "id": "9a3adf023c4c.2.nginx15.default.xcm.dataman2",
+    "ip": "172.16.1.18",
+    "maxRetries": 0,
+    "name": "2.nginx15.default.xcm.dataman2",
+    "opstatus": "",
+    "ports": [
+        31002
+    ],
+    "retries": 0,
+    "status": "TASK_RUNNING",
+    "updated": "2017-09-06T10:39:17.848361519+08:00",
+    "version": "1504665557784509256",
+    "weight": 100
 }
+
 ```
 
 #### Inspect a version 
@@ -801,57 +799,79 @@ Example response:
 ```json
 HTTP/1.1 200 OK
 Content-Type: application/json
+
 {
-  "id": "1498029948754163146",
-  "name": "nginx0r1",
-  "cmd": "",
-  "cpus": 0.01,
-  "mem": 32,
-  "disk": 0,
-  "instances": 1,
-  "runAs": "xcm",
-  "container": {
-    "type": "DOCKER",
-    "docker": {
-      "image": "nginx",
-      "network": "bridge",
-      "parameters": [
+    "cluster": "dataman2",
+    "cmd": "",
+    "constraints": [
         {
-          "key": "label",
-          "value": "APP_ID=wordpress"
+            "attribute": "disk",
+            "operator": "==",
+            "value": "ssd"
         }
-      ],
-      "portMappings": [
-        {
-          "containerPort": 80,
-          "hostPort": 80,
-          "name": "web",
-          "protocol": "tcp"
-        }
-      ],
-      "privileged": true
+    ],
+    "container": {
+        "docker": {
+            "image": "nginx",
+            "network": "bridge",
+            "parameters": [
+                {
+                    "key": "ipc",
+                    "value": "host"
+                },
+                {
+                    "key": "workdir",
+                    "value": "/data"
+                }
+            ],
+            "portMappings": [
+                {
+                    "containerPort": 80,
+                    "hostPort": 80,
+                    "name": "web",
+                    "protocol": "tcp"
+                }
+            ],
+            "privileged": true
+        },
+        "type": "DOCKER",
+        "volumes": [
+            {
+                "containerPath": "/data",
+                "hostPath": "/home",
+                "mode": "RW"
+            }
+        ]
     },
-    "volumes": [
-      {
-        "containerPath": "/data",
-        "hostPath": "/home",
-        "mode": "RW"
-      }
-    ]
-  },
-  "labels": null,
-  "healthCheck": null,
-  "env": {},
-  "killPolicy": null,
-  "updatPolicy": null,
-  "constraints": [],
-  "uris": [],
-  "ips": null,
-  "proxy": {
-    "enabled": false,
-    "alias": ""
-  }
+    "cpus": 0.01,
+    "disk": 0,
+    "env": {
+        "WORDPRESS_DB_HOST": "dbhost",
+        "WORDPRESS_DB_PASSWORD": "password"
+    },
+    "gpus": 0,
+    "healthCheck": null,
+    "id": "1504665557784509256",
+    "instances": 10,
+    "ips": null,
+    "kill": null,
+    "labels": null,
+    "mem": 10,
+    "name": "nginx15",
+    "proxy": {
+        "alias": "",
+        "enabled": false,
+        "listen": 0,
+        "sticky": false
+    },
+    "restart": {
+        "retries": 0
+    },
+    "runAs": "xcm",
+    "update": null,
+    "uris": []
 }
+
 ```
 #### Create a version 
 ```
@@ -947,12 +967,12 @@ Example request:
  Content-Type: application/json
  
  {
-     "Value": 0.2
+	"value": 0.1
  }
 ```
 Json parameters:
 ```
-Value: Percentage of traffic. Indicated how much traffics switched to new version.
+Value(float) : traffic for new version relative to all versions. 
 ```
 Example response:
 ```
