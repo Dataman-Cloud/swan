@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
 
@@ -49,7 +50,7 @@ func (s *Scheduler) offersHandler(event *mesosproto.Event) {
 
 		a := s.getAgent(agentId)
 		if a == nil {
-			a = newAgent(agentId, hostname, attrs)
+			a = magent.NewAgent(agentId, hostname, attrs)
 			s.addAgent(a)
 		}
 
@@ -65,7 +66,7 @@ func (s *Scheduler) rescindedHandler(event *mesosproto.Event) {
 	log.Debugln("Receiving rescind msg for offer ", offerId)
 
 	for _, agent := range s.getAgents() {
-		if offer := agent.getOffer(offerId); offer != nil {
+		if offer := agent.GetOffer(offerId); offer != nil {
 			s.removeOffer(offer)
 			break
 		}

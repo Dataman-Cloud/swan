@@ -4,7 +4,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Dataman-Cloud/swan/mesos"
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 )
 
 type randomStrategy struct {
@@ -17,7 +17,7 @@ func NewRandomStrategy() *randomStrategy {
 	}
 }
 
-func (m *randomStrategy) RankAndSort(agents []*mesos.Agent) []*mesos.Agent {
+func (m *randomStrategy) RankAndSort(agents []*magent.Agent) []*magent.Agent {
 	for i := 0; i < len(agents); i++ {
 		j := m.r.Intn(i + 1)
 		agents[i], agents[j] = agents[j], agents[i]

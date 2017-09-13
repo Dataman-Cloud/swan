@@ -16,7 +16,7 @@ type Agent struct {
 	offers map[string]*Offer
 }
 
-func newAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
+func NewAgent(id, hostname string, attrs []*mesosproto.Attribute) *Agent {
 	return &Agent{
 		id:       id,
 		hostname: hostname,
@@ -38,13 +38,17 @@ func (s *Agent) MarshalJSON() ([]byte, error) {
 	return json.Marshal(m)
 }
 
-func (s *Agent) addOffer(offer *Offer) {
+func (s *Agent) ID() string {
+	return s.id
+}
+
+func (s *Agent) AddOffer(offer *Offer) {
 	s.Lock()
 	s.offers[offer.GetId()] = offer
 	s.Unlock()
 }
 
-func (s *Agent) removeOffer(offerID string) bool {
+func (s *Agent) RemoveOffer(offerID string) bool {
 	s.Lock()
 	defer s.Unlock()
 
@@ -55,14 +59,14 @@ func (s *Agent) removeOffer(offerID string) bool {
 	return found
 }
 
-func (s *Agent) empty() bool {
+func (s *Agent) Empty() bool {
 	s.RLock()
 	defer s.RUnlock()
 
 	return len(s.offers) == 0
 }
 
-func (s *Agent) getOffer(offerId string) *Offer {
+func (s *Agent) GetOffer(offerId string) *Offer {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -74,7 +78,7 @@ func (s *Agent) getOffer(offerId string) *Offer {
 	return offer
 }
 
-func (s *Agent) getOffers() []*Offer {
+func (s *Agent) GetOffers() []*Offer {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -86,19 +90,8 @@ func (s *Agent) getOffers() []*Offer {
 	return offers
 }
 
-func (s *Agent) offer() *Offer {
-	s.RLock()
-	defer s.RUnlock()
-
-	for _, offer := range s.offers {
-		return offer
-	}
-
-	return nil
-}
-
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
-	for _, offer := range s.getOffers() {
+	for _, offer := range s.GetOffers() {
 		cpus += offer.GetCpus()
 		mem += offer.GetMem()
 		disk += offer.GetDisk()
@@ -111,7 +104,7 @@ func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
 func (s *Agent) Attributes() map[string]string {
 	attrs := make(map[string]string)
 
-	for _, offer := range s.getOffers() {
+	for _, offer := range s.GetOffers() {
 		for k, v := range offer.GetAttrs() {
 			attrs[k] = v
 		}

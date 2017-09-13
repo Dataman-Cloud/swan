@@ -27,7 +27,7 @@ func (r *portRange) MarshalJSON() ([]byte, error) {
 	return json.Marshal([]uint64{r.begin, r.end})
 }
 
-func newOffer(offer *mesosproto.Offer) *Offer {
+func NewOffer(offer *mesosproto.Offer) *Offer {
 	f := &Offer{
 		id:       offer.GetId().GetValue(),
 		hostname: offer.GetHostname(),
@@ -142,8 +142,4 @@ func (f *Offer) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(m)
-}
-
-func (f *Offer) getPorts(n int) []uint64 {
-	return f.ports[0:n]
 }

@@ -1,15 +1,16 @@
-package mesos
+package filter
 
 import (
+	magent "github.com/Dataman-Cloud/swan/mesos/agent"
 	"github.com/Dataman-Cloud/swan/types"
 )
 
 type Filter interface {
-	Filter(config *types.TaskConfig, replicas int, agents []*Agent) ([]*Agent, error)
+	Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error)
 }
 
 // the returned agents contains at least one proper agent
-func ApplyFilters(filters []Filter, config *types.TaskConfig, replicas int, agents []*Agent) ([]*Agent, error) {
+func ApplyFilters(filters []Filter, config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
 	accepted := agents
 
 	var err error
