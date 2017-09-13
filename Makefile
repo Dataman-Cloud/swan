@@ -2,7 +2,7 @@
 .PHONY: build image docker docker-centos clean
 
 PACKAGES = $(shell go list ./... | grep -v vendor | grep -v integration-test)
-PRJNAME = $(shell pwd -P | sed -e "s@.*/@@g" | tr '[A-Z]' '[a-z]' | tr -d '-')
+PRJNAME := "swan"
 Compose := "https://github.com/docker/compose/releases/download/1.14.0/docker-compose"
 TmpDataDir := "/tmp/swan-tmp-data"
 
@@ -74,12 +74,12 @@ tmpdir:
 	mkdir -p $(TmpDataDir)
 
 local-cluster: prepare-docker-compose build-binary docker-image tmpdir
-	docker-compose up -d
-	docker-compose ps
+	docker-compose -p ${PRJNAME} up -d
+	docker-compose -p ${PRJNAME} ps
 
 rm-local-cluster: prepare-docker-compose
-	docker-compose stop
-	docker-compose rm -f
+	docker-compose -p ${PRJNAME} stop
+	docker-compose -p ${PRJNAME} rm -f
 	rm -rf $(TmpDataDir)
 
 check-local-cluster:

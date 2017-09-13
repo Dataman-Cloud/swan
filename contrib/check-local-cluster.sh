@@ -1,11 +1,10 @@
 #!/bin/bash
-set -ex
 
 function check(){
 	local n=0
-	local cnames=$(docker-compose ps | awk '(/swan-[agent|master]/) {print $1}')
+	local cnames=( "swan_swan-master_1"  "swan_swan-agent_1"  )
 
-	for cname in `echo ${cnames}`
+	for cname in `echo ${cnames[*]}`
 	do
 		status=$(docker inspect -f "{{.State.Health.Status}}" $cname)
 		echo "$cname --> $status"
