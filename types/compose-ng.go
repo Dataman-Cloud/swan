@@ -235,15 +235,19 @@ func (c *ComposeV3) Valid() error {
 				listen = p.Listen
 			)
 
-			if _, ok := seenAlias[alias]; ok {
-				return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+			if alias != "" {
+				if _, ok := seenAlias[alias]; ok {
+					return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+				}
+				seenAlias[alias] = true
 			}
-			seenAlias[alias] = true
 
-			if _, ok := seenListen[listen]; ok {
-				return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+			if listen != "" {
+				if _, ok := seenListen[listen]; ok {
+					return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+				}
+				seenListen[listen] = true
 			}
-			seenListen[listen] = true
 		}
 	}
 
