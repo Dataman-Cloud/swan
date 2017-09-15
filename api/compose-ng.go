@@ -186,6 +186,15 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 				return
 			}
 
+			var (
+				restart = ver.RestartPolicy
+				retries = 3
+			)
+
+			if restart != nil && restart.Retries >= 0 {
+				retries = restart.Retries
+			}
+
 			for i := 0; i < count; i++ {
 				var (
 					taskName = fmt.Sprintf("%d.%s", i, appId)
@@ -194,14 +203,15 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 
 				// db task
 				task := &types.Task{
-					ID:      taskId,
-					Name:    taskName,
-					Weight:  100,
-					Status:  "pending",
-					Healthy: types.TaskHealthyUnset,
-					Version: ver.ID,
-					Created: time.Now(),
-					Updated: time.Now(),
+					ID:         taskId,
+					Name:       taskName,
+					Weight:     100,
+					Status:     "pending",
+					Healthy:    types.TaskHealthyUnset,
+					Version:    ver.ID,
+					MaxRetries: retries,
+					Created:    time.Now(),
+					Updated:    time.Now(),
 				}
 
 				if ver.IsHealthSet() {
