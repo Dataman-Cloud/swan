@@ -150,22 +150,22 @@ func (r *Server) getAgentConfigs(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) redirectAgentDocker(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/docker/`) + 39 // FIX LATER
+	n := strings.Index(req.URL.Path, "/docker") + len("/docker")
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentProxy(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 39
+	n := strings.Index(req.URL.Path, "/proxy")
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentDNS(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 39
+	n := strings.Index(req.URL.Path, "/dns")
 	r.redirectAgent(n, w, req)
 }
 
 func (r *Server) redirectAgentIPAM(w http.ResponseWriter, req *http.Request) {
-	n := len(`/v1/agents/`) + 39
+	n := strings.Index(req.URL.Path, "/ipam")
 	r.redirectAgent(n, w, req)
 }
 
