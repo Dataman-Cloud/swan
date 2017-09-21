@@ -164,7 +164,9 @@ func (s *kvStore) RemoveSubNet(id string) error {
 		return err
 	}
 
-	return s.kv.DeleteTree(s.normalize(subnet.ID))
+	// to make fit with zk & etcd to ensure the keys removed
+	s.kv.DeleteTree(s.normalize(subnet.ID))
+	return s.kv.Delete(s.normalize(subnet.ID))
 }
 
 // Subnet IPs
