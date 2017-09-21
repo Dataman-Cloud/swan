@@ -590,6 +590,16 @@ func (s *Scheduler) runReconcile() {
 		return
 	}
 
+	// filter only the OpStatusNoop apps
+	var idx int
+	for _, app := range apps {
+		if app.OpStatus == types.OpStatusNoop {
+			apps[idx] = app
+			idx++
+		}
+	}
+	apps = apps[:idx]
+
 	tasks := make([]*types.Task, 0)
 
 	for _, app := range apps {
@@ -600,6 +610,10 @@ func (s *Scheduler) runReconcile() {
 		}
 
 		for _, t := range ts {
+			// skip pending tasks
+			if t.Status == "pending" {
+				continue
+			}
 			tasks = append(tasks, t)
 		}
 	}
