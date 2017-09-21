@@ -1833,7 +1833,8 @@ Example response:
 
 #### list agents
 ```
-GET /v1/agents
+GET /v1/agents             // list normal agents
+GET /v1/agents?debug=true  // list all of agents including offlines
 ```
 
 ```json

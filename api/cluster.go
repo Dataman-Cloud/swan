@@ -15,17 +15,32 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// only list normal agents by default, use `?debug=true` to show all agents
 func (r *Server) listAgents(w http.ResponseWriter, req *http.Request) {
-	var ret = map[string]interface{}{}
+	req.ParseForm()
+
+	var (
+		ret      = map[string]interface{}{}
+		normals  = map[string]*types.SysInfo{}
+		debug, _ = strconv.ParseBool(req.Form.Get("debug"))
+	)
+
 	for id := range r.driver.ClusterAgents() {
 		info, err := r.getAgentInfo(id)
 		if err != nil {
 			ret[id] = err.Error()
 		} else {
 			ret[id] = info
+			normals[id] = info
 		}
 	}
-	writeJSON(w, http.StatusOK, ret)
+
+	if debug {
+		writeJSON(w, http.StatusOK, ret)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, normals)
 }
 
 func (r *Server) queryAgentID(w http.ResponseWriter, req *http.Request) {
