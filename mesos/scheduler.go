@@ -23,6 +23,7 @@ import (
 	"github.com/Dataman-Cloud/swan/store"
 	"github.com/Dataman-Cloud/swan/types"
 	"github.com/Dataman-Cloud/swan/utils"
+	"github.com/Dataman-Cloud/swan/utils/recordio"
 )
 
 type SchedulerConfig struct {
@@ -258,7 +259,7 @@ func (s *Scheduler) watchEvents(resp *http.Response) {
 		err error
 	)
 
-	dec := json.NewDecoder(NewReader(resp.Body))
+	dec := json.NewDecoder(recordio.NewReader(resp.Body))
 
 	for {
 		if err = dec.Decode(&ev); err != nil {

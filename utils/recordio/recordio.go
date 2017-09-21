@@ -1,4 +1,5 @@
-package mesos
+// NOTE(nmg): copy from github.com/mesos/mesos-go/recordio
+package recordio
 
 import (
 	"bufio"
@@ -6,8 +7,6 @@ import (
 	"io"
 	"strconv"
 )
-
-// NOTE(nmg): copy from github.com/mesos/mesos-go/recordio
 
 // NewReader returns an io.Reader that unpacks the data read from r out of
 // RecordIO framing before returning it.
