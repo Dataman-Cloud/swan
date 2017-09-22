@@ -57,7 +57,7 @@ func (m *Master) handle(conn net.Conn) {
 	switch cmd.Cmd {
 
 	case cmdJoin:
-		log.Println("agent joined", cmd.AgentID)
+		log.Println("agent joined with ID", cmd.AgentID)
 		m.AddAgent(cmd.AgentID, conn) // this is the persistent control connection
 
 	case cmdNewWorker:
