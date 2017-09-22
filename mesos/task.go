@@ -3,6 +3,7 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
+	"os"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
@@ -35,7 +36,7 @@ func (t *Task) ID() string {
 
 func (t *Task) Build() {
 	t.Resources = t.cfg.BuildResources()
-	if true {
+	if os.Getenv("TEST_CUSTOM_EXECUTOR") != "" {
 		t.Executor = t.cfg.BuildCustomExecutor()
 	} else {
 		t.Command = t.cfg.BuildCommand()
