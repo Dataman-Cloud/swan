@@ -1,21 +1,23 @@
 package janitor
 
 import (
+	"encoding/json"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor/stats"
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
+
+	"github.com/gorilla/mux"
 )
 
-func (s *JanitorServer) ListUpstreams(c *gin.Context) {
-	c.JSON(200, upstream.AllUpstreams())
+func (s *JanitorServer) ListUpstreams(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(upstream.AllUpstreams())
 }
 
-func (s *JanitorServer) GetUpstream(c *gin.Context) {
+func (s *JanitorServer) GetUpstream(w http.ResponseWriter, r *http.Request) {
 	var (
-		uid = c.Param("uid")
+		uid = mux.Vars(r)["uid"]
 		m   = upstream.AllUpstreams()
 		ret = new(upstream.Upstream)
 	)
@@ -27,74 +29,88 @@ func (s *JanitorServer) GetUpstream(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, ret)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ret)
 }
 
-func (s *JanitorServer) UpsertUpstream(c *gin.Context) {
+func (s *JanitorServer) UpsertUpstream(w http.ResponseWriter, r *http.Request) {
 	var cmb *upstream.BackendCombined
-	if err := c.BindJSON(&cmb); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+	if err := json.NewDecoder(r.Body).Decode(&cmb); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if err := cmb.Valid(); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if err := s.UpsertBackend(cmb); err != nil {
-		http.Error(c.Writer, err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 
-	c.Writer.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 }
 
-func (s *JanitorServer) DelUpstream(c *gin.Context) {
+func (s *JanitorServer) DelUpstream(w http.ResponseWriter, r *http.Request) {
 	var cmb *upstream.BackendCombined
-	if err := c.BindJSON(&cmb); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+	if err := json.NewDecoder(r.Body).Decode(&cmb); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	s.removeBackend(cmb)
-	c.Writer.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *JanitorServer) ListSessions(c *gin.Context) {
-	c.JSON(200, upstream.AllSessions())
+func (s *JanitorServer) ListSessions(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(upstream.AllSessions())
 }
 
-func (s *JanitorServer) ShowConfigs(c *gin.Context) {
-	c.JSON(200, s.config)
+func (s *JanitorServer) ShowConfigs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.config)
 }
 
-func (s *JanitorServer) ShowStats(c *gin.Context) {
+func (s *JanitorServer) ShowStats(w http.ResponseWriter, r *http.Request) {
 	wrapper := map[string]interface{}{
 		"httpd":    s.config.ListenAddr,
 		"httpdTLS": s.config.TLSListenAddr,
 		"counter":  stats.Get(),
 		"tcpd":     s.tcpd,
 	}
-	c.JSON(200, wrapper)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(wrapper)
 }
 
-func (s *JanitorServer) ShowUpstreamStats(c *gin.Context) {
-	uid := c.Param("uid")
+func (s *JanitorServer) ShowUpstreamStats(w http.ResponseWriter, r *http.Request) {
+	uid := mux.Vars(r)["uid"]
 	if m, ok := stats.UpstreamStats()[uid]; ok {
-		c.JSON(200, m)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(m)
 		return
 	}
-	c.JSON(200, make(map[string]interface{}))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(make(map[string]interface{}))
 }
 
-func (s *JanitorServer) ShowBackendStats(c *gin.Context) {
-	uid, bid := c.Param("uid"), c.Param("bid")
+func (s *JanitorServer) ShowBackendStats(w http.ResponseWriter, r *http.Request) {
+	var (
+		vars = mux.Vars(r)
+		uid  = vars["uid"]
+		bid  = vars["bid"]
+	)
+
 	if ups, ok := stats.UpstreamStats()[uid]; ok {
 		if backend, ok := ups[bid]; ok {
-			c.JSON(200, backend)
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(backend)
 			return
 		}
 	}
-	c.JSON(200, make(map[string]interface{}))
+
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(make(map[string]interface{}))
 }

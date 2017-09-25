@@ -1,70 +1,78 @@
 package resolver
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 )
 
-func (s *Resolver) ListRecords(c *gin.Context) {
-	c.JSON(200, s.allRecords())
+func (s *Resolver) ListRecords(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.allRecords())
 }
 
-func (s *Resolver) GetRecord(c *gin.Context) {
+func (s *Resolver) GetRecord(w http.ResponseWriter, r *http.Request) {
 	var (
-		id  = c.Param("id")
-		m   = s.allRecords()
-		ret = make([]*Record, 0)
+		vars = mux.Vars(r)
+		id   = vars["id"]
+		m    = s.allRecords()
+		ret  = make([]*Record, 0)
 	)
 	if val, ok := m[id]; ok {
 		ret = val
 	}
-	c.JSON(200, ret)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ret)
 }
 
-func (s *Resolver) UpsertRecord(c *gin.Context) {
+func (s *Resolver) UpsertRecord(w http.ResponseWriter, r *http.Request) {
 	var record *Record
-	if err := c.BindJSON(&record); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if err := s.Upsert(record); err != nil {
-		http.Error(c.Writer, err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 
-	c.Writer.WriteHeader(201)
+	w.WriteHeader(http.StatusCreated)
 
 }
 
-func (s *Resolver) DelRecord(c *gin.Context) {
+func (s *Resolver) DelRecord(w http.ResponseWriter, r *http.Request) {
 	var record *Record
-	if err := c.BindJSON(&record); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+	if err := json.NewDecoder(r.Body).Decode(&record); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if s.remove(record) {
 		s.stats.Del(record.Parent)
 	}
-	c.Writer.WriteHeader(204)
+	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Resolver) ShowConfigs(c *gin.Context) {
-	c.JSON(200, s.config)
+func (s *Resolver) ShowConfigs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.config)
 }
 
-func (s *Resolver) ShowStats(c *gin.Context) {
-	c.JSON(200, s.stats.Get())
+func (s *Resolver) ShowStats(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(s.stats.Get())
 }
 
-func (s *Resolver) ShowParentStats(c *gin.Context) {
-	pid := c.Param("id")
+func (s *Resolver) ShowParentStats(w http.ResponseWriter, r *http.Request) {
+	pid := mux.Vars(r)["id"]
 	m := s.stats.Get()
 	if m, ok := m.Parents[pid]; ok {
-		c.JSON(200, m)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(m)
 		return
 	}
-	c.JSON(200, make(map[string]interface{}))
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(make(map[string]interface{}))
 }

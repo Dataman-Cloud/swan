@@ -109,7 +109,8 @@ func (r *Resolver) handleLocal(w dns.ResponseWriter, req *dns.Msg) {
 		MsgHdr: dns.MsgHdr{
 			Authoritative:      true,
 			RecursionAvailable: r.config.RecurseOn,
-		}}
+		},
+	}
 	msg.SetReply(req)
 
 	var (

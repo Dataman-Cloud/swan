@@ -14,7 +14,6 @@ import (
 	"time"
 
 	log "github.com/Sirupsen/logrus"
-	"github.com/gin-gonic/gin"
 
 	"github.com/Dataman-Cloud/swan/agent/ipam"
 	"github.com/Dataman-Cloud/swan/agent/janitor"
@@ -202,12 +201,7 @@ func (agent *Agent) ServeApi(l net.Listener) error {
 	return httpd.Serve(l)
 }
 
-func (agent *Agent) serveProxy(ctx *gin.Context) {
-	var (
-		r = ctx.Request
-		w = ctx.Writer
-	)
-
+func (agent *Agent) serveProxy(w http.ResponseWriter, r *http.Request) {
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		w.WriteHeader(500)
