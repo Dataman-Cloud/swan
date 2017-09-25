@@ -7,12 +7,6 @@ import (
 )
 
 func (agent *Agent) NewHTTPMux() http.Handler {
-	var (
-		janitor  = agent.janitor
-		resolver = agent.resolver
-		ipam     = agent.ipam
-	)
-
 	mux := gin.Default()
 	gin.SetMode(gin.ReleaseMode)
 
@@ -21,42 +15,67 @@ func (agent *Agent) NewHTTPMux() http.Handler {
 
 	// /proxy/**
 	if agent.config.Janitor.Enabled {
-		r := mux.Group("/proxy")
-		r.GET("", janitor.ListUpstreams)
-		r.GET("/upstreams", janitor.ListUpstreams)
-		r.GET("/upstreams/:uid", janitor.GetUpstream)
-		r.PUT("/upstreams", janitor.UpsertUpstream)
-		r.DELETE("/upstreams", janitor.DelUpstream)
-		r.GET("/sessions", janitor.ListSessions)
-		r.GET("/configs", janitor.ShowConfigs)
-		r.GET("/stats", janitor.ShowStats)
-		r.GET("/stats/:uid", janitor.ShowUpstreamStats)
-		r.GET("/stats/:uid/:bid", janitor.ShowBackendStats)
+		agent.setupProxyHandlers(mux)
 	}
 
 	// /dns/**
 	if agent.config.DNS.Enabled {
-		r := mux.Group("/dns")
-		r.GET("", resolver.ListRecords)
-		r.GET("/records", resolver.ListRecords)
-		r.GET("/records/:id", resolver.GetRecord)
-		r.PUT("/records", resolver.UpsertRecord)
-		r.DELETE("/records", resolver.DelRecord)
-		r.GET("/configs", resolver.ShowConfigs)
-		r.GET("/stats", resolver.ShowStats)
-		r.GET("/stats/:id", resolver.ShowParentStats)
+		agent.setupDNSHandlers(mux)
 	}
 
 	// /ipam/**
 	if agent.config.IPAM.Enabled {
-		r := mux.Group("/ipam")
-		r.GET("", ipam.ListSubNets)
-		r.GET("subnets", ipam.ListSubNets)
-		r.PUT("subnets", ipam.SetSubNetPool)
+		agent.setupIPAMHandlers(mux)
 	}
 
 	mux.NoRoute(agent.serveProxy)
 	return mux
+}
+
+func (agent *Agent) setupProxyHandlers(mux *gin.Engine) {
+	var (
+		janitor = agent.janitor
+	)
+
+	r := mux.Group("/proxy")
+	r.GET("", janitor.ListUpstreams)
+	r.GET("/upstreams", janitor.ListUpstreams)
+	r.GET("/upstreams/:uid", janitor.GetUpstream)
+	r.PUT("/upstreams", janitor.UpsertUpstream)
+	r.DELETE("/upstreams", janitor.DelUpstream)
+	r.GET("/sessions", janitor.ListSessions)
+	r.GET("/configs", janitor.ShowConfigs)
+	r.GET("/stats", janitor.ShowStats)
+	r.GET("/stats/:uid", janitor.ShowUpstreamStats)
+	r.GET("/stats/:uid/:bid", janitor.ShowBackendStats)
+}
+
+func (agent *Agent) setupDNSHandlers(mux *gin.Engine) {
+	var (
+		resolver = agent.resolver
+	)
+
+	r := mux.Group("/dns")
+	r.GET("", resolver.ListRecords)
+	r.GET("/records", resolver.ListRecords)
+	r.GET("/records/:id", resolver.GetRecord)
+	r.PUT("/records", resolver.UpsertRecord)
+	r.DELETE("/records", resolver.DelRecord)
+	r.GET("/configs", resolver.ShowConfigs)
+	r.GET("/stats", resolver.ShowStats)
+	r.GET("/stats/:id", resolver.ShowParentStats)
+
+}
+
+func (agent *Agent) setupIPAMHandlers(mux *gin.Engine) {
+	var (
+		ipam = agent.ipam
+	)
+
+	r := mux.Group("/ipam")
+	r.GET("", ipam.ListSubNets)
+	r.GET("subnets", ipam.ListSubNets)
+	r.PUT("subnets", ipam.SetSubNetPool)
 }
 
 func (agent *Agent) sysinfo(ctx *gin.Context) {
