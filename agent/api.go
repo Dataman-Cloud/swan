@@ -1,93 +1,95 @@
 package agent
 
 import (
+	"encoding/json"
 	"net/http"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gorilla/mux"
 )
 
 func (agent *Agent) NewHTTPMux() http.Handler {
-	mux := gin.Default()
-	gin.SetMode(gin.ReleaseMode)
+	m := mux.NewRouter()
 
-	mux.GET("/sysinfo", agent.sysinfo)
-	mux.GET("/configs", agent.showConfigs)
+	m.Path("/sysinfo").Methods("GET").HandlerFunc(agent.sysinfo)
+	m.Path("/configs").Methods("GET").HandlerFunc(agent.showConfigs)
 
 	// /proxy/**
 	if agent.config.Janitor.Enabled {
-		agent.setupProxyHandlers(mux)
+		agent.setupProxyHandlers(m)
 	}
 
 	// /dns/**
 	if agent.config.DNS.Enabled {
-		agent.setupDNSHandlers(mux)
+		agent.setupDNSHandlers(m)
 	}
 
 	// /ipam/**
 	if agent.config.IPAM.Enabled {
-		agent.setupIPAMHandlers(mux)
+		agent.setupIPAMHandlers(m)
 	}
 
-	mux.NoRoute(agent.serveProxy)
-	return mux
+	m.NotFoundHandler = http.HandlerFunc(agent.serveProxy)
+
+	return m
 }
 
-func (agent *Agent) setupProxyHandlers(mux *gin.Engine) {
+func (agent *Agent) setupProxyHandlers(mux *mux.Router) {
 	var (
 		janitor = agent.janitor
 	)
 
-	r := mux.Group("/proxy")
-	r.GET("", janitor.ListUpstreams)
-	r.GET("/upstreams", janitor.ListUpstreams)
-	r.GET("/upstreams/:uid", janitor.GetUpstream)
-	r.PUT("/upstreams", janitor.UpsertUpstream)
-	r.DELETE("/upstreams", janitor.DelUpstream)
-	r.GET("/sessions", janitor.ListSessions)
-	r.GET("/configs", janitor.ShowConfigs)
-	r.GET("/stats", janitor.ShowStats)
-	r.GET("/stats/:uid", janitor.ShowUpstreamStats)
-	r.GET("/stats/:uid/:bid", janitor.ShowBackendStats)
+	r := mux.PathPrefix("/proxy").Subrouter()
+	r.Path("").Methods("GET").HandlerFunc(janitor.ListUpstreams)
+	r.Path("/upstreams").Methods("GET").HandlerFunc(janitor.ListUpstreams)
+	r.Path("/upstreams/{uid}").Methods("GET").HandlerFunc(janitor.GetUpstream)
+	r.Path("/upstreams").Methods("PUT").HandlerFunc(janitor.UpsertUpstream)
+	r.Path("/upstreams").Methods("DELETE").HandlerFunc(janitor.DelUpstream)
+	r.Path("/sessions").Methods("GET").HandlerFunc(janitor.ListSessions)
+	r.Path("/configs").Methods("GET").HandlerFunc(janitor.ShowConfigs)
+	r.Path("/stats").Methods("GET").HandlerFunc(janitor.ShowStats)
+	r.Path("/stats/{uid}").Methods("GET").HandlerFunc(janitor.ShowUpstreamStats)
+	r.Path("/stats/{uid}/{bid}").Methods("GET").HandlerFunc(janitor.ShowBackendStats)
 }
 
-func (agent *Agent) setupDNSHandlers(mux *gin.Engine) {
+func (agent *Agent) setupDNSHandlers(mux *mux.Router) {
 	var (
 		resolver = agent.resolver
 	)
 
-	r := mux.Group("/dns")
-	r.GET("", resolver.ListRecords)
-	r.GET("/records", resolver.ListRecords)
-	r.GET("/records/:id", resolver.GetRecord)
-	r.PUT("/records", resolver.UpsertRecord)
-	r.DELETE("/records", resolver.DelRecord)
-	r.GET("/configs", resolver.ShowConfigs)
-	r.GET("/stats", resolver.ShowStats)
-	r.GET("/stats/:id", resolver.ShowParentStats)
-
+	r := mux.PathPrefix("/dns").Subrouter()
+	r.Path("").Methods("GET").HandlerFunc(resolver.ListRecords)
+	r.Path("/records").Methods("GET").HandlerFunc(resolver.ListRecords)
+	r.Path("/records/{id}").Methods("GET").HandlerFunc(resolver.GetRecord)
+	r.Path("/records").Methods("PUT").HandlerFunc(resolver.UpsertRecord)
+	r.Path("/records").Methods("DELETE").HandlerFunc(resolver.DelRecord)
+	r.Path("/configs").Methods("GET").HandlerFunc(resolver.ShowConfigs)
+	r.Path("/stats").Methods("GET").HandlerFunc(resolver.ShowStats)
+	r.Path("/stats/{id}").Methods("GET").HandlerFunc(resolver.ShowParentStats)
 }
 
-func (agent *Agent) setupIPAMHandlers(mux *gin.Engine) {
+func (agent *Agent) setupIPAMHandlers(mux *mux.Router) {
 	var (
 		ipam = agent.ipam
 	)
 
-	r := mux.Group("/ipam")
-	r.GET("", ipam.ListSubNets)
-	r.GET("subnets", ipam.ListSubNets)
-	r.PUT("subnets", ipam.SetSubNetPool)
+	r := mux.PathPrefix("/ipam").Subrouter()
+	r.Path("").Methods("GET").HandlerFunc(ipam.ListSubNets)
+	r.Path("/subnets").Methods("GET").HandlerFunc(ipam.ListSubNets)
+	r.Path("/subnets").Methods("PUT").HandlerFunc(ipam.SetSubNetPool)
 }
 
-func (agent *Agent) sysinfo(ctx *gin.Context) {
+func (agent *Agent) sysinfo(w http.ResponseWriter, r *http.Request) {
 	info, err := Gather()
 	if err != nil {
-		http.Error(ctx.Writer, err.Error(), http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	ctx.JSON(200, info)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(info)
 }
 
-func (agent *Agent) showConfigs(ctx *gin.Context) {
-	ctx.JSON(200, agent.config)
+func (agent *Agent) showConfigs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(agent.config)
 }

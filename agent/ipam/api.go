@@ -1,15 +1,14 @@
 package ipam
 
 import (
+	"encoding/json"
 	"net/http"
-
-	"github.com/gin-gonic/gin"
 )
 
-func (m *IPAM) ListSubNets(c *gin.Context) {
+func (m *IPAM) ListSubNets(w http.ResponseWriter, r *http.Request) {
 	subnets, err := m.store.ListSubNets()
 	if err != nil {
-		http.Error(c.Writer, err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 
@@ -31,23 +30,24 @@ func (m *IPAM) ListSubNets(c *gin.Context) {
 		}
 	}
 
-	c.JSON(200, ret)
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(ret)
 }
 
-func (m *IPAM) SetSubNetPool(c *gin.Context) {
+func (m *IPAM) SetSubNetPool(w http.ResponseWriter, r *http.Request) {
 	var pool *IPPoolRange
-	if err := c.BindJSON(&pool); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+	if err := json.NewDecoder(r.Body).Decode(&pool); err != nil {
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if err := pool.Valid(); err != nil {
-		http.Error(c.Writer, err.Error(), 400)
+		http.Error(w, err.Error(), 400)
 		return
 	}
 
 	if err := m.SetIPPool(pool); err != nil {
-		http.Error(c.Writer, err.Error(), 500)
+		http.Error(w, err.Error(), 500)
 		return
 	}
 }
