@@ -74,7 +74,7 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	tasks, err := s.tasks(p, id)
+	tasks, err := s.ListTasks(id)
 	if err != nil {
 		log.Errorf("get app %s tasks got error: %v", id, err)
 		return nil, err
@@ -86,7 +86,7 @@ func (s *EtcdStore) GetApp(id string) (*types.Application, error) {
 	app.Version = s.version(tasks)
 	app.Health = s.health(tasks)
 
-	versions, err := s.versions(p, id)
+	versions, err := s.ListVersions(id)
 	if err != nil {
 		log.Errorf("get app %s versions got error: %v", id, err)
 		return nil, err
@@ -149,62 +149,6 @@ func (s *EtcdStore) ListApps() ([]*types.Application, error) {
 func (s *EtcdStore) DeleteApp(id string) error {
 	p := path.Join(keyApp, id)
 	return s.delDir(p, true)
-}
-
-func (s *EtcdStore) tasks(p, id string) (types.TaskList, error) {
-	children, err := s.list(path.Join(p, keyTasks))
-	if err != nil {
-		log.Errorf("get app %s children(tasks) error: %v", id, err)
-		return nil, err
-	}
-
-	tasks := make([]*types.Task, 0)
-	for child := range children {
-		p := path.Join(keyApp, id, keyTasks, child)
-		data, err := s.get(p)
-		if err != nil {
-			log.Errorf("get %s got error: %v", p, err)
-			return nil, err
-		}
-
-		var task *types.Task
-		if err := decode(data, &task); err != nil {
-			log.Errorf("decode task %s got error: %v", id, err)
-			return nil, err
-		}
-
-		tasks = append(tasks, task)
-	}
-
-	return tasks, nil
-}
-
-func (s *EtcdStore) versions(p, id string) (types.VersionList, error) {
-	children, err := s.list(path.Join(p, keyVersions))
-	if err != nil {
-		log.Errorf("get app %s children(versions) error: %v", id, err)
-		return nil, err
-	}
-
-	versions := make([]*types.Version, 0)
-	for child := range children {
-		p := path.Join(keyApp, id, keyVersions, child)
-		data, err := s.get(p)
-		if err != nil {
-			log.Errorf("get %s got error: %v", p, err)
-			return nil, err
-		}
-
-		var ver *types.Version
-		if err := decode(data, &ver); err != nil {
-			log.Errorf("decode version %s got error: %v", id, err)
-			return nil, err
-		}
-
-		versions = append(versions, ver)
-	}
-
-	return versions, err
 }
 
 func (s *EtcdStore) status(tasks types.TaskList) string {

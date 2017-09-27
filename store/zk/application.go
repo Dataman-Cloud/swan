@@ -60,7 +60,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 		return nil, err
 	}
 
-	tasks, err := zk.tasks(p, id)
+	tasks, err := zk.ListTasks(id)
 	if err != nil {
 		log.Errorf("get app %s tasks got error: %v", id, err)
 		return nil, err
@@ -73,7 +73,7 @@ func (zk *ZKStore) GetApp(id string) (*types.Application, error) {
 	app.Health = zk.health(tasks)
 	app.Progress, app.ProgressDetails = zk.progress(tasks)
 
-	versions, err := zk.versions(p, id)
+	versions, err := zk.ListVersions(id)
 	if err != nil && !zk.IsErrNotFound(err) {
 		log.Errorf("get app %s versions got error: %v", id, err)
 		return nil, err
@@ -148,61 +148,6 @@ func (zk *ZKStore) DeleteApp(id string) error {
 	}
 
 	return zk.del(p)
-}
-
-func (zk *ZKStore) tasks(p, id string) (types.TaskList, error) {
-	children, err := zk.list(path.Join(p, "tasks"))
-	if err != nil {
-		log.Errorf("get app %s children(tasks) error: %v", id, err)
-		return nil, err
-	}
-
-	tasks := make([]*types.Task, 0)
-	for _, child := range children {
-		p := path.Join(keyApp, id, "tasks", child)
-		data, _, err := zk.get(p)
-		if err != nil {
-			continue
-		}
-
-		var task *types.Task
-		if err := decode(data, &task); err != nil {
-			log.Errorf("decode task %s got error: %v", id, err)
-			return nil, err
-		}
-
-		tasks = append(tasks, task)
-	}
-
-	return tasks, nil
-}
-
-func (zk *ZKStore) versions(p, id string) (types.VersionList, error) {
-	children, err := zk.list(path.Join(p, "versions"))
-	if err != nil {
-		log.Errorf("get app %s children(versions) error: %v", id, err)
-		return nil, err
-	}
-
-	versions := make([]*types.Version, 0)
-	for _, child := range children {
-		p := path.Join(keyApp, id, "versions", child)
-		data, _, err := zk.get(p)
-		if err != nil {
-			log.Errorf("get %s got error: %v", p, err)
-			return nil, err
-		}
-
-		var ver *types.Version
-		if err := decode(data, &ver); err != nil {
-			log.Errorf("decode version %s got error: %v", id, err)
-			return nil, err
-		}
-
-		versions = append(versions, ver)
-	}
-
-	return versions, err
 }
 
 func (zk *ZKStore) status(tasks types.TaskList) string {
