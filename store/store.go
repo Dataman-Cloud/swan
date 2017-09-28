@@ -28,6 +28,20 @@ type Store interface {
 	ListVersions(string) ([]*types.Version, error)
 	DeleteVersion(string, string) error
 
+	// kvm app & task
+	CreateKvmApp(app *types.KvmApp) error
+	UpdateKvmApp(app *types.KvmApp) error
+	GetKvmApp(appId string) (*types.KvmApp, error)
+	ListKvmApps() ([]*types.KvmApp, error)
+	DeleteKvmApp(appId string) error
+
+	CreateKvmTask(string, *types.KvmTask) error
+	GetKvmTask(string, string) (*types.KvmTask, error)
+	UpdateKvmTask(string, *types.KvmTask) error
+	DeleteKvmTask(string) error
+	ListKvmTasks(string) ([]*types.KvmTask, error)
+
+	// framework id
 	UpdateFrameworkId(frameworkId string) error
 	GetFrameworkId() (string, int64)
 

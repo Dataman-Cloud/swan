@@ -29,6 +29,7 @@ const (
 	keyCompose     = "/composes"    // compose instance legacy (group apps), deprecated
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
+	keyKvmApp      = "/kvm-apps"    // single kvm app
 )
 
 type ZKStore struct {

@@ -30,7 +30,7 @@ endif
 default: build
 
 build: clean
-	CGO_ENABLED=${CGO_ENABLED} go build -v -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
+	CGO_ENABLED=${CGO_ENABLED} go build -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
 
 # multi-stage builds, require docker >= 17.05
 docker:
