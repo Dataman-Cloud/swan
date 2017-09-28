@@ -6,6 +6,7 @@ import (
 
 	"github.com/Dataman-Cloud/swan/executor/driver"
 	"github.com/Dataman-Cloud/swan/executor/example"
+	"github.com/Dataman-Cloud/swan/executor/kvm"
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	log "github.com/Sirupsen/logrus"
 )
@@ -30,7 +31,7 @@ func main() {
 	case "example":
 		executor = example.New()
 	case "kvm":
-		log.Fatal(ErrNotImplemented)
+		executor = kvm.New()
 	case "pod":
 		log.Fatal(ErrNotImplemented)
 	default:

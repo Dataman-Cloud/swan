@@ -743,7 +743,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		groups = [][]*Task{}
 		count  = len(tasks)
 		step   = s.cfg.MaxTasksPerOffer
-		cfg    = tasks[0].cfg
+		isKvm  = tasks[0].IsKvm() // if kvm task or not
 	)
 
 	var errs struct {
@@ -751,6 +751,16 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		sync.Mutex
 	}
 	errs.m = make([]error, 0, 0)
+
+	// construct base filter options (without Replicas)
+	var filterOpts = new(filter.FilterOptions)
+	if isKvm {
+		filterOpts.ResRequired = tasks[0].kvmCfg.ResourcesRequired()
+		filterOpts.Constraints = tasks[0].kvmCfg.Constraints
+	} else {
+		filterOpts.ResRequired = tasks[0].cfg.ResourcesRequired()
+		filterOpts.Constraints = tasks[0].cfg.Constraints
+	}
 
 	// cut all tasks into sub pieces
 	for i := 0; i < count; i = i + step {
@@ -765,11 +775,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 	for _, group := range groups {
 
 		// try to use filter options to obtain proper offers
-		filterOpts := &filter.FilterOptions{
-			ResRequired: cfg.ResourcesRequired(),
-			Replicas:    len(group),
-			Constraints: cfg.Constraints,
-		}
+		filterOpts.Replicas = len(group)
 
 		// try obtain proper offers
 		offers, err := s.waitOffers(filterOpts)
@@ -783,7 +789,12 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		}
 
 		// launch group tasks with specified offers
-		if err := s.launchGroupTasksWithOffers(offers, group); err != nil {
+		if isKvm {
+			err = s.launchGroupKvmTasksWithOffers(offers, group)
+		} else {
+			err = s.launchGroupTasksWithOffers(offers, group)
+		}
+		if err != nil {
 			// NOTE: required to prevent memory leaks if tasks not emited to mesos master.
 			for _, task := range group {
 				s.removePendingTask(task.ID())

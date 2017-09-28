@@ -92,6 +92,17 @@ func (d *SwanDriver) Stop() {
 	close(d.stopCh)
 }
 
+func (d *SwanDriver) labels() *mesosproto.Labels {
+	return &mesosproto.Labels{
+		Labels: []*mesosproto.Label{
+			&mesosproto.Label{
+				Key:   proto.String("MESOS_EXECUTOR_DRIVER_NAME"),
+				Value: proto.String("swan"),
+			},
+		},
+	}
+}
+
 func (d *SwanDriver) SendStatusUpdate(taskId *mesosproto.TaskID, state *mesosproto.TaskState, message *string) error {
 	var (
 		uuid     = uuid.NewV4().Bytes()
@@ -107,6 +118,7 @@ func (d *SwanDriver) SendStatusUpdate(taskId *mesosproto.TaskID, state *mesospro
 		ExecutorId: d.cfg.executorID,
 		Timestamp:  proto.Float64(float64(time.Now().Unix())),
 		Uuid:       []byte(uuid),
+		Labels:     d.labels(),
 	})
 
 	if err != nil {
@@ -130,9 +142,11 @@ func (d *SwanDriver) SendFrameworkMessage(msg string) error {
 
 	resp, err := d.SendCall(call, http.StatusAccepted)
 	if err != nil {
+		log.Errorf("SendFrameworkMessage() [%s] error: %v", msg, err)
 		return err
 	}
 
+	log.Printf("SendFrameworkMessage() [%s] succeed", msg)
 	resp.Body.Close()
 	return nil
 }

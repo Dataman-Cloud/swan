@@ -1,4 +1,4 @@
-package example
+package kvm
 
 import (
 	"encoding/base64"
@@ -15,6 +15,7 @@ import (
 )
 
 type Executor struct {
+	taskId *mesosproto.TaskID
 	stopCh chan struct{}
 }
 
@@ -31,26 +32,49 @@ func (e *Executor) HandleSubscribed(driv driver.Driver, ev *mesosproto.ExecEvent
 
 func (e *Executor) HandlePreLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) error {
 	log.Println("Mesos Executor: Pre Launching Task ...")
+
+	// log the task info
+	taskInfo := ev.Launch.Task
+	e.taskId = taskInfo.GetTaskId() // now we got the mesos task id
+
+	taskbs, _ := json.MarshalIndent(taskInfo, "", "    ")
+	log.Println("Mesos Executor: Task Info: ")
+	fmt.Println(string(taskbs))
+
+	// fetching os iso file
+	msg := e.NewMessage("IsoFetching", "fetching OS ISO file ...")
+	e.sendMessage(driv, msg)
+	time.Sleep(time.Second)
+
+	// creating qemu image
+	msg = e.NewMessage("ImageCreating", "creating the base qemu image ...")
+	e.sendMessage(driv, msg)
+	time.Sleep(time.Second)
+
+	// all preparing work done
+	msg = e.NewMessage("Prepared", "all preparations ready")
+	e.sendMessage(driv, msg)
 	return nil
 }
 
 func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) error {
 	log.Println("Mesos Executor: Launching Task ...")
 
-	var (
-		taskInfo = ev.Launch.Task
-		taskId   = taskInfo.GetTaskId()
-	)
+	// create the xml file
+	msg := e.NewMessage("XmlCreating", "creating the xml config file ...")
+	e.sendMessage(driv, msg)
+	time.Sleep(time.Second)
 
-	taskbs, _ := json.MarshalIndent(taskInfo, "", "    ")
-	log.Println("Mesos Executor: Task Info: ")
-	fmt.Println(string(taskbs))
+	// define the xml
+	msg = e.NewMessage("KvmDefining", "defining the kvm domain ...")
+	e.sendMessage(driv, msg)
+	time.Sleep(time.Second)
 
-	driv.SendStatusUpdate(taskId, mesosproto.TaskState_TASK_STARTING.Enum(), proto.String(""))
+	e.sendUpdate(driv, mesosproto.TaskState_TASK_STARTING.Enum(), "")
 
 	go func() {
 
-		driv.SendStatusUpdate(taskId, mesosproto.TaskState_TASK_RUNNING.Enum(), proto.String(""))
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_RUNNING.Enum(), "")
 
 		// defer to stop the executor driver
 		defer driv.Stop()
@@ -59,7 +83,7 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 		for {
 			select {
 			case <-e.stopCh:
-				driv.SendStatusUpdate(taskId, mesosproto.TaskState_TASK_KILLED.Enum(), proto.String(""))
+				e.sendUpdate(driv, mesosproto.TaskState_TASK_KILLED.Enum(), "")
 			default:
 				idx++
 				fmt.Println("Hello World ...", idx)
@@ -86,16 +110,15 @@ func (e *Executor) HandleKill(driv driver.Driver, ev *mesosproto.ExecEvent) erro
 	log.Println("Mesos Executor: Killing Task ...")
 
 	var (
-		taskId = ev.Kill.GetTaskId()
 		policy = ev.Kill.GetKillPolicy()
 	)
 
-	log.Printf("Mesos Executor: Killing Task %s with Policy %s", taskId, policy)
+	log.Printf("Mesos Executor: Killing Task %s with Policy %s", e.taskId, policy)
 
 	// stop the task
-	driv.SendStatusUpdate(taskId, mesosproto.TaskState_TASK_KILLING.Enum(), proto.String(""))
+	e.sendUpdate(driv, mesosproto.TaskState_TASK_KILLING.Enum(), "")
 	close(e.stopCh)
-	driv.SendStatusUpdate(taskId, mesosproto.TaskState_TASK_KILLED.Enum(), proto.String(""))
+	e.sendUpdate(driv, mesosproto.TaskState_TASK_KILLED.Enum(), "")
 
 	// stop the executor driver
 	driv.Stop()
@@ -108,11 +131,10 @@ func (e *Executor) HandleAcknowledged(driv driver.Driver, ev *mesosproto.ExecEve
 	log.Println("Mesos Executor: Acknowledging ...")
 
 	var (
-		taskId = ev.Acknowledged.GetTaskId()
-		uuid   = base64.StdEncoding.EncodeToString(ev.Acknowledged.GetUuid())
+		uuid = base64.StdEncoding.EncodeToString(ev.Acknowledged.GetUuid())
 	)
 
-	log.Printf("Mesos Executor: Acknowledging Task %s with uuid %s", taskId.GetValue(), uuid)
+	log.Printf("Mesos Executor: Acknowledging Task %s with uuid %s", e.taskId, uuid)
 	return nil
 }
 
@@ -145,4 +167,18 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 	evbs, _ := json.MarshalIndent(ev, "", "    ")
 	fmt.Println(string(evbs))
 	return nil
+}
+
+// send every update event with message prefixed with `SWAN_KVM_EXECUTOR_MESSAGE: `
+func (e *Executor) sendUpdate(driv driver.Driver, state *mesosproto.TaskState, message string) error {
+	message = "SWAN_KVM_EXECUTOR_MESSAGE: " + message
+	return driv.SendStatusUpdate(e.taskId, state, proto.String(message))
+}
+
+// send every message prefixed with `SWAN_KVM_EXECUTOR_MESSAGE: `
+func (e *Executor) sendMessage(driv driver.Driver, msg Message) error {
+	message := "SWAN_KVM_EXECUTOR_MESSAGE: "
+	bs, _ := json.Marshal(msg)
+	message += string(bs)
+	return driv.SendFrameworkMessage(message)
 }

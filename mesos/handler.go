@@ -1,6 +1,7 @@
 package mesos
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"time"
@@ -95,16 +96,26 @@ func (s *Scheduler) broadCastCleanupEvents(appId, taskId string) {
 }
 
 func (s *Scheduler) updateHandler(event *mesosproto.Event) {
+
 	var (
 		status  = event.GetUpdate().GetStatus()
 		state   = status.GetState()
 		taskId  = status.TaskId.GetValue()
 		healthy = status.GetHealthy()
 		data    = status.GetData()
+		reason  = status.GetReason().String()
+		message = status.GetMessage()
+		isKvm   = strings.HasPrefix(message, "SWAN_KVM_EXECUTOR_MESSAGE: ")
 	)
 
-	log.Debugf("Received status update %s(%v) for task:%s, reason:%s, message:%s",
-		status.GetState(), healthy, taskId, status.GetReason().String(), status.GetMessage())
+	log.Debugf("Received status update %s(%v) for task:%s, reason:%s, message:%s, isKvm:%v",
+		state, healthy, taskId, reason, message, isKvm)
+
+	// hijacked by kvm processing if kvm task event
+	if isKvm {
+		s.processKvmUpdateEvent(event)
+		return
+	}
 
 	// get appId
 	var appId string
@@ -337,4 +348,120 @@ func (s *Scheduler) failureHandler(event *mesosproto.Event) {
 }
 
 func (s *Scheduler) messageHandler(event *mesosproto.Event) {
+	var (
+		ev      = event.GetMessage()
+		message = string(ev.GetData())
+		isKvm   = strings.HasPrefix(message, "SWAN_KVM_EXECUTOR_MESSAGE: ")
+	)
+
+	log.Debugf("Received executor message:%s, isKvm:%v", message, isKvm)
+
+	// hijacked by kvm processing if kvm task event
+	if isKvm {
+		s.processKvmMessageEvent(event)
+		return
+	}
+}
+
+// KVM: methods to process kvm update & message events
+//
+//
+func (s *Scheduler) processKvmUpdateEvent(event *mesosproto.Event) {
+	var (
+		status  = event.GetUpdate().GetStatus()
+		state   = status.GetState()
+		taskId  = status.TaskId.GetValue()
+		reason  = status.GetReason().String()
+		message = strings.TrimPrefix(status.GetMessage(), "SWAN_KVM_EXECUTOR_MESSAGE: ")
+	)
+
+	log.Infof("Received status update %s for kvm task: %s", state, taskId)
+
+	// get kvm appId
+	var appId string
+	parts := strings.SplitN(taskId, ".", 3)
+	if len(parts) >= 3 {
+		appId = parts[2]
+	}
+
+	// obtain db kvm app
+	_, err := s.db.GetKvmApp(appId)
+	if err != nil {
+		log.Errorf("find db kvm app %s got error: %v", appId, err)
+		return
+	}
+
+	// obtain db kvm task & update
+	task, err := s.db.GetKvmTask(appId, taskId)
+	if err != nil {
+		log.Errorf("find db kvm task %s got error: %v", taskId, err)
+		return
+	}
+
+	// set status // TODO
+	task.Status = state.String()
+	if state != mesosproto.TaskState_TASK_RUNNING {
+		task.ErrMsg = reason + ":" + message
+	}
+
+	// memo db update db task
+	if err := s.db.UpdateKvmTask(appId, task); err != nil {
+		log.Errorf("update db kvm task %s error: %v", taskId, err)
+		return
+	}
+}
+
+func (s *Scheduler) processKvmMessageEvent(event *mesosproto.Event) {
+	var (
+		ev      = event.GetMessage()
+		message = bytes.TrimPrefix(ev.GetData(), []byte("SWAN_KVM_EXECUTOR_MESSAGE: "))
+	)
+
+	log.Infof("Received swan kvm executor message: [%s]", string(message))
+
+	// var msg SwanKvmMessage
+	var kvmMsg KvmExecutorMessage
+	if err := json.Unmarshal(message, &kvmMsg); err != nil {
+		log.Errorf("decode swan kvm executor message [%s] error: %v", string(message), err)
+		return
+	}
+
+	var (
+		taskId     = kvmMsg.TaskId
+		taskStatus = kvmMsg.Status
+		appId      string
+	)
+
+	// get kvm appId
+	parts := strings.SplitN(taskId, ".", 3)
+	if len(parts) >= 3 {
+		appId = parts[2]
+	}
+
+	// obtain db kvm app
+	_, err := s.db.GetKvmApp(appId)
+	if err != nil {
+		log.Errorf("find db kvm app %s got error: %v", appId, err)
+		return
+	}
+
+	// obtain db kvm task & update
+	task, err := s.db.GetKvmTask(appId, taskId)
+	if err != nil {
+		log.Errorf("find db kvm task %s got error: %v", taskId, err)
+		return
+	}
+
+	// set task status & memo db update db task
+	task.Status = taskStatus
+	if err := s.db.UpdateKvmTask(appId, task); err != nil {
+		log.Errorf("update db kvm task %s error: %v", taskId, err)
+		return
+	}
+}
+
+type KvmExecutorMessage struct {
+	TaskId  string `json:"taskId"`
+	Status  string `json:"status"`
+	Message string `json:"message"`
 }

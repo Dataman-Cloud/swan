@@ -43,7 +43,7 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/suspend", s.suspendKvmApp),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/resume", s.resumeKvmApp),
 
-		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks", s.getKvmTasks),
+		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks", s.listKvmTasks),
 		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.getKvmTask),
 		NewRoute("DELETE", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.deleteKvmTask),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/start", s.startKvmTask),

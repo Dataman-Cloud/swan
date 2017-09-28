@@ -53,7 +53,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyKvmApp, keyFrameworkID} {
 		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}

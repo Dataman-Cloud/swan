@@ -3,7 +3,6 @@ package mesos
 import (
 	"encoding/json"
 	"errors"
-	"os"
 
 	"github.com/Dataman-Cloud/swan/mesosproto"
 	"github.com/Dataman-Cloud/swan/types"
@@ -11,13 +10,20 @@ import (
 
 // runtime Task object
 type Task struct {
+	// set from Build()
 	mesosproto.TaskInfo
 
+	// for runtime mesos task updates event receive
 	updates chan *mesosproto.TaskStatus
 
+	// if set, means docker container task
 	cfg *types.TaskConfig
+
+	// if set, means kvm task
+	kvmCfg *types.KvmConfig
 }
 
+// NewTask create a docker container runitme task
 func NewTask(cfg *types.TaskConfig, id, name string) *Task {
 	task := &Task{
 		cfg:     cfg,
@@ -30,17 +36,44 @@ func NewTask(cfg *types.TaskConfig, id, name string) *Task {
 	return task
 }
 
+// NewTask create a kvm runtime task
+func NewKvmTask(id, name string, cfg *types.KvmConfig) *Task {
+	task := &Task{
+		kvmCfg:  cfg,
+		updates: make(chan *mesosproto.TaskStatus, 1024),
+	}
+
+	task.Name = &name
+	task.TaskId = &mesosproto.TaskID{Value: &id}
+
+	return task
+}
+
+func (t *Task) IsKvm() bool {
+	return t.kvmCfg != nil
+}
+
 func (t *Task) ID() string {
 	return t.TaskId.GetValue()
 }
 
 func (t *Task) Build() {
-	t.Resources = t.cfg.BuildResources()
-	if os.Getenv("TEST_CUSTOM_EXECUTOR") != "" {
-		t.Executor = t.cfg.BuildCustomExecutor()
-	} else {
-		t.Command = t.cfg.BuildCommand()
+	if t.IsKvm() {
+		t.buildKvmTask()
+		return
 	}
+	t.buildContainerTask()
+}
+
+func (t *Task) buildKvmTask() {
+	t.Resources = t.kvmCfg.BuildResources()
+	t.Executor = t.kvmCfg.BuildKvmExecutor()
+	t.Labels = t.kvmCfg.BuildLabels(t.ID(), t.GetName())
+}
+
+func (t *Task) buildContainerTask() {
+	t.Resources = t.cfg.BuildResources()
+	t.Command = t.cfg.BuildCommand()
 	t.Container = t.cfg.BuildContainer(t.ID(), t.GetName())
 	if t.cfg.HealthCheck != nil {
 		t.HealthCheck = t.cfg.BuildHealthCheck()
