@@ -131,6 +131,16 @@ func NewTaskConfig(spec *Version, idx int) *TaskConfig {
 	return cfg
 }
 
+func (c *TaskConfig) ResourcesRequired() ResourcesRequired {
+	return ResourcesRequired{
+		CPUs:    c.CPUs,
+		GPUs:    c.GPUs,
+		Mem:     c.Mem,
+		Disk:    c.Disk,
+		NumPort: len(c.PortMappings), // FIXME LATER, this is maybe not exact
+	}
+}
+
 func (c *TaskConfig) BuildCommand() *mesosproto.CommandInfo {
 	if cmd := c.Command; len(cmd) > 0 {
 		return &mesosproto.CommandInfo{

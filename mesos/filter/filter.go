@@ -6,16 +6,25 @@ import (
 )
 
 type Filter interface {
-	Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error)
+	Filter(opts *FilterOptions, agents []*magent.Agent) ([]*magent.Agent, error)
+}
+
+type FilterOptions struct {
+	// resources requirements
+	ResRequired types.ResourcesRequired
+	Replicas    int
+
+	// constraints
+	Constraints []*types.Constraint
 }
 
 // the returned agents contains at least one proper agent
-func ApplyFilters(filters []Filter, config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
+func ApplyFilters(filters []Filter, opts *FilterOptions, agents []*magent.Agent) ([]*magent.Agent, error) {
 	accepted := agents
 
 	var err error
 	for _, filter := range filters {
-		accepted, err = filter.Filter(config, replicas, accepted)
+		accepted, err = filter.Filter(opts, accepted)
 		if err != nil {
 			return nil, err
 		}

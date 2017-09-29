@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	magent "github.com/Dataman-Cloud/swan/mesos/agent"
-	"github.com/Dataman-Cloud/swan/types"
 )
 
 var (
@@ -17,9 +16,9 @@ func NewConstraintsFilter() *constraintsFilter {
 	return &constraintsFilter{}
 }
 
-func (f *constraintsFilter) Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
+func (f *constraintsFilter) Filter(opts *FilterOptions, agents []*magent.Agent) ([]*magent.Agent, error) {
 	var (
-		constraints = config.Constraints
+		constraints = opts.Constraints
 		candidates  = make([]*magent.Agent, 0)
 	)
 

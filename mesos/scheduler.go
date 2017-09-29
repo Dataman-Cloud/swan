@@ -701,6 +701,13 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.O
 			}
 
 		default:
+			// filter options
+			filterOpts := &filter.FilterOptions{
+				ResRequired: cfg.ResourcesRequired(),
+				Replicas:    replicas,
+				Constraints: cfg.Constraints,
+			}
+
 			// ensure we have at least one agent avaliable
 			agents := s.getAgents()
 			if len(agents) == 0 {
@@ -709,7 +716,7 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.O
 			}
 
 			// filter agents by resources & constraints
-			filteredAgents, err = filter.ApplyFilters(s.filters, cfg, replicas, agents)
+			filteredAgents, err = filter.ApplyFilters(s.filters, filterOpts, agents)
 			if err != nil {
 				log.Warnf("without proper offers: [%v], retrying ...", err)
 				goto RETRY
