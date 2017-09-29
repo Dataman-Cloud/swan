@@ -1,10 +1,13 @@
 package mole
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"net"
 	"net/url"
+	"os"
 	"sync"
 	"time"
 
@@ -12,6 +15,8 @@ import (
 )
 
 var (
+	FILE_UUID = "/etc/.mole.uuid"
+
 	errNotConnected = errors.New("not connected to master")
 	errClosed       = errors.New("agent listener closed")
 )
@@ -28,10 +33,32 @@ type Agent struct {
 }
 
 func NewAgent(id string, masterAddr *url.URL) *Agent {
+	var err error
+	if id == "" {
+		id, err = getAgentID() // load or save a random id
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	return &Agent{
 		id:     id,
 		master: masterAddr,
 	}
+}
+
+func getAgentID() (string, error) {
+	_, err := os.Stat(FILE_UUID)
+	if os.IsNotExist(err) {
+		uuid := randNumber(16)
+		err = ioutil.WriteFile(FILE_UUID, []byte(uuid), os.FileMode(0400))
+		return string(uuid), err
+	}
+
+	bs, err := ioutil.ReadFile(FILE_UUID)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(bs)), nil
 }
 
 func (a *Agent) Join() error {

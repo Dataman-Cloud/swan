@@ -175,7 +175,7 @@ func (agent *Agent) Join() error {
 	// detect mesos slave id
 	id, err := agent.detectMesosSlaveID(masterURL)
 	if err != nil {
-		return err
+		log.Warnf("try to detect local mesos slave id failed: %v, will fall back using random agent id", err)
 	}
 
 	// setup & join
