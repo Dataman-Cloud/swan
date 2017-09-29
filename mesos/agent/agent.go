@@ -90,6 +90,10 @@ func (s *Agent) GetOffers() []*Offer {
 	return offers
 }
 
+func (s *Agent) IP() string {
+	return s.hostname
+}
+
 func (s *Agent) Resources() (cpus, mem, disk float64, ports []uint64) {
 	for _, offer := range s.GetOffers() {
 		cpus += offer.GetCpus()

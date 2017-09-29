@@ -31,6 +31,9 @@
 + framework
   - [GET /v1/framework](#framework) *Framework Info*
 
++ label 
+  - [label](https://github.com/Dataman-Cloud/swan/tree/master/docs/label.md)
+
 + events
   - [GET /v1/events](#) *Event Subscription*
 
