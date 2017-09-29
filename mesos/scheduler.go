@@ -676,7 +676,7 @@ func (s *Scheduler) Dump() interface{} {
 }
 
 // wait proper offers according by grouped-task's constraints & resources requirments
-func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.Offer, error) {
+func (s *Scheduler) waitOffers(filterOpts *filter.FilterOptions) ([]*magent.Offer, error) {
 	log.Debugln("Finding suitable agent to run tasks")
 
 	var (
@@ -709,7 +709,7 @@ func (s *Scheduler) waitOffers(cfg *types.TaskConfig, replicas int) ([]*magent.O
 			}
 
 			// filter agents by resources & constraints
-			filteredAgents, err = filter.ApplyFilters(s.filters, cfg, replicas, agents)
+			filteredAgents, err = filter.ApplyFilters(s.filters, filterOpts, agents)
 			if err != nil {
 				log.Warnf("without proper offers: [%v], retrying ...", err)
 				goto RETRY
@@ -763,8 +763,15 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 	// launch each sub-pieces of tasks
 	for _, group := range groups {
 
+		// try to use filter options to obtain proper offers
+		filterOpts := &filter.FilterOptions{
+			ResRequired: cfg.ResourcesRequired(),
+			Replicas:    len(group),
+			Constraints: cfg.Constraints,
+		}
+
 		// try obtain proper offers
-		offers, err := s.waitOffers(cfg, len(group))
+		offers, err := s.waitOffers(filterOpts)
 		if err != nil {
 			return err
 		}

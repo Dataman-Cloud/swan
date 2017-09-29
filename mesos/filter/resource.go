@@ -4,33 +4,35 @@ import (
 	"errors"
 
 	magent "github.com/Dataman-Cloud/swan/mesos/agent"
-	"github.com/Dataman-Cloud/swan/types"
 )
 
 var (
 	errResourceNotEnough = errors.New("resource not enough")
 )
 
-type resourceFilter struct {
-}
+type resourceFilter struct{}
 
 func NewResourceFilter() *resourceFilter {
 	return &resourceFilter{}
 }
 
-// multiplicate with replicas to calculate total resource requirments
-func (f *resourceFilter) Filter(config *types.TaskConfig, replicas int, agents []*magent.Agent) ([]*magent.Agent, error) {
-	candidates := make([]*magent.Agent, 0)
+func (f *resourceFilter) Filter(opts *FilterOptions, agents []*magent.Agent) ([]*magent.Agent, error) {
+	var (
+		candidates = make([]*magent.Agent, 0)
+		replicas   = opts.Replicas
+
+		// multiplicate with replicas to calculate total resource requirments
+		cpuReq   = opts.ResRequired.CPUs * float64(replicas)
+		memReq   = opts.ResRequired.Mem * float64(replicas)
+		diskReq  = opts.ResRequired.Disk * float64(replicas)
+		portsReq = opts.ResRequired.NumPort * replicas
+	)
 
 	for _, agent := range agents {
 		var (
-			cpus, mem, disk, ports = agent.Resources()               // avaliable agent resources
-			cpusReq                = config.CPUs * float64(replicas) // total resources requirements ...
-			memReq                 = config.Mem * float64(replicas)
-			diskReq                = config.Disk * float64(replicas)
-			portsReq               = len(config.PortMappings) * replicas // FIXME LATER, this is maybe not exact
+			cpus, mem, disk, ports = agent.Resources() // avaliable agent resources
 		)
-		if cpus >= cpusReq && mem >= memReq && disk >= diskReq && len(ports) >= portsReq {
+		if cpus >= cpuReq && mem >= memReq && disk >= diskReq && len(ports) >= portsReq {
 			candidates = append(candidates, agent)
 		}
 	}
