@@ -11,7 +11,7 @@ VERSION=$(shell git describe --always --tags --abbre=0)
 BUILD_TIME=$(shell date -u +%Y-%m-%d:%H-%M-%S)
 PKG := "github.com/Dataman-Cloud/swan"
 
-gitCommit=$(shell git describe --tags)
+gitCommit=$(shell git describe --tags --long)
 gitDirty=$(shell git status --porcelain --untracked-files=no)
 GIT_COMMIT=$(gitCommit)
 ifneq ($(gitDirty),"")
