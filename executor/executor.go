@@ -26,16 +26,24 @@ func main() {
 		log.Fatal("require at least one argument, eg: [example|kvm|pod]")
 	}
 
-	var executor Executor
+	var (
+		executor Executor
+		err      error
+	)
+
 	switch os.Args[1] {
 	case "example":
 		executor = example.New()
 	case "kvm":
-		executor = kvm.New()
+		executor, err = kvm.New()
 	case "pod":
 		log.Fatal(ErrNotImplemented)
 	default:
 		log.Fatal(ErrNotSupportedExecutor)
+	}
+
+	if err != nil {
+		log.Fatal(err)
 	}
 
 	// init driver

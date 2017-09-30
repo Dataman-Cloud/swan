@@ -1,10 +1,16 @@
 package kvm
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
+	"math"
+	"os/exec"
+	"strconv"
+	"syscall"
 	"time"
 
 	"github.com/Dataman-Cloud/swan/executor/driver"
@@ -15,14 +21,20 @@ import (
 )
 
 type Executor struct {
-	taskId *mesosproto.TaskID
 	stopCh chan struct{}
+
+	taskId  *mesosproto.TaskID // from taskinfo on Launch Event
+	kvmOpts *KvmDomainOpts     // from taskinfo labels on Launch Event
 }
 
-func New() *Executor {
-	return &Executor{
-		stopCh: make(chan struct{}),
-	}
+func New() (*Executor, error) {
+	return &Executor{stopCh: make(chan struct{})}, envPreCheck()
+}
+
+// TODO
+// check local virt-what virt-xml-validate virsh qemu-img ...
+func envPreCheck() error {
+	return nil
 }
 
 func (e *Executor) HandleSubscribed(driv driver.Driver, ev *mesosproto.ExecEvent) error {
@@ -35,43 +47,80 @@ func (e *Executor) HandlePreLaunch(driv driver.Driver, ev *mesosproto.ExecEvent)
 
 	// log the task info
 	taskInfo := ev.Launch.Task
-	e.taskId = taskInfo.GetTaskId() // now we got the mesos task id
-
 	taskbs, _ := json.MarshalIndent(taskInfo, "", "    ")
 	log.Println("Mesos Executor: Task Info: ")
 	fmt.Println(string(taskbs))
+
+	// now we got the mesos task id
+	e.taskId = taskInfo.GetTaskId()
+
+	// now we got the kvm options
+	// parse taskinfo labels to obtain kvm settings
+	if err := e.parseKvmOptions(taskInfo); err != nil {
+		log.Errorln("parse kvm options from task labels error:", err)
+		return err
+	}
 
 	// fetching os iso file
 	msg := e.NewMessage("IsoFetching", "fetching OS ISO file ...")
 	e.sendMessage(driv, msg)
 	time.Sleep(time.Second)
-
-	// creating qemu image
-	msg = e.NewMessage("ImageCreating", "creating the base qemu image ...")
-	e.sendMessage(driv, msg)
-	time.Sleep(time.Second)
-
-	// all preparing work done
-	msg = e.NewMessage("Prepared", "all preparations ready")
-	e.sendMessage(driv, msg)
 	return nil
 }
 
 func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) error {
 	log.Println("Mesos Executor: Launching Task ...")
 
-	// create the xml file
-	msg := e.NewMessage("XmlCreating", "creating the xml config file ...")
+	// creating qemu image
+	msg := e.NewMessage("ImageCreating", "creating the base qemu image ...")
 	e.sendMessage(driv, msg)
 	time.Sleep(time.Second)
 
-	// define the xml
+	// create the xml file
+	msg = e.NewMessage("XmlCreating", "creating the xml config file ...")
+	e.sendMessage(driv, msg)
+	time.Sleep(time.Second)
+
+	xmlbs, err := NewKvmDomain(e.kvmOpts)
+	if err != nil {
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "parse kvm options error: "+err.Error())
+		return err
+	}
+
+	fileName := e.taskId.GetValue() + ".xml"
+	if err := ioutil.WriteFile(fileName, xmlbs, 0644); err != nil {
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "save kvm domain xml file error: "+err.Error())
+		return err
+	}
+
+	// TODO validate the xml syntax
+
+	// virsh define 4ef2002ee94a.0.demo.bbk.bj.xml
 	msg = e.NewMessage("KvmDefining", "defining the kvm domain ...")
 	e.sendMessage(driv, msg)
-	time.Sleep(time.Second)
+	so, se, err := RunCmd("/usr/bin/virsh", "--validate", fmt.Sprintf("--file=%s", fileName))
+	cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+	fmt.Println(cmbOutput)
+	if err != nil {
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "virsh define error: "+err.Error())
+		return err
+	}
 
-	e.sendUpdate(driv, mesosproto.TaskState_TASK_STARTING.Enum(), "")
+	// virsh start {{.Name}}
+	msg = e.NewMessage("KvmStarting", "starting the kvm domain ...")
+	e.sendMessage(driv, msg)
+	so, se, err = RunCmd("/usr/bin/virsh", "start", e.kvmOpts.Name)
+	cmbOutput = fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+	fmt.Println(cmbOutput)
+	if err != nil {
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "virsh start error: "+err.Error())
+		return err
+	}
 
+	// tell the scheduler the vm vnc address
+	// virsh vncdisplay bbk-demo
+
+	// TODO start an goroutine to watch the vm status through virsh events
 	go func() {
 
 		e.sendUpdate(driv, mesosproto.TaskState_TASK_RUNNING.Enum(), "")
@@ -181,4 +230,66 @@ func (e *Executor) sendMessage(driv driver.Driver, msg Message) error {
 	bs, _ := json.Marshal(msg)
 	message += string(bs)
 	return driv.SendFrameworkMessage(message)
+}
+
+func (e *Executor) parseKvmOptions(taskInfo *mesosproto.TaskInfo) error {
+	var (
+		labels = taskInfo.Labels.GetLabels()
+	)
+
+	fgetlb := func(key string) string {
+		for _, lb := range labels {
+			if lb.GetKey() == key {
+				return lb.GetValue()
+			}
+		}
+		return ""
+	}
+
+	var (
+		name        = fgetlb("SWAN_KVM_TASK_NAME")
+		mem         = fgetlb("SWAN_KVM_MEMS")
+		cpus        = fgetlb("SWAN_KVM_CPUS")
+		imgUrl      = fgetlb("SWAN_KVM_IMAGE_URI")
+		vncPassword = fgetlb("SWAN_KVM_VNC_PASSWORD")
+		vncPort     = "5911" // TODO
+		// imgTyp      = fgetlb("SWAN_KVM_IMAGE_TYPE") // TODO
+	)
+
+	cpusN, _ := strconv.Atoi(cpus)
+	memN, _ := strconv.Atoi(mem)
+
+	// TODO valid
+	// TODO support qcow2 image file
+
+	e.kvmOpts = &KvmDomainOpts{
+		Name:        name,
+		Memory:      uint(memN),
+		Cpus:        cpusN,
+		Iso:         imgUrl,
+		VncPort:     vncPort,
+		VncPassword: vncPassword,
+	}
+
+	return nil
+}
+
+// RunCmd
+func RunCmd(command string, args ...string) (string, string, error) {
+	var stdoutBytes, stderrBytes bytes.Buffer
+	cmd := exec.Command(command, args...)
+	cmd.Stdout = &stdoutBytes
+	cmd.Stderr = &stderrBytes
+	err := cmd.Run()
+	return stdoutBytes.String(), stderrBytes.String(), err
+}
+
+func detectExitCode(err error) (code int) {
+	defer func() {
+		if r := recover(); r != nil {
+			code = int(math.MinInt32)
+		}
+	}()
+
+	return err.(*exec.ExitError).Sys().(syscall.WaitStatus).ExitStatus()
 }
