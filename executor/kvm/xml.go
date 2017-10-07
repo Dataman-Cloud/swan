@@ -14,10 +14,8 @@ var (
         <vcpu>{{.Cpus}}</vcpu>
         <os>
 		<type arch='x86_64' machine='pc'>hvm</type>
-		<boot dev='fd'/>
 		<boot dev='hd'/>
 		<boot dev='cdrom'/>
-		<boot dev='network'/>
 		<bootmenu enable='yes' timeout='3000'/>
        </os>
        <features>
@@ -30,7 +28,9 @@ var (
        <on_reboot>restart</on_reboot>
        <on_crash>destroy</on_crash>
        <devices>
-		<emulator>/usr/libexec/qemu-kvm</emulator>
+		<!-- centos <emulator>/usr/libexec/qemu-kvm</emulator> -->
+		<!-- ubuntu <emulator>/usr/bin/qemu-system-x86_64</emulator> -->
+		<emulator>/usr/bin/qemu-system-x86_64</emulator>
 
 		<disk type='file' device='disk'>
 			<driver name='qemu' type='qcow2'/>
@@ -49,7 +49,7 @@ var (
 
 		<input type='mouse' bus='ps2'/>
 
-		<graphics type='vnc' port='{{.VncPort}}' passwd='{{.VncPassword}}' sharePolicy='allow-exclusive'>
+		<graphics type='vnc' autoport='yes' passwd='{{.VncPassword}}' sharePolicy='allow-exclusive'>
     			<listen type='address' address='0.0.0.0'/>
   		</graphics>
        </devices>
@@ -61,6 +61,7 @@ type KvmDomainOpts struct {
 	Name        string
 	Memory      uint // by MiB
 	Cpus        int
+	Disk        int // by GiB
 	Iso         string
 	VncPort     string
 	VncPassword string

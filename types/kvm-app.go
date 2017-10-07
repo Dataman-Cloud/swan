@@ -63,6 +63,7 @@ type KvmConfig struct {
 	Count       int           `json:"count"`
 	Cpus        int           `json:"cpus"`
 	Mems        int           `json:"mems"`
+	Disks       int           `json:"disks"` // by GiB
 	Executor    *Executor     `json:"executor"`
 	Image       *KvmImage     `json:"image"`
 	Vnc         *Vnc          `json:"vnc"`
@@ -81,6 +82,10 @@ func (cfg *KvmConfig) Valid() error {
 
 	if cfg.Mems <= 0 {
 		return errors.New("mems must be positive")
+	}
+
+	if cfg.Disks <= 0 {
+		return errors.New("disks must be positive")
 	}
 
 	if exec := cfg.Executor; exec == nil {
@@ -176,6 +181,7 @@ func (cfg *KvmConfig) BuildLabels(id, name string) *mesosproto.Labels {
 		"SWAN_KVM_TASK_NAME":    name,
 		"SWAN_KVM_CPUS":         strconv.Itoa(cfg.Cpus),
 		"SWAN_KVM_MEMS":         strconv.Itoa(cfg.Mems),
+		"SWAN_KVM_DISKS":        strconv.Itoa(cfg.Disks),
 		"SWAN_KVM_IMAGE_TYPE":   cfg.Image.Type,
 		"SWAN_KVM_IMAGE_URI":    cfg.Image.URI,
 		"SWAN_KVM_VNC_ENABLED":  strconv.FormatBool(cfg.Vnc.Enabled),

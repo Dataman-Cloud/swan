@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"math"
+	"os"
 	"os/exec"
 	"strconv"
 	"syscall"
@@ -72,9 +73,18 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 	log.Println("Mesos Executor: Launching Task ...")
 
 	// creating qemu image
+	// qemu-img create -f qcow2 /var/lib/libvirt/images/centos.qcow2 10G
 	msg := e.NewMessage("ImageCreating", "creating the base qemu image ...")
 	e.sendMessage(driv, msg)
-	time.Sleep(time.Second)
+	so, se, err := RunCmd("/usr/bin/qemu-img", "create", "-f", "qcow2",
+		fmt.Sprintf("/var/lib/libvirt/images/%s.qcow2", e.kvmOpts.Name),
+		fmt.Sprintf("%dG", e.kvmOpts.Disk))
+	cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+	fmt.Println(cmbOutput)
+	if err != nil {
+		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "qemu-img create error: "+err.Error())
+		return err
+	}
 
 	// create the xml file
 	msg = e.NewMessage("XmlCreating", "creating the xml config file ...")
@@ -93,13 +103,11 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 		return err
 	}
 
-	// TODO validate the xml syntax
-
 	// virsh define 4ef2002ee94a.0.demo.bbk.bj.xml
 	msg = e.NewMessage("KvmDefining", "defining the kvm domain ...")
 	e.sendMessage(driv, msg)
-	so, se, err := RunCmd("/usr/bin/virsh", "--validate", fmt.Sprintf("--file=%s", fileName))
-	cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+	so, se, err = RunCmd("/usr/bin/virsh", "define", fmt.Sprintf("--file=%s", fileName), "--validate")
+	cmbOutput = fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
 	fmt.Println(cmbOutput)
 	if err != nil {
 		e.sendUpdate(driv, mesosproto.TaskState_TASK_FAILED.Enum(), "virsh define error: "+err.Error())
@@ -166,8 +174,14 @@ func (e *Executor) HandleKill(driv driver.Driver, ev *mesosproto.ExecEvent) erro
 
 	// stop the task
 	e.sendUpdate(driv, mesosproto.TaskState_TASK_KILLING.Enum(), "")
-	close(e.stopCh)
+	// shutdown the vm & clean the base image file
+	RunCmd("/usr/bin/virsh", "shutdown", e.kvmOpts.Name)
+	time.Sleep(time.Second * 3)
+	RunCmd("/usr/bin/virsh", "destroy", e.kvmOpts.Name)
+	RunCmd("/usr/bin/virsh", "undefine", e.kvmOpts.Name)
+	os.Remove(fmt.Sprintf("/var/lib/libvirt/images/%s.qcow2", e.kvmOpts.Name))
 	e.sendUpdate(driv, mesosproto.TaskState_TASK_KILLED.Enum(), "")
+	close(e.stopCh)
 
 	// stop the executor driver
 	driv.Stop()
@@ -249,15 +263,16 @@ func (e *Executor) parseKvmOptions(taskInfo *mesosproto.TaskInfo) error {
 	var (
 		name        = fgetlb("SWAN_KVM_TASK_NAME")
 		mem         = fgetlb("SWAN_KVM_MEMS")
+		disk        = fgetlb("SWAN_KVM_DISKS")
 		cpus        = fgetlb("SWAN_KVM_CPUS")
 		imgUrl      = fgetlb("SWAN_KVM_IMAGE_URI")
 		vncPassword = fgetlb("SWAN_KVM_VNC_PASSWORD")
-		vncPort     = "5911" // TODO
 		// imgTyp      = fgetlb("SWAN_KVM_IMAGE_TYPE") // TODO
 	)
 
 	cpusN, _ := strconv.Atoi(cpus)
 	memN, _ := strconv.Atoi(mem)
+	diskN, _ := strconv.Atoi(disk)
 
 	// TODO valid
 	// TODO support qcow2 image file
@@ -266,8 +281,8 @@ func (e *Executor) parseKvmOptions(taskInfo *mesosproto.TaskInfo) error {
 		Name:        name,
 		Memory:      uint(memN),
 		Cpus:        cpusN,
+		Disk:        diskN,
 		Iso:         imgUrl,
-		VncPort:     vncPort,
 		VncPassword: vncPassword,
 	}
 
