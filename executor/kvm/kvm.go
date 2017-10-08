@@ -267,7 +267,7 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 		}
 
 	case string(FMMsgStartUp):
-		msg := e.NewMessage("KvmStopping", "startting the kvm domain ...", "")
+		msg := e.NewMessage("KvmStarting", "startting the kvm domain ...", "")
 		e.sendMessage(driv, msg)
 
 		so, se, err := RunCmd("/usr/bin/virsh", "start", e.kvmOpts.Name)
