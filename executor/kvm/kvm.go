@@ -226,9 +226,57 @@ func (e *Executor) HandleUnknown(driv driver.Driver, ev *mesosproto.ExecEvent) e
 }
 
 func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) error {
+	var (
+		msg  = ev.GetMessage() // we only care about the Message field
+		data = msg.GetData()
+	)
+
 	log.Println("Mesos Executor: Message Event:")
-	evbs, _ := json.MarshalIndent(ev, "", "    ")
+	evbs, _ := json.MarshalIndent(msg, "", "    ")
 	fmt.Println(string(evbs))
+
+	switch msg := string(data); msg {
+
+	case string(FMMsgShutDown):
+		msg := e.NewMessage("KvmStopping", "stopping the kvm domain ...")
+		e.sendMessage(driv, msg)
+
+		// this require the guest vm have acpid installed
+		// so, se, err := RunCmd("/usr/bin/virsh", "shutdown", e.kvmOpts.Name)
+
+		// we use managedsave <domain> --running to perform the vm stopping
+		so, se, err := RunCmd("/usr/bin/virsh", "managedsave", e.kvmOpts.Name, "--running")
+		cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+		fmt.Println(cmbOutput)
+
+		if err != nil {
+			msg := e.NewMessage("KvmStopFailed", "stop the kvm domain failed: "+err.Error())
+			e.sendMessage(driv, msg)
+		} else {
+			msg := e.NewMessage("KvmStopped", "stop the kvm domain succeed")
+			e.sendMessage(driv, msg)
+		}
+
+	case string(FMMsgStartUp):
+		msg := e.NewMessage("KvmStopping", "startting the kvm domain ...")
+		e.sendMessage(driv, msg)
+
+		so, se, err := RunCmd("/usr/bin/virsh", "start", e.kvmOpts.Name)
+		cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+		fmt.Println(cmbOutput)
+
+		if err != nil {
+			msg := e.NewMessage("KvmStartFailed", "start the kvm domain failed: "+err.Error())
+			e.sendMessage(driv, msg)
+		} else {
+			msg := e.NewMessage("KvmRunning", "start the kvm domain succeed")
+			e.sendMessage(driv, msg)
+		}
+
+	default:
+		log.Warnln("Mesos Executor: Unsupported kvm command message: %s, skip", msg)
+	}
+
 	return nil
 }
 

@@ -371,6 +371,7 @@ func (s *Scheduler) processKvmUpdateEvent(event *mesosproto.Event) {
 		status  = event.GetUpdate().GetStatus()
 		state   = status.GetState()
 		taskId  = status.TaskId.GetValue()
+		execId  = status.ExecutorId.GetValue()
 		reason  = status.GetReason().String()
 		message = strings.TrimPrefix(status.GetMessage(), "SWAN_KVM_EXECUTOR_MESSAGE: ")
 	)
@@ -403,6 +404,9 @@ func (s *Scheduler) processKvmUpdateEvent(event *mesosproto.Event) {
 	if state != mesosproto.TaskState_TASK_RUNNING {
 		task.ErrMsg = reason + ":" + message
 	}
+
+	// set executor id
+	task.ExecutorId = execId
 
 	// memo db update db task
 	if err := s.db.UpdateKvmTask(appId, task); err != nil {

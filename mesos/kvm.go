@@ -11,6 +11,100 @@ import (
 	"github.com/golang/protobuf/proto"
 )
 
+// StopKvmTask send message to kvm executor to stop kvm task
+func (s *Scheduler) StopKvmTask(taskId, agentId, executorId string) error {
+	log.Printf("Stopping kvm task %s with agentId %s", taskId, agentId)
+
+	if agentId == "" || executorId == "" {
+		log.Warnf("agentId or executorId of task %s is empty, ignore", taskId)
+		return nil
+	}
+
+	// TODO
+	//t := NewTask(nil, taskId, "")
+	//s.addPendingTask(t)
+	//defer s.removePendingTask(taskId) // prevent leak
+
+	call := &mesosproto.Call{
+		FrameworkId: s.FrameworkId(),
+		Type:        mesosproto.Call_MESSAGE.Enum(),
+		Message: &mesosproto.Call_Message{
+			ExecutorId: &mesosproto.ExecutorID{
+				Value: proto.String(executorId),
+			},
+			AgentId: &mesosproto.AgentID{
+				Value: proto.String(agentId),
+			},
+			Data: []byte("SWAN_KVM_TASK_SHUTDOWN"),
+		},
+	}
+
+	// send call
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("StopKvmTask().SendCall() error:", err)
+		return err
+	}
+
+	// TODO
+	//log.Debugf("Waiting for kvm task %s to be stopped by mesos", taskId)
+	//for status := range t.GetStatus() {
+	//log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
+	//if IsKvmTaskStopped(status) {
+	//log.Printf("Task %s stopped", taskId)
+	//break
+	//}
+	//}
+
+	return nil
+}
+
+// StartKvmTask send message to kvm executor to start kvm task
+func (s *Scheduler) StartKvmTask(taskId, agentId, executorId string) error {
+	log.Printf("Starting kvm task %s with agentId %s", taskId, agentId)
+
+	if agentId == "" || executorId == "" {
+		log.Warnf("agentId or executorId of task %s is empty, ignore", taskId)
+		return nil
+	}
+
+	// TODO
+	//t := NewTask(nil, taskId, "")
+	//s.addPendingTask(t)
+	//defer s.removePendingTask(taskId) // prevent leak
+
+	call := &mesosproto.Call{
+		FrameworkId: s.FrameworkId(),
+		Type:        mesosproto.Call_MESSAGE.Enum(),
+		Message: &mesosproto.Call_Message{
+			ExecutorId: &mesosproto.ExecutorID{
+				Value: proto.String(executorId),
+			},
+			AgentId: &mesosproto.AgentID{
+				Value: proto.String(agentId),
+			},
+			Data: []byte("SWAN_KVM_TASK_STARTUP"),
+		},
+	}
+
+	// send call
+	if _, err := s.SendCall(call, http.StatusAccepted); err != nil {
+		log.Errorln("StopKvmTask().SendCall() error:", err)
+		return err
+	}
+
+	// TODO
+	//log.Debugf("Waiting for kvm task %s to be stopped by mesos", taskId)
+	//for status := range t.GetStatus() {
+	//log.Debugf("Receiving status %s for task %s", status.GetState().String(), taskId)
+	//if IsKvmTaskStopped(status) {
+	//log.Printf("Task %s stopped", taskId)
+	//break
+	//}
+	//}
+
+	return nil
+}
+
 // launch grouped runtime tasks with specified mesos offers
 func (s *Scheduler) launchGroupKvmTasksWithOffers(offers []*magent.Offer, tasks []*Task) error {
 	var (
@@ -33,7 +127,8 @@ func (s *Scheduler) launchGroupKvmTasksWithOffers(offers []*magent.Offer, tasks 
 		}
 
 		dbtask.AgentId = t.AgentId.GetValue()
-		dbtask.IP = offers[0].GetHostname()
+		dbtask.IPAddr = offers[0].GetHostname()
+		dbtask.VncAddr = "" // TODO with ipaddr + vncport
 
 		if err := s.db.UpdateKvmTask(appId, dbtask); err != nil {
 			log.Errorln("update db kvm task got error: %v", err)

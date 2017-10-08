@@ -34,16 +34,16 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("POST", "/v1/apps/{app_id}/versions", s.createVersion),
 
 		// kvm app scheduling
-		NewRoute("GET", "/v1/kvm-apps", s.listKvmApps),
-		NewRoute("POST", "/v1/kvm-apps", s.createKvmApp),
-		NewRoute("GET", "/v1/kvm-apps/{app_id}", s.getKvmApp),
-		NewRoute("DELETE", "/v1/kvm-apps/{app_id}", s.deleteKvmApp),
+		NewRoute("GET", "/v1/kvm-apps", s.listKvmApps),              // DONE
+		NewRoute("POST", "/v1/kvm-apps", s.createKvmApp),            // DONE
+		NewRoute("GET", "/v1/kvm-apps/{app_id}", s.getKvmApp),       // DONE
+		NewRoute("DELETE", "/v1/kvm-apps/{app_id}", s.deleteKvmApp), // DONE
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/start", s.startKvmApp),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/stop", s.stopKvmApp),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/suspend", s.suspendKvmApp),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/resume", s.resumeKvmApp),
 
-		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks", s.listKvmTasks),
+		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks", s.listKvmTasks), // DONE
 		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.getKvmTask),
 		NewRoute("DELETE", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.deleteKvmTask),
 		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/start", s.startKvmTask),

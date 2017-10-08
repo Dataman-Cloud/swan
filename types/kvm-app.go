@@ -45,18 +45,20 @@ func (app *KvmApp) Valid() error {
 
 // KvmTask is a db kvm task
 type KvmTask struct {
-	ID        string    `json:"id"`
-	Name      string    `json:"name"`
-	AgentId   string    `json:"agentId"`    // mesos agent id located at, set with offer before launch
-	DomUuid   string    `json:"domainUuid"` // libvirt domain uuid, set by mesos update event
-	DomName   string    `json:"domainName"` // libvirt domain name, set by mesos update event
-	OpStatus  string    `json:"opstatus"`   // op status
-	Status    string    `json:"status"`     // mesos task status, set by mesos update event
-	ErrMsg    string    `json:"errmsg"`     // mesos task errmsg, set by mesos update event or scheduler according by ops
-	CreatedAt time.Time `json:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	AgentId    string    `json:"agentId"`    // mesos agent id located at, set with offer before launch
+	ExecutorId string    `json:"executorId"` // swan kvm executor id, set by mesos update event
+	DomUuid    string    `json:"domainUuid"` // libvirt domain uuid, set by mesos update event
+	DomName    string    `json:"domainName"` // libvirt domain name, set by mesos update event
+	OpStatus   string    `json:"opstatus"`   // op status
+	Status     string    `json:"status"`     // mesos task status, set by mesos update event
+	ErrMsg     string    `json:"errmsg"`     // mesos task errmsg, set by mesos update event or scheduler according by ops
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 
-	IP string `json:"ip"` // TODO
+	IPAddr  string `json:"ipAddr"`  // TODO
+	VncAddr string `json:"vncAddr"` // TODO
 }
 
 type KvmConfig struct {
