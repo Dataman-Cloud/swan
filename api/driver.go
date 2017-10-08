@@ -16,8 +16,8 @@ type Driver interface {
 	// kvm stop/start/suspend/resume
 	StopKvmTask(taskId, agentId, executorId string) error
 	StartKvmTask(taskId, agentId, executorId string) error
-	// SuspendKvmTask(taskId string, agentId string) error
-	// ResumeKvmTask(taskId string, agentId string) error
+	SuspendKvmTask(taskId, agentId, executorId string) error
+	ResumeKvmTask(taskId, agentId, executorId string) error
 
 	ClusterName() string
 

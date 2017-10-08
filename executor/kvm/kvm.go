@@ -273,6 +273,38 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 			e.sendMessage(driv, msg)
 		}
 
+	case string(FMMsgSuspend):
+		msg := e.NewMessage("KvmSuspending", "euspending the kvm domain ...")
+		e.sendMessage(driv, msg)
+
+		so, se, err := RunCmd("/usr/bin/virsh", "suspend", e.kvmOpts.Name)
+		cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+		fmt.Println(cmbOutput)
+
+		if err != nil {
+			msg := e.NewMessage("KvmSuspendFailed", "suspend the kvm domain failed: "+err.Error())
+			e.sendMessage(driv, msg)
+		} else {
+			msg := e.NewMessage("KvmSuspended", "suspend the kvm domain succeed")
+			e.sendMessage(driv, msg)
+		}
+
+	case string(FMMsgResume):
+		msg := e.NewMessage("KvmResuming", "resuming the kvm domain ...")
+		e.sendMessage(driv, msg)
+
+		so, se, err := RunCmd("/usr/bin/virsh", "resume", e.kvmOpts.Name)
+		cmbOutput := fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+		fmt.Println(cmbOutput)
+
+		if err != nil {
+			msg := e.NewMessage("KvmResumeFailed", "resume the kvm domain failed: "+err.Error())
+			e.sendMessage(driv, msg)
+		} else {
+			msg := e.NewMessage("KvmRunning", "resume the kvm domain succeed")
+			e.sendMessage(driv, msg)
+		}
+
 	default:
 		log.Warnln("Mesos Executor: Unsupported kvm command message: %s, skip", msg)
 	}

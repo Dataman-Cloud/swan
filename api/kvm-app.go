@@ -240,74 +240,22 @@ func (r *Server) deleteKvmApp(w http.ResponseWriter, req *http.Request) {
 }
 
 func (r *Server) stopKvmApp(w http.ResponseWriter, req *http.Request) {
-	var (
-		appId = mux.Vars(req)["app_id"]
-	)
-
-	// get app tasks
-	tasks, err := r.db.ListKvmTasks(appId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("list kvm tasks got error for delete kvm app. %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	log.Debugf("kvm app %s has %d tasks", appId, len(tasks))
-
-	// mark app op status
-	if err := r.memoKvmAppStatus(appId, types.OpStatusStopping, ""); err != nil {
-		http.Error(w, fmt.Sprintf("update kvm app opstatus to stopping got error: %v", err), http.StatusInternalServerError)
-		return
-	}
-
-	// preform stop async
-	go func() {
-		var err error
-
-		// defer to mark op status
-		defer func() {
-			if err != nil {
-				log.Errorf("stop kvm app %s error: %v", appId, err)
-				r.memoKvmAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("stop kvm app error: %v", err))
-			} else {
-				log.Printf("stop kvm app %s succeed", appId)
-			}
-		}()
-
-		log.Printf("Preparing to stop Kvm App %s with %d tasks", appId, len(tasks))
-
-		// stop runtime tasks
-		var (
-			count   = len(tasks)
-			succeed = int64(0)
-			wg      sync.WaitGroup
-		)
-		for _, task := range tasks {
-			wg.Add(1)
-			go func(task *types.KvmTask) {
-				defer wg.Done()
-
-				if err = r.driver.StopKvmTask(task.ID, task.AgentId, task.ExecutorId); err != nil {
-					log.Errorf("stop kvm task %s got error: %v", task.ID, err)
-					r.memoKvmTaskStatus(appId, task.ID, "", "", "stop kvm task error: "+err.Error())
-					return
-				}
-
-				atomic.AddInt64(&succeed, 1)
-
-			}(task)
-		}
-		wg.Wait()
-
-		if int(succeed) != count {
-			err = fmt.Errorf("%d tasks stopped failed", count-int(succeed))
-			return
-		}
-	}()
-
-	writeJSON(w, http.StatusNoContent, "")
+	r.controlKvmApp(w, req, "Stop")
 }
 
 func (r *Server) startKvmApp(w http.ResponseWriter, req *http.Request) {
+	r.controlKvmApp(w, req, "Start")
+}
+
+func (r *Server) suspendKvmApp(w http.ResponseWriter, req *http.Request) {
+	r.controlKvmApp(w, req, "Suspend")
+}
+
+func (r *Server) resumeKvmApp(w http.ResponseWriter, req *http.Request) {
+	r.controlKvmApp(w, req, "Resume")
+}
+
+func (r *Server) controlKvmApp(w http.ResponseWriter, req *http.Request, ops string) {
 	var (
 		appId = mux.Vars(req)["app_id"]
 	)
@@ -315,15 +263,38 @@ func (r *Server) startKvmApp(w http.ResponseWriter, req *http.Request) {
 	// get app tasks
 	tasks, err := r.db.ListKvmTasks(appId)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("list kvm tasks got error for delete kvm app. %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("list kvm tasks got error. %v", err), http.StatusInternalServerError)
 		return
 	}
 
 	log.Debugf("kvm app %s has %d tasks", appId, len(tasks))
 
+	// op type
+	var (
+		opStatus string
+		opFunc   func(string, string, string) error
+	)
+	switch ops {
+	case "Start":
+		opStatus = types.OpStatusStarting
+		opFunc = r.driver.StartKvmTask
+	case "Stop":
+		opStatus = types.OpStatusStopping
+		opFunc = r.driver.StopKvmTask
+	case "Suspend":
+		opStatus = types.OpStatusSuspending
+		opFunc = r.driver.SuspendKvmTask
+	case "Resume":
+		opStatus = types.OpStatusResuming
+		opFunc = r.driver.ResumeKvmTask
+	default:
+		http.Error(w, "unsupported kvm app operation", http.StatusBadRequest)
+		return
+	}
+
 	// mark app op status
-	if err := r.memoKvmAppStatus(appId, types.OpStatusStarting, ""); err != nil {
-		http.Error(w, fmt.Sprintf("update kvm app opstatus to starting got error: %v", err), http.StatusInternalServerError)
+	if err := r.memoKvmAppStatus(appId, opStatus, ""); err != nil {
+		http.Error(w, fmt.Sprintf("update kvm app opstatus to %s got error: %v", opStatus, err), http.StatusInternalServerError)
 		return
 	}
 
@@ -334,14 +305,14 @@ func (r *Server) startKvmApp(w http.ResponseWriter, req *http.Request) {
 		// defer to mark op status
 		defer func() {
 			if err != nil {
-				log.Errorf("start kvm app %s error: %v", appId, err)
-				r.memoKvmAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("start kvm app error: %v", err))
+				log.Errorf("%s kvm app %s error: %v", ops, appId, err)
+				r.memoKvmAppStatus(appId, types.OpStatusNoop, fmt.Sprintf("%s kvm app error: %v", ops, err))
 			} else {
-				log.Printf("start kvm app %s succeed", appId)
+				log.Printf("%s kvm app %s succeed", ops, appId)
 			}
 		}()
 
-		log.Printf("Preparing to start Kvm App %s with %d tasks", appId, len(tasks))
+		log.Printf("Preparing to %s Kvm App %s with %d tasks", ops, appId, len(tasks))
 
 		// start runtime tasks
 		var (
@@ -354,9 +325,9 @@ func (r *Server) startKvmApp(w http.ResponseWriter, req *http.Request) {
 			go func(task *types.KvmTask) {
 				defer wg.Done()
 
-				if err = r.driver.StartKvmTask(task.ID, task.AgentId, task.ExecutorId); err != nil {
-					log.Errorf("start kvm task %s got error: %v", task.ID, err)
-					r.memoKvmTaskStatus(appId, task.ID, "", "", "start kvm task error: "+err.Error())
+				if err = opFunc(task.ID, task.AgentId, task.ExecutorId); err != nil {
+					log.Errorf("%s kvm task %s got error: %v", ops, task.ID, err)
+					r.memoKvmTaskStatus(appId, task.ID, "", "", ops+" kvm task error: "+err.Error())
 					return
 				}
 
@@ -367,18 +338,12 @@ func (r *Server) startKvmApp(w http.ResponseWriter, req *http.Request) {
 		wg.Wait()
 
 		if int(succeed) != count {
-			err = fmt.Errorf("%d tasks start failed", count-int(succeed))
+			err = fmt.Errorf("%d tasks %s failed", count-int(succeed), ops)
 			return
 		}
 	}()
 
 	writeJSON(w, http.StatusNoContent, "")
-}
-
-func (r *Server) suspendKvmApp(w http.ResponseWriter, req *http.Request) {
-}
-
-func (r *Server) resumeKvmApp(w http.ResponseWriter, req *http.Request) {
 }
 
 // Kvm Task
