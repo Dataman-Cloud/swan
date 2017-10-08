@@ -57,8 +57,8 @@ type KvmTask struct {
 	CreatedAt  time.Time `json:"createdAt"`
 	UpdatedAt  time.Time `json:"updatedAt"`
 
-	IPAddr  string `json:"ipAddr"`  // TODO
-	VncAddr string `json:"vncAddr"` // TODO
+	IPAddr  string `json:"ipAddr"`  // set with offer
+	VncAddr string `json:"vncAddr"` // set by mesos message event: KvmVncAddr
 }
 
 type KvmConfig struct {

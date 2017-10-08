@@ -11,6 +11,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -63,7 +64,7 @@ func (e *Executor) HandlePreLaunch(driv driver.Driver, ev *mesosproto.ExecEvent)
 	}
 
 	// fetching os iso file
-	msg := e.NewMessage("IsoFetching", "fetching OS ISO file ...")
+	msg := e.NewMessage("IsoFetching", "fetching OS ISO file ...", "")
 	e.sendMessage(driv, msg)
 	time.Sleep(time.Second)
 	return nil
@@ -74,7 +75,7 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 
 	// creating qemu image
 	// qemu-img create -f qcow2 /var/lib/libvirt/images/centos.qcow2 10G
-	msg := e.NewMessage("ImageCreating", "creating the base qemu image ...")
+	msg := e.NewMessage("ImageCreating", "creating the base qemu image ...", "")
 	e.sendMessage(driv, msg)
 	so, se, err := RunCmd("/usr/bin/qemu-img", "create", "-f", "qcow2",
 		fmt.Sprintf("/var/lib/libvirt/images/%s.qcow2", e.kvmOpts.Name),
@@ -87,7 +88,7 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 	}
 
 	// create the xml file
-	msg = e.NewMessage("XmlCreating", "creating the xml config file ...")
+	msg = e.NewMessage("XmlCreating", "creating the xml config file ...", "")
 	e.sendMessage(driv, msg)
 	time.Sleep(time.Second)
 
@@ -104,7 +105,7 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 	}
 
 	// virsh define 4ef2002ee94a.0.demo.bbk.bj.xml
-	msg = e.NewMessage("KvmDefining", "defining the kvm domain ...")
+	msg = e.NewMessage("KvmDefining", "defining the kvm domain ...", "")
 	e.sendMessage(driv, msg)
 	so, se, err = RunCmd("/usr/bin/virsh", "define", fmt.Sprintf("--file=%s", fileName), "--validate")
 	cmbOutput = fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
@@ -115,7 +116,7 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 	}
 
 	// virsh start {{.Name}}
-	msg = e.NewMessage("KvmStarting", "starting the kvm domain ...")
+	msg = e.NewMessage("KvmStarting", "starting the kvm domain ...", "")
 	e.sendMessage(driv, msg)
 	so, se, err = RunCmd("/usr/bin/virsh", "start", e.kvmOpts.Name)
 	cmbOutput = fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
@@ -127,6 +128,14 @@ func (e *Executor) HandleLaunch(driv driver.Driver, ev *mesosproto.ExecEvent) er
 
 	// tell the scheduler the vm vnc address
 	// virsh vncdisplay bbk-demo
+	so, se, err = RunCmd("/usr/bin/virsh", "vncdisplay", e.kvmOpts.Name)
+	cmbOutput = fmt.Sprintf("stdout=[%s], stderr=[%s]", so, se)
+	fmt.Println(cmbOutput)
+	if err == nil {
+		vncAddr := strings.TrimSpace(so)
+		msg = e.NewMessage("KvmVncAddr", "telling vnc addr of the kvm domain ...", vncAddr)
+		e.sendMessage(driv, msg)
+	}
 
 	// TODO start an goroutine to watch the vm status through virsh events
 	go func() {
@@ -238,7 +247,7 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 	switch msg := string(data); msg {
 
 	case string(FMMsgShutDown):
-		msg := e.NewMessage("KvmStopping", "stopping the kvm domain ...")
+		msg := e.NewMessage("KvmStopping", "stopping the kvm domain ...", "")
 		e.sendMessage(driv, msg)
 
 		// this require the guest vm have acpid installed
@@ -250,15 +259,15 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 		fmt.Println(cmbOutput)
 
 		if err != nil {
-			msg := e.NewMessage("KvmStopFailed", "stop the kvm domain failed: "+err.Error())
+			msg := e.NewMessage("KvmStopFailed", "stop the kvm domain failed: "+err.Error(), "")
 			e.sendMessage(driv, msg)
 		} else {
-			msg := e.NewMessage("KvmStopped", "stop the kvm domain succeed")
+			msg := e.NewMessage("KvmStopped", "stop the kvm domain succeed", "")
 			e.sendMessage(driv, msg)
 		}
 
 	case string(FMMsgStartUp):
-		msg := e.NewMessage("KvmStopping", "startting the kvm domain ...")
+		msg := e.NewMessage("KvmStopping", "startting the kvm domain ...", "")
 		e.sendMessage(driv, msg)
 
 		so, se, err := RunCmd("/usr/bin/virsh", "start", e.kvmOpts.Name)
@@ -266,15 +275,15 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 		fmt.Println(cmbOutput)
 
 		if err != nil {
-			msg := e.NewMessage("KvmStartFailed", "start the kvm domain failed: "+err.Error())
+			msg := e.NewMessage("KvmStartFailed", "start the kvm domain failed: "+err.Error(), "")
 			e.sendMessage(driv, msg)
 		} else {
-			msg := e.NewMessage("KvmRunning", "start the kvm domain succeed")
+			msg := e.NewMessage("KvmRunning", "start the kvm domain succeed", "")
 			e.sendMessage(driv, msg)
 		}
 
 	case string(FMMsgSuspend):
-		msg := e.NewMessage("KvmSuspending", "euspending the kvm domain ...")
+		msg := e.NewMessage("KvmSuspending", "euspending the kvm domain ...", "")
 		e.sendMessage(driv, msg)
 
 		so, se, err := RunCmd("/usr/bin/virsh", "suspend", e.kvmOpts.Name)
@@ -282,15 +291,15 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 		fmt.Println(cmbOutput)
 
 		if err != nil {
-			msg := e.NewMessage("KvmSuspendFailed", "suspend the kvm domain failed: "+err.Error())
+			msg := e.NewMessage("KvmSuspendFailed", "suspend the kvm domain failed: "+err.Error(), "")
 			e.sendMessage(driv, msg)
 		} else {
-			msg := e.NewMessage("KvmSuspended", "suspend the kvm domain succeed")
+			msg := e.NewMessage("KvmSuspended", "suspend the kvm domain succeed", "")
 			e.sendMessage(driv, msg)
 		}
 
 	case string(FMMsgResume):
-		msg := e.NewMessage("KvmResuming", "resuming the kvm domain ...")
+		msg := e.NewMessage("KvmResuming", "resuming the kvm domain ...", "")
 		e.sendMessage(driv, msg)
 
 		so, se, err := RunCmd("/usr/bin/virsh", "resume", e.kvmOpts.Name)
@@ -298,10 +307,10 @@ func (e *Executor) HandleMessage(driv driver.Driver, ev *mesosproto.ExecEvent) e
 		fmt.Println(cmbOutput)
 
 		if err != nil {
-			msg := e.NewMessage("KvmResumeFailed", "resume the kvm domain failed: "+err.Error())
+			msg := e.NewMessage("KvmResumeFailed", "resume the kvm domain failed: "+err.Error(), "")
 			e.sendMessage(driv, msg)
 		} else {
-			msg := e.NewMessage("KvmRunning", "resume the kvm domain succeed")
+			msg := e.NewMessage("KvmRunning", "resume the kvm domain succeed", "")
 			e.sendMessage(driv, msg)
 		}
 

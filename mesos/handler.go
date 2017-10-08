@@ -433,7 +433,9 @@ func (s *Scheduler) processKvmMessageEvent(event *mesosproto.Event) {
 	var (
 		taskId     = kvmMsg.TaskId
 		taskStatus = kvmMsg.Status
-		appId      string
+		vncAddr    = kvmMsg.VncAddr
+		// message = kvmMsg.Message // TODO
+		appId string
 	)
 
 	// get kvm appId
@@ -456,8 +458,13 @@ func (s *Scheduler) processKvmMessageEvent(event *mesosproto.Event) {
 		return
 	}
 
-	// set task status & memo db update db task
-	task.Status = taskStatus
+	// set task status & vncAddr & memo db update db task
+	if taskStatus != "KvmVncAddr" {
+		task.Status = taskStatus
+	}
+	if vncAddr != "" {
+		task.VncAddr = task.IPAddr + vncAddr
+	}
 	if err := s.db.UpdateKvmTask(appId, task); err != nil {
 		log.Errorf("update db kvm task %s error: %v", taskId, err)
 		return
@@ -468,4 +475,5 @@ type KvmExecutorMessage struct {
 	TaskId  string `json:"taskId"`
 	Status  string `json:"status"`
 	Message string `json:"message"`
+	VncAddr string `json:"vncAddr"`
 }
