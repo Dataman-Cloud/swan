@@ -44,8 +44,11 @@ func newUpstream(first *BackendCombined) *Upstream {
 		Listen:   first.Upstream.Listen,
 		Sticky:   first.Upstream.Sticky,
 		Backends: []*Backend{first.Backend},
-		sessions: newSessions(),     // sessions store
-		balancer: &weightBalancer{}, // default balancer
+		sessions: newSessions(), // sessions store
+		balancer: &wrrBalancer{
+			index: -1,
+			cw:    0,
+		}, // default balancer
 	}
 }
 
