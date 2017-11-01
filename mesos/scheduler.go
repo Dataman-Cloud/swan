@@ -675,6 +675,20 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
+func (s *Scheduler) Offers() interface{} {
+	s.RLock()
+	defer s.RUnlock()
+
+	offers := make([]*magent.Offer, 0)
+	for _, a := range s.agents {
+		for _, f := range a.GetOffers() {
+			offers = append(offers, f)
+		}
+	}
+
+	return offers
+}
+
 // wait proper offers according by grouped-task's constraints & resources requirments
 func (s *Scheduler) waitOffers(filterOpts *filter.FilterOptions) ([]*magent.Offer, error) {
 	log.Debugln("Finding suitable agent to run tasks")
