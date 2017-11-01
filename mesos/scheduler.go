@@ -762,6 +762,50 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 	// launch each sub-pieces of tasks
 	for _, group := range groups {
+		// save db tasks
+		for _, task := range group {
+			var (
+				restart     = task.cfg.RestartPolicy
+				retries     = 3
+				healthCheck = task.cfg.HealthCheck
+				healthy     = types.TaskHealthyUnset
+				versionId   = task.cfg.Version
+				taskId      = task.TaskId.GetValue()
+				taskName    = task.GetName()
+			)
+
+			if restart != nil && restart.Retries >= 0 {
+				retries = restart.Retries
+			}
+
+			if healthCheck != nil {
+				healthy = types.TaskUnHealthy
+			}
+
+			dbtask := &types.Task{
+				ID:         taskId,
+				Name:       taskName,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    healthy,
+				Version:    versionId,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
+			}
+
+			parts := strings.SplitN(taskId, ".", 3)
+			if len(parts) < 3 {
+				return fmt.Errorf("malformed taskId: %s", taskId)
+			}
+
+			appId := parts[2]
+
+			log.Debugf("Create task %s in db", task.ID)
+			if err := s.db.CreateTask(appId, dbtask); err != nil {
+				return fmt.Errorf("create db task failed: %v", err)
+			}
+		}
 
 		// try to use filter options to obtain proper offers
 		filterOpts := &filter.FilterOptions{

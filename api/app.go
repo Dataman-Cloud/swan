@@ -66,15 +66,9 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 	}
 
 	var (
-		id      = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, cluster)
-		count   = int(version.Instances)
-		restart = version.RestartPolicy
-		retries = 3
+		id    = fmt.Sprintf("%s.%s.%s.%s", version.Name, compose, version.RunAs, cluster)
+		count = int(version.Instances)
 	)
-
-	if restart != nil && restart.Retries >= 0 {
-		retries = restart.Retries
-	}
 
 	app := &types.Application{
 		ID:        id,
@@ -128,29 +122,6 @@ func (r *Server) createApp(w http.ResponseWriter, req *http.Request) {
 			cfg := types.NewTaskConfig(&version, i)
 			t := mesos.NewTask(cfg, id, name)
 			tasks = append(tasks, t)
-
-			// save db tasks
-			// TODO move db task creation to each runtime task logic
-			task := &types.Task{
-				ID:         id,
-				Name:       name,
-				Weight:     100,
-				Status:     "pending",
-				Healthy:    types.TaskHealthyUnset,
-				Version:    version.ID,
-				MaxRetries: retries,
-				Created:    time.Now(),
-				Updated:    time.Now(),
-			}
-			if version.IsHealthSet() {
-				task.Healthy = types.TaskUnHealthy
-			}
-
-			log.Debugf("Create task %s in db", task.ID)
-			if err = r.db.CreateTask(app.ID, task); err != nil {
-				err = fmt.Errorf("create db task failed: %v", err)
-				return
-			}
 		}
 
 		err = r.driver.LaunchTasks(tasks)
