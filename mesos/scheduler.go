@@ -831,6 +831,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		// try obtain proper offers
 		offers, err := s.waitOffers(filterOpts)
 		if err != nil {
+			for _, task := range group {
+				if err := s.updateTask(task.ID(), err.Error(), "falied"); err != nil {
+					log.Errorf("update task errmsg error: %v", err)
+				}
+			}
 			return err
 		}
 
@@ -844,6 +849,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 			// NOTE: required to prevent memory leaks if tasks not emited to mesos master.
 			for _, task := range group {
 				s.removePendingTask(task.ID())
+
+				if err := s.updateTask(task.ID(), err.Error(), "failed"); err != nil {
+					log.Errorf("update task errmsg error: %v", err)
+				}
+
 			}
 			return err
 		}
@@ -864,6 +874,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 					if err := DetectTaskError(status); err != nil {
 						log.Errorf("Launch task %s failed: %v", task.ID(), err)
+
+						if err := s.updateTask(task.ID(), err.Error(), "failed"); err != nil {
+							log.Errorf("update task errmsg error: %v", err)
+						}
+
 						errs.Lock()
 						errs.m = append(errs.m, err)
 						errs.Unlock()
@@ -1136,4 +1151,23 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 	}
 
 	return nil
+}
+
+func (s *Scheduler) updateTask(taskId, errmsg, status string) error {
+	parts := strings.SplitN(taskId, ".", 3)
+	if len(parts) < 3 {
+		return fmt.Errorf("malformed taskId: %s", taskId)
+	}
+
+	appId := parts[2]
+
+	task, err := s.db.GetTask(appId, taskId)
+	if err != nil {
+		return fmt.Errorf("get task error: %v", err)
+	}
+
+	task.ErrMsg = errmsg
+	task.Status = status
+
+	return s.db.UpdateTask(appId, task)
 }
