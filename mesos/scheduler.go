@@ -944,11 +944,10 @@ func (s *Scheduler) launchGroupTasksWithOffers(offers []*magent.Offer, tasks []*
 
 		dbtask.AgentId = t.AgentId.GetValue()
 		dbtask.IP = t.cfg.IP
+		dbtask.Ports = t.cfg.Ports
 		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
 			dbtask.IP = offers[0].GetHostname()
 		}
-
-		dbtask.Ports = t.cfg.Ports
 
 		if err := s.db.UpdateTask(appId, dbtask); err != nil {
 			log.Errorln("update task got error: %v", err)
