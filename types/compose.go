@@ -18,7 +18,7 @@ import (
 var swanDomain string
 
 func init() {
-	swanDomain = "swan.com"
+	swanDomain = "gateway.swan.com"
 	if d := strings.TrimSpace(os.Getenv("SWAN_DOMAIN")); d != "" {
 		swanDomain = d
 	}
