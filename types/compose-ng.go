@@ -466,7 +466,7 @@ func (s *ComposeService) container(dnsSearch, cName string, extLabels map[string
 		parameters = s.parameters(dnsSearch, cName, extLabels)
 	)
 
-	portMap, err := s.portMappings()
+	portMap, err := s.portMappings(network)
 	if err != nil {
 		return nil, err
 	}
@@ -632,7 +632,7 @@ func (s *ComposeService) parameters(dnsSearch, cName string, extLabels map[strin
 
 // note: nat.ParsePortSpecs() will make the original port disordered.
 // we have to reorder the returned bindings to make fit with mesos port assignments.
-func (s *ComposeService) portMappings() ([]*PortMapping, error) {
+func (s *ComposeService) portMappings(network string) ([]*PortMapping, error) {
 	var orgPorts []nat.Port
 	for _, portSpec := range s.Ports {
 		bindings, err := nat.ParsePortSpec(portSpec)
@@ -647,11 +647,23 @@ func (s *ComposeService) portMappings() ([]*PortMapping, error) {
 	ret := make([]*PortMapping, 0, 0)
 	for _, p := range orgPorts {
 		cp, _ := strconv.Atoi(p.Port())
+
+		// network bridge set `containerPort` to use.
+		if network == "bridge" {
+			ret = append(ret, &PortMapping{
+				Name:          fmt.Sprintf("%d", cp), // TODO
+				ContainerPort: int32(cp),
+				Protocol:      strings.ToUpper(p.Proto()),
+			})
+		}
+
+		// other modes set `hostPort` to use.
 		ret = append(ret, &PortMapping{
-			Name:          fmt.Sprintf("%d", cp), // TODO
-			ContainerPort: int32(cp),
-			Protocol:      strings.ToUpper(p.Proto()),
+			Name:     fmt.Sprintf("%d", cp), // TODO
+			HostPort: int32(cp),
+			Protocol: strings.ToUpper(p.Proto()),
 		})
+
 	}
 
 	return ret, nil
