@@ -815,7 +815,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 			appId := parts[2]
 
-			log.Debugf("Create task %s in db", task.ID)
+			log.Debugf("Create task %s in db", taskId)
 			if err := s.db.CreateTask(appId, dbtask); err != nil {
 				return fmt.Errorf("create db task failed: %v", err)
 			}
