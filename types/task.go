@@ -13,7 +13,7 @@ import (
 
 const (
 	TaskHealthyUnset = "unset"
-	TaskHealthy      = "healty"
+	TaskHealthy      = "healthy"
 	TaskUnHealthy    = "unhealthy"
 )
 
