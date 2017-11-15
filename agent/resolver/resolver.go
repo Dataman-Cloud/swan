@@ -13,10 +13,6 @@ import (
 	"github.com/Dataman-Cloud/swan/config"
 )
 
-const (
-	GATEWAY = "gateway"
-)
-
 var (
 	isDigitPrefix = regexp.MustCompile(`^[0-9]+\.`) // prefix with DigitsAndDot
 )
@@ -42,7 +38,7 @@ func NewResolver(cfg *config.DNS, AdvertiseIP string) *Resolver {
 	resolver := &Resolver{
 		config: cfg,
 		base:   base,
-		gwbase: GATEWAY + "." + base,
+		gwbase: base,
 		m:      make(map[string][]*Record),
 		stats:  newStats(),
 		dnsClient: &dns.Client{

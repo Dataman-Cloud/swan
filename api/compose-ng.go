@@ -58,6 +58,7 @@ func (r *Server) runComposeNG(w http.ResponseWriter, req *http.Request) {
 		Desc:        desc,
 		OpStatus:    types.OpStatusCreating,
 		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
 		Labels:      extLabels,
 	}
 

@@ -675,6 +675,20 @@ func (s *Scheduler) Dump() interface{} {
 	}
 }
 
+func (s *Scheduler) Offers() interface{} {
+	s.RLock()
+	defer s.RUnlock()
+
+	offers := make([]*magent.Offer, 0)
+	for _, a := range s.agents {
+		for _, f := range a.GetOffers() {
+			offers = append(offers, f)
+		}
+	}
+
+	return offers
+}
+
 // wait proper offers according by grouped-task's constraints & resources requirments
 func (s *Scheduler) waitOffers(filterOpts *filter.FilterOptions) ([]*magent.Offer, error) {
 	log.Debugln("Finding suitable agent to run tasks")
@@ -762,6 +776,50 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 	// launch each sub-pieces of tasks
 	for _, group := range groups {
+		// save db tasks
+		for _, task := range group {
+			var (
+				restart     = task.cfg.RestartPolicy
+				retries     = 3
+				healthCheck = task.cfg.HealthCheck
+				healthy     = types.TaskHealthyUnset
+				versionId   = task.cfg.Version
+				taskId      = task.TaskId.GetValue()
+				taskName    = task.GetName()
+			)
+
+			if restart != nil && restart.Retries >= 0 {
+				retries = restart.Retries
+			}
+
+			if healthCheck != nil {
+				healthy = types.TaskUnHealthy
+			}
+
+			dbtask := &types.Task{
+				ID:         taskId,
+				Name:       taskName,
+				Weight:     100,
+				Status:     "pending",
+				Healthy:    healthy,
+				Version:    versionId,
+				MaxRetries: retries,
+				Created:    time.Now(),
+				Updated:    time.Now(),
+			}
+
+			parts := strings.SplitN(taskId, ".", 3)
+			if len(parts) < 3 {
+				return fmt.Errorf("malformed taskId: %s", taskId)
+			}
+
+			appId := parts[2]
+
+			log.Debugf("Create task %s in db", taskId)
+			if err := s.db.CreateTask(appId, dbtask); err != nil {
+				return fmt.Errorf("create db task failed: %v", err)
+			}
+		}
 
 		// try to use filter options to obtain proper offers
 		filterOpts := &filter.FilterOptions{
@@ -773,6 +831,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		// try obtain proper offers
 		offers, err := s.waitOffers(filterOpts)
 		if err != nil {
+			for _, task := range group {
+				if err := s.updateTask(task.ID(), err.Error(), "falied"); err != nil {
+					log.Errorf("update task errmsg error: %v", err)
+				}
+			}
 			return err
 		}
 
@@ -786,6 +849,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 			// NOTE: required to prevent memory leaks if tasks not emited to mesos master.
 			for _, task := range group {
 				s.removePendingTask(task.ID())
+
+				if err := s.updateTask(task.ID(), err.Error(), "failed"); err != nil {
+					log.Errorf("update task errmsg error: %v", err)
+				}
+
 			}
 			return err
 		}
@@ -806,6 +874,11 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 
 					if err := DetectTaskError(status); err != nil {
 						log.Errorf("Launch task %s failed: %v", task.ID(), err)
+
+						if err := s.updateTask(task.ID(), err.Error(), "failed"); err != nil {
+							log.Errorf("update task errmsg error: %v", err)
+						}
+
 						errs.Lock()
 						errs.m = append(errs.m, err)
 						errs.Unlock()
@@ -871,11 +944,10 @@ func (s *Scheduler) launchGroupTasksWithOffers(offers []*magent.Offer, tasks []*
 
 		dbtask.AgentId = t.AgentId.GetValue()
 		dbtask.IP = t.cfg.IP
+		dbtask.Ports = t.cfg.Ports
 		if t.cfg.Network == "host" || t.cfg.Network == "bridge" {
 			dbtask.IP = offers[0].GetHostname()
 		}
-
-		dbtask.Ports = t.cfg.Ports
 
 		if err := s.db.UpdateTask(appId, dbtask); err != nil {
 			log.Errorln("update task got error: %v", err)
@@ -1078,4 +1150,23 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 	}
 
 	return nil
+}
+
+func (s *Scheduler) updateTask(taskId, errmsg, status string) error {
+	parts := strings.SplitN(taskId, ".", 3)
+	if len(parts) < 3 {
+		return fmt.Errorf("malformed taskId: %s", taskId)
+	}
+
+	appId := parts[2]
+
+	task, err := s.db.GetTask(appId, taskId)
+	if err != nil {
+		return fmt.Errorf("get task error: %v", err)
+	}
+
+	task.ErrMsg = errmsg
+	task.Status = status
+
+	return s.db.UpdateTask(appId, task)
 }
