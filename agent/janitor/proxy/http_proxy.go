@@ -16,10 +16,6 @@ import (
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
 )
 
-const (
-	APIGATEWAY = "gateway"
-)
-
 // generic http proxy handler
 type HTTPProxy struct {
 	suffix string
@@ -27,7 +23,7 @@ type HTTPProxy struct {
 
 func NewHTTPProxyHandler(domain string) http.Handler {
 	return &HTTPProxy{
-		suffix: "." + APIGATEWAY + "." + domain,
+		suffix: "." + domain,
 	}
 }
 
@@ -59,10 +55,10 @@ func (p *HTTPProxy) lookup(r *http.Request) (*upstream.BackendCombined, error) {
 		ss := strings.Split(trimed, ".")
 
 		switch len(ss) {
-		case 4: // upstream
+		case 3: // upstream
 			ups := trimed
 			selected = upstream.Lookup(remoteIP, ups, "")
-		case 5: // specified backend
+		case 4: // specified backend
 			ups := fmt.Sprintf("%s.%s.%s.%s", ss[1], ss[2], ss[3], ss[4])
 			backend := trimed
 			selected = upstream.Lookup(remoteIP, ups, backend)
