@@ -655,14 +655,14 @@ func (s *ComposeService) portMappings(network string) ([]*PortMapping, error) {
 				ContainerPort: int32(cp),
 				Protocol:      strings.ToUpper(p.Proto()),
 			})
+		} else {
+			// other modes set `hostPort` to use.
+			ret = append(ret, &PortMapping{
+				Name:     fmt.Sprintf("%d", cp), // TODO
+				HostPort: int32(cp),
+				Protocol: strings.ToUpper(p.Proto()),
+			})
 		}
-
-		// other modes set `hostPort` to use.
-		ret = append(ret, &PortMapping{
-			Name:     fmt.Sprintf("%d", cp), // TODO
-			HostPort: int32(cp),
-			Protocol: strings.ToUpper(p.Proto()),
-		})
 
 	}
 
