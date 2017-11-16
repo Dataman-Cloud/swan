@@ -29,6 +29,7 @@ const (
 	keyCompose     = "/composes"    // compose instance legacy (group apps), deprecated
 	keyComposeNG   = "/composes-ng" // compose instance (group apps)
 	keyFrameworkID = "/frameworkId" // framework id
+	keyKvmApp      = "/kvm-apps"    // single kvm app
 )
 
 type ZKStore struct {
@@ -52,7 +53,7 @@ func NewZKStore(url *url.URL) (*ZKStore, error) {
 	}
 
 	// create base keys nodes
-	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyFrameworkID} {
+	for _, node := range []string{keyApp, keyCompose, keyComposeNG, keyKvmApp, keyFrameworkID} {
 		if err := zs.ensure(node); err != nil {
 			return nil, err
 		}

@@ -7,6 +7,7 @@ import (
 
 func (s *Server) setupRoutes(mux *mux.Router) {
 	routes := []*Route{
+		// docker container app scheduling
 		NewRoute("GET", "/v1/apps", s.listApps),
 		NewRoute("POST", "/v1/apps", s.createApp),
 		NewRoute("GET", "/v1/apps/{app_id}", s.getApp),
@@ -31,6 +32,24 @@ func (s *Server) setupRoutes(mux *mux.Router) {
 		NewRoute("GET", "/v1/apps/{app_id}/versions", s.getVersions),
 		NewRoute("GET", "/v1/apps/{app_id}/versions/{version_id}", s.getVersion),
 		NewRoute("POST", "/v1/apps/{app_id}/versions", s.createVersion),
+
+		// kvm app scheduling
+		NewRoute("GET", "/v1/kvm-apps", s.listKvmApps),                     // DONE
+		NewRoute("POST", "/v1/kvm-apps", s.createKvmApp),                   // DONE
+		NewRoute("GET", "/v1/kvm-apps/{app_id}", s.getKvmApp),              // DONE
+		NewRoute("DELETE", "/v1/kvm-apps/{app_id}", s.deleteKvmApp),        // DONE
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/start", s.startKvmApp),     // DONE
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/stop", s.stopKvmApp),       // DONE
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/suspend", s.suspendKvmApp), // DONE
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/resume", s.resumeKvmApp),   // DONE
+
+		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks", s.listKvmTasks),         // DONE
+		NewRoute("GET", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.getKvmTask), // DONE
+		NewRoute("DELETE", "/v1/kvm-apps/{app_id}/tasks/{task_id}", s.deleteKvmTask),
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/start", s.startKvmTask),
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/stop", s.stopKvmTask),
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/suspend", s.suspendKvmTask),
+		NewRoute("POST", "/v1/kvm-apps/{app_id}/tasks/{task_id}/resume", s.resumeKvmTask),
 
 		// Deprecated, Remove Later
 		NewRoute("POST", "/v1/compose", s.runCompose),

@@ -30,7 +30,7 @@ endif
 default: build
 
 build: clean
-	CGO_ENABLED=${CGO_ENABLED} go build -v -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
+	CGO_ENABLED=${CGO_ENABLED} go build -a -ldflags "${GO_LDFLAGS}" -o bin/swan main.go
 
 # multi-stage builds, require docker >= 17.05
 docker:
@@ -47,7 +47,7 @@ docker-build:
 		-e CGO_ENABLED=0 -e GOOS=linux -e GOARCH=amd64  \
 		-v $(shell pwd):/go/src/github.com/Dataman-Cloud/swan \
 		golang:1.8.1-alpine \
-		sh -c 'go build -ldflags "${GO_LDFLAGS}" -v -o bin/swan main.go'
+		sh -c 'go build -ldflags "${GO_LDFLAGS}" -o bin/swan main.go'
 
 # compitable for legacy docker version
 docker-image:

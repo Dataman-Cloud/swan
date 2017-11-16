@@ -13,6 +13,12 @@ type Driver interface {
 	KillTask(taskId string, agentId string, gradePeriod int64) error
 	LaunchTasks([]*mesos.Task) error
 
+	// kvm stop/start/suspend/resume
+	StopKvmTask(taskId, agentId, executorId string) error
+	StartKvmTask(taskId, agentId, executorId string) error
+	SuspendKvmTask(taskId, agentId, executorId string) error
+	ResumeKvmTask(taskId, agentId, executorId string) error
+
 	ClusterName() string
 
 	SubscribeEvent(io.Writer, string) error

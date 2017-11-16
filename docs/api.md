@@ -28,6 +28,9 @@
   - ~[compose](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose.md)~ **Deprecated**
   - [compose-ng](https://github.com/Dataman-Cloud/swan/tree/master/docs/compose-ng.md)
 
++ kvm
+  - [kvm](https://github.com/Dataman-Cloud/swan/tree/master/docs/kvm.md)
+
 + framework
   - [GET /v1/framework](#framework) *Framework Info*
 

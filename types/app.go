@@ -20,6 +20,10 @@ const (
 	OpStatusStopping         = "stopping"
 	OpStatusDeleting         = "deleting"
 	OpStatusRollback         = "rollbacking"
+
+	// followings are kvm only
+	OpStatusSuspending = "suspending"
+	OpStatusResuming   = "resuming"
 )
 
 type Application struct {
