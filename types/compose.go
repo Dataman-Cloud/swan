@@ -301,6 +301,11 @@ func (s *DockerService) ToVersion(cName, cluster string) (*Version, error) {
 		HealthCheck:  s.healthCheck(),
 		UpdatePolicy: nil, // TODO
 	}
+	ver.Constraints = append(ver.Constraints, &Constraint{
+		Attribute: "vcluster",
+		Operator:  "==",
+		Value:     cluster,
+	})
 
 	dnsSearch := fmt.Sprintf("%s.%s.%s.%s", cName, ver.RunAs, cluster, swanDomain)
 
