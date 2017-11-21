@@ -3,6 +3,7 @@ package manager
 import (
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Dataman-Cloud/swan/api"
 	"github.com/Dataman-Cloud/swan/config"
@@ -31,7 +32,12 @@ type Manager struct {
 
 func New(cfg *config.ManagerConfig) (*Manager, error) {
 	// connect to zk leader
-	conn, err := connect(strings.Split(cfg.ZKURL.Host, ","))
+	var (
+		hosts   = strings.Split(cfg.ZKURL.Host, ",")
+		timeout = time.Second * 5
+	)
+
+	conn, err := connect(hosts, timeout)
 	if err != nil {
 		return nil, err
 	}
