@@ -313,11 +313,13 @@ func (c *ComposeV3) ConvertServiceToVersion(svrName, cmpName, runAs, cluster str
 		HealthCheck: svr.healthCheck(),
 	}
 
-	ver.Constraints = append(ver.Constraints, &Constraint{
-		Attribute: "vcluster",
-		Operator:  "==",
-		Value:     cluster,
-	})
+	if cluster != "" {
+		ver.Constraints = append(ver.Constraints, &Constraint{
+			Attribute: "vcluster",
+			Operator:  "==",
+			Value:     cluster,
+		})
+	}
 
 	dnsSearch := fmt.Sprintf("%s.%s.%s.%s", cmpName, runAs, cluster, swanDomain)
 
