@@ -103,7 +103,22 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		data    = status.GetData()
 	)
 
-	log.Debugf("Received status update %s(%v) for task:%s, reason:%s, message:%s",
+	switch state {
+	case mesosproto.TaskState_TASK_FINISHED,
+		mesosproto.TaskState_TASK_FAILED,
+		mesosproto.TaskState_TASK_KILLED,
+		mesosproto.TaskState_TASK_ERROR,
+		mesosproto.TaskState_TASK_LOST,
+		mesosproto.TaskState_TASK_DROPPED,
+		mesosproto.TaskState_TASK_UNREACHABLE,
+		mesosproto.TaskState_TASK_GONE,
+		mesosproto.TaskState_TASK_GONE_BY_OPERATOR,
+		mesosproto.TaskState_TASK_UNKNOWN:
+
+		healthy = false
+	}
+
+	log.Println("Received status update %s(%v) for task:%s, reason:%s, message:%s",
 		status.GetState(), healthy, taskId, status.GetReason().String(), status.GetMessage())
 
 	// get appId
@@ -220,7 +235,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	// broadcasting task events
-	log.Debugf("task %s healthy & status: %s (%s) --> %s (%s) --> changed=%v",
+	log.Println("task %s healthy & status: %s (%s) --> %s (%s) --> changed=%v",
 		taskId, previousHealthy, previousStatus, task.Healthy, task.Status, healthyChange)
 
 	if healthyChange { // skip on no-change
