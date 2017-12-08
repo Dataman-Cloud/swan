@@ -118,7 +118,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		healthy = false
 	}
 
-	log.Println("Received status update %s(%v) for task:%s, reason:%s, message:%s",
+	log.Printf("Received status update %s(%v) for task:%s, reason:%s, message:%s",
 		status.GetState(), healthy, taskId, status.GetReason().String(), status.GetMessage())
 
 	// get appId
@@ -235,7 +235,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 	}
 
 	// broadcasting task events
-	log.Println("task %s healthy & status: %s (%s) --> %s (%s) --> changed=%v",
+	log.Printf("task %s healthy & status: %s (%s) --> %s (%s) --> changed=%v",
 		taskId, previousHealthy, previousStatus, task.Healthy, task.Status, healthyChange)
 
 	if healthyChange { // skip on no-change
