@@ -1737,15 +1737,19 @@ func (r *Server) delApp(appId string, tasks []*types.Task, versions []*types.Ver
 	// remove runtime tasks & db tasks firstly
 	for _, task := range tasks {
 		wg.Add(1)
-		go func(task *types.Task) {
+		go func(appId string, task *types.Task) {
 			defer wg.Done()
+
+			if err := r.driver.SendEvent(appId, task); err != nil {
+				log.Errorf("Sending event got error: %v", err)
+			}
 
 			if err := r.delTask(appId, task); err != nil {
 				return
 			}
 
 			atomic.AddInt64(&succeed, 1)
-		}(task)
+		}(appId, task)
 	}
 	wg.Wait()
 

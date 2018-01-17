@@ -26,8 +26,8 @@ var (
 	ZKDefaultACL = zk.WorldACL(zk.PermAll)
 )
 
-func connect(addrs []string) (*zk.Conn, error) {
-	conn, connChan, err := zk.Connect(addrs, 5*time.Second)
+func connect(addrs []string, timeout time.Duration) (*zk.Conn, error) {
+	conn, connChan, err := zk.Connect(addrs, timeout)
 	if err != nil {
 		return nil, fmt.Errorf("zk connection to [%v] error: %v", addrs, err)
 	}

@@ -695,7 +695,7 @@ func (s *Scheduler) waitOffers(filterOpts *filter.FilterOptions) ([]*magent.Offe
 
 	var (
 		offers         = make([]*magent.Offer, 0, 0)
-		maxWait        = time.Second * 5
+		maxWait        = time.Second * 86400
 		waitTimeout    = time.After(maxWait)
 		err            error // global final error
 		filteredAgents []*magent.Agent
@@ -832,7 +832,7 @@ func (s *Scheduler) LaunchTasks(tasks []*Task) error {
 		offers, err := s.waitOffers(filterOpts)
 		if err != nil {
 			for _, task := range group {
-				if err := s.updateTask(task.ID(), err.Error(), "falied"); err != nil {
+				if err := s.updateTask(task.ID(), err.Error(), "failed"); err != nil {
 					log.Errorf("update task errmsg error: %v", err)
 				}
 			}

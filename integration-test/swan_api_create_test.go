@@ -85,7 +85,7 @@ func (s *ApiSuite) TestCreateNoMatchedAgentsApp(c *check.C) {
 	startAt = time.Now()
 	app := s.inspectApp(id, c)
 	c.Assert(app.Name, check.Equals, "demo")
-	c.Assert(app.TaskCount, check.Equals, 10)
+	c.Assert(app.TaskCount, check.Equals, 5)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
 	c.Assert(app.ErrMsg, check.Not(check.Equals), "")
@@ -102,9 +102,9 @@ func (s *ApiSuite) TestCreateNoMatchedAgentsApp(c *check.C) {
 
 	// verify app tasks
 	tasks := s.listAppTasks(id, c)
-	c.Assert(len(tasks), check.Equals, 10)
+	c.Assert(len(tasks), check.Equals, 5)
 	for _, task := range tasks {
-		c.Assert(task.Status, check.Equals, "pending")
+		c.Assert(task.Status, check.Equals, "failed")
 	}
 
 	// verify proxy record
@@ -151,7 +151,7 @@ func (s *ApiSuite) TestCreateOverQuotaResourceApp(c *check.C) {
 	startAt = time.Now()
 	app := s.inspectApp(id, c)
 	c.Assert(app.Name, check.Equals, "demo")
-	c.Assert(app.TaskCount, check.Equals, 10)
+	c.Assert(app.TaskCount, check.Equals, 5)
 	c.Assert(app.VersionCount, check.Equals, 1)
 	c.Assert(len(app.Version), check.Equals, 1)
 	c.Assert(app.ErrMsg, check.Not(check.Equals), "")
@@ -168,9 +168,9 @@ func (s *ApiSuite) TestCreateOverQuotaResourceApp(c *check.C) {
 
 	// verify app tasks
 	tasks := s.listAppTasks(id, c)
-	c.Assert(len(tasks), check.Equals, 10)
+	c.Assert(len(tasks), check.Equals, 5)
 	for _, task := range tasks {
-		c.Assert(task.Status, check.Equals, "pending")
+		c.Assert(task.Status, check.Equals, "failed")
 	}
 
 	// verify proxy record
