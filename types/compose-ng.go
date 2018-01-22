@@ -230,23 +230,25 @@ func (c *ComposeV3) Valid() error {
 	seenAlias, seenListen := map[string]bool{}, map[string]bool{}
 	for name, srv := range c.Services {
 		if p := srv.Proxy; p != nil && p.Enabled {
-			var (
-				alias  = p.Alias
-				listen = p.Listen
-			)
+			for _, proxy := range p.Proxies {
+				var (
+					alias  = proxy.Alias
+					listen = proxy.Listen
+				)
 
-			if alias != "" {
-				if _, ok := seenAlias[alias]; ok {
-					return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+				if alias != "" {
+					if _, ok := seenAlias[alias]; ok {
+						return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+					}
+					seenAlias[alias] = true
 				}
-				seenAlias[alias] = true
-			}
+				if listen != "" {
+					if _, ok := seenListen[listen]; ok {
+						return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+					}
+					seenListen[listen] = true
+				}
 
-			if listen != "" {
-				if _, ok := seenListen[listen]; ok {
-					return fmt.Errorf("%s proxy listen %s conflict", name, listen)
-				}
-				seenListen[listen] = true
 			}
 		}
 	}

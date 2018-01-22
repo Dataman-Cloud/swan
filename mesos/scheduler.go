@@ -1130,23 +1130,26 @@ func (s *Scheduler) SendEvent(appId string, task *types.Task) error {
 	}
 
 	if ver.Proxy != nil {
-		taskEv.GatewayEnabled = ver.Proxy.Enabled
-		taskEv.AppAlias = ver.Proxy.Alias
-		taskEv.AppListen = ver.Proxy.Listen
-		taskEv.AppSticky = ver.Proxy.Sticky
-	}
+		for i, proxy := range ver.Proxy.Proxies {
+			taskEv.GatewayEnabled = ver.Proxy.Enabled
+			taskEv.AppAlias = proxy.Alias
+			taskEv.AppListen = proxy.Listen
+			taskEv.AppSticky = proxy.Sticky
 
-	if len(task.Ports) > 0 {
-		taskEv.Port = task.Ports[0] // currently only support the first port within proxy & events
-	}
+			if len(task.Ports) > 0 {
+				taskEv.Port = task.Ports[i] // currently only support the first port within proxy & events
+			}
 
-	if err := s.eventmgr.broadcast(taskEv); err != nil {
-		return fmt.Errorf("Shceduler.SendEvent(): broadcast task event got error: %v", err)
-	}
+			if err := s.eventmgr.broadcast(taskEv); err != nil {
+				return fmt.Errorf("Shceduler.SendEvent(): broadcast task event got error: %v", err)
+			}
 
-	if err := s.broadcastEventRecords(taskEv); err != nil {
-		return fmt.Errorf("Shceduler.SendEvent(): broadcast to sync proxy & dns records error: %v", err)
-		// TODO: memo db task errmsg
+			if err := s.broadcastEventRecords(taskEv); err != nil {
+				return fmt.Errorf("Shceduler.SendEvent(): broadcast to sync proxy & dns records error: %v", err)
+				// TODO: memo db task errmsg
+			}
+		}
+
 	}
 
 	return nil

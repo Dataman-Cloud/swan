@@ -1840,15 +1840,17 @@ func (r *Server) checkPortListening(p *types.Proxy) error {
 		return nil
 	}
 
-	if p.Listen == "" {
+	if p.Proxies == nil || len(p.Proxies) == 0 {
 		return nil
 	}
 
-	l, _ := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+	for _, proxy := range p.Proxies {
+		l, _ := strconv.Atoi(strings.TrimPrefix(proxy.Listen, ":"))
 
-	for _, v := range r.getAgentsListenings() {
-		if int64(l) == v {
-			return fmt.Errorf("proxy.Listen %d occupied on nodes", l)
+		for _, v := range r.getAgentsListenings() {
+			if int64(l) == v {
+				return fmt.Errorf("proxy.Listen %d occupied on nodes", l)
+			}
 		}
 	}
 
@@ -1869,28 +1871,33 @@ func (r *Server) checkProxyDuplication(p *types.Proxy) error {
 		return err
 	}
 
-	// check Listen
-	if v := p.Listen; v != "" {
-		for app, ps := range proxies {
-			for _, p := range ps {
-				if p.Listen == v {
-					return fmt.Errorf("proxy.Listen %s conflict to app %s", v, app)
+	for _, proxy := range p.Proxies {
+		// check Listen
+		if v := proxy.Listen; v != "" {
+			for app, ps := range proxies {
+				for _, p := range ps {
+					for _, pr := range p.Proxies {
+						if pr.Listen == v {
+							return fmt.Errorf("proxy.Listen %s conflict to app %s", v, app)
+						}
+					}
+				}
+			}
+		}
+
+		// check Alias
+		if v := proxy.Alias; v != "" {
+			for app, ps := range proxies {
+				for _, p := range ps {
+					for _, pr := range p.Proxies {
+						if pr.Alias == v {
+							return fmt.Errorf("proxy.Alias %s conflict to app %s", v, app)
+						}
+					}
 				}
 			}
 		}
 	}
-
-	// check Alias
-	if v := p.Alias; v != "" {
-		for app, ps := range proxies {
-			for _, p := range ps {
-				if p.Alias == v {
-					return fmt.Errorf("proxy.Alias %s conflict to app %s", v, app)
-				}
-			}
-		}
-	}
-
 	return nil
 }
 
