@@ -223,16 +223,20 @@ func (r *Server) getAppDNSTraffics(w http.ResponseWriter, req *http.Request) {
 func (r *Server) getAppProxy(w http.ResponseWriter, req *http.Request) {
 	var (
 		appId = mux.Vars(req)["app_id"]
-		ret   = make(map[string]interface{})
+		ret   = make([]interface{}, 0)
 	)
 
 	for id := range r.driver.ClusterAgents() {
-		info, err := r.getAppProxyInfo(id, appId)
+		proxies, err := r.getAppProxyInfo(id, appId)
 		if err != nil {
-			ret[id] = err.Error()
-		} else {
-			ret[id] = info
+			continue
 		}
+
+		for _, p := range proxies {
+			ret = append(ret, p)
+		}
+
+		break
 	}
 
 	writeJSON(w, http.StatusOK, ret)
@@ -342,9 +346,9 @@ func (r *Server) getAppDNSInfo(agentId, appId string) ([]interface{}, error) {
 	return info, err
 }
 
-func (r *Server) getAppProxyInfo(agentId, appId string) (map[string]interface{}, error) {
+func (r *Server) getAppProxyInfo(agentId, appId string) ([]interface{}, error) {
 	agentReq, _ := http.NewRequest("GET", fmt.Sprintf("http://%s/proxy/upstreams/%s", agentId, appId), nil)
-	var info map[string]interface{}
+	var info []interface{}
 	err := r.requestAgentResource(agentId, agentReq, 200, &info)
 	return info, err
 }

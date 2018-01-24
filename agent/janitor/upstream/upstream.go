@@ -43,6 +43,7 @@ func newUpstream(first *BackendCombined) *Upstream {
 		Name:     first.Upstream.Name,
 		Alias:    first.Upstream.Alias,
 		Listen:   first.Upstream.Listen,
+		Target:   first.Upstream.Target,
 		Sticky:   first.Upstream.Sticky,
 		Backends: []*Backend{first.Backend},
 		sessions: newSessions(), // sessions store
