@@ -251,13 +251,16 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		}
 
 		if ver.Proxy != nil {
+			proxies := ver.Proxy.Proxies
 			proxyEnabled := ver.Proxy.Enabled
-			for i, proxy := range ver.Proxy.Proxies {
+			mappings := ver.Container.Docker.PortMappings
+			for i, proxy := range proxies {
 				var (
-					alias    = proxy.Alias
-					listen   = proxy.Listen
-					sticky   = proxy.Sticky
-					taskPort = task.Ports[i]
+					alias      = proxy.Alias
+					listen     = proxy.Listen
+					sticky     = proxy.Sticky
+					taskPort   = task.Ports[i]
+					targetPort = mappings[i].ContainerPort
 				)
 
 				//var taskPort uint64
@@ -274,6 +277,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 					TaskID:         taskId,
 					IP:             task.IP,
 					Port:           taskPort,
+					TargetPort:     uint64(targetPort),
 					Weight:         task.Weight,
 					GatewayEnabled: proxyEnabled,
 				}
