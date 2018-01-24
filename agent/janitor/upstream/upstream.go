@@ -26,6 +26,7 @@ type Upstream struct {
 	Name     string     `json:"name"`     // uniq name
 	Alias    string     `json:"alias"`    // advertised url
 	Listen   string     `json:"listen"`   // listen addr
+	Target   string     `json:"target"`   // target addr
 	Sticky   bool       `json:"sticky"`   // session sticky enabled (default no)
 	Backends []*Backend `json:"backends"` // backend servers
 
@@ -86,13 +87,14 @@ func (u *Upstream) tcpListen() string {
 
 // Backend
 type Backend struct {
-	ID        string  `json:"id"`     // backend server id(name)
-	IP        string  `json:"ip"`     // backend server ip
-	Port      uint64  `json:"port"`   // backend server port
-	Scheme    string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
-	Version   string  `json:"version"`
-	Weight    float64 `json:"weihgt"`
-	CleanName string  `json:"clean_name"` // backend server clean id(name)
+	ID         string  `json:"id"`          // backend server id(name)
+	IP         string  `json:"ip"`          // backend server ip
+	Port       uint64  `json:"port"`        // backend server port
+	TargetPort uint64  `json:"target_port"` // target port
+	Scheme     string  `json:"scheme"`      // http / https, auto detect & setup by httpProxy
+	Version    string  `json:"version"`
+	Weight     float64 `json:"weihgt"`
+	CleanName  string  `json:"clean_name"` // backend server clean id(name)
 }
 
 func (b *Backend) String() string {
