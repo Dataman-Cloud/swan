@@ -326,10 +326,6 @@ func LookupUpstream(remoteIP, name, port, backend string) *BackendCombined {
 func Lookup(remoteIP string, u *Upstream, backend string) *BackendCombined {
 	var b *Backend
 
-	if u == nil {
-		return nil
-	}
-
 	defer func() {
 		if u.Sticky && b != nil {
 			u.sessions.update(remoteIP, b)
