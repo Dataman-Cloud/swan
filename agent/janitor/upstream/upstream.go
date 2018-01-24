@@ -190,13 +190,14 @@ func UpsertBackend(cmb *BackendCombined) (onFirst bool, err error) {
 	defer mgr.Unlock()
 
 	var (
-		ups     = cmb.Upstream.Name
+		name    = cmb.Upstream.Name
 		alias   = cmb.Upstream.Alias
 		listen  = cmb.Upstream.Listen
+		target  = cmb.Upstream.Target
 		backend = cmb.Backend.ID
 	)
 
-	_, u := getUpstreamByName(ups)
+	_, u := getUpstreamByNameAndTarget(name, target)
 	// add new upstream
 	if u == nil {
 		onFirst = true
@@ -372,6 +373,16 @@ func getUpstreamByName(ups string) (int, *Upstream) {
 			return i, v
 		}
 	}
+	return -1, nil
+}
+
+func getUpstreamByNameAndTarget(name, target string) (int, *Upstream) {
+	for i, v := range mgr.Upstreams {
+		if v.Name == name && v.Target == target {
+			return i, v
+		}
+	}
+
 	return -1, nil
 }
 
