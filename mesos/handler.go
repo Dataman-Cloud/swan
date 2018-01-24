@@ -283,6 +283,7 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 				}
 
 				log.Debugln("sending task changed event", taskId)
+				log.Debugln("event ->", taskEv)
 				if err := s.eventmgr.broadcast(taskEv); err != nil {
 					log.Errorln("broadcast task event got error:", err)
 				}
