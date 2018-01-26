@@ -19,13 +19,12 @@ func (s *JanitorServer) GetUpstream(w http.ResponseWriter, r *http.Request) {
 	var (
 		uid = mux.Vars(r)["uid"]
 		m   = upstream.AllUpstreams()
-		ret = new(upstream.Upstream)
+		ret = []*upstream.Upstream{}
 	)
 
-	for idx, u := range m {
+	for _, u := range m {
 		if u.Name == uid {
-			ret = m[idx]
-			break
+			ret = append(ret, u)
 		}
 	}
 

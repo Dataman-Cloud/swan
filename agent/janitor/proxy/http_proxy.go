@@ -39,7 +39,9 @@ func (p *HTTPProxy) lookup(r *http.Request) (*upstream.BackendCombined, error) {
 	}
 
 	var (
-		host     = strings.Split(r.Host, ":")[0]
+		split    = strings.Split(r.Host, ":")
+		host     = split[0]
+		port     = split[1]
 		byAlias  bool // flag on looking up by upstream alias or not
 		selected *upstream.BackendCombined
 	)
@@ -57,11 +59,11 @@ func (p *HTTPProxy) lookup(r *http.Request) (*upstream.BackendCombined, error) {
 		switch len(ss) {
 		case 3: // upstream
 			ups := trimed
-			selected = upstream.Lookup(remoteIP, ups, "")
+			selected = upstream.LookupUpstream(remoteIP, ups, port, "")
 		case 4: // specified backend
 			ups := fmt.Sprintf("%s.%s.%s.%s", ss[1], ss[2], ss[3], ss[4])
 			backend := trimed
-			selected = upstream.Lookup(remoteIP, ups, backend)
+			selected = upstream.LookupUpstream(remoteIP, ups, port, backend)
 		default:
 			return nil, fmt.Errorf("request Host [%s] invalid", host)
 		}

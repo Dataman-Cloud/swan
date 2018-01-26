@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strconv"
 	"sync"
 
 	"github.com/Dataman-Cloud/swan/agent/janitor/upstream"
@@ -151,16 +152,18 @@ func (s *Scheduler) buildAgentProxyRecord(ev *types.TaskEvent) *upstream.Backend
 			Name:   ev.AppID,
 			Alias:  ev.AppAlias,
 			Listen: ev.AppListen,
+			Target: strconv.Itoa(int(ev.TargetPort)),
 			Sticky: ev.AppSticky,
 		},
 		Backend: &upstream.Backend{
-			ID:        ev.TaskID,
-			IP:        ev.IP,
-			Port:      ev.Port,
-			Scheme:    "",
-			Version:   ev.VersionID,
-			Weight:    ev.Weight,
-			CleanName: "",
+			ID:         ev.TaskID,
+			IP:         ev.IP,
+			Port:       ev.Port,
+			TargetPort: ev.TargetPort,
+			Scheme:     "",
+			Version:    ev.VersionID,
+			Weight:     ev.Weight,
+			CleanName:  "",
 		},
 	}
 }

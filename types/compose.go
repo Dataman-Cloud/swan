@@ -214,20 +214,22 @@ func (sg ServiceGroup) Valid() error {
 	seenAlias, seenListen := map[string]bool{}, map[string]bool{}
 	for name, srv := range sg {
 		if p := srv.Extra.Proxy; p != nil && p.Enabled {
-			var (
-				alias  = p.Alias
-				listen = p.Listen
-			)
+			for _, proxy := range p.Proxies {
+				var (
+					alias  = proxy.Alias
+					listen = proxy.Listen
+				)
 
-			if _, ok := seenAlias[alias]; ok {
-				return fmt.Errorf("%s proxy alias %s conflict", name, alias)
-			}
-			seenAlias[alias] = true
+				if _, ok := seenAlias[alias]; ok {
+					return fmt.Errorf("%s proxy alias %s conflict", name, alias)
+				}
+				seenAlias[alias] = true
 
-			if _, ok := seenListen[listen]; ok {
-				return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+				if _, ok := seenListen[listen]; ok {
+					return fmt.Errorf("%s proxy listen %s conflict", name, listen)
+				}
+				seenListen[listen] = true
 			}
-			seenListen[listen] = true
 		}
 	}
 

@@ -26,6 +26,7 @@ type Upstream struct {
 	Name     string     `json:"name"`     // uniq name
 	Alias    string     `json:"alias"`    // advertised url
 	Listen   string     `json:"listen"`   // listen addr
+	Target   string     `json:"target"`   // target addr
 	Sticky   bool       `json:"sticky"`   // session sticky enabled (default no)
 	Backends []*Backend `json:"backends"` // backend servers
 
@@ -42,6 +43,7 @@ func newUpstream(first *BackendCombined) *Upstream {
 		Name:     first.Upstream.Name,
 		Alias:    first.Upstream.Alias,
 		Listen:   first.Upstream.Listen,
+		Target:   first.Upstream.Target,
 		Sticky:   first.Upstream.Sticky,
 		Backends: []*Backend{first.Backend},
 		sessions: newSessions(), // sessions store
@@ -86,13 +88,14 @@ func (u *Upstream) tcpListen() string {
 
 // Backend
 type Backend struct {
-	ID        string  `json:"id"`     // backend server id(name)
-	IP        string  `json:"ip"`     // backend server ip
-	Port      uint64  `json:"port"`   // backend server port
-	Scheme    string  `json:"scheme"` // http / https, auto detect & setup by httpProxy
-	Version   string  `json:"version"`
-	Weight    float64 `json:"weihgt"`
-	CleanName string  `json:"clean_name"` // backend server clean id(name)
+	ID         string  `json:"id"`          // backend server id(name)
+	IP         string  `json:"ip"`          // backend server ip
+	Port       uint64  `json:"port"`        // backend server port
+	TargetPort uint64  `json:"target_port"` // target port
+	Scheme     string  `json:"scheme"`      // http / https, auto detect & setup by httpProxy
+	Version    string  `json:"version"`
+	Weight     float64 `json:"weihgt"`
+	CleanName  string  `json:"clean_name"` // backend server clean id(name)
 }
 
 func (b *Backend) String() string {
@@ -188,13 +191,14 @@ func UpsertBackend(cmb *BackendCombined) (onFirst bool, err error) {
 	defer mgr.Unlock()
 
 	var (
-		ups     = cmb.Upstream.Name
+		name    = cmb.Upstream.Name
 		alias   = cmb.Upstream.Alias
 		listen  = cmb.Upstream.Listen
+		target  = cmb.Upstream.Target
 		backend = cmb.Backend.ID
 	)
 
-	_, u := getUpstreamByName(ups)
+	_, u := getUpstreamByNameAndTarget(name, target)
 	// add new upstream
 	if u == nil {
 		onFirst = true
@@ -234,14 +238,9 @@ func UpsertBackend(cmb *BackendCombined) (onFirst bool, err error) {
 	return
 }
 
-func GetBackend(ups, backend string) *Backend {
+func GetBackend(u *Upstream, backend string) *Backend {
 	mgr.RLock()
 	defer mgr.RUnlock()
-
-	_, u := getUpstreamByName(ups)
-	if u == nil {
-		return nil
-	}
 
 	_, b := u.search(backend)
 	return b
@@ -290,7 +289,7 @@ func LookupAlias(remoteIP, alias string) *BackendCombined {
 		return nil
 	}
 
-	return Lookup(remoteIP, u.Name, "")
+	return Lookup(remoteIP, u, "")
 }
 
 // similar as lookup, but by upstream listen
@@ -303,23 +302,29 @@ func LookupListen(remoteIP, listen string) *BackendCombined {
 		return nil
 	}
 
-	return Lookup(remoteIP, u.Name, "")
+	return Lookup(remoteIP, u, "")
+}
+
+func LookupUpstream(remoteIP, name, port, backend string) *BackendCombined {
+	var up *Upstream
+	mgr.RLock()
+	for _, u := range mgr.Upstreams {
+		if u.Name == name && u.Target == port {
+			up = u
+		}
+	}
+	mgr.RUnlock()
+
+	if up == nil {
+		return nil
+	}
+
+	return Lookup(remoteIP, up, backend)
 }
 
 // lookup select a suitable backend according by sessions & balancer
-func Lookup(remoteIP, ups, backend string) *BackendCombined {
-	var (
-		u *Upstream
-		b *Backend
-	)
-
-	mgr.RLock()
-	_, u = getUpstreamByName(ups)
-	mgr.RUnlock()
-
-	if u == nil {
-		return nil
-	}
+func Lookup(remoteIP string, u *Upstream, backend string) *BackendCombined {
+	var b *Backend
 
 	defer func() {
 		if u.Sticky && b != nil {
@@ -329,7 +334,7 @@ func Lookup(remoteIP, ups, backend string) *BackendCombined {
 
 	// obtain specified backend
 	if backend != "" {
-		b = GetBackend(ups, backend)
+		b = GetBackend(u, backend)
 		if b == nil {
 			return nil
 		}
@@ -344,18 +349,17 @@ func Lookup(remoteIP, ups, backend string) *BackendCombined {
 	}
 
 	// use balancer to obtain a new backend
-	if b = nextBackend(ups); b != nil {
+	if b = nextBackend(u); b != nil {
 		return &BackendCombined{u, b}
 	}
 
 	return nil
 }
 
-func nextBackend(ups string) *Backend {
+func nextBackend(u *Upstream) *Backend {
 	mgr.RLock()
 	defer mgr.RUnlock()
 
-	_, u := getUpstreamByName(ups)
 	if u == nil {
 		return nil
 	}
@@ -370,6 +374,16 @@ func getUpstreamByName(ups string) (int, *Upstream) {
 			return i, v
 		}
 	}
+	return -1, nil
+}
+
+func getUpstreamByNameAndTarget(name, target string) (int, *Upstream) {
+	for i, v := range mgr.Upstreams {
+		if v.Name == name && v.Target == target {
+			return i, v
+		}
+	}
+
 	return -1, nil
 }
 

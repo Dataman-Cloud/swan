@@ -250,45 +250,49 @@ func (s *Scheduler) updateHandler(event *mesosproto.Event) {
 		case types.TaskUnHealthy:
 		}
 
-		var (
-			alias        string
-			proxyEnabled bool
-			listen       string
-			sticky       bool
-		)
 		if ver.Proxy != nil {
-			proxyEnabled = ver.Proxy.Enabled
-			alias = ver.Proxy.Alias
-			listen = ver.Proxy.Listen
-			sticky = ver.Proxy.Sticky
-		}
+			proxies := ver.Proxy.Proxies
+			proxyEnabled := ver.Proxy.Enabled
+			mappings := ver.Container.Docker.PortMappings
+			for i, proxy := range proxies {
+				var (
+					alias      = proxy.Alias
+					listen     = proxy.Listen
+					sticky     = proxy.Sticky
+					taskPort   = task.Ports[i]
+					targetPort = mappings[i].ContainerPort
+				)
 
-		var taskPort uint64
-		if len(task.Ports) > 0 { // currently only support the first port within proxy & events
-			taskPort = task.Ports[0]
-		}
+				//var taskPort uint64
+				//if len(task.Ports) > 0 { // currently only support the first port within proxy & events
+				//	taskPort = task.Ports[0]
+				//}
 
-		taskEv := &types.TaskEvent{
-			Type:           evType,
-			AppID:          appId,
-			AppAlias:       alias,
-			AppListen:      listen,
-			AppSticky:      sticky,
-			TaskID:         taskId,
-			IP:             task.IP,
-			Port:           taskPort,
-			Weight:         task.Weight,
-			GatewayEnabled: proxyEnabled,
-		}
+				taskEv := &types.TaskEvent{
+					Type:           evType,
+					AppID:          appId,
+					AppAlias:       alias,
+					AppListen:      listen,
+					AppSticky:      sticky,
+					TaskID:         taskId,
+					IP:             task.IP,
+					Port:           taskPort,
+					TargetPort:     uint64(targetPort),
+					Weight:         task.Weight,
+					GatewayEnabled: proxyEnabled,
+				}
 
-		log.Debugln("sending task changed event", taskId)
-		if err := s.eventmgr.broadcast(taskEv); err != nil {
-			log.Errorln("broadcast task event got error:", err)
-		}
+				log.Debugln("sending task changed event", taskId)
+				log.Debugln("event ->", taskEv)
+				if err := s.eventmgr.broadcast(taskEv); err != nil {
+					log.Errorln("broadcast task event got error:", err)
+				}
 
-		if err := s.broadcastEventRecords(taskEv); err != nil {
-			log.Errorln("broadcast to sync proxy & dns records error:", err)
-			// TODO: memo db task errmsg
+				if err := s.broadcastEventRecords(taskEv); err != nil {
+					log.Errorln("broadcast to sync proxy & dns records error:", err)
+					// TODO: memo db task errmsg
+				}
+			}
 		}
 	}
 

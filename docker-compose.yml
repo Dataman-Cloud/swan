@@ -96,7 +96,7 @@ services:
   swan-agent:
     image: "swan:latest"
     command: "agent"
-    network_mode: "service:swan-master" # share with swan-master to make use of 127.0.0.1
+    network_mode: "host"
     restart: "unless-stopped"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:rw

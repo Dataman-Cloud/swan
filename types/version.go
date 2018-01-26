@@ -1,7 +1,7 @@
 package types
 
 import (
-	"encoding/json"
+	//"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -265,10 +265,14 @@ func (h *HealthCheck) Valid() error {
 }
 
 type Proxy struct {
-	Enabled bool   `json:"enabled" yaml:"enabled"`
-	Alias   string `json:"alias" yaml:"alias"`
-	Listen  string `json:"listen" yaml:"listen"`
-	Sticky  bool   `json:"sticky" yaml:"sticky"`
+	Enabled bool         `json:"enabled" yaml:"enabled"`
+	Proxies []*ProxyItem `json:"proxies" yaml:"proxies"`
+}
+
+type ProxyItem struct {
+	Alias  string `json:"alias" yaml:"alias"`
+	Listen string `json:"listen" yaml:"listen"`
+	Sticky bool   `json:"sticky" yaml:"sticky"`
 }
 
 // similiar as above, but `Listen` int type
@@ -283,52 +287,58 @@ func (p *Proxy) Valid() error {
 	if !p.Enabled {
 		return nil
 	}
-	if p.Listen == "" {
+
+	if p.Proxies == nil || len(p.Proxies) == 0 {
 		return nil
 	}
-	l, err := strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
-	if err != nil {
-		return err
+
+	for _, proxy := range p.Proxies {
+		l, err := strconv.Atoi(proxy.Listen)
+		if err != nil {
+			return err
+		}
+
+		if l < 0 || l > 65535 {
+			return errors.New("proxy.Listen out of range")
+		}
 	}
-	if l < 0 || l > 65535 {
-		return errors.New("proxy.Listen out of range")
-	}
+
 	return nil
 }
 
 // hijack Marshaler & Unmarshaler to make fit with int type `Listen`
-func (p *Proxy) MarshalJSON() ([]byte, error) {
-	var l int
-	if p.Listen != "" {
-		l, _ = strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
-	}
-	var pa = &ProxyAlias{
-		Enabled: p.Enabled,
-		Alias:   p.Alias,
-		Listen:  l,
-		Sticky:  p.Sticky,
-	}
-	return json.Marshal(pa)
-}
-
-func (p *Proxy) UnmarshalJSON(data []byte) error {
-	var pa ProxyAlias
-	if err := json.Unmarshal(data, &pa); err != nil {
-		return err
-	}
-	p.Enabled = pa.Enabled
-	p.Alias = pa.Alias
-	switch {
-	case pa.Listen == 0:
-		p.Listen = ""
-	case pa.Listen < 0 || pa.Listen > 65535:
-		return errors.New("proxy.Listen out of range")
-	default: // (0, 65535]
-		p.Listen = fmt.Sprintf(":%d", pa.Listen)
-	}
-	p.Sticky = pa.Sticky
-	return nil
-}
+// func (p *Proxy) MarshalJSON() ([]byte, error) {
+// 	var l int
+// 	if p.Listen != "" {
+// 		l, _ = strconv.Atoi(strings.TrimPrefix(p.Listen, ":"))
+// 	}
+// 	var pa = &ProxyAlias{
+// 		Enabled: p.Enabled,
+// 		Alias:   p.Alias,
+// 		Listen:  l,
+// 		Sticky:  p.Sticky,
+// 	}
+// 	return json.Marshal(pa)
+// }
+//
+// func (p *Proxy) UnmarshalJSON(data []byte) error {
+// 	var pa ProxyAlias
+// 	if err := json.Unmarshal(data, &pa); err != nil {
+// 		return err
+// 	}
+// 	p.Enabled = pa.Enabled
+// 	p.Alias = pa.Alias
+// 	switch {
+// 	case pa.Listen == 0:
+// 		p.Listen = ""
+// 	case pa.Listen < 0 || pa.Listen > 65535:
+// 		return errors.New("proxy.Listen out of range")
+// 	default: // (0, 65535]
+// 		p.Listen = fmt.Sprintf(":%d", pa.Listen)
+// 	}
+// 	p.Sticky = pa.Sticky
+// 	return nil
+// }
 
 func (v *Version) IsHealthSet() bool {
 	return v.HealthCheck != nil

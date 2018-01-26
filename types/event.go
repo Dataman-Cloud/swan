@@ -31,6 +31,7 @@ type TaskEvent struct {
 	TaskID         string  `json:"task_id"`
 	IP             string  `json:"task_ip"`
 	Port           uint64  `json:"task_port"`
+	TargetPort     uint64  `json:"target_port"`
 	Weight         float64 `json:"weihgt"`
 	GatewayEnabled bool    `json:"gateway"` // for proxy
 }

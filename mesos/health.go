@@ -55,28 +55,30 @@ func (s *Scheduler) FullTaskEventsAndRecords() []*types.CombinedEvents {
 				Weight: task.Weight,
 			}
 
-			var proxyEnabled bool
 			if ver.Proxy != nil {
-				proxyEnabled = ver.Proxy.Enabled
-				taskEv.GatewayEnabled = ver.Proxy.Enabled
-				taskEv.AppAlias = ver.Proxy.Alias
-				taskEv.AppListen = ver.Proxy.Listen
-				taskEv.AppSticky = ver.Proxy.Sticky
+				proxyEnabled := ver.Proxy.Enabled
+				for i, proxy := range ver.Proxy.Proxies {
+					taskEv.GatewayEnabled = proxyEnabled
+					taskEv.AppAlias = proxy.Alias
+					taskEv.AppListen = proxy.Listen
+					taskEv.AppSticky = proxy.Sticky
+					if len(task.Ports) > 0 {
+						taskEv.Port = task.Ports[i] // currently only support the first port within proxy & events
+					}
+
+					cmb := &types.CombinedEvents{
+						Event: taskEv,
+						DNS:   s.buildAgentDNSRecord(taskEv),
+					}
+					if proxyEnabled {
+						cmb.Proxy = s.buildAgentProxyRecord(taskEv)
+					}
+
+					ret = append(ret, cmb)
+
+				}
 			}
 
-			if len(task.Ports) > 0 {
-				taskEv.Port = task.Ports[0] // currently only support the first port within proxy & events
-			}
-
-			cmb := &types.CombinedEvents{
-				Event: taskEv,
-				DNS:   s.buildAgentDNSRecord(taskEv),
-			}
-			if proxyEnabled {
-				cmb.Proxy = s.buildAgentProxyRecord(taskEv)
-			}
-
-			ret = append(ret, cmb)
 		}
 	}
 
