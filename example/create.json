@@ -3,17 +3,12 @@
   "cmd": null,
   "args": null,
   "cpus": 0.01,
-  "mem": 32,
+  "mem": 5,
   "disk": 0,
-  "runAs": "xcm",
+  "runAs": "test",
   "priority": 0,
-  "instances": 3,
+  "instances": 1,
   "constraints": [
-    {
-      "attribute": "vcluster",
-      "operator": "==",
-      "value": "bbklab"
-    }
   ],
   "container": {
     "docker": {
@@ -22,14 +17,6 @@
       "forcePullImage": false,
       "privileged": true,
       "parameters": [
-        {
-          "key": "ipc",
-          "value": "host"
-        },
-        {
-          "key": "workdir",
-          "value": "/data"
-        }
       ],
       "portMappings": [
         {
@@ -37,47 +24,39 @@
           "protocol": "tcp",
           "containerPort": 80,
           "hostPort": 80
+        },
+	{
+          "name": "https",
+	  "protocol": "tcp",
+	  "containerPort": 443,
+	  "hostPort": 443
         }
       ]
     },
     "type": "DOCKER",
     "volumes": [
-      {
-        "hostPath": "/home",
-        "containerPath": "/data",
-        "mode": "RW"
-      }
     ]
   },
   "env": {
-    "WORDPRESS_DB_HOST": "dbhost",
-    "WORDPRESS_DB_PASSWORD": "password"
   },
   "uris": [
     
   ],
   "label": {
-    "USER_ID": "1",
-    "APP": "wordpress"
-  },
-  "healthCheck": {
-    "protocol": "http",
-    "path": "/",
-    "delaySeconds": 2,
-    "gracePeriodSeconds": 5,
-    "intervalSeconds": 1,
-    "portName": "web",
-    "timeoutSeconds": 1,
-    "consecutiveFailures": 5
   },
   "proxy": {
     "enabled": true,
-    "alias": "g.cn",
-	"listen": 99,
-	"sticky": false
-  },
-  "deploy": {
-    "step": 10,
-    "onfailure": "stop"
+    "proxies": [
+        {
+            "alias": "g.cn",
+            "listen": "7890",
+            "sticky": false
+	},
+	{
+            "alias": "m.cn",
+	    "listen": "8900",
+	    "sticky": false
+	}
+    ]
   }
 }
