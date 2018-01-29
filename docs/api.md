@@ -197,10 +197,19 @@ Example request:
       "consecutiveFailures": 5
     },
   "proxy": {
-      "enabled": false,
-      "alias": "www.example.com",
-      "listen": 9999,
-      "sticky": false
+      "enabled": true,
+      "proxies": [
+        {
+            "alias": "g.cn",
+            "listen": "7890",
+            "sticky": false
+        },
+        {
+            "alias": "m.cn",
+            "listen": "8900",
+            "sticky": false
+        }
+    ]
   }
 }
 ```
