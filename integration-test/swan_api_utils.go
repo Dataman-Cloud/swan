@@ -351,6 +351,68 @@ func (s *ApiSuite) rawRunCompose(cmp *types.Compose) (int, []byte, error) {
 	return s.sendRequest("POST", "/v1/compose", cmp)
 }
 
+// agent
+
+func (s *ApiSuite) listAgents(c *check.C) []string {
+	code, body, err := s.sendRequest("GET", "/v1/agents", nil)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	var res map[string]interface{}
+	err = s.bind(body, &res)
+	c.Assert(err, check.IsNil)
+	c.Log(res)
+
+	agents := make([]string, 0)
+
+	for id, _ := range res {
+		agents = append(agents, id)
+	}
+
+	return agents
+}
+
+func (s *ApiSuite) deleteNetwork(agentId, name string, c *check.C) error {
+	code, _, err := s.sendRequest("DELETE", "/v1/agents/"+agentId+"/docker/networks/"+name, nil)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusNoContent)
+
+	return nil
+}
+
+func (s *ApiSuite) createNetwork(agentId string, payload interface{}, c *check.C) string {
+	code, body, err := s.sendRequest("POST", "/v1/agents/"+agentId+"/docker/networks/create", payload)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusCreated)
+
+	var res map[string]interface{}
+	err = s.bind(body, &res)
+	c.Assert(err, check.IsNil)
+
+	return res["Id"].(string)
+}
+
+func (s *ApiSuite) inspectNetwork(agentId, name string, c *check.C) string {
+	code, body, err := s.sendRequest("GET", "/v1/agents/"+agentId+"/docker/networks/"+name, nil)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	var net map[string]interface{}
+	err = s.bind(body, &net)
+	c.Assert(err, check.IsNil)
+	c.Log(net)
+
+	return net["Name"].(string)
+}
+
+func (s *ApiSuite) createSubnet(agentId string, pool interface{}, c *check.C) error {
+	code, _, err := s.sendRequest("PUT", "/v1/agents/"+agentId+"/ipam/subnets", pool)
+	c.Assert(err, check.IsNil)
+	c.Assert(code, check.Equals, http.StatusOK)
+
+	return nil
+}
+
 // purge
 //
 func (s *ApiSuite) purge(maxWait time.Duration, c *check.C) error {
